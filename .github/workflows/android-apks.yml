@@ -36,7 +36,6 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '9.12.0'
   # ABIs alvo: cobre praticamente todos os aparelhos Android atuais e
   # reduz o tempo de build (x86/x86_64 sao apenas para emulador).
   TARGET_ABIS: 'arm64-v8a,armeabi-v7a'
@@ -57,9 +56,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A versao do pnpm vem de package.json > packageManager (corepack).
+      # Declarar tambem no action causa erro de versao duplicada.
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
@@ -102,9 +101,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # A versao do pnpm vem de package.json > packageManager (corepack).
+      # Declarar tambem no action causa erro de versao duplicada.
       - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
