@@ -111,13 +111,19 @@ jobs:
 
       - name: Compilar o APK
         working-directory: apps/${{ matrix.app }}
+        env:
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         run: |
           set -euo pipefail
           if [ "${{ inputs.build_type || 'release' }}" = "debug" ]; then
-            flutter build apk --debug
+            BUILD_TYPE=debug
           else
-            flutter build apk --release
+            BUILD_TYPE=release
           fi
+
+          flutter build apk --$BUILD_TYPE \
+            --dart-define=MAPS_API_KEY="${MAPS_API_KEY:-}" \
+            -PMAPS_API_KEY="${MAPS_API_KEY:-}"
 
       - name: Localizar o APK
         id: apk

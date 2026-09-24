@@ -41,7 +41,7 @@ class RideScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              MapCanvas(
+              RideMap(
                 center: app.coords,
                 height: 250,
                 span: 0.07,

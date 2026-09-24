@@ -90,7 +90,7 @@ class _SearchingScreenState extends State<SearchingScreen> with SingleTickerProv
               Stack(
                 alignment: Alignment.center,
                 children: [
-                  MapCanvas(
+                  RideMap(
                     center: app.coords,
                     height: 260,
                     span: 0.06,

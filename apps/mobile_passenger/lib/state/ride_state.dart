@@ -23,6 +23,13 @@ class RideState extends ChangeNotifier {
   bool estimating = false;
   String? error;
 
+  /// Popula os carros visiveis no mapa da tela inicial.
+  void refreshNearby(Coords origin) {
+    if (nearbyDrivers.isNotEmpty) return;
+    nearbyDrivers = _repository.nearbyDrivers(origin);
+    notifyListeners();
+  }
+
   Future<List<RideCategory>> estimate(Coords origin, Coords destination) async {
     estimating = true;
     notifyListeners();

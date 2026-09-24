@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/uber_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/demo_engine.dart';
 import '../data/models/models.dart';
 import '../state/app_state.dart';
 import '../state/ride_state.dart';
-import '../widgets/map_canvas.dart';
+import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
+/// Selecao de categoria: mapa encolhe para os 40% superiores (mostrando a rota)
+/// e os 60% inferiores exibem a lista deslizante de opcoes de viagem.
 class ConfirmScreen extends StatefulWidget {
   const ConfirmScreen({super.key, required this.destination, required this.address});
 
@@ -41,17 +43,14 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
 
     setState(() => _submitting = true);
 
-    final app = context.read<AppState>();
-    final ride = context.read<RideState>();
-
-    await ride.requestRide(
-      origin: app.coords,
-      destination: widget.destination,
-      pickupAddress: 'Localizacao atual',
-      dropoffAddress: widget.address,
-      category: category,
-      paymentMethod: _payment.label,
-    );
+    await context.read<RideState>().requestRide(
+          origin: context.read<AppState>().coords,
+          destination: widget.destination,
+          pickupAddress: 'Localizacao atual',
+          dropoffAddress: widget.address,
+          category: category,
+          paymentMethod: _payment.label,
+        );
 
     if (!mounted) return;
     setState(() => _submitting = false);
@@ -73,165 +72,268 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       (app.coords.longitude + widget.destination.longitude) / 2,
     );
 
-    final distanceMeters = _selected == null
-        ? 3200
-        : ((_selected!.priceCents / 180) * 1000).round();
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        title: const Text('Confirmar corrida'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              MapCanvas(
-                center: center,
-                height: 210,
-                span: 0.09,
-                markers: [
-                  MapMarker(id: 'pickup', coords: app.coords, kind: MarkerKind.pickup),
-                  MapMarker(id: 'dropoff', coords: widget.destination, kind: MarkerKind.dropoff),
-                ],
-                route: [app.coords, widget.destination],
-              ),
-              const SizedBox(height: Spacing.lg),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'DESTINO',
-                      style: TextStyle(
-                        color: AppColors.textFaint,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.6,
+      body: Column(
+        children: [
+          // ---------- 40% superiores: mapa com a rota tracada ----------
+          Expanded(
+            flex: 4,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: RideMap(
+                    center: center,
+                    span: 0.075,
+                    rounded: false,
+                    route: [app.coords, widget.destination],
+                    markers: [
+                      MapMarker(id: 'pickup', coords: app.coords, kind: MarkerKind.pickup),
+                      MapMarker(
+                        id: 'dropoff',
+                        coords: widget.destination,
+                        kind: MarkerKind.dropoff,
+                      ),
+                    ],
+                  ),
+                ),
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.sm),
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        height: 40,
+                        width: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.background.withValues(alpha: 0.86),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Icon(Icons.arrow_back, color: AppColors.text, size: 20),
                       ),
                     ),
-                    const SizedBox(height: Spacing.xs),
-                    Text(
-                      widget.address,
-                      style: const TextStyle(color: AppColors.text, fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    const AppDivider(),
-                    Row(
-                      children: [
-                        MetricTile(value: formatDistance(distanceMeters.toDouble()), label: 'Distancia'),
-                        MetricTile(
-                          value: formatDuration(((distanceMeters / 1000 / 24) * 3600).round()),
-                          label: 'Tempo',
-                        ),
-                        MetricTile(
-                          value: _selected == null ? '-' : formatMoney(_selected!.priceCents),
-                          label: 'Estimativa',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Spacing.lg),
-              const SectionTitle(text: 'Escolha a categoria'),
-              for (final category in categories)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.sm),
-                  child: _OptionTile(
-                    title: category.name,
-                    subtitle: '${category.description} - ${category.seats} lugar(es)',
-                    trailing: formatMoney(category.priceCents),
-                    caption: 'Chega em ${category.etaMinutes} min',
-                    selected: _selected?.id == category.id,
-                    onTap: () => setState(() => _selected = category),
                   ),
                 ),
-              const SizedBox(height: Spacing.sm),
-              const SectionTitle(text: 'Forma de pagamento'),
-              for (final method in DemoEngine.paymentMethods())
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.sm),
-                  child: _OptionTile(
-                    title: method.label,
-                    subtitle: method.detail,
-                    selected: _payment.id == method.id,
-                    onTap: () => setState(() => _payment = method),
-                  ),
-                ),
-              const SizedBox(height: Spacing.lg),
-              AppButton(
-                label: _selected == null
-                    ? 'Confirmar'
-                    : 'Confirmar ${formatMoney(_selected!.priceCents)}',
-                loading: _submitting,
-                enabled: _selected != null,
-                onPressed: _confirm,
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+
+          // ---------- 60% inferiores: lista de opcoes de viagem ----------
+          Expanded(
+            flex: 6,
+            child: SheetSurface(
+              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.lg, Spacing.lg, Spacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Escolha uma viagem', style: SheetText.title),
+                            const SizedBox(height: Spacing.xs),
+                            Text(
+                              widget.address,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: SheetText.muted,
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.sheetText),
+                        child: const Text('Trocar'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Spacing.sm),
+
+                  // Lista deslizante vertical de categorias
+                  Expanded(
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        final category = categories[index];
+                        final isSelected = _selected?.id == category.id;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: Spacing.sm),
+                          child: _CategoryTile(
+                            category: category,
+                            selected: isSelected,
+                            onTap: () => setState(() => _selected = category),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Forma de pagamento
+                  GestureDetector(
+                    onTap: _choosePayment,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Spacing.md,
+                        vertical: Spacing.md,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.sheetField,
+                        borderRadius: BorderRadius.circular(Radii.sm),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.credit_card, size: 20, color: AppColors.sheetText),
+                          const SizedBox(width: Spacing.md),
+                          Expanded(
+                            child: Text(
+                              _payment.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          const Icon(Icons.keyboard_arrow_right, color: AppColors.sheetMuted),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.md),
+
+                  // Botao de acao principal: preto, texto branco em negrito,
+                  // largura total, na extremidade inferior com padding confortavel.
+                  AppButton(
+                    label: _selected == null
+                        ? 'Confirmar'
+                        : 'Confirmar ${_selected!.name}',
+                    variant: AppButtonVariant.primary,
+                    loading: _submitting,
+                    enabled: _selected != null,
+                    onPressed: _confirm,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Future<void> _choosePayment() async {
+    final chosen = await showModalBottomSheet<PaymentOption>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SheetSurface(
+        padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.sheetBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: Spacing.lg),
+            Text('Forma de pagamento', style: SheetText.title),
+            const SizedBox(height: Spacing.md),
+            for (final method in DemoEngine.paymentMethods())
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.payments_outlined, color: AppColors.sheetText),
+                title: Text(method.label, style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
+                subtitle: Text(method.detail, style: SheetText.muted),
+                trailing: method.id == _payment.id
+                    ? const Icon(Icons.check, color: AppColors.primary)
+                    : null,
+                onTap: () => Navigator.of(context).pop(method),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    if (chosen != null) setState(() => _payment = chosen);
+  }
 }
 
-class _OptionTile extends StatelessWidget {
-  const _OptionTile({
-    required this.title,
-    required this.subtitle,
+/// Item da lista de categorias: imagem do carro a esquerda, nome e capacidade
+/// no centro, valor em destaque a direita. A categoria selecionada recebe
+/// borda preta espessa.
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({
+    required this.category,
     required this.selected,
     required this.onTap,
-    this.trailing,
-    this.caption,
   });
 
-  final String title;
-  final String subtitle;
+  final RideCategory category;
   final bool selected;
   final VoidCallback onTap;
-  final String? trailing;
-  final String? caption;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(Spacing.lg),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
         decoration: BoxDecoration(
-          color: selected ? AppColors.primarySoft : AppColors.surface,
-          border: Border.all(color: selected ? AppColors.primary : AppColors.border),
-          borderRadius: BorderRadius.circular(Radii.md),
+          color: AppColors.sheet,
+          borderRadius: BorderRadius.circular(Radii.sm),
+          // Borda preta espessa na categoria selecionada.
+          border: Border.all(
+            color: selected ? AppColors.sheetText : AppColors.sheetBorder,
+            width: selected ? 2.5 : 1,
+          ),
         ),
         child: Row(
           children: [
+            VehicleIcon(slug: category.slug),
+            const SizedBox(width: Spacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(color: AppColors.text, fontSize: 15, fontWeight: FontWeight.w600),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          category.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: SheetText.heading,
+                        ),
+                      ),
+                      const SizedBox(width: Spacing.sm),
+                      const Icon(Icons.person, size: 14, color: AppColors.sheetMuted),
+                      Text(
+                        '${category.seats}',
+                        style: SheetText.muted,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                  if (caption != null) ...[
-                    const SizedBox(height: 2),
-                    Text(caption!, style: const TextStyle(color: AppColors.primary, fontSize: 13)),
-                  ],
+                  Text(
+                    '${category.etaMinutes} min de distancia',
+                    style: SheetText.muted,
+                  ),
                 ],
               ),
             ),
-            if (trailing != null)
-              Text(
-                trailing!,
-                style: const TextStyle(color: AppColors.text, fontSize: 17, fontWeight: FontWeight.w600),
-              )
-            else if (selected)
-              const Icon(Icons.check, color: AppColors.primary, size: 20),
+            const SizedBox(width: Spacing.sm),
+            Text(formatMoney(category.priceCents), style: SheetText.price),
           ],
         ),
       ),

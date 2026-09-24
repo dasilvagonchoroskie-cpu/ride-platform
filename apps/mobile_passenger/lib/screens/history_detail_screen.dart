@@ -43,7 +43,7 @@ class HistoryDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              MapCanvas(
+              RideMap(
                 center: center,
                 height: 210,
                 span: 0.09,

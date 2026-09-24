@@ -14,9 +14,9 @@ class DemoEngine {
 
   static const List<Map<String, Object>> _categoryBase = [
     {'slug': 'moto', 'name': 'Moto', 'description': 'Rapido e economico', 'seats': 1, 'base': 300, 'perKm': 120, 'perMin': 20, 'min': 600, 'icon': 'bike'},
-    {'slug': 'ride', 'name': 'Ride', 'description': 'Carro popular, ate 4', 'seats': 4, 'base': 500, 'perKm': 180, 'perMin': 30, 'min': 900, 'icon': 'car'},
-    {'slug': 'comfort', 'name': 'Comfort', 'description': 'Mais novo e espacoso', 'seats': 4, 'base': 700, 'perKm': 240, 'perMin': 40, 'min': 1200, 'icon': 'car'},
-    {'slug': 'black', 'name': 'Black', 'description': 'Luxo com motorista', 'seats': 4, 'base': 1100, 'perKm': 380, 'perMin': 60, 'min': 2000, 'icon': 'car'},
+    {'slug': 'ride', 'name': 'UberX', 'description': 'Carro popular, ate 4', 'seats': 4, 'base': 500, 'perKm': 180, 'perMin': 30, 'min': 900, 'icon': 'car'},
+    {'slug': 'comfort', 'name': 'Uber Comfort', 'description': 'Mais novo e espacoso', 'seats': 4, 'base': 700, 'perKm': 240, 'perMin': 40, 'min': 1200, 'icon': 'car'},
+    {'slug': 'black', 'name': 'Uber Black', 'description': 'Luxo com motorista', 'seats': 4, 'base': 1100, 'perKm': 380, 'perMin': 60, 'min': 2000, 'icon': 'car'},
     {'slug': 'van', 'name': 'Van', 'description': 'Ate 6 passageiros', 'seats': 6, 'base': 900, 'perKm': 300, 'perMin': 45, 'min': 1800, 'icon': 'bus'},
   ];
 
