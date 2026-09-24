@@ -19,6 +19,10 @@ class RideRepository {
 
   void forceDemo() => _useDemo = true;
 
+  /// Orcamento da viagem: so origem e destino.
+  ///
+  /// Nao ha categoria a enviar — a plataforma opera modalidade unica, e a
+  /// bandeira quem decide e o relogio do servidor.
   Future<EstimateResult> estimate(Coords origin, Coords destination) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);
 
@@ -28,25 +32,7 @@ class RideRepository {
         'dropoff': destination.toJson(),
       }) as Map<String, dynamic>;
 
-      final options = (data['options'] as List<dynamic>? ?? const <dynamic>[]);
-      return EstimateResult(
-        categories: options.map((option) {
-          final map = option as Map<String, dynamic>;
-          final category = map['category'] as Map<String, dynamic>? ?? const <String, dynamic>{};
-          return RideCategory.fromJson({
-            'id': category['id'],
-            'slug': category['slug'],
-            'name': category['name'],
-            'description': category['description'],
-            'seats': category['seats'],
-            'etaMinutes': map['etaMinutes'],
-            'priceCents': map['priceCents'],
-            'priceRangeCents': map['priceRangeCents'],
-          });
-        }).toList(),
-        distanceMeters: (data['distanceMeters'] as num?)?.toInt() ?? 0,
-        durationSeconds: (data['durationSeconds'] as num?)?.toInt() ?? 0,
-      );
+      return EstimateResult(quote: RideQuote.fromJson(data));
     } catch (_) {
       _useDemo = true;
       return DemoEngine.estimate(origin, destination);
@@ -58,7 +44,6 @@ class RideRepository {
     required Coords destination,
     required String pickupAddress,
     required String dropoffAddress,
-    required RideCategory category,
     required String paymentMethod,
   }) async {
     if (_useDemo) {
@@ -67,7 +52,6 @@ class RideRepository {
         destination: destination,
         pickupAddress: pickupAddress,
         dropoffAddress: dropoffAddress,
-        category: category,
         paymentMethod: paymentMethod,
       );
     }
@@ -76,8 +60,7 @@ class RideRepository {
       final data = await _client.request('POST', '/rides', body: {
         'pickup': {'address': pickupAddress, ...origin.toJson()},
         'dropoff': {'address': dropoffAddress, ...destination.toJson()},
-        'categoryId': category.id,
-        'paymentMethodType': 'PIX',
+        'paymentMethodType': 'CASH',
       }) as Map<String, dynamic>;
 
       return Ride.fromJson(data['ride'] as Map<String, dynamic>);
@@ -88,7 +71,6 @@ class RideRepository {
         destination: destination,
         pickupAddress: pickupAddress,
         dropoffAddress: dropoffAddress,
-        category: category,
         paymentMethod: paymentMethod,
       );
     }
