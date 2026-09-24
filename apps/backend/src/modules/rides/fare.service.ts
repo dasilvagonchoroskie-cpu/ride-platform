@@ -43,10 +43,10 @@ export interface OrcamentoDaCorrida {
  *    do aparelho, bastava mudar o relogio do celular para pagar a diurna
  *    as duas da manha.
  *
- * 2. A bandeirada ja cobre uma carencia — o primeiro quilometro e os
- *    primeiros minutos parado. Passando disso, cobra-se SO o excedente,
- *    nao o trajeto inteiro. Uma corrida de 1,2 km paga a bandeirada mais
- *    200 metros, e nao mais 1.200 metros.
+ * 2. A bandeirada ja cobre uma franquia — os primeiros 1,5 km e os
+ *    primeiros 3 minutos parado. Passando disso, cobra-se SO o excedente,
+ *    nao o trajeto inteiro. Uma corrida de 1,8 km paga a bandeirada mais
+ *    300 metros, e nao mais 1.800 metros.
  */
 @Injectable()
 export class FareService {
