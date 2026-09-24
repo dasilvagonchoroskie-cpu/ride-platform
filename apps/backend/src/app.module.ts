@@ -21,6 +21,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { HealthModule } from './modules/health/health.module';
+import { RidesModule } from './modules/rides/rides.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { HealthModule } from './modules/health/health.module';
     DriversModule,
     DocumentsModule,
     VehiclesModule,
+    RidesModule,
     HealthModule,
   ],
   providers: [
