@@ -523,7 +523,7 @@ model FareConfig {
   waitingPerMinuteCents Int      @default(0) @map("waiting_per_minute_cents")
 
   /// Carencia inclusa na bandeirada.
-  freeDistanceMeters    Int      @default(1000) @map("free_distance_meters")
+  freeDistanceMeters    Int      @default(1500) @map("free_distance_meters")
   freeWaitingSeconds    Int      @default(180) @map("free_waiting_seconds")
 
   minFareCents          Int      @map("min_fare_cents")
