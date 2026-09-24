@@ -1,14 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
+import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
-/// Oferta de corrida com contador regressivo e rota ate o passageiro.
+/// Enquadramento do mapa: o meio entre o ponto mais extremo de cada lado,
+/// para que carro, embarque e destino apareçam juntos.
+Coords _enquadrar(Coords carro, RideOffer oferta) {
+  final lats = [carro.latitude, oferta.pickupCoords.latitude, oferta.dropoffCoords.latitude];
+  final lons = [carro.longitude, oferta.pickupCoords.longitude, oferta.dropoffCoords.longitude];
+  lats.sort();
+  lons.sort();
+  return Coords((lats.first + lats.last) / 2, (lons.first + lons.last) / 2);
+}
+
+/// Quanto o mapa precisa abrir para os tres pontos caberem, com uma folga
+/// de 40% nas bordas para nada ficar colado no canto.
+double _abertura(Coords carro, RideOffer oferta) {
+  final lats = [carro.latitude, oferta.pickupCoords.latitude, oferta.dropoffCoords.latitude];
+  final lons = [carro.longitude, oferta.pickupCoords.longitude, oferta.dropoffCoords.longitude];
+  lats.sort();
+  lons.sort();
+  final maior = (lats.last - lats.first) > (lons.last - lons.first)
+      ? lats.last - lats.first
+      : lons.last - lons.first;
+  // Piso de 0,02 para uma corrida curta nao deixar o mapa colado demais.
+  final comFolga = maior * 1.4;
+  return comFolga < 0.02 ? 0.02 : comFolga;
+}
+
+/// Oferta de corrida: contador regressivo, onde buscar e para onde vai.
 class OfferScreen extends StatelessWidget {
   const OfferScreen({super.key});
 
@@ -27,14 +53,19 @@ class OfferScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // Mapa com a rota ate o passageiro
+          // Mapa com a VIAGEM INTEIRA: onde buscar e para onde vai.
+          //
+          // Antes so aparecia o caminho ate o passageiro, e o motorista
+          // aceitava sem saber o destino. Agora o traco segue ate o fim, e
+          // o enquadramento abre o suficiente para os tres pontos caberem
+          // na tela — carro, embarque e desembarque.
           Expanded(
             flex: 4,
             child: RideMap(
-              center: offer.pickupCoords,
-              span: 0.05,
+              center: _enquadrar(driver.position, offer),
+              span: _abertura(driver.position, offer),
               rounded: false,
-              route: [driver.position, offer.pickupCoords],
+              route: [driver.position, offer.pickupCoords, offer.dropoffCoords],
               markers: [
                 MapMarker(id: 'me', coords: driver.position, kind: MarkerKind.car),
                 MapMarker(id: 'pickup', coords: offer.pickupCoords, kind: MarkerKind.pickup),
@@ -182,11 +213,17 @@ class OfferScreen extends StatelessWidget {
                       const Icon(Icons.location_on, size: 18, color: AppColors.primary),
                       const SizedBox(width: Spacing.md),
                       Expanded(
-                        child: Text(
-                          offer.pickupAddress,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: SheetText.body,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('ONDE BUSCAR', style: SheetText.label),
+                            Text(
+                              offer.pickupAddress,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: SheetText.body,
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -197,11 +234,17 @@ class OfferScreen extends StatelessWidget {
                       const Icon(Icons.flag, size: 18, color: AppColors.danger),
                       const SizedBox(width: Spacing.md),
                       Expanded(
-                        child: Text(
-                          offer.dropoffAddress,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: SheetText.body,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('PARA ONDE VAI', style: SheetText.label),
+                            Text(
+                              offer.dropoffAddress,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: SheetText.body,
+                            ),
+                          ],
                         ),
                       ),
                       Text(
