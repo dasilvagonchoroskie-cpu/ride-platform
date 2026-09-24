@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/uber_theme.dart';
 import '../core/utils/formatters.dart';
+import '../core/utils/geo.dart';
 import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 import '../widgets/ui.dart';
