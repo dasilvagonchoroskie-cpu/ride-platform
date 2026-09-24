@@ -25,7 +25,7 @@ Painel Admin   ─┘                  (JWT + refresh)      │
 ## Autenticacao
 
 1. `POST /auth/otp/request` cria um codigo de 6 digitos com hash SHA-256 + pepper, TTL de 5 min, cooldown de 60 s e no maximo 5 tentativas.
-2. `POST /auth/otp/verify` consome o codigo e cria a conta na primeira entrada (fluxo Uber). Retorna `accessToken` (15 min) + `refreshToken` (30 dias).
+2. `POST /auth/otp/verify` consome o codigo e cria a conta na primeira entrada (entra pelo telefone, sem senha). Retorna `accessToken` (15 min) + `refreshToken` (30 dias).
 3. O refresh token e **rotativo e de uso unico**: cada `/auth/refresh` revoga o anterior e grava `replacedBy`. Reuso de um token antigo retorna 401.
 4. Dispositivos registrados em `devices` guardam o `fcmToken` para push.
 
