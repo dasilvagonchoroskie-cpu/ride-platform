@@ -7,3 +7,4 @@ export * from './schemas/user.schema';
 export * from './schemas/driver.schema';
 export * from './schemas/document.schema';
 export * from './schemas/vehicle.schema';
+export * from './schemas/ride.schema';
