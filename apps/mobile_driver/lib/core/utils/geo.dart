@@ -63,3 +63,23 @@ String formatDuration(int seconds) {
   final minutes = math.max(1, (seconds / 60).round());
   return '$minutes min';
 }
+
+/// Normaliza a placa: maiuscula, sem separadores.
+String normalizePlate(String value) =>
+    value.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
+/// Valida a placa no padrao antigo (ABC1234) ou Mercosul (ABC1D23).
+bool isValidPlate(String value) {
+  final plate = normalizePlate(value);
+  return RegExp(r'^[A-Z]{3}[0-9]{4}$').hasMatch(plate) ||
+      RegExp(r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$').hasMatch(plate);
+}
+
+/// Formata a placa para exibicao: ABC-1234 ou ABC1D23.
+String formatPlate(String value) {
+  final plate = normalizePlate(value);
+  if (RegExp(r'^[A-Z]{3}[0-9]{4}$').hasMatch(plate)) {
+    return '${plate.substring(0, 3)}-${plate.substring(3)}';
+  }
+  return plate;
+}

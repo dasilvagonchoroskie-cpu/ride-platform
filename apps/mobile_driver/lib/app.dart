@@ -18,7 +18,7 @@ class DriverApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ride Motorista',
+      title: 'Fortaleza Mov Motorista',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       home: const _Root(),

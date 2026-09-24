@@ -61,8 +61,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _error = 'Informe marca e modelo do veiculo.');
       return;
     }
-    if (onlyDigits(_plate.text).length < 7) {
-      setState(() => _error = 'Informe uma placa valida (ABC1D23).');
+    // BUG CORRIGIDO: a validacao anterior usava onlyDigits(), que remove as
+    // LETRAS da placa — "ABC1D23" virava "123" e nunca passava no teste.
+    // Agora normalizamos para alfanumerico e validamos os dois padroes:
+    // antigo (ABC1234) e Mercosul (ABC1D23).
+    final plate = normalizePlate(_plate.text);
+    if (!isValidPlate(plate)) {
+      setState(() => _error = 'Placa invalida. Use ABC1234 ou ABC1D23.');
       return;
     }
 
@@ -73,7 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             model: _model.text.trim(),
             year: int.tryParse(_year.text.trim()) ?? DateTime.now().year,
             color: _color.text.trim(),
-            plate: _plate.text.trim().toUpperCase(),
+            plate: plate,
           ),
         );
 
@@ -239,7 +244,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         const SizedBox(height: Spacing.md),
-        AppField(label: 'Placa', hint: 'ABC1D23', controller: _plate, onChanged: (_) => setState(() {})),
+        AppField(
+          label: 'Placa',
+          hint: 'ABC1D23',
+          controller: _plate,
+          maxLength: 7,
+          onChanged: (value) {
+            // Mantem apenas letras e numeros, no maximo 7 caracteres.
+            final masked = normalizePlate(value);
+            if (masked != value) {
+              _plate.value = TextEditingValue(
+                text: masked,
+                selection: TextSelection.collapsed(offset: masked.length),
+              );
+            }
+            setState(() {});
+          },
+        ),
+        const SizedBox(height: Spacing.xs),
+        Text(
+          'Formatos aceitos: ABC1234 (antigo) ou ABC1D23 (Mercosul)',
+          style: AppText.caption.copyWith(color: AppColors.textFaint),
+        ),
         if (_error != null) ...[
           const SizedBox(height: Spacing.sm),
           Text(_error!, style: AppText.caption.copyWith(color: AppColors.danger)),

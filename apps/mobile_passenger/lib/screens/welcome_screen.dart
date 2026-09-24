@@ -31,11 +31,11 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               const SizedBox(height: Spacing.xxxl),
               const Text(
-                'Ride',
+                'Fortaleza',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 46,
+                  color: AppColors.text,
+                  fontSize: 42,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -1.2,
                 ),

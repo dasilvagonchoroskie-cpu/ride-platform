@@ -14,17 +14,17 @@ class SplashScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Ride',
+              'Fortaleza',
               style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 44,
+                color: AppColors.text,
+                fontSize: 40,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -1,
               ),
             ),
             SizedBox(height: Spacing.xs),
             Text(
-              'Seu transporte sob demanda',
+              'MOV  -  Seu transporte sob demanda',
               style: TextStyle(color: AppColors.textMuted, fontSize: 15),
             ),
             SizedBox(height: Spacing.xl),

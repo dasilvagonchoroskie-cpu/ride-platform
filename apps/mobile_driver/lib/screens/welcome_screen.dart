@@ -27,18 +27,18 @@ class WelcomeScreen extends StatelessWidget {
             children: [
               const SizedBox(height: Spacing.xxxl),
               const Text(
-                'Ride',
+                'Fortaleza',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppText.family,
                   color: AppColors.text,
-                  fontSize: 46,
+                  fontSize: 42,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -1.2,
                 ),
               ),
               const Text(
-                'MOTORISTA',
+                'MOV  -  MOTORISTA',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppText.family,

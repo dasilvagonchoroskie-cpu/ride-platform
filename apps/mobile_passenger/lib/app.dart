@@ -19,7 +19,7 @@ class RideApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ride Passageiro',
+      title: 'Fortaleza Mov',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       home: const _Root(),
