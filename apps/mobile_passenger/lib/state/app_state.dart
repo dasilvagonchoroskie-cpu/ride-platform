@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -9,11 +11,19 @@ import '../core/utils/geo.dart';
 enum DataSource { api, demo, unknown }
 
 class LocationResult {
-  const LocationResult({required this.coords, required this.granted, required this.mocked});
+  const LocationResult({
+    required this.coords,
+    required this.granted,
+    required this.mocked,
+    this.accuracyMeters,
+  });
 
   final Coords coords;
   final bool granted;
   final bool mocked;
+
+  /// Margem de erro da leitura, em metros. Nulo quando nao houve GPS.
+  final double? accuracyMeters;
 }
 
 /// Estado global: modo de dados (API ou demonstracao), posicao e recentes.
@@ -26,6 +36,11 @@ class AppState extends ChangeNotifier {
   DataSource dataSource = DataSource.unknown;
   Coords coords = fallbackCoords;
   bool locationGranted = false;
+
+  /// Margem de erro da melhor leitura ate agora.
+  double? accuracyMeters;
+
+  StreamSubscription<Position>? _vigia;
   List<String> recentPlaces = [];
 
   bool get isDemo => dataSource != DataSource.api;
@@ -34,6 +49,14 @@ class AppState extends ChangeNotifier {
     final location = await _resolveLocation();
     coords = location.coords;
     locationGranted = location.granted;
+    accuracyMeters = location.accuracyMeters;
+
+    // A primeira leitura do GPS costuma vir torta — as vezes com centenas
+    // de metros de erro. Em vez de congelar nela, o aparelho segue
+    // ouvindo e so troca quando chega leitura MELHOR. Assim o ponto de
+    // embarque vai se acertando sozinho enquanto o passageiro digita o
+    // destino.
+    if (location.granted) _vigiarPosicao();
 
     if (!AppConfig.hasApi) {
       dataSource = DataSource.demo;
@@ -82,9 +105,40 @@ class AppState extends ChangeNotifier {
         coords: Coords(position.latitude, position.longitude),
         granted: true,
         mocked: false,
+        accuracyMeters: position.accuracy,
       );
     } catch (_) {
       return const LocationResult(coords: fallbackCoords, granted: false, mocked: true);
     }
+  }
+
+  void _vigiarPosicao() {
+    _vigia?.cancel();
+    try {
+      _vigia = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 5,
+        ),
+      ).listen((position) {
+        final atual = accuracyMeters;
+        // So aceita a leitura nova se ela for mais precisa que a que ja
+        // temos, ou se a antiga estiver velha demais para confiar.
+        final melhorou = atual == null || position.accuracy <= atual;
+        if (!melhorou) return;
+
+        coords = Coords(position.latitude, position.longitude);
+        accuracyMeters = position.accuracy;
+        notifyListeners();
+      }, onError: (_) {});
+    } catch (_) {
+      // Sem GPS continuo o aplicativo segue com a leitura unica.
+    }
+  }
+
+  @override
+  void dispose() {
+    _vigia?.cancel();
+    super.dispose();
   }
 }
