@@ -1,0 +1,32 @@
+{
+  "name": "ride-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma de transporte de passageiros sob demanda (passageiro, motorista e painel admin)",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "infra:reset": "docker compose -f infra/docker-compose.yml down -v && docker compose -f infra/docker-compose.yml up -d",
+    "db:generate": "pnpm --filter @ride/backend prisma:generate",
+    "db:migrate": "pnpm --filter @ride/backend prisma:migrate",
+    "db:deploy": "pnpm --filter @ride/backend prisma:deploy",
+    "db:seed": "pnpm --filter @ride/backend prisma:seed",
+    "db:studio": "pnpm --filter @ride/backend prisma:studio",
+    "backend:dev": "pnpm --filter @ride/backend start:dev",
+    "setup": "pnpm install && pnpm infra:up && pnpm db:generate && pnpm db:migrate && pnpm db:seed"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "turbo": "^2.1.3",
+    "typescript": "^5.6.3"
+  }
+}
