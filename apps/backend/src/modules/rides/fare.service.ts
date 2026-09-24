@@ -1,46 +1,57 @@
 import { Injectable } from '@nestjs/common';
+import { FareFlag } from '@prisma/client';
 import { ERROR_CODES, haversineKm } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
-import { applySurge, percentOf, splitCommission } from '../../common/utils/money.util';
+import { percentOf, splitCommission } from '../../common/utils/money.util';
 
 export interface RotaMedida {
   distanceMeters: number;
   durationSeconds: number;
-  polyline?: string;
 }
 
 export interface OrcamentoDaCorrida {
-  categoryId: string;
+  flag: FareFlag;
   distanceMeters: number;
   durationSeconds: number;
+  waitingSeconds: number;
+
+  /** Bandeirada: o valor fixo, cobrado sempre. */
   baseFareCents: number;
+
+  /** O que passou da carencia e por isso entrou na conta. */
+  chargedDistanceMeters: number;
+  chargedWaitingSeconds: number;
   distanceCents: number;
-  timeCents: number;
-  bookingFeeCents: number;
   waitingCents: number;
+
   subtotalCents: number;
-  surgeMultiplier: number;
   totalCents: number;
+  minFareApplied: boolean;
+
   commissionPercent: number;
   commissionCents: number;
   driverEarningCents: number;
-  minFareApplied: boolean;
 }
 
 /**
- * Preco da corrida.
+ * Preco da corrida — sistema de bandeiras por horario.
  *
- * Regra que nao se negocia: o valor e SEMPRE calculado aqui, no servidor,
- * a partir da tabela vigente. O aplicativo nunca manda preco — manda
- * distancia e tempo medidos, e recebe de volta quanto custou. Se o preco
- * viesse do celular, bastaria alguem editar o aplicativo para andar de
- * graca ou para cobrar a mais de um passageiro.
+ * Duas regras mandam aqui, e nenhuma delas vem do celular:
+ *
+ * 1. A bandeira sai da hora do SERVIDOR no instante do pedido. Se viesse
+ *    do aparelho, bastava mudar o relogio do celular para pagar a diurna
+ *    as duas da manha.
+ *
+ * 2. A bandeirada ja cobre uma carencia — o primeiro quilometro e os
+ *    primeiros minutos parado. Passando disso, cobra-se SO o excedente,
+ *    nao o trajeto inteiro. Uma corrida de 1,2 km paga a bandeirada mais
+ *    200 metros, e nao mais 1.200 metros.
  */
 @Injectable()
 export class FareService {
-  // Ruas nao sao linha reta. Quando nao ha rota calculada, a distancia em
-  // linha reta e multiplicada por este fator para chegar perto do real.
+  // Ruas nao sao linha reta. Sem rota calculada, a distancia em linha
+  // reta e multiplicada por este fator para chegar perto do real.
   private static readonly FATOR_DE_RUA = 1.35;
 
   // Velocidade suposta quando nao ha rota: 25 km/h e o que se faz em
@@ -48,6 +59,32 @@ export class FareService {
   private static readonly VELOCIDADE_URBANA_KMH = 25;
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Qual bandeira vale agora, pela hora do servidor.
+   *
+   * A faixa noturna atravessa a meia-noite (22h as 6h), por isso o teste
+   * muda de forma quando o inicio e maior que o fim.
+   */
+  bandeiraDe(quando: Date, inicio: number, fim: number): boolean {
+    const hora = quando.getHours();
+    return inicio <= fim ? hora >= inicio && hora < fim : hora >= inicio || hora < fim;
+  }
+
+  /** A tabela vigente neste instante. */
+  async tabelaVigente(quando: Date = new Date()) {
+    const tabelas = await this.prisma.fareConfig.findMany({ where: { isActive: true } });
+    if (tabelas.length === 0) {
+      throw new BusinessException(
+        ERROR_CODES.NOT_FOUND,
+        'Nao ha tabela de precos ativa. Configure as bandeiras no painel.',
+      );
+    }
+    const achada = tabelas.find((t) => this.bandeiraDe(quando, t.startHour, t.endHour));
+    // Sem faixa correspondente, vale a diurna: e melhor cobrar a tarifa
+    // mais barata do que recusar a corrida por erro de configuracao.
+    return achada ?? tabelas.find((t) => t.flag === FareFlag.DIURNA) ?? tabelas[0];
+  }
 
   /** Distancia e tempo entre dois pontos quando nao ha rota por rua. */
   estimarRota(
@@ -68,54 +105,41 @@ export class FareService {
   }
 
   /**
-   * Monta o orcamento a partir da tabela vigente da categoria.
+   * Monta o orcamento pela bandeira vigente.
    *
-   * `waitingSeconds` cobre o tempo que o motorista ficou parado esperando
-   * o passageiro; so entra na conta se a tabela tiver preco de espera.
+   * `quando` existe para que o fechamento da corrida possa recalcular com
+   * a bandeira do PEDIDO, e nao com a hora em que terminou: quem chamou
+   * as 21h55 nao deve pagar noturna por ter descido as 22h05.
    */
   async calcular(params: {
-    categoryId: string;
     distanceMeters: number;
     durationSeconds: number;
     waitingSeconds?: number;
-    pickupLat: number;
-    pickupLng: number;
+    quando?: Date;
+    flag?: FareFlag;
   }): Promise<OrcamentoDaCorrida> {
-    const tabela = await this.prisma.fareConfig.findFirst({
-      where: { categoryId: params.categoryId, isActive: true, validFrom: { lte: new Date() } },
-      orderBy: { validFrom: 'desc' },
-    });
+    const quando = params.quando ?? new Date();
+    const tabela = params.flag
+      ? await this.prisma.fareConfig.findUnique({ where: { flag: params.flag } })
+      : await this.tabelaVigente(quando);
 
     if (!tabela) {
-      throw new BusinessException(
-        ERROR_CODES.NOT_FOUND,
-        'Nao ha tabela de precos ativa para esta categoria.',
-      );
+      throw new BusinessException(ERROR_CODES.NOT_FOUND, 'Tabela de precos nao encontrada.');
     }
 
-    const km = params.distanceMeters / 1000;
-    const minutos = params.durationSeconds / 60;
-    const minutosParado = (params.waitingSeconds ?? 0) / 60;
+    const esperaSegundos = params.waitingSeconds ?? 0;
 
-    const distanceCents = Math.round(km * tabela.perKmCents);
-    const timeCents = Math.round(minutos * tabela.perMinuteCents);
-    const waitingCents = Math.round(minutosParado * tabela.waitingPerMinuteCents);
+    // Carencia: so o que passa do incluso e cobrado.
+    const metrosCobrados = Math.max(0, params.distanceMeters - tabela.freeDistanceMeters);
+    const esperaCobrada = Math.max(0, esperaSegundos - tabela.freeWaitingSeconds);
 
-    let subtotalCents =
-      tabela.baseFareCents + distanceCents + timeCents + waitingCents + tabela.bookingFeeCents;
+    const distanceCents = Math.round((metrosCobrados / 1000) * tabela.perKmCents);
+    const waitingCents = Math.round((esperaCobrada / 60) * tabela.waitingPerMinuteCents);
 
-    // A tarifa dinamica so multiplica o que foi rodado. Se estiver
-    // desligada na tabela, o multiplicador fica em 1 e nada muda.
-    let surgeMultiplier = 1;
-    if (tabela.surgeEnabled) {
-      const encontrado = await this.prisma.findSurgeMultiplier(params.pickupLat, params.pickupLng);
-      const teto = Number(tabela.maxSurgeMultiplier);
-      surgeMultiplier = Math.min(Math.max(encontrado, 1), teto);
-      subtotalCents = applySurge(subtotalCents, surgeMultiplier);
-    }
+    const subtotalCents = tabela.baseFareCents + distanceCents + waitingCents;
 
-    // Corrida curta nao pode sair abaixo do minimo: abaixo disso o
-    // motorista sai no prejuizo so de ligar o carro.
+    // Piso da corrida. Com bandeirada de R$ 10 o piso raramente entra,
+    // mas fica como rede de seguranca se alguem baixar a bandeirada.
     const minFareApplied = subtotalCents < tabela.minFareCents;
     const totalCents = minFareApplied ? tabela.minFareCents : subtotalCents;
 
@@ -123,31 +147,28 @@ export class FareService {
     const divisao = splitCommission(totalCents, commissionPercent);
 
     return {
-      categoryId: params.categoryId,
+      flag: tabela.flag,
       distanceMeters: params.distanceMeters,
       durationSeconds: params.durationSeconds,
+      waitingSeconds: esperaSegundos,
       baseFareCents: tabela.baseFareCents,
+      chargedDistanceMeters: metrosCobrados,
+      chargedWaitingSeconds: esperaCobrada,
       distanceCents,
-      timeCents,
-      bookingFeeCents: tabela.bookingFeeCents,
       waitingCents,
       subtotalCents,
-      surgeMultiplier,
       totalCents,
+      minFareApplied,
       commissionPercent,
       commissionCents: divisao.commissionCents,
       driverEarningCents: divisao.driverEarningCents,
-      minFareApplied,
     };
   }
 
-  /** Multa de cancelamento tardio, conforme a tabela da categoria. */
-  async taxaDeCancelamento(categoryId: string): Promise<number> {
-    const tabela = await this.prisma.fareConfig.findFirst({
-      where: { categoryId, isActive: true },
-      orderBy: { validFrom: 'desc' },
-    });
-    return tabela?.cancellationFeeCents ?? 0;
+  /** Multa de cancelamento tardio, pela bandeira vigente. */
+  async taxaDeCancelamento(quando: Date = new Date()): Promise<number> {
+    const tabela = await this.tabelaVigente(quando);
+    return tabela.cancellationFeeCents;
   }
 
   /** Quanto a plataforma fica de um valor bruto. */
