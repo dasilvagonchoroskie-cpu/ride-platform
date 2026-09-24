@@ -1,120 +1,58 @@
 /* eslint-disable no-console */
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { FareFlag, PrismaClient, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-interface CategorySeed {
-  slug: string;
-  name: string;
-  description: string;
-  seats: number;
-  sortOrder: number;
-  fare: {
-    baseFareCents: number;
-    perKmCents: number;
-    perMinuteCents: number;
-    minFareCents: number;
-    bookingFeeCents: number;
-    cancellationFeeCents: number;
-    waitingPerMinuteCents: number;
-  };
-}
-
-const CATEGORIES: CategorySeed[] = [
+/**
+ * Bandeiras da plataforma.
+ *
+ * Modalidade unica: nao ha categoria de veiculo a escolher. O que muda o
+ * preco e a HORA da corrida.
+ *
+ * A bandeirada ja inclui o primeiro quilometro e os tres primeiros
+ * minutos parado. Passando disso, cobra-se so o excedente.
+ */
+const BANDEIRAS = [
   {
-    slug: 'moto',
-    name: 'Moto',
-    description: 'Rapido e economico para um passageiro',
-    seats: 1,
-    sortOrder: 1,
-    fare: { baseFareCents: 300, perKmCents: 120, perMinuteCents: 20, minFareCents: 600, bookingFeeCents: 100, cancellationFeeCents: 300, waitingPerMinuteCents: 30 },
+    flag: FareFlag.DIURNA,
+    startHour: 6,
+    endHour: 22,
+    baseFareCents: 1000,
+    perKmCents: 250,
+    waitingPerMinuteCents: 50,
+    freeDistanceMeters: 1000,
+    freeWaitingSeconds: 180,
+    minFareCents: 1000,
+    cancellationFeeCents: 500,
+    commissionPercent: 20,
   },
   {
-    slug: 'ride',
-    name: 'Ride',
-    description: 'Carro popular para ate 4 pessoas',
-    seats: 4,
-    sortOrder: 2,
-    fare: { baseFareCents: 500, perKmCents: 180, perMinuteCents: 30, minFareCents: 900, bookingFeeCents: 150, cancellationFeeCents: 500, waitingPerMinuteCents: 50 },
+    flag: FareFlag.NOTURNA,
+    startHour: 22,
+    endHour: 6,
+    baseFareCents: 2000,
+    perKmCents: 250,
+    waitingPerMinuteCents: 50,
+    freeDistanceMeters: 1000,
+    freeWaitingSeconds: 180,
+    minFareCents: 2000,
+    cancellationFeeCents: 500,
+    commissionPercent: 20,
   },
-  {
-    slug: 'comfort',
-    name: 'Comfort',
-    description: 'Carros mais novos e espacosos',
-    seats: 4,
-    sortOrder: 3,
-    fare: { baseFareCents: 700, perKmCents: 240, perMinuteCents: 40, minFareCents: 1200, bookingFeeCents: 200, cancellationFeeCents: 600, waitingPerMinuteCents: 60 },
-  },
-  {
-    slug: 'black',
-    name: 'Black',
-    description: 'Carros de luxo com motorista',
-    seats: 4,
-    sortOrder: 4,
-    fare: { baseFareCents: 1100, perKmCents: 380, perMinuteCents: 60, minFareCents: 2000, bookingFeeCents: 300, cancellationFeeCents: 900, waitingPerMinuteCents: 90 },
-  },
-  {
-    slug: 'van',
-    name: 'Van',
-    description: 'Ate 6 passageiros, ideal para grupos',
-    seats: 6,
-    sortOrder: 5,
-    fare: { baseFareCents: 900, perKmCents: 300, perMinuteCents: 45, minFareCents: 1800, bookingFeeCents: 250, cancellationFeeCents: 800, waitingPerMinuteCents: 70 },
-  },
-];
-
-const SETTINGS = [
-  { key: 'platform.commission_percent', value: 20, description: 'Comissao padrao da plataforma (%)' },
-  { key: 'ride.offer_ttl_seconds', value: 15, description: 'Tempo de resposta da oferta de corrida' },
-  { key: 'ride.search_radius_km', value: 3, description: 'Raio inicial de busca de motorista' },
-  { key: 'ride.max_search_radius_km', value: 15, description: 'Raio maximo de busca' },
-  { key: 'payout.min_cents', value: 5000, description: 'Valor minimo para saque (centavos)' },
-  { key: 'driver.location_interval_seconds', value: 5, description: 'Intervalo de envio de posicao do motorista' },
 ];
 
 async function main(): Promise<void> {
   console.log('Semeando banco...');
 
-  for (const category of CATEGORIES) {
-    const record = await prisma.vehicleCategory.upsert({
-      where: { slug: category.slug },
-      create: {
-        slug: category.slug,
-        name: category.name,
-        description: category.description,
-        seats: category.seats,
-        sortOrder: category.sortOrder,
-        isActive: true,
-      },
-      update: {
-        name: category.name,
-        description: category.description,
-        seats: category.seats,
-        sortOrder: category.sortOrder,
-        isActive: true,
-      },
+  for (const bandeira of BANDEIRAS) {
+    await prisma.fareConfig.upsert({
+      where: { flag: bandeira.flag },
+      create: { ...bandeira, isActive: true },
+      update: { ...bandeira, isActive: true },
     });
-
-    const activeFare = await prisma.fareConfig.findFirst({
-      where: { categoryId: record.id, isActive: true },
-    });
-
-    if (!activeFare) {
-      await prisma.fareConfig.create({
-        data: {
-          categoryId: record.id,
-          ...category.fare,
-          surgeEnabled: true,
-          maxSurgeMultiplier: 2,
-          commissionPercent: 20,
-          isActive: true,
-        },
-      });
-      console.log(`  tarifa criada: ${category.slug}`);
-    }
-
-    console.log(`  categoria ok: ${category.slug}`);
+    const reais = (bandeira.baseFareCents / 100).toFixed(2).replace('.', ',');
+    console.log(`  bandeira ${bandeira.flag}: R$ ${reais} das ${bandeira.startHour}h as ${bandeira.endHour}h`);
   }
 
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'Admin@123';
