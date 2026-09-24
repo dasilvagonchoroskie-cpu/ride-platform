@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { coordinatesSchema, uuidSchema } from './common.schema';
+import { coordinatesSchema } from './common.schema';
 
 /**
  * Um ponto da corrida: coordenada mais o endereco por extenso.
@@ -13,16 +13,21 @@ export const ridePointSchema = coordinatesSchema.extend({
   placeId: z.string().max(200).optional(),
 });
 
+/**
+ * Orcamento: so o ponto A e o ponto B.
+ *
+ * Nao ha categoria a escolher — a plataforma opera uma modalidade unica.
+ * A bandeira nao entra aqui de proposito: quem decide e a hora do
+ * servidor, nunca o aparelho.
+ */
 export const estimateRideSchema = z.object({
   pickup: ridePointSchema,
   dropoff: ridePointSchema,
-  categoryId: uuidSchema.optional(),
 });
 
 export const requestRideSchema = z.object({
   pickup: ridePointSchema,
   dropoff: ridePointSchema,
-  categoryId: uuidSchema,
   paymentMethodType: z
     .enum(['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'WALLET'])
     .default('CASH'),
