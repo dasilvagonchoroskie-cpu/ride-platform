@@ -15,7 +15,7 @@ on:
         required: true
         default: 'all'
         type: choice
-        options: ['all', 'mobile_passenger']
+        options: ['all', 'mobile_passenger', 'mobile_driver']
       build_type:
         description: 'Tipo de build'
         required: true
@@ -31,7 +31,6 @@ on:
 concurrency:
   group: android-apks-${{ github.ref }}
   cancel-in-progress: true
-
 env:
   FLUTTER_VERSION: '3.47.5'
   JAVA_VERSION: '17'
@@ -44,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [mobile_passenger]
+        app: [mobile_passenger, mobile_driver]
     steps:
       - uses: actions/checkout@v4
 
@@ -80,6 +79,10 @@ jobs:
             label: Passageiro
             artifact: ride-passenger-apk
             apk_name: ride-passenger
+          - app: mobile_driver
+            label: Motorista
+            artifact: ride-driver-apk
+            apk_name: ride-driver
     steps:
       - uses: actions/checkout@v4
 
@@ -111,8 +114,6 @@ jobs:
 
       - name: Compilar o APK
         working-directory: apps/${{ matrix.app }}
-        env:
-          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
         run: |
           set -euo pipefail
           if [ "${{ inputs.build_type || 'release' }}" = "debug" ]; then
@@ -122,8 +123,6 @@ jobs:
           fi
 
           flutter build apk --$BUILD_TYPE \
-            --dart-define=MAPS_API_KEY="${MAPS_API_KEY:-}" \
-            -PMAPS_API_KEY="${MAPS_API_KEY:-}"
 
       - name: Localizar o APK
         id: apk

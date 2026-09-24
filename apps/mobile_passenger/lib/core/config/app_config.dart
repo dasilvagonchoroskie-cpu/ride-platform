@@ -9,13 +9,6 @@ class AppConfig {
   static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: '');
   static const bool forceDemo = bool.fromEnvironment('FORCE_DEMO', defaultValue: false);
 
-  /// Chave do Google Maps SDK, injetada no build:
-  /// `--dart-define=MAPS_API_KEY=...`
-  static const String mapsApiKey = String.fromEnvironment('MAPS_API_KEY', defaultValue: '');
-
-  /// Sem chave, o mapa usa o renderizador estilizado proprio (nunca o
-  /// retangulo cinza do SDK sem credencial).
-  static bool get hasMaps => mapsApiKey.isNotEmpty;
 
   static const String appVersion = '0.1.0';
   static const Duration apiTimeout = Duration(seconds: 15);
