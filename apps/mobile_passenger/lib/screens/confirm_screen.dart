@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/demo_engine.dart';
@@ -11,8 +11,11 @@ import '../state/ride_state.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
-/// Selecao de categoria: mapa encolhe para os 40% superiores (mostrando a rota)
-/// e os 60% inferiores exibem a lista deslizante de opcoes de viagem.
+/// Confirmacao da viagem.
+///
+/// Modalidade unica: nao ha lista de opcoes a percorrer. O mapa mostra a
+/// rota em cima e embaixo aparece um card so, com o preco da bandeira
+/// vigente e o botao de confirmar.
 class ConfirmScreen extends StatefulWidget {
   const ConfirmScreen({super.key, required this.destination, required this.address});
 
@@ -24,31 +27,17 @@ class ConfirmScreen extends StatefulWidget {
 }
 
 class _ConfirmScreenState extends State<ConfirmScreen> {
-  RideCategory? _selected;
   PaymentOption _payment = DemoEngine.paymentMethods().first;
   bool _submitting = false;
 
-  @override
-  void initState() {
-    super.initState();
-    final categories = context.read<RideState>().categories;
-    if (categories.isNotEmpty) {
-      _selected = categories.length > 1 ? categories[1] : categories.first;
-    }
-  }
-
   Future<void> _confirm() async {
-    final category = _selected;
-    if (category == null) return;
-
     setState(() => _submitting = true);
 
     await context.read<RideState>().requestRide(
           origin: context.read<AppState>().coords,
           destination: widget.destination,
-          pickupAddress: 'Localizacao atual',
+          pickupAddress: 'Local de embarque (GPS)',
           dropoffAddress: widget.address,
-          category: category,
           paymentMethod: _payment.label,
         );
 
@@ -61,11 +50,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final ride = context.watch<RideState>();
-    final categories = ride.categories;
-
-    if (_selected == null && categories.isNotEmpty) {
-      _selected = categories.length > 1 ? categories[1] : categories.first;
-    }
+    final quote = ride.quote;
 
     final center = Coords(
       (app.coords.latitude + widget.destination.latitude) / 2,
@@ -133,7 +118,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Escolha uma viagem', style: SheetText.title),
+                            Text('Confirmar viagem', style: SheetText.title),
                             const SizedBox(height: Spacing.xs),
                             Text(
                               widget.address,
@@ -153,26 +138,19 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                   ),
                   const SizedBox(height: Spacing.sm),
 
-                  // Lista deslizante vertical de categorias
+                  // Card unico com o preco da bandeira vigente.
                   Expanded(
-                    child: ListView.builder(
+                    child: SingleChildScrollView(
                       padding: EdgeInsets.zero,
-                      itemCount: categories.length,
-                      itemBuilder: (context, index) {
-                        final category = categories[index];
-                        final isSelected = _selected?.id == category.id;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: Spacing.sm),
-                          child: _CategoryTile(
-                            category: category,
-                            selected: isSelected,
-                            onTap: () => setState(() => _selected = category),
-                          ),
-                        );
-                      },
+                      child: ride.estimating || quote == null
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: Spacing.xl),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          : _PriceCard(quote: quote),
                     ),
                   ),
+                  const SizedBox(height: Spacing.md),
 
                   // Forma de pagamento
                   GestureDetector(
@@ -208,12 +186,10 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                   // Botao de acao principal: preto, texto branco em negrito,
                   // largura total, na extremidade inferior com padding confortavel.
                   AppButton(
-                    label: _selected == null
-                        ? 'Confirmar'
-                        : 'Confirmar ${_selected!.name}',
+                    label: 'Confirmar corrida',
                     variant: AppButtonVariant.primary,
                     loading: _submitting,
-                    enabled: _selected != null,
+                    enabled: quote != null,
                     onPressed: _confirm,
                   ),
                 ],
@@ -268,75 +244,98 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
   }
 }
 
-/// Item da lista de categorias: imagem do carro a esquerda, nome e capacidade
-/// no centro, valor em destaque a direita. A categoria selecionada recebe
-/// borda preta espessa.
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
+/// Card unico com o preco da viagem.
+///
+/// Mostra a bandeira vigente e abre a conta: a bandeirada e, quando a
+/// viagem passa da franquia, quanto foi somado por distancia. O passageiro
+/// consegue conferir o valor em vez de so aceitar um numero.
+class _PriceCard extends StatelessWidget {
+  const _PriceCard({required this.quote});
 
-  final RideCategory category;
-  final bool selected;
-  final VoidCallback onTap;
+  final RideQuote quote;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.sheet,
-          borderRadius: BorderRadius.circular(Radii.sm),
-          // Borda preta espessa na categoria selecionada.
-          border: Border.all(
-            color: selected ? AppColors.sheetText : AppColors.sheetBorder,
-            width: selected ? 2.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            VehicleIcon(slug: category.slug),
-            const SizedBox(width: Spacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          category.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: SheetText.heading,
-                        ),
-                      ),
-                      const SizedBox(width: Spacing.sm),
-                      const Icon(Icons.person, size: 14, color: AppColors.sheetMuted),
-                      Text(
-                        '${category.seats}',
-                        style: SheetText.muted,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${category.etaMinutes} min de distancia',
-                    style: SheetText.muted,
-                  ),
-                ],
+    final noturna = quote.flag == FareFlag.noturna;
+
+    return Container(
+      padding: const EdgeInsets.all(Spacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.sheet,
+        borderRadius: BorderRadius.circular(Radii.sm),
+        border: Border.all(color: AppColors.sheetText, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                noturna ? Icons.nightlight_round : Icons.wb_sunny_outlined,
+                size: 18,
+                color: AppColors.sheetMuted,
               ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Text(
+                  'Bandeira ${quote.flag.label} - ${quote.flag.faixa}',
+                  style: SheetText.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.md),
+
+          Text(formatMoney(quote.priceCents), style: SheetText.price),
+          const SizedBox(height: Spacing.xs),
+          Text(
+            '${formatDistance(quote.distanceMeters.toDouble())} - cerca de '
+            '${(quote.durationSeconds / 60).round()} min',
+            style: SheetText.muted,
+          ),
+
+          const SizedBox(height: Spacing.md),
+          const Divider(height: 1, color: AppColors.sheetBorder),
+          const SizedBox(height: Spacing.md),
+
+          _LinhaConta(
+            rotulo: 'Bandeirada (ate 1,5 km inclusos)',
+            valor: formatMoney(quote.baseFareCents),
+          ),
+          if (!quote.somenteBandeirada) ...[
+            const SizedBox(height: Spacing.xs),
+            _LinhaConta(
+              rotulo: 'Distancia alem da franquia '
+                  '(${formatDistance(quote.chargedDistanceMeters.toDouble())})',
+              valor: formatMoney(quote.distanceCents),
             ),
-            const SizedBox(width: Spacing.sm),
-            Text(formatMoney(category.priceCents), style: SheetText.price),
           ],
-        ),
+
+          const SizedBox(height: Spacing.md),
+          Text(
+            quote.somenteBandeirada
+                ? 'A viagem cabe na franquia: paga so a bandeirada.'
+                : 'Tempo parado esperando so entra na conta depois de 3 minutos.',
+            style: SheetText.muted,
+          ),
+        ],
       ),
     );
   }
+}
+
+class _LinhaConta extends StatelessWidget {
+  const _LinhaConta({required this.rotulo, required this.valor});
+
+  final String rotulo;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Expanded(child: Text(rotulo, style: SheetText.muted)),
+          const SizedBox(width: Spacing.sm),
+          Text(valor, style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      );
 }
