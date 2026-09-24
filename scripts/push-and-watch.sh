@@ -11,7 +11,7 @@
 # O script:
 #   1. cria o repositorio remoto se nao existir;
 #   2. faz o push da branch atual;
-#   3. dispara o workflow "Android APK — App do Passageiro";
+#   3. dispara o workflow "Android APKs";
 #   4. acompanha a execucao ate o fim;
 #   5. baixa o APK e imprime o caminho local.
 # ============================================================
@@ -21,7 +21,7 @@ set -euo pipefail
 : "${GITHUB_OWNER:?Defina GITHUB_OWNER (seu usuario ou organizacao)}"
 GITHUB_REPO="${GITHUB_REPO:-ride-platform}"
 BRANCH="${BRANCH:-main}"
-WORKFLOW_FILE="android-passenger.yml"
+WORKFLOW_FILE="android-apks.yml"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -46,7 +46,7 @@ git branch -M "$BRANCH"
 git push -u origin "$BRANCH"
 
 echo "==> Disparando o workflow"
-gh workflow run "$WORKFLOW_FILE" --ref "$BRANCH" -f build_type=release
+gh workflow run "$WORKFLOW_FILE" --ref "$BRANCH" -f app=all -f build_type=release
 
 sleep 8
 RUN_ID="$(gh run list --workflow="$WORKFLOW_FILE" --branch "$BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId')"
@@ -60,7 +60,7 @@ gh run watch "$RUN_ID" --exit-status || {
 
 echo "==> Baixando o APK"
 rm -rf ./dist-apk && mkdir -p ./dist-apk
-gh run download "$RUN_ID" -n ride-passenger-apk -D ./dist-apk
+gh run download "$RUN_ID" -D ./dist-apk
 
 APK="$(find ./dist-apk -name '*.apk' | head -n 1)"
 echo ""

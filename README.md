@@ -161,7 +161,7 @@ pnpm --filter @ride/backend test:e2e    # exige infra no ar + banco migrado e se
 | F2 | Pricing (tarifas + surge), Geo (rotas/ETA com cache), Rides (maquina de estados) |
 | F3 | Tempo real (Socket.IO), matching com PostGIS + Redis GEO, ofertas com expiracao |
 | F4 | Pagamentos (Asaas/Stripe), carteira, extrato e saque via Pix |
-| F5 | App do passageiro (React Native + Expo) |
+| **F5** | App do passageiro (React Native + Expo) — **entregue**, com APK via GitHub Actions |
 | F6 | App do motorista (React Native + Expo) |
 | F7 | Painel admin (Next.js) |
 | F8 | Notificacoes push, avaliacoes, seguranca, testes E2E completos |
