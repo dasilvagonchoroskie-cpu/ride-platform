@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 
 /// Variantes de botao.
 ///
@@ -9,7 +9,7 @@ import '../core/theme/uber_theme.dart';
 /// `accent`   -> verde #27A770 (confirmacoes e status)
 enum AppButtonVariant { primary, inverted, secondary, accent, ghost, danger }
 
-/// Botao de acao principal no padrao Uber: **largura total** (block button),
+/// Botao de acao principal no da plataforma: **largura total** (block button),
 /// altura confortavel e texto em negrito.
 class AppButton extends StatelessWidget {
   const AppButton({
