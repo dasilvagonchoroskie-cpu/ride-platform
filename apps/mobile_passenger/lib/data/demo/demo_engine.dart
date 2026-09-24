@@ -12,13 +12,12 @@ class DemoEngine {
 
   static final math.Random _random = math.Random();
 
-  static const List<Map<String, Object>> _categoryBase = [
-    {'slug': 'moto', 'name': 'Moto', 'description': 'Rapido e economico', 'seats': 1, 'base': 300, 'perKm': 120, 'perMin': 20, 'min': 600, 'icon': 'bike'},
-    {'slug': 'ride', 'name': 'Viagem', 'description': 'Carro popular, ate 4', 'seats': 4, 'base': 500, 'perKm': 180, 'perMin': 30, 'min': 900, 'icon': 'car'},
-    {'slug': 'comfort', 'name': 'Viagem', 'description': 'Mais novo e espacoso', 'seats': 4, 'base': 700, 'perKm': 240, 'perMin': 40, 'min': 1200, 'icon': 'car'},
-    {'slug': 'black', 'name': 'Viagem', 'description': 'Luxo com motorista', 'seats': 4, 'base': 1100, 'perKm': 380, 'perMin': 60, 'min': 2000, 'icon': 'car'},
-    {'slug': 'van', 'name': 'Van', 'description': 'Ate 6 passageiros', 'seats': 6, 'base': 900, 'perKm': 300, 'perMin': 45, 'min': 1800, 'icon': 'bus'},
-  ];
+  /// Tabela de bandeiras — a mesma do servidor, para que a demonstracao
+  /// mostre o preco que o passageiro vai pagar de verdade.
+  static const int _bandeiradaDiurnaCents = 1000;
+  static const int _bandeiradaNoturnaCents = 2000;
+  static const int _porKmCents = 250;
+  static const int _franquiaMetros = 1500;
 
   static const List<List<String>> _driverPool = [
     ['d1', 'Carlos Mendes', '4.92', '3120', 'Toyota Corolla', 'FKR-2A18', 'Prata'],
@@ -71,39 +70,40 @@ class DemoEngine {
     return list;
   }
 
-  static EstimateResult estimate(Coords origin, Coords destination) {
+  /// Qual bandeira vale agora. Na demonstracao usa-se o relogio do
+  /// aparelho; valendo, quem decide e o servidor.
+  static FareFlag bandeiraAgora() {
+    final h = DateTime.now().hour;
+    return (h >= 22 || h < 6) ? FareFlag.noturna : FareFlag.diurna;
+  }
+
+  static RideQuote _orcar(Coords origin, Coords destination) {
     final km = math.max(0.8, distanceKm(origin, destination));
     final distanceMeters = (km * 1000).round();
-    // Velocidade media urbana de ~24 km/h.
     final durationSeconds = ((km / 24) * 3600).round();
 
-    final categories = _categoryBase.map((base) {
-      final raw = (base['base'] as int) +
-          (base['perKm'] as int) * km +
-          (base['perMin'] as int) * (durationSeconds / 60);
-      final min = base['min'] as int;
-      final price = math.max(min, (raw / 10).round() * 10);
-      final slug = base['slug'] as String;
+    final flag = bandeiraAgora();
+    final bandeirada =
+        flag == FareFlag.noturna ? _bandeiradaNoturnaCents : _bandeiradaDiurnaCents;
 
-      return RideCategory(
-        id: slug,
-        slug: slug,
-        name: base['name'] as String,
-        description: base['description'] as String,
-        seats: base['seats'] as int,
-        etaMinutes: math.max(1, 2 + _random.nextInt(6)),
-        priceCents: price,
-        priceRangeCents: [price, (price * 1.15).round()],
-        icon: base['icon'] as String,
-      );
-    }).toList();
+    // A bandeirada ja cobre a franquia: so o excedente e somado.
+    final metrosCobrados = math.max(0, distanceMeters - _franquiaMetros);
+    final porDistancia = ((metrosCobrados / 1000) * _porKmCents).round();
 
-    return EstimateResult(
-      categories: categories,
+    return RideQuote(
+      flag: flag,
+      priceCents: bandeirada + porDistancia,
+      baseFareCents: bandeirada,
+      distanceCents: porDistancia,
+      chargedDistanceMeters: metrosCobrados,
       distanceMeters: distanceMeters,
       durationSeconds: durationSeconds,
+      etaMinutes: math.max(1, 2 + _random.nextInt(6)),
     );
   }
+
+  static EstimateResult estimate(Coords origin, Coords destination) =>
+      EstimateResult(quote: _orcar(origin, destination));
 
   static DriverInfo _driver(int index, Coords position) {
     final row = _driverPool[index % _driverPool.length];
@@ -134,10 +134,10 @@ class DemoEngine {
     required Coords destination,
     required String pickupAddress,
     required String dropoffAddress,
-    required RideCategory category,
     required String paymentMethod,
   }) {
     _rideCounter += 1;
+    final orcamento = _orcar(origin, destination);
     final km = math.max(0.8, distanceKm(origin, destination));
 
     return Ride(
@@ -146,10 +146,10 @@ class DemoEngine {
       status: RideStatus.searching,
       pickup: RidePlace(address: pickupAddress, coords: origin),
       dropoff: RidePlace(address: dropoffAddress, coords: destination),
-      category: category,
+      fareFlag: orcamento.flag,
       distanceMeters: (km * 1000).round(),
       durationSeconds: ((km / 24) * 3600).round(),
-      fareCents: category.priceCents,
+      fareCents: orcamento.priceCents,
       paymentMethod: paymentMethod,
       pin: '${1000 + _random.nextInt(8999)}',
       createdAt: DateTime.now().toIso8601String(),
@@ -170,7 +170,6 @@ class DemoEngine {
     return List<Ride>.generate(places.length, (index) {
       final place = places[index];
       final result = estimate(origin, place.coords);
-      final category = result.categories[index % result.categories.length];
       final finishedAt =
           DateTime.now().subtract(Duration(hours: (index + 1) * 26)).toIso8601String();
 
@@ -180,11 +179,11 @@ class DemoEngine {
         status: RideStatus.completed,
         pickup: RidePlace(address: _addresses.first, coords: origin),
         dropoff: RidePlace(address: place.address, coords: place.coords),
-        category: category,
+        fareFlag: result.quote.flag,
         driver: _driver(index, place.coords),
         distanceMeters: result.distanceMeters,
         durationSeconds: result.durationSeconds,
-        fareCents: category.priceCents,
+        fareCents: result.quote.priceCents,
         paymentMethod: paymentLabels[index % paymentLabels.length],
         pin: '${1000 + index * 137}',
         createdAt: finishedAt,
