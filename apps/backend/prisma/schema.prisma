@@ -325,30 +325,10 @@ model DriverDocument {
   @@map("driver_documents")
 }
 
-model VehicleCategory {
-  id            String   @id @default(uuid()) @db.Uuid
-  slug          String   @unique @db.VarChar(40)
-  name          String   @db.VarChar(60)
-  description   String?  @db.VarChar(200)
-  seats         Int      @default(4)
-  iconUrl       String?  @map("icon_url")
-  sortOrder     Int      @default(0) @map("sort_order")
-  isActive      Boolean  @default(true) @map("is_active")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  vehicles   Vehicle[]
-  fareConfigs FareConfig[]
-  rides      Ride[]
-
-  @@index([isActive, sortOrder])
-  @@map("vehicle_categories")
-}
 
 model Vehicle {
   id         String   @id @default(uuid()) @db.Uuid
   driverId   String   @map("driver_id") @db.Uuid
-  categoryId String   @map("category_id") @db.Uuid
   plate      String   @unique @db.VarChar(8)
   brand      String   @db.VarChar(60)
   model      String   @db.VarChar(60)
@@ -359,11 +339,9 @@ model Vehicle {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   driver   Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  category VehicleCategory @relation(fields: [categoryId], references: [id])
   rides    Ride[]
 
   @@index([driverId, isActive])
-  @@index([categoryId])
   @@map("vehicles")
 }
 
@@ -396,8 +374,10 @@ model Ride {
   passengerId       String             @map("passenger_id") @db.Uuid
   driverId          String?            @map("driver_id") @db.Uuid
   vehicleId         String?            @map("vehicle_id") @db.Uuid
-  categoryId        String             @map("category_id") @db.Uuid
   status            RideStatus         @default(REQUESTED)
+  /// Bandeira vigente no instante do pedido, gravada na corrida para que
+  /// o historico continue explicavel mesmo se a tabela mudar depois.
+  fareFlag          FareFlag           @map("fare_flag")
 
   pickupAddress     String             @map("pickup_address") @db.VarChar(300)
   pickupLat         Float              @map("pickup_lat")
@@ -415,8 +395,11 @@ model Ride {
 
   estimatedFareCents Int               @map("estimated_fare_cents")
   finalFareCents     Int?              @map("final_fare_cents")
-  surgeMultiplier    Decimal           @default(1.00) @map("surge_multiplier") @db.Decimal(4, 2)
   commissionPercent  Decimal           @default(20.00) @map("commission_percent") @db.Decimal(5, 2)
+  /// Quanto passou da carencia e entrou na conta. Guardado para que o
+  /// motorista consiga conferir a cobranca linha por linha.
+  chargedDistanceMeters Int             @default(0) @map("charged_distance_meters")
+  chargedWaitingSeconds Int             @default(0) @map("charged_waiting_seconds")
   commissionCents    Int               @default(0) @map("commission_cents")
   driverEarningCents Int               @default(0) @map("driver_earning_cents")
   discountCents      Int               @default(0) @map("discount_cents")
@@ -441,7 +424,6 @@ model Ride {
   passenger     User                @relation("RidePassenger", fields: [passengerId], references: [id])
   driver        Driver?             @relation(fields: [driverId], references: [id], onDelete: SetNull)
   vehicle       Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  category      VehicleCategory     @relation(fields: [categoryId], references: [id])
   coupon        Coupon?             @relation(fields: [couponId], references: [id], onDelete: SetNull)
   stops         RideStop[]
   statusHistory RideStatusHistory[]
@@ -513,46 +495,49 @@ model RideOffer {
 
 // ------------------------- PRECIFICACAO -------------------------
 
+/// Bandeira do horario. Nomes em portugues porque aparecem no painel e
+/// no recibo do passageiro.
+enum FareFlag {
+  DIURNA
+  NOTURNA
+}
+
+/// Tabela de precos, uma linha por bandeira.
+///
+/// A bandeirada ja cobre uma carencia: o primeiro quilometro e os
+/// primeiros minutos de espera estao inclusos. So o que passa disso e
+/// cobrado a mais — e cobra-se apenas o excedente, nao o trajeto todo.
 model FareConfig {
-  id                  String   @id @default(uuid()) @db.Uuid
-  categoryId          String   @map("category_id") @db.Uuid
-  baseFareCents       Int      @map("base_fare_cents")
-  perKmCents          Int      @map("per_km_cents")
-  perMinuteCents      Int      @map("per_minute_cents")
-  minFareCents        Int      @map("min_fare_cents")
-  bookingFeeCents     Int      @default(0) @map("booking_fee_cents")
-  cancellationFeeCents Int     @default(0) @map("cancellation_fee_cents")
-  waitingPerMinuteCents Int    @default(0) @map("waiting_per_minute_cents")
-  surgeEnabled        Boolean  @default(true) @map("surge_enabled")
-  maxSurgeMultiplier  Decimal  @default(2.00) @map("max_surge_multiplier") @db.Decimal(4, 2)
-  commissionPercent   Decimal  @default(20.00) @map("commission_percent") @db.Decimal(5, 2)
-  isActive            Boolean  @default(true) @map("is_active")
-  validFrom           DateTime @default(now()) @map("valid_from")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                    String   @id @default(uuid()) @db.Uuid
+  flag                  FareFlag @unique
 
-  category VehicleCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  /// Faixa de horario em que esta bandeira vale, pela hora do servidor.
+  /// A noturna atravessa a meia-noite: comeca as 22 e termina as 6.
+  startHour             Int      @map("start_hour")
+  endHour               Int      @map("end_hour")
 
-  @@index([categoryId, isActive])
+  /// Bandeirada: valor fixo cobrado assim que a corrida comeca.
+  baseFareCents         Int      @map("base_fare_cents")
+
+  perKmCents            Int      @map("per_km_cents")
+  waitingPerMinuteCents Int      @default(0) @map("waiting_per_minute_cents")
+
+  /// Carencia inclusa na bandeirada.
+  freeDistanceMeters    Int      @default(1000) @map("free_distance_meters")
+  freeWaitingSeconds    Int      @default(180) @map("free_waiting_seconds")
+
+  minFareCents          Int      @map("min_fare_cents")
+  cancellationFeeCents  Int      @default(0) @map("cancellation_fee_cents")
+  commissionPercent     Decimal  @default(20.00) @map("commission_percent") @db.Decimal(5, 2)
+
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
   @@map("fare_configs")
 }
 
-/// Zonas de tarifa dinamica. `boundary` e geography(Polygon,4326) e nao
-/// aparece no Prisma Client: manipulacao via SQL cru.
-model SurgeZone {
-  id             String                      @id @default(uuid()) @db.Uuid
-  name           String                      @db.VarChar(80)
-  boundary       Unsupported("geography(Polygon, 4326)")
-  multiplier     Decimal                     @default(1.00) @db.Decimal(4, 2)
-  isActive       Boolean                     @default(true) @map("is_active")
-  startsAt       DateTime?                   @map("starts_at")
-  endsAt         DateTime?                   @map("ends_at")
-  createdAt      DateTime                    @default(now()) @map("created_at")
-  updatedAt      DateTime                    @updatedAt @map("updated_at")
-
-  @@index([isActive])
-  @@map("surge_zones")
-}
 
 model Coupon {
   id             String   @id @default(uuid()) @db.Uuid
