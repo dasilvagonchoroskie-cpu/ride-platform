@@ -61,44 +61,20 @@ export class RidesService {
 
   async estimar(input: EstimateRideInput) {
     const rota = this.fare.estimarRota(input.pickup, input.dropoff);
-    const categorias = await this.prisma.vehicleCategory.findMany({
-      where: { isActive: true, ...(input.categoryId ? { id: input.categoryId } : {}) },
-      orderBy: { sortOrder: 'asc' },
+    const orcamento = await this.fare.calcular({
+      distanceMeters: rota.distanceMeters,
+      durationSeconds: rota.durationSeconds,
     });
-
-    if (categorias.length === 0) {
-      throw BusinessException.notFound('Nenhuma categoria de veiculo disponivel.');
-    }
-
-    const opcoes = [];
-    for (const categoria of categorias) {
-      try {
-        const orcamento = await this.fare.calcular({
-          categoryId: categoria.id,
-          distanceMeters: rota.distanceMeters,
-          durationSeconds: rota.durationSeconds,
-          pickupLat: input.pickup.latitude,
-          pickupLng: input.pickup.longitude,
-        });
-        opcoes.push({
-          categoryId: categoria.id,
-          categoryName: categoria.name,
-          estimatedFareCents: orcamento.totalCents,
-          surgeMultiplier: orcamento.surgeMultiplier,
-          distanceMeters: orcamento.distanceMeters,
-          durationSeconds: orcamento.durationSeconds,
-        });
-      } catch {
-        // Categoria sem tabela de preco vigente apenas nao aparece para o
-        // passageiro, em vez de derrubar a consulta inteira.
-        this.logger.warn(`Categoria ${categoria.id} sem tabela de precos ativa.`);
-      }
-    }
-
-    if (opcoes.length === 0) {
-      throw BusinessException.notFound('Nenhuma categoria com tabela de precos ativa.');
-    }
-    return { options: opcoes };
+    return {
+      flag: orcamento.flag,
+      estimatedFareCents: orcamento.totalCents,
+      baseFareCents: orcamento.baseFareCents,
+      distanceCents: orcamento.distanceCents,
+      distanceMeters: orcamento.distanceMeters,
+      durationSeconds: orcamento.durationSeconds,
+      chargedDistanceMeters: orcamento.chargedDistanceMeters,
+      minFareApplied: orcamento.minFareApplied,
+    };
   }
 
   // ------------------------------------------------------------------
@@ -117,12 +93,11 @@ export class RidesService {
     }
 
     const rota = this.fare.estimarRota(input.pickup, input.dropoff);
+    const pedidoEm = new Date();
     const orcamento = await this.fare.calcular({
-      categoryId: input.categoryId,
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
-      pickupLat: input.pickup.latitude,
-      pickupLng: input.pickup.longitude,
+      quando: pedidoEm,
     });
 
     const corrida = await this.prisma.withTransaction(async (tx) => {
@@ -130,8 +105,8 @@ export class RidesService {
         data: {
           code: await this.codigoUnico(tx),
           passengerId,
-          categoryId: input.categoryId,
           status: RideStatus.REQUESTED,
+          fareFlag: orcamento.flag,
           pickupAddress: input.pickup.address,
           pickupLat: input.pickup.latitude,
           pickupLng: input.pickup.longitude,
@@ -143,7 +118,6 @@ export class RidesService {
           distanceMeters: orcamento.distanceMeters,
           durationSeconds: orcamento.durationSeconds,
           estimatedFareCents: orcamento.totalCents,
-          surgeMultiplier: new Prisma.Decimal(orcamento.surgeMultiplier),
           commissionPercent: new Prisma.Decimal(orcamento.commissionPercent),
           paymentMethodType: input.paymentMethodType,
         },
@@ -374,13 +348,13 @@ export class RidesService {
     const distancia = input.distanceMeters ?? corrida.distanceMeters;
     const duracao = input.durationSeconds ?? corrida.durationSeconds;
 
+    // A bandeira e a do PEDIDO, nao a do instante em que terminou: quem
+    // chamou as 21h55 nao paga noturna por ter descido as 22h05.
     const orcamento = await this.fare.calcular({
-      categoryId: corrida.categoryId,
       distanceMeters: distancia,
       durationSeconds: duracao,
       waitingSeconds: input.waitingSeconds,
-      pickupLat: corrida.pickupLat,
-      pickupLng: corrida.pickupLng,
+      flag: corrida.fareFlag,
     });
 
     return this.prisma.withTransaction(async (tx) => {
@@ -394,6 +368,8 @@ export class RidesService {
           finalFareCents: orcamento.totalCents,
           commissionCents: orcamento.commissionCents,
           driverEarningCents: orcamento.driverEarningCents,
+          chargedDistanceMeters: orcamento.chargedDistanceMeters,
+          chargedWaitingSeconds: orcamento.chargedWaitingSeconds,
         },
       });
 
@@ -447,6 +423,12 @@ export class RidesService {
       return {
         rideId,
         code: corrida.code,
+        flag: orcamento.flag,
+        baseFareCents: orcamento.baseFareCents,
+        distanceCents: orcamento.distanceCents,
+        waitingCents: orcamento.waitingCents,
+        chargedDistanceMeters: orcamento.chargedDistanceMeters,
+        chargedWaitingSeconds: orcamento.chargedWaitingSeconds,
         finalFareCents: orcamento.totalCents,
         commissionCents: orcamento.commissionCents,
         driverEarningCents: orcamento.driverEarningCents,
@@ -488,7 +470,7 @@ export class RidesService {
     // uma corrida que ninguem aceitou.
     let multaCents = 0;
     if (ehPassageiro && corrida.driverId) {
-      multaCents = await this.fare.taxaDeCancelamento(corrida.categoryId);
+      multaCents = await this.fare.taxaDeCancelamento();
     }
 
     await this.prisma.withTransaction(async (tx) => {
@@ -555,7 +537,6 @@ export class RidesService {
           },
         },
         vehicle: { select: { plate: true, brand: true, model: true, color: true } },
-        category: { select: { id: true, name: true } },
       },
     });
     if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
@@ -574,7 +555,6 @@ export class RidesService {
         orderBy: { requestedAt: 'desc' },
         skip: (filtro.page - 1) * filtro.pageSize,
         take: filtro.pageSize,
-        include: { category: { select: { name: true } } },
       }),
     ]);
     return { total, page: filtro.page, pageSize: filtro.pageSize, items: itens };
