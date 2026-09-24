@@ -94,7 +94,7 @@ class _CompleteScreenState extends State<CompleteScreen> {
                       value: formatDistance(ride.distanceMeters.toDouble()),
                     ),
                     _ReceiptRow(label: 'Pagamento', value: ride.paymentMethod),
-                    _ReceiptRow(label: 'Categoria', value: ride.category.name),
+                    _ReceiptRow(label: 'Bandeira', value: ride.fareFlag.label),
                     const AppDivider(),
                     const Text(
                       'DESTINO',
