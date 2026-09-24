@@ -22,6 +22,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { HealthModule } from './modules/health/health.module';
 import { RidesModule } from './modules/rides/rides.module';
+import { TariffsModule } from './modules/tariffs/tariffs.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { RidesModule } from './modules/rides/rides.module';
     DocumentsModule,
     VehiclesModule,
     RidesModule,
+    TariffsModule,
     HealthModule,
   ],
   providers: [
