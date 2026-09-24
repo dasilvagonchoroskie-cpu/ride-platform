@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/models/driver_models.dart';
@@ -202,9 +202,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: Spacing.sm),
         for (final entry in const [
           ['moto', 'Moto'],
-          ['ride', 'UberX'],
-          ['comfort', 'Uber Comfort'],
-          ['black', 'Uber Black'],
+          ['ride', 'Viagem'],
+          ['comfort', 'Viagem'],
+          ['black', 'Viagem'],
           ['van', 'Van'],
         ])
           Padding(
