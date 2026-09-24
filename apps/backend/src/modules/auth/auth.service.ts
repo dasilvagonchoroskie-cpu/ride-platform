@@ -35,7 +35,7 @@ export class AuthService {
     return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip);
   }
 
-  /** Login por OTP: cria a conta na primeira entrada (fluxo Uber). */
+  /** Login por OTP: cria a conta na primeira entrada (entra pelo telefone, sem senha). */
   async verifyOtp(params: {
     phone?: string;
     email?: string;
