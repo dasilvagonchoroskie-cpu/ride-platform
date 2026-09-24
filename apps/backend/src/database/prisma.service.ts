@@ -96,23 +96,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     `;
   }
 
-  /** Verifica se um ponto esta dentro de alguma zona de surge ativa. */
-  async findSurgeMultiplier(latitude: number, longitude: number): Promise<number> {
-    const rows = await this.$queryRaw<Array<{ multiplier: number }>>`
-      SELECT multiplier::float AS multiplier
-      FROM surge_zones
-      WHERE is_active = TRUE
-        AND (starts_at IS NULL OR starts_at <= NOW())
-        AND (ends_at IS NULL OR ends_at >= NOW())
-        AND ST_Contains(
-          boundary::geometry,
-          ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
-        )
-      ORDER BY multiplier DESC
-      LIMIT 1
-    `;
-    return rows.length > 0 ? Number(rows[0].multiplier) : 1;
-  }
 
   async isHealthy(): Promise<boolean> {
     try {
