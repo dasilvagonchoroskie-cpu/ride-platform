@@ -12,7 +12,6 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.3.3
   geolocator: ^13.0.2
-  flutter_local_notifications: ^18.0.1
   url_launcher: ^6.3.1
   pdf: ^3.11.1
   qr_flutter: ^4.1.0
@@ -20,7 +19,6 @@ dependencies:
   share_plus: ^10.1.2
   intl: ^0.19.0
   crypto: ^3.0.7
-  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:
