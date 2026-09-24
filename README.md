@@ -1,6 +1,6 @@
 # Ride Platform
 
-Plataforma de transporte de passageiros sob demanda (estilo Uber): **app do passageiro**, **app do motorista** e **painel administrativo**, sobre um **backend unico** e um **banco unificado**.
+Plataforma de transporte de passageiros sob demanda (sob demanda): **app do passageiro**, **app do motorista** e **painel administrativo**, sobre um **backend unico** e um **banco unificado**.
 
 **Modulo 1 (esta entrega): Backend core** — autenticacao, usuarios, motoristas, documentos e veiculos.
 
