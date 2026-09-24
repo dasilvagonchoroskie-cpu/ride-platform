@@ -165,10 +165,10 @@ class VehicleSummary {
 
   String get categoryName => switch (categorySlug) {
         'moto' => 'Moto',
-        'comfort' => 'Uber Comfort',
-        'black' => 'Uber Black',
+        'comfort' => 'Viagem',
+        'black' => 'Viagem',
         'van' => 'Van',
-        _ => 'UberX',
+        _ => 'Viagem',
       };
 }
 
@@ -249,10 +249,10 @@ class FareSettings {
 
   String get categoryName => switch (categorySlug) {
         'moto' => 'Moto',
-        'comfort' => 'Uber Comfort',
-        'black' => 'Uber Black',
+        'comfort' => 'Viagem',
+        'black' => 'Viagem',
         'van' => 'Van',
-        _ => 'UberX',
+        _ => 'Viagem',
       };
 
   FareSettings copyWith({
