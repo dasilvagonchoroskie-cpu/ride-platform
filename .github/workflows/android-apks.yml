@@ -15,7 +15,7 @@ on:
         required: true
         default: 'all'
         type: choice
-        options: ['all', 'mobile_passenger', 'mobile_driver']
+        options: ['all', 'mobile_passenger', 'mobile_driver', 'central_app']
       build_type:
         description: 'Tipo de build'
         required: true
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [mobile_passenger, mobile_driver]
+        app: [mobile_passenger, mobile_driver, central_app]
     steps:
       - uses: actions/checkout@v4
 
@@ -83,6 +83,10 @@ jobs:
             label: Motorista
             artifact: ride-driver-apk
             apk_name: ride-driver
+          - app: central_app
+            label: Central
+            artifact: fortaleza-central-apk
+            apk_name: fortaleza-central
     steps:
       - uses: actions/checkout@v4
 

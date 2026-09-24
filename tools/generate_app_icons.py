@@ -256,6 +256,7 @@ BACKGROUND_HEX = '#1F4E8C'
 APPS = {
     'mobile_passenger': 'passenger',
     'mobile_driver': 'driver',
+    'central_app': 'central',
 }
 
 
