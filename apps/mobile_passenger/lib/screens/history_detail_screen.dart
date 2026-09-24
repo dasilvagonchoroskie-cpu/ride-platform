@@ -72,7 +72,7 @@ class HistoryDetailScreen extends StatelessWidget {
                       value: formatDistance(ride.distanceMeters.toDouble()),
                     ),
                     _DetailRow(label: 'Duracao', value: formatDuration(ride.durationSeconds)),
-                    _DetailRow(label: 'Categoria', value: ride.category.name),
+                    _DetailRow(label: 'Bandeira', value: ride.fareFlag.label),
                     _DetailRow(label: 'Pagamento', value: ride.paymentMethod),
                     const AppDivider(),
                     Row(
