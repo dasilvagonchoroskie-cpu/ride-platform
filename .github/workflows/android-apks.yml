@@ -198,9 +198,19 @@ jobs:
 
           set_prop reactNativeArchitectures "${{ env.TARGET_ABIS }}"
           set_prop newArchEnabled false
+          # O Compose Compiler 1.5.15 exige Kotlin 1.9.25; o template do Expo
+          # fixa 1.9.24 e o Gradle falha com erro de compatibilidade.
+          set_prop android.kotlinVersion 1.9.25
           set_prop org.gradle.jvmargs "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
           set_prop org.gradle.parallel true
           set_prop org.gradle.caching true
+
+          # Reforco: alguns templates escrevem a versao direto no build.gradle.
+          if [ -f build.gradle ]; then
+            sed -i -E "s/(kotlinVersion *= *['\"])[0-9.]+(['\"])/\11.9.25\2/" build.gradle || true
+            echo "--- kotlinVersion apos o ajuste ---"
+            grep -n 'kotlinVersion' build.gradle | head -5 || true
+          fi
 
           echo "--- gradle.properties ---"
           cat gradle.properties
