@@ -109,7 +109,6 @@ class DriverState extends ChangeNotifier {
   Future<void> registerVehicle(VehicleInfo info) async {
     vehicle = info;
     await AppStorage.write(AppStorage.vehicle, jsonEncode({
-      'categorySlug': info.categorySlug,
       'brand': info.brand,
       'model': info.model,
       'year': info.year,
@@ -145,7 +144,6 @@ class DriverState extends ChangeNotifier {
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       vehicle = VehicleInfo(
-        categorySlug: json['categorySlug'] as String? ?? 'ride',
         brand: json['brand'] as String? ?? '',
         model: json['model'] as String? ?? '',
         year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
