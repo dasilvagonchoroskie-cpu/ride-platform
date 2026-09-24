@@ -126,7 +126,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '${item.category.name} - ${formatDistance(item.distanceMeters.toDouble())}',
+                                  'Bandeira ${item.fareFlag.label} - ${formatDistance(item.distanceMeters.toDouble())}',
                                   style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                                 ),
                                 Text(
