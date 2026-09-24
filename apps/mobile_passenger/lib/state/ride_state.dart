@@ -18,7 +18,8 @@ class RideState extends ChangeNotifier {
   List<Coords> driverRoute = [];
   List<Coords> tripRoute = [];
   List<Ride> history = [];
-  List<RideCategory> categories = [];
+  /// O orcamento da viagem. Um so, porque a modalidade e unica.
+  RideQuote? quote;
   List<DriverInfo> nearbyDrivers = [];
   bool estimating = false;
   String? error;
@@ -30,17 +31,17 @@ class RideState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<RideCategory>> estimate(Coords origin, Coords destination) async {
+  Future<RideQuote> estimate(Coords origin, Coords destination) async {
     estimating = true;
     notifyListeners();
 
     final result = await _repository.estimate(origin, destination);
-    categories = result.categories;
+    quote = result.quote;
     nearbyDrivers = _repository.nearbyDrivers(origin);
     estimating = false;
     notifyListeners();
 
-    return categories;
+    return result.quote;
   }
 
   Future<Ride> requestRide({
@@ -48,7 +49,6 @@ class RideState extends ChangeNotifier {
     required Coords destination,
     required String pickupAddress,
     required String dropoffAddress,
-    required RideCategory category,
     required String paymentMethod,
   }) async {
     final ride = await _repository.createRide(
@@ -56,7 +56,6 @@ class RideState extends ChangeNotifier {
       destination: destination,
       pickupAddress: pickupAddress,
       dropoffAddress: dropoffAddress,
-      category: category,
       paymentMethod: paymentMethod,
     );
 
