@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/config/app_config.dart';
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 import '../widgets/ui.dart';
@@ -75,7 +75,7 @@ class AccountScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              VehicleIcon(slug: vehicle.categorySlug, onLight: false, size: 42),
+                              const VehicleIcon(slug: 'ride', onLight: false, size: 42),
                               const SizedBox(width: Spacing.md),
                               Expanded(
                                 child: Column(
@@ -83,7 +83,7 @@ class AccountScreen extends StatelessWidget {
                                   children: [
                                     Text(vehicle.description, style: AppText.bodyStrong),
                                     Text(
-                                      '${vehicle.categoryName} - ${vehicle.color}',
+                                      vehicle.color,
                                       style: AppText.caption.copyWith(color: AppColors.textMuted),
                                     ),
                                   ],
