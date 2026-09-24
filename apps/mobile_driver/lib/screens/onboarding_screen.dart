@@ -29,7 +29,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _year = TextEditingController(text: '2022');
   final _color = TextEditingController(text: 'Prata');
   final _plate = TextEditingController(text: 'ABC1D23');
-  String _categorySlug = 'ride';
 
   String? _error;
 
@@ -74,7 +73,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     await context.read<DriverState>().registerVehicle(
           VehicleInfo(
-            categorySlug: _categorySlug,
             brand: _brand.text.trim(),
             model: _model.text.trim(),
             year: int.tryParse(_year.text.trim()) ?? DateTime.now().year,
@@ -198,40 +196,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: Spacing.xs),
         Text('Seu veiculo', style: AppText.title),
         const SizedBox(height: Spacing.lg),
-        Text('CATEGORIA', style: AppText.label.copyWith(color: AppColors.textMuted)),
-        const SizedBox(height: Spacing.sm),
-        for (final entry in const [
-          ['moto', 'Moto'],
-          ['ride', 'Viagem'],
-          ['comfort', 'Viagem'],
-          ['black', 'Viagem'],
-          ['van', 'Van'],
-        ])
-          Padding(
-            padding: const EdgeInsets.only(bottom: Spacing.sm),
-            child: GestureDetector(
-              onTap: () => setState(() => _categorySlug = entry[0]),
-              child: Container(
-                padding: const EdgeInsets.all(Spacing.md),
-                decoration: BoxDecoration(
-                  color: _categorySlug == entry[0] ? AppColors.primarySoft : AppColors.surface,
-                  border: Border.all(
-                    color: _categorySlug == entry[0] ? AppColors.primary : AppColors.border,
-                  ),
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                ),
-                child: Row(
-                  children: [
-                    VehicleIcon(slug: entry[0], onLight: false, size: 38),
-                    const SizedBox(width: Spacing.md),
-                    Expanded(child: Text(entry[1], style: AppText.bodyStrong)),
-                    if (_categorySlug == entry[0])
-                      const Icon(Icons.check, color: AppColors.primary, size: 20),
-                  ],
-                ),
-              ),
-            ),
-          ),
         const SizedBox(height: Spacing.sm),
         AppField(label: 'Marca', controller: _brand, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
@@ -306,7 +270,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 '${driver.vehicle?.color ?? ''} - ${driver.vehicle?.plate ?? ''}',
                 style: AppText.body,
               ),
-              Text(driver.vehicle?.categoryName ?? '', style: AppText.body),
             ],
           ),
         ),
