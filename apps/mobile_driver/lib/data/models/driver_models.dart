@@ -177,10 +177,10 @@ class VehicleInfo {
 
   String get categoryName => switch (categorySlug) {
         'moto' => 'Moto',
-        'comfort' => 'Uber Comfort',
-        'black' => 'Uber Black',
+        'comfort' => 'Viagem',
+        'black' => 'Viagem',
         'van' => 'Van',
-        _ => 'UberX',
+        _ => 'Viagem',
       };
 }
 
