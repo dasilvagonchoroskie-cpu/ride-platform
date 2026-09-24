@@ -75,41 +75,74 @@ class UserProfile {
   String get firstName => name.split(' ').first;
 }
 
-class RideCategory {
-  const RideCategory({
-    required this.id,
-    required this.slug,
-    required this.name,
-    required this.description,
-    required this.seats,
-    required this.etaMinutes,
+/// Bandeira do horario. Quem decide e o servidor, pelo relogio dele.
+enum FareFlag { diurna, noturna }
+
+extension FareFlagLabel on FareFlag {
+  String get label => this == FareFlag.noturna ? 'Noturna' : 'Diurna';
+  String get faixa => this == FareFlag.noturna ? '22h as 6h' : '6h as 22h';
+}
+
+/// O preco da viagem.
+///
+/// Modalidade unica: nao ha categoria a escolher. O que o passageiro ve e
+/// um valor so, o da bandeira vigente no momento do pedido.
+class RideQuote {
+  const RideQuote({
+    required this.flag,
     required this.priceCents,
-    this.priceRangeCents,
-    this.icon = 'car',
+    required this.baseFareCents,
+    required this.distanceCents,
+    required this.distanceMeters,
+    required this.durationSeconds,
+    required this.chargedDistanceMeters,
+    this.etaMinutes = 3,
+    this.minFareApplied = false,
   });
 
-  final String id;
-  final String slug;
-  final String name;
-  final String description;
-  final int seats;
-  final int etaMinutes;
+  final FareFlag flag;
   final int priceCents;
-  final List<int>? priceRangeCents;
-  final String icon;
 
-  factory RideCategory.fromJson(Map<String, dynamic> json) => RideCategory(
-        id: json['id'] as String,
-        slug: json['slug'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        seats: (json['seats'] as num?)?.toInt() ?? 4,
-        etaMinutes: (json['etaMinutes'] as num?)?.toInt() ?? 3,
-        priceCents: (json['priceCents'] as num?)?.toInt() ?? 0,
-        priceRangeCents: (json['priceRangeCents'] as List<dynamic>?)
-            ?.map((e) => (e as num).toInt())
-            .toList(),
+  /// Bandeirada: a parte fixa, que ja inclui a franquia.
+  final int baseFareCents;
+
+  /// O que passou da franquia e por isso foi somado.
+  final int distanceCents;
+  final int chargedDistanceMeters;
+
+  final int distanceMeters;
+  final int durationSeconds;
+  final int etaMinutes;
+  final bool minFareApplied;
+
+  /// Se nada passou da franquia, o passageiro paga so a bandeirada.
+  bool get somenteBandeirada => chargedDistanceMeters <= 0;
+
+  factory RideQuote.fromJson(Map<String, dynamic> json) => RideQuote(
+        flag: (json['flag'] as String?)?.toUpperCase() == 'NOTURNA'
+            ? FareFlag.noturna
+            : FareFlag.diurna,
+        priceCents: (json['estimatedFareCents'] as num?)?.toInt() ??
+            (json['priceCents'] as num?)?.toInt() ??
+            0,
+        baseFareCents: (json['baseFareCents'] as num?)?.toInt() ?? 0,
+        distanceCents: (json['distanceCents'] as num?)?.toInt() ?? 0,
+        distanceMeters: (json['distanceMeters'] as num?)?.toInt() ?? 0,
+        durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
+        chargedDistanceMeters: (json['chargedDistanceMeters'] as num?)?.toInt() ?? 0,
+        minFareApplied: json['minFareApplied'] as bool? ?? false,
       );
+
+  Map<String, dynamic> toJson() => {
+        'flag': flag == FareFlag.noturna ? 'NOTURNA' : 'DIURNA',
+        'estimatedFareCents': priceCents,
+        'baseFareCents': baseFareCents,
+        'distanceCents': distanceCents,
+        'distanceMeters': distanceMeters,
+        'durationSeconds': durationSeconds,
+        'chargedDistanceMeters': chargedDistanceMeters,
+        'minFareApplied': minFareApplied,
+      };
 }
 
 class DriverInfo {
@@ -153,7 +186,7 @@ class Ride {
     required this.status,
     required this.pickup,
     required this.dropoff,
-    required this.category,
+    required this.fareFlag,
     required this.distanceMeters,
     required this.durationSeconds,
     required this.fareCents,
@@ -170,7 +203,7 @@ class Ride {
   final RideStatus status;
   final RidePlace pickup;
   final RidePlace dropoff;
-  final RideCategory category;
+  final FareFlag fareFlag;
   final DriverInfo? driver;
   final int distanceMeters;
   final int durationSeconds;
@@ -193,7 +226,7 @@ class Ride {
         status: status ?? this.status,
         pickup: pickup,
         dropoff: dropoff,
-        category: category,
+        fareFlag: fareFlag,
         driver: driver ?? this.driver,
         distanceMeters: distanceMeters,
         durationSeconds: durationSeconds,
@@ -211,15 +244,7 @@ class Ride {
         'status': status.name,
         'pickup': {'address': pickup.address, ...pickup.coords.toJson()},
         'dropoff': {'address': dropoff.address, ...dropoff.coords.toJson()},
-        'category': {
-          'id': category.id,
-          'slug': category.slug,
-          'name': category.name,
-          'description': category.description,
-          'seats': category.seats,
-          'etaMinutes': category.etaMinutes,
-          'priceCents': category.priceCents,
-        },
+        'fareFlag': fareFlag == FareFlag.noturna ? 'NOTURNA' : 'DIURNA',
         'driver': driver == null
             ? null
             : {
@@ -245,7 +270,6 @@ class Ride {
   factory Ride.fromJson(Map<String, dynamic> json) {
     final pickupJson = json['pickup'] as Map<String, dynamic>? ?? const <String, dynamic>{};
     final dropoffJson = json['dropoff'] as Map<String, dynamic>? ?? const <String, dynamic>{};
-    final categoryJson = json['category'] as Map<String, dynamic>? ?? const <String, dynamic>{};
     final driverJson = json['driver'] as Map<String, dynamic>?;
     final positionJson = driverJson?['position'] as Map<String, dynamic>?;
 
@@ -267,14 +291,9 @@ class Ride {
           (dropoffJson['longitude'] as num?)?.toDouble() ?? fallbackCoords.longitude,
         ),
       ),
-      category: RideCategory.fromJson({
-        'id': categoryJson['id'] ?? 'ride',
-        'name': categoryJson['name'] ?? 'Ride',
-        'description': categoryJson['description'] ?? '',
-        'seats': categoryJson['seats'] ?? 4,
-        'etaMinutes': categoryJson['etaMinutes'] ?? 3,
-        'priceCents': categoryJson['priceCents'] ?? 0,
-      }),
+      fareFlag: (json['fareFlag'] as String?)?.toUpperCase() == 'NOTURNA'
+          ? FareFlag.noturna
+          : FareFlag.diurna,
       driver: driverJson == null
           ? null
           : DriverInfo(
@@ -336,13 +355,11 @@ class PlaceSuggestion {
 }
 
 class EstimateResult {
-  const EstimateResult({
-    required this.categories,
-    required this.distanceMeters,
-    required this.durationSeconds,
-  });
+  const EstimateResult({required this.quote});
 
-  final List<RideCategory> categories;
-  final int distanceMeters;
-  final int durationSeconds;
+  /// Um orcamento so: a plataforma tem modalidade unica.
+  final RideQuote quote;
+
+  int get distanceMeters => quote.distanceMeters;
+  int get durationSeconds => quote.durationSeconds;
 }
