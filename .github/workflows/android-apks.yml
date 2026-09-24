@@ -116,8 +116,34 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
+      # O runner ubuntu-latest ja traz o Android SDK instalado. A action
+      # android-actions/setup-android@v3 roda `sdkmanager tools`, pacote que
+      # foi removido dos repositorios do SDK -> falha com exit code 1.
+      # Aqui apenas validamos o SDK preinstalado e aceitamos as licencas.
+      - name: Verificar o Android SDK preinstalado
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=${ANDROID_HOME:-<vazio>}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-<vazio>}"
+          echo "SDK usado: $SDK"
+          test -d "$SDK" || { echo "::error::Android SDK nao encontrado em $SDK"; exit 1; }
+
+          echo "--- conteudo do SDK ---"
+          ls "$SDK"
+          echo "--- platforms ---"
+          ls "$SDK/platforms" 2>/dev/null || echo "(nenhuma)"
+          echo "--- build-tools ---"
+          ls "$SDK/build-tools" 2>/dev/null || echo "(nenhuma)"
+
+          SDKMANAGER="$(find "$SDK/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -n 1)"
+          if [ -n "$SDKMANAGER" ]; then
+            echo "sdkmanager: $SDKMANAGER"
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+            echo "licencas aceitas"
+          else
+            echo "sdkmanager nao encontrado (o runner ja vem com as licencas aceitas)"
+          fi
 
       - name: Cache do Gradle
         uses: actions/cache@v4
@@ -149,6 +175,11 @@ jobs:
           test -x gradlew || { echo "gradlew ausente — prebuild falhou"; exit 1; }
           test -f gradle.properties || { echo "gradle.properties ausente"; exit 1; }
           test -f settings.gradle || { echo "settings.gradle ausente"; exit 1; }
+
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "sdk.dir=$SDK" > local.properties
+          echo "local.properties -> $(cat local.properties)"
+
           echo "projeto nativo OK"
 
       - name: Ajustar gradle.properties
