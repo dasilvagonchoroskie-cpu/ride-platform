@@ -158,7 +158,6 @@ class DriverDocumentItem {
 
 class VehicleInfo {
   const VehicleInfo({
-    required this.categorySlug,
     required this.brand,
     required this.model,
     required this.year,
@@ -166,7 +165,6 @@ class VehicleInfo {
     required this.plate,
   });
 
-  final String categorySlug;
   final String brand;
   final String model;
   final int year;
@@ -175,13 +173,6 @@ class VehicleInfo {
 
   String get description => '$brand $model $year';
 
-  String get categoryName => switch (categorySlug) {
-        'moto' => 'Moto',
-        'comfort' => 'Viagem',
-        'black' => 'Viagem',
-        'van' => 'Van',
-        _ => 'Viagem',
-      };
 }
 
 class RideOffer {
@@ -200,7 +191,7 @@ class RideOffer {
     required this.fareCents,
     required this.earningCents,
     required this.paymentMethod,
-    this.expiresInSeconds = 15,
+    this.expiresInSeconds = 30,
   });
 
   final String id;
