@@ -29,7 +29,7 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'users','devices','drivers','driver_documents','vehicles','vehicle_categories',
+    'users','devices','drivers','driver_documents','vehicles',
     'fare_configs','coupons','rides','payments','payment_methods','wallets',
     'payouts','driver_locations'
   ]
