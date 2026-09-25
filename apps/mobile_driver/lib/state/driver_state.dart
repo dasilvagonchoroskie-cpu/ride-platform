@@ -31,6 +31,8 @@ class DriverState extends ChangeNotifier {
   double? positionAccuracy;
   bool locationDenied = false;
   Timer? _heartbeat;
+  Timer? _statusTimer;
+  int? _ganhoReal;
   StreamSubscription<Position>? _gps;
 
   // ---- Oferta recebida ----
@@ -88,6 +90,98 @@ class DriverState extends ChangeNotifier {
 
     ready = true;
     notifyListeners();
+    if (profile != null) _vigiarAprovacao();
+  }
+
+  // ------------------------------------------------------------------
+  // Login real por codigo (servidor)
+  // ------------------------------------------------------------------
+
+  /// Pede o codigo. Em ambiente de teste o servidor devolve o proprio
+  /// codigo na resposta (debugCode) — assim da para entrar sem SMS.
+  Future<String?> requestOtp(String phone) async {
+    final data = await _client.request('POST', '/auth/otp/request', body: {
+      'phone': phone,
+      'purpose': 'LOGIN',
+    }) as Map<String, dynamic>;
+    return data['debugCode'] as String?;
+  }
+
+  Future<void> verifyOtp(String phone, String code) async {
+    final data = await _client.request('POST', '/auth/otp/verify', body: {
+      'phone': phone,
+      'code': code,
+      'purpose': 'LOGIN',
+      'role': 'DRIVER',
+      'device': {'deviceId': 'flutter-android-driver', 'platform': 'ANDROID'},
+    }) as Map<String, dynamic>;
+
+    await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
+    final refresh = data['refreshToken'] as String?;
+    if (refresh != null) await AppStorage.write(AppStorage.refreshToken, refresh);
+
+    final u = data['user'] as Map<String, dynamic>;
+    profile = DriverProfile(
+      id: u['driverId'] as String? ?? u['id'] as String? ?? '',
+      name: u['name'] as String? ?? 'Motorista',
+      phone: u['phone'] as String? ?? phone,
+    ).copyWith(
+      approval: _aprovacao(u['driverStatus'] as String?),
+      termsAccepted: u['termsAccepted'] as bool? ?? false,
+    );
+    await _persistProfile();
+    notifyListeners();
+    _vigiarAprovacao();
+  }
+
+  static DriverApproval _aprovacao(String? s) {
+    switch (s) {
+      case 'APPROVED':
+        return DriverApproval.approved;
+      case 'REJECTED':
+      case 'SUSPENDED':
+        return DriverApproval.rejected;
+      default:
+        return DriverApproval.pending;
+    }
+  }
+
+  /// "25/09/1990" vira "1990-09-25", o formato que o servidor aceita.
+  /// Se ja vier no formato ISO, passa direto.
+  static String _paraIso(String data) {
+    final p = data.trim().split('/');
+    if (p.length == 3) {
+      return '${p[2].padLeft(4, '0')}-${p[1].padLeft(2, '0')}-${p[0].padLeft(2, '0')}';
+    }
+    return data.trim();
+  }
+
+  /// Consulta o servidor para saber se o cadastro ja foi aprovado pela
+  /// Central. Sem isto o motorista ficaria preso na tela "em analise"
+  /// mesmo depois de aprovado.
+  Future<void> refreshFromServer() async {
+    if (!AppConfig.hasApi || profile == null) return;
+    try {
+      final u = await _client.request('GET', '/auth/me') as Map<String, dynamic>;
+      final nova = _aprovacao(u['driverStatus'] as String?);
+      if (profile!.approval != nova) {
+        profile = profile!.copyWith(approval: nova);
+        await _persistProfile();
+        notifyListeners();
+      }
+    } catch (_) {
+      // Sem rede agora; tenta de novo na proxima volta do relogio.
+    }
+  }
+
+  void _vigiarAprovacao() {
+    _statusTimer?.cancel();
+    if (!AppConfig.hasApi) return;
+    _statusTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (profile != null && profile!.approval != DriverApproval.approved) {
+        refreshFromServer();
+      }
+    });
   }
 
   Future<void> demoLogin(String name, String phone) async {
@@ -124,9 +218,29 @@ class DriverState extends ChangeNotifier {
     required String cnhNumber,
     required String cnhCategory,
     required String cnhExpiresAt,
+    String? birthDate,
   }) async {
     final current = profile;
     if (current == null) return;
+
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/drivers/onboarding', body: {
+          'cpf': cpf.replaceAll(RegExp(r'\D'), ''),
+          'birthDate': _paraIso(birthDate ?? ''),
+          'cnhNumber': cnhNumber.replaceAll(RegExp(r'\D'), ''),
+          'cnhCategory': cnhCategory,
+          'cnhExpiresAt': _paraIso(cnhExpiresAt),
+        });
+      } on ApiException catch (e) {
+        // Cadastro ja existente (reinstalou o app) nao e erro de verdade.
+        if (e.statusCode != 409) {
+          error = e.message;
+          notifyListeners();
+          return;
+        }
+      }
+    }
 
     profile = current.copyWith(
       cpf: cpf,
@@ -139,6 +253,23 @@ class DriverState extends ChangeNotifier {
   }
 
   Future<void> registerVehicle(VehicleInfo info) async {
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/vehicles', body: {
+          'plate': info.plate.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), ''),
+          'brand': info.brand,
+          'model': info.model,
+          'year': info.year,
+          'color': info.color,
+        });
+      } on ApiException catch (e) {
+        if (e.statusCode != 409) {
+          error = e.message;
+          notifyListeners();
+          return;
+        }
+      }
+    }
     vehicle = info;
     await AppStorage.write(AppStorage.vehicle, jsonEncode({
       'brand': info.brand,
@@ -195,7 +326,8 @@ class DriverState extends ChangeNotifier {
     final current = profile;
     if (current == null) return;
 
-    if (current.approval != DriverApproval.approved) {
+    await refreshFromServer();
+    if ((profile ?? current).approval != DriverApproval.approved) {
       error = 'Sua conta ainda nao foi aprovada para ficar online.';
       notifyListeners();
       return;
@@ -218,6 +350,11 @@ class DriverState extends ChangeNotifier {
     await _persistProfile();
     notifyListeners();
 
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('PATCH', '/drivers/me/online', body: {'isOnline': true});
+      } catch (_) {}
+    }
     await _iniciarGps();
     _startHeartbeat();
   }
@@ -229,6 +366,11 @@ class DriverState extends ChangeNotifier {
     profile = current.copyWith(isOnline: false);
     _stopHeartbeat();
     _pararGps();
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('PATCH', '/drivers/me/online', body: {'isOnline': false});
+      } catch (_) {}
+    }
     await _persistProfile();
     notifyListeners();
   }
@@ -320,8 +462,12 @@ class DriverState extends ChangeNotifier {
         notifyListeners();
       }
 
-      if (activeRide == null && offer == null && DateTime.now().second % 12 == 0) {
-        receiveOffer();
+      if (activeRide == null && offer == null) {
+        if (AppConfig.hasApi) {
+          _buscarChamados();
+        } else if (DateTime.now().second % 12 == 0) {
+          receiveOffer();
+        }
       }
     });
   }
@@ -361,6 +507,52 @@ class DriverState extends ChangeNotifier {
     });
   }
 
+  /// Busca os chamados abertos para este motorista no servidor.
+  Future<void> _buscarChamados() async {
+    try {
+      final lista = await _client.request('GET', '/driver/rides/offers') as List<dynamic>;
+      if (lista.isEmpty || offer != null || activeRide != null) return;
+      final o = lista.first as Map<String, dynamic>;
+      final expira = DateTime.tryParse(o['expiresAt'] as String? ?? '');
+      final restam = expira == null ? 30 : expira.difference(DateTime.now()).inSeconds;
+      if (restam <= 1) return;
+
+      final tarifa = (o['estimatedFareCents'] as num?)?.toInt() ?? 0;
+      final comissao = (o['commissionPercent'] as num?)?.toDouble() ?? 20;
+      offer = RideOffer(
+        id: o['rideId'] as String,
+        code: o['code'] as String? ?? '',
+        passengerName: o['passengerName'] as String? ?? 'Passageiro',
+        passengerRating: 5,
+        pickupAddress: o['pickupAddress'] as String? ?? '',
+        pickupCoords: Coords((o['pickupLat'] as num).toDouble(), (o['pickupLng'] as num).toDouble()),
+        dropoffAddress: o['dropoffAddress'] as String? ?? '',
+        dropoffCoords: Coords((o['dropoffLat'] as num).toDouble(), (o['dropoffLng'] as num).toDouble()),
+        distanceToPickupMeters: (((o['distanceKm'] as num?)?.toDouble() ?? 0) * 1000).round(),
+        tripDistanceMeters: (o['tripDistanceMeters'] as num?)?.toInt() ?? 0,
+        durationSeconds: (o['tripDurationSeconds'] as num?)?.toInt() ?? 0,
+        fareCents: tarifa,
+        earningCents: (tarifa * (100 - comissao) / 100).round(),
+        paymentMethod: 'Dinheiro',
+        expiresInSeconds: restam,
+      );
+      offerSecondsLeft = restam;
+      notifyListeners();
+
+      _offerTimer?.cancel();
+      _offerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (offer == null) return;
+        offerSecondsLeft -= 1;
+        if (offerSecondsLeft <= 0) {
+          _clearOffer();
+        }
+        notifyListeners();
+      });
+    } catch (_) {
+      // Rede instavel: a proxima volta do relogio tenta de novo.
+    }
+  }
+
   void _clearOffer() {
     _offerTimer?.cancel();
     _offerTimer = null;
@@ -371,6 +563,22 @@ class DriverState extends ChangeNotifier {
   Future<void> acceptOffer() async {
     final current = offer;
     if (current == null) return;
+
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/driver/rides/${current.id}/accept');
+        // O servidor so aceita "cheguei" depois de "a caminho". Como o app
+        // nao tem um botao separado para isso, o aceite ja emenda os dois.
+        await _client.request('POST', '/driver/rides/${current.id}/arriving',
+            body: {'latitude': position.latitude, 'longitude': position.longitude});
+      } on ApiException catch (e) {
+        // Outro motorista levou, ou o prazo acabou.
+        error = e.message;
+        _clearOffer();
+        notifyListeners();
+        return;
+      }
+    }
 
     activeRide = DriverRide(
       offer: current,
@@ -388,6 +596,10 @@ class DriverState extends ChangeNotifier {
   }
 
   void declineOffer() {
+    final atual = offer;
+    if (AppConfig.hasApi && atual != null) {
+      _client.request('POST', '/driver/rides/${atual.id}/decline').catchError((_) => null);
+    }
     _clearOffer();
     notifyListeners();
   }
@@ -398,6 +610,10 @@ class DriverState extends ChangeNotifier {
   void markArrived() {
     final ride = activeRide;
     if (ride == null) return;
+    if (AppConfig.hasApi) {
+      _client.request('POST', '/driver/rides/${ride.offer.id}/arrived',
+          body: {'latitude': position.latitude, 'longitude': position.longitude}).catchError((_) => null);
+    }
     activeRide = ride.copyWith(phase: RidePhase.waitingPassenger);
     notifyListeners();
   }
@@ -405,6 +621,10 @@ class DriverState extends ChangeNotifier {
   void startRide() {
     final ride = activeRide;
     if (ride == null) return;
+    if (AppConfig.hasApi) {
+      _client.request('POST', '/driver/rides/${ride.offer.id}/start',
+          body: {'latitude': position.latitude, 'longitude': position.longitude}).catchError((_) => null);
+    }
     activeRide = ride.copyWith(phase: RidePhase.inProgress);
     notifyListeners();
   }
@@ -413,6 +633,19 @@ class DriverState extends ChangeNotifier {
     final ride = activeRide;
     if (ride == null) return;
 
+    if (AppConfig.hasApi) {
+      try {
+        // Sem medicao propria, o servidor usa a estimativa do pedido e
+        // calcula o valor pela bandeira gravada na corrida.
+        final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {})
+            as Map<String, dynamic>;
+        _ganhoReal = (r['driverEarningCents'] as num?)?.toInt();
+      } on ApiException catch (e) {
+        error = e.message;
+        notifyListeners();
+        return;
+      }
+    }
     activeRide = ride.copyWith(
       phase: RidePhase.completed,
       finishedAt: DateTime.now().toIso8601String(),
@@ -425,7 +658,8 @@ class DriverState extends ChangeNotifier {
     final ride = activeRide;
     if (ride == null) return;
 
-    extraEarningsCents += ride.offer.earningCents;
+    extraEarningsCents += _ganhoReal ?? ride.offer.earningCents;
+    _ganhoReal = null;
     extraRides += 1;
 
     activeRide = null;
@@ -450,6 +684,7 @@ class DriverState extends ChangeNotifier {
   Future<void> logout() async {
     _stopHeartbeat();
     _pararGps();
+    _statusTimer?.cancel();
     await AppStorage.clearDriverSession();
     profile = null;
     vehicle = null;
