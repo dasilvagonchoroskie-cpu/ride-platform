@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
-import '../core/utils/formatters.dart';
 import '../data/models/central_models.dart';
 import '../state/central_state.dart';
 import '../widgets/ui.dart';
 
-/// Configuracao de tarifas por categoria.
+/// Gerenciamento das bandeiras.
+///
+/// Modalidade unica: nao ha categoria de veiculo. O que muda o preco e a
+/// HORA da corrida, e sao duas faixas — diurna e noturna.
+///
+/// As duas sao salvas juntas de proposito. Salvar uma so abriria a chance
+/// de deixar um pedaco do dia sem tabela de preco; o servidor recusa se as
+/// faixas nao se encaixarem.
 class FareConfigScreen extends StatefulWidget {
   const FareConfigScreen({super.key});
 
@@ -16,74 +22,51 @@ class FareConfigScreen extends StatefulWidget {
 }
 
 class _FareConfigScreenState extends State<FareConfigScreen> {
-  String? _slug;
-  late TextEditingController _base;
-  late TextEditingController _perKm;
-  late TextEditingController _perMinute;
-  late TextEditingController _minimum;
-  late TextEditingController _fee;
-
-  @override
-  void initState() {
-    super.initState();
-    _base = TextEditingController();
-    _perKm = TextEditingController();
-    _perMinute = TextEditingController();
-    _minimum = TextEditingController();
-    _fee = TextEditingController();
-  }
+  final _diurna = _CamposDaBandeira();
+  final _noturna = _CamposDaBandeira();
+  bool _preenchido = false;
 
   @override
   void dispose() {
-    for (final controller in [_base, _perKm, _perMinute, _minimum, _fee]) {
-      controller.dispose();
-    }
+    _diurna.dispose();
+    _noturna.dispose();
     super.dispose();
   }
 
-  void _fill(FareSettings fare) {
-    _slug = fare.categorySlug;
-    _base.text = (fare.baseFareCents / 100).toStringAsFixed(2).replaceAll('.', ',');
-    _perKm.text = (fare.perKmCents / 100).toStringAsFixed(2).replaceAll('.', ',');
-    _perMinute.text = (fare.perMinuteCents / 100).toStringAsFixed(2).replaceAll('.', ',');
-    _minimum.text = (fare.minimumFareCents / 100).toStringAsFixed(2).replaceAll('.', ',');
-    _fee.text = fare.platformFeePercent.toStringAsFixed(1).replaceAll('.', ',');
+  void _preencher(Tariffs t) {
+    _diurna.preencher(t.diurna);
+    _noturna.preencher(t.noturna);
+    _preenchido = true;
   }
 
-  /// "12,50" -> 1250 centavos.
-  int _toCents(String value) {
-    final normalized = value.replaceAll('.', '').replaceAll(',', '.');
-    final parsed = double.tryParse(normalized) ?? 0;
-    return (parsed * 100).round();
-  }
+  Future<void> _salvar(Tariffs atual) async {
+    final erro = _diurna.erro ?? _noturna.erro;
+    if (erro != null) {
+      _avisar(erro, certo: false);
+      return;
+    }
 
-  double _toDouble(String value) {
-    return double.tryParse(value.replaceAll(',', '.')) ?? 0;
-  }
-
-  Future<void> _save() async {
-    final slug = _slug;
-    if (slug == null) return;
-
-    final fare = FareSettings(
-      categorySlug: slug,
-      baseFareCents: _toCents(_base.text),
-      perKmCents: _toCents(_perKm.text),
-      perMinuteCents: _toCents(_perMinute.text),
-      minimumFareCents: _toCents(_minimum.text),
-      platformFeePercent: _toDouble(_fee.text),
+    final novo = Tariffs(
+      diurna: _diurna.montar(atual.diurna),
+      noturna: _noturna.montar(atual.noturna),
     );
 
-    final ok = await context.read<CentralState>().saveFare(fare);
+    final ok = await context.read<CentralState>().saveTariffs(novo);
     if (!mounted) return;
 
+    _avisar(
+      ok
+          ? 'Bandeiras salvas. Ja valem na proxima corrida.'
+          : (context.read<CentralState>().error ?? 'Falha ao salvar as bandeiras.'),
+      certo: ok,
+    );
+  }
+
+  void _avisar(String texto, {required bool certo}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          ok ? 'Tarifas salvas e publicadas.' : 'Falha ao salvar as tarifas.',
-          style: AppText.body.copyWith(color: AppColors.text),
-        ),
-        backgroundColor: ok ? AppColors.primary : AppColors.danger,
+        content: Text(texto, style: AppText.body.copyWith(color: AppColors.text)),
+        backgroundColor: certo ? AppColors.primary : AppColors.danger,
       ),
     );
   }
@@ -91,192 +74,271 @@ class _FareConfigScreenState extends State<FareConfigScreen> {
   @override
   Widget build(BuildContext context) {
     final central = context.watch<CentralState>();
-    final fares = central.fares;
-    final tablet = MediaQuery.of(context).size.width >= 900;
+    final tarifas = central.tariffs;
 
-    if (fares.isEmpty) {
+    if (tarifas == null) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
+    if (!_preenchido) _preencher(tarifas);
 
-    _slug ??= fares.first.categorySlug;
-    final selected = fares.firstWhere(
-      (f) => f.categorySlug == _slug,
-      orElse: () => fares.first,
-    );
+    final largo = MediaQuery.of(context).size.width >= 900;
 
-    // Preenche os campos quando troca de categoria ou chega dado novo.
-    if (_base.text.isEmpty) _fill(selected);
+    final secoes = [
+      _SecaoDaBandeira(campos: _diurna, flag: FareFlag.diurna),
+      _SecaoDaBandeira(campos: _noturna, flag: FareFlag.noturna),
+    ];
 
-    final selector = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      padding: const EdgeInsets.all(Spacing.lg),
       children: [
-        const SectionTitle(text: 'Categoria'),
-        for (final fare in fares)
-          Padding(
-            padding: const EdgeInsets.only(bottom: Spacing.sm),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _fill(fare);
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.all(Spacing.md),
-                decoration: BoxDecoration(
-                  color: _slug == fare.categorySlug ? AppColors.primarySoft : AppColors.surface,
-                  border: Border.all(
-                    color: _slug == fare.categorySlug ? AppColors.primary : AppColors.border,
-                  ),
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(fare.categoryName, style: AppText.bodyStrong),
-                          Text(
-                            'Base ${formatMoney(fare.baseFareCents)} - ${formatMoney(fare.perKmCents)}/km',
-                            style: AppText.caption.copyWith(color: AppColors.textMuted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '${fare.platformFeePercent.toStringAsFixed(0)}%',
-                      style: AppText.bodyStrong.copyWith(color: AppColors.primary),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+        const SectionTitle(text: 'Bandeiras'),
+        Text(
+          'A bandeirada ja inclui a franquia. So o que passa dela e cobrado a mais.',
+          style: AppText.body.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: Spacing.lg),
+
+        if (largo)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: secoes[0]),
+              const SizedBox(width: Spacing.lg),
+              Expanded(child: secoes[1]),
+            ],
+          )
+        else ...[
+          secoes[0],
+          const SizedBox(height: Spacing.lg),
+          secoes[1],
+        ],
+
+        const SizedBox(height: Spacing.xl),
+        AppButton(
+          label: 'Salvar configuracoes',
+          loading: central.loading,
+          onPressed: () => _salvar(tarifas),
+        ),
+        const SizedBox(height: Spacing.md),
+        Text(
+          'As duas bandeiras sao salvas juntas: uma precisa terminar na hora '
+          'em que a outra comeca, para nao sobrar horario sem tabela.',
+          style: AppText.body.copyWith(color: AppColors.textMuted),
+        ),
       ],
     );
+  }
+}
 
-    final form = AppCard(
+/// Os campos de uma bandeira.
+///
+/// O administrador digita em reais e minutos, que e como ele pensa. A
+/// conversao para centavos e segundos acontece aqui, num lugar so — e
+/// dinheiro sempre vira inteiro, nunca decimal.
+class _CamposDaBandeira {
+  final inicio = TextEditingController();
+  final fim = TextEditingController();
+  final bandeirada = TextEditingController();
+  final porKm = TextEditingController();
+  final porMinuto = TextEditingController();
+  final franquiaKm = TextEditingController();
+  final franquiaMin = TextEditingController();
+  final minimo = TextEditingController();
+  final cancelamento = TextEditingController();
+  final comissao = TextEditingController();
+
+  void preencher(TariffFlag t) {
+    inicio.text = '${t.startHour}';
+    fim.text = '${t.endHour}';
+    bandeirada.text = _reais(t.baseFareCents);
+    porKm.text = _reais(t.perKmCents);
+    porMinuto.text = _reais(t.waitingPerMinuteCents);
+    franquiaKm.text = (t.freeDistanceMeters / 1000).toStringAsFixed(1).replaceAll('.', ',');
+    franquiaMin.text = '${(t.freeWaitingSeconds / 60).round()}';
+    minimo.text = _reais(t.minFareCents);
+    cancelamento.text = _reais(t.cancellationFeeCents);
+    comissao.text = t.commissionPercent.toStringAsFixed(0);
+  }
+
+  /// A primeira coisa errada que encontrar, ou nulo se estiver tudo certo.
+  String? get erro {
+    final hi = _inteiro(inicio.text), hf = _inteiro(fim.text);
+    if (hi == null || hi < 0 || hi > 23) return 'Hora de inicio invalida.';
+    if (hf == null || hf < 0 || hf > 23) return 'Hora de termino invalida.';
+    if (hi == hf) return 'A faixa nao pode comecar e terminar na mesma hora.';
+    if (_centavos(bandeirada.text) == null) return 'Bandeirada invalida.';
+    if (_centavos(porKm.text) == null) return 'Valor por km invalido.';
+    if (_centavos(porMinuto.text) == null) return 'Valor por minuto invalido.';
+    if (_decimal(franquiaKm.text) == null) return 'Franquia de distancia invalida.';
+    if (_inteiro(franquiaMin.text) == null) return 'Franquia de tempo invalida.';
+    return null;
+  }
+
+  TariffFlag montar(TariffFlag base) => base.copyWith(
+        startHour: _inteiro(inicio.text),
+        endHour: _inteiro(fim.text),
+        baseFareCents: _centavos(bandeirada.text),
+        perKmCents: _centavos(porKm.text),
+        waitingPerMinuteCents: _centavos(porMinuto.text),
+        freeDistanceMeters: ((_decimal(franquiaKm.text) ?? 1.5) * 1000).round(),
+        freeWaitingSeconds: (_inteiro(franquiaMin.text) ?? 3) * 60,
+        minFareCents: _centavos(minimo.text),
+        cancellationFeeCents: _centavos(cancelamento.text),
+        commissionPercent: _decimal(comissao.text),
+      );
+
+  void dispose() {
+    for (final c in [
+      inicio, fim, bandeirada, porKm, porMinuto,
+      franquiaKm, franquiaMin, minimo, cancelamento, comissao,
+    ]) {
+      c.dispose();
+    }
+  }
+
+  static String _reais(int cents) => (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
+
+  static int? _inteiro(String v) => int.tryParse(v.trim());
+
+  static double? _decimal(String v) => double.tryParse(v.trim().replaceAll(',', '.'));
+
+  /// "12,50" vira 1250. Arredonda no fim para nao guardar meio centavo.
+  static int? _centavos(String v) {
+    final d = _decimal(v);
+    return d == null ? null : (d * 100).round();
+  }
+}
+
+class _SecaoDaBandeira extends StatelessWidget {
+  const _SecaoDaBandeira({required this.campos, required this.flag});
+
+  final _CamposDaBandeira campos;
+  final FareFlag flag;
+
+  @override
+  Widget build(BuildContext context) {
+    final noturna = flag == FareFlag.noturna;
+
+    return Container(
+      padding: const EdgeInsets.all(Spacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: noturna ? AppColors.primary : AppColors.border, width: 1.5),
+        borderRadius: BorderRadius.circular(Radii.sm),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Expanded(child: Text('${selected.categoryName} - valores', style: AppText.heading)),
-              AppBadge(text: 'CENTAVOS/REAIS', tone: AppBadgeTone.info),
+              Icon(
+                noturna ? Icons.nightlight_round : Icons.wb_sunny_outlined,
+                size: 20,
+                color: noturna ? AppColors.primary : AppColors.textMuted,
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(child: Text(flag.titulo, style: AppText.title)),
             ],
           ),
           const SizedBox(height: Spacing.lg),
-          AppField(
-            label: 'Preco base (R\$)',
-            hint: '5,00',
-            controller: _base,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            helper: 'Valor fixo cobrado ao iniciar a corrida',
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Spacing.md),
-          AppField(
-            label: 'Preco por KM (R\$)',
-            hint: '1,80',
-            controller: _perKm,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            helper: 'Multiplicado pela distancia da rota',
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Spacing.md),
-          AppField(
-            label: 'Preco por minuto (R\$)',
-            hint: '0,30',
-            controller: _perMinute,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            helper: 'Multiplicado pelo tempo estimado',
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Spacing.md),
-          AppField(
-            label: 'Tarifa minima (R\$)',
-            hint: '9,00',
-            controller: _minimum,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            helper: 'Piso cobrado em corridas curtas',
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Spacing.md),
-          AppField(
-            label: 'Taxa da plataforma (%)',
-            hint: '20,0',
-            controller: _fee,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            helper: 'Percentual retido de cada corrida',
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Spacing.lg),
-          Container(
-            padding: const EdgeInsets.all(Spacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft,
-              border: Border.all(color: AppColors.primary),
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('PREVIA DA TARIFA', style: AppText.label.copyWith(color: AppColors.primary)),
-                const SizedBox(height: Spacing.sm),
-                Text(
-                  'Corrida de 5 km em 12 min: ${formatMoney(_preview())}',
-                  style: AppText.bodyStrong,
+
+          Row(
+            children: [
+              Expanded(
+                child: AppField(
+                  label: 'Comeca as (hora)',
+                  controller: campos.inicio,
+                  keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: Spacing.xs),
-                Text(
-                  'Plataforma ${formatMoney((_preview() * _toDouble(_fee.text) / 100).round())} - Motorista ${formatMoney((_preview() * (100 - _toDouble(_fee.text)) / 100).round())}',
-                  style: AppText.caption.copyWith(color: AppColors.textMuted),
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: AppField(
+                  label: 'Termina as (hora)',
+                  controller: campos.fim,
+                  keyboardType: TextInputType.number,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: Spacing.lg),
-          AppButton(
-            label: 'Salvar e publicar tarifas',
-            variant: AppButtonVariant.approve,
-            icon: Icons.publish,
-            loading: central.loading,
-            onPressed: _save,
+          const SizedBox(height: Spacing.md),
+
+          AppField(
+            label: 'Bandeirada (R\$)',
+            controller: campos.bandeirada,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            helper: 'Valor fixo, cobrado assim que a corrida comeca.',
+          ),
+          const SizedBox(height: Spacing.md),
+
+          Row(
+            children: [
+              Expanded(
+                child: AppField(
+                  label: 'Franquia de distancia (km)',
+                  controller: campos.franquiaKm,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: AppField(
+                  label: 'Franquia de espera (min)',
+                  controller: campos.franquiaMin,
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.xs),
+          Text(
+            'Ja inclusos na bandeirada. So o excedente e cobrado.',
+            style: AppText.body.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: Spacing.md),
+
+          AppField(
+            label: 'Valor por km excedente (R\$)',
+            controller: campos.porKm,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          const SizedBox(height: Spacing.md),
+
+          AppField(
+            label: 'Valor por minuto parado excedente (R\$)',
+            controller: campos.porMinuto,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          const SizedBox(height: Spacing.md),
+
+          Row(
+            children: [
+              Expanded(
+                child: AppField(
+                  label: 'Minimo da corrida (R\$)',
+                  controller: campos.minimo,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: AppField(
+                  label: 'Multa de cancelamento (R\$)',
+                  controller: campos.cancelamento,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.md),
+
+          AppField(
+            label: 'Comissao da plataforma (%)',
+            controller: campos.comissao,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
         ],
       ),
     );
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(Spacing.lg),
-      child: tablet
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(width: 320, child: selector),
-                const SizedBox(width: Spacing.lg),
-                Expanded(child: form),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                selector,
-                const SizedBox(height: Spacing.lg),
-                form,
-                const SizedBox(height: Spacing.lg),
-              ],
-            ),
-    );
-  }
-
-  /// Estimativa com 5 km e 12 minutos.
-  int _preview() {
-    final base = _toCents(_base.text);
-    final perKm = _toCents(_perKm.text);
-    final perMinute = _toCents(_perMinute.text);
-    final minimum = _toCents(_minimum.text);
-    final value = base + perKm * 5 + perMinute * 12;
-    return value < minimum ? minimum : value;
   }
 }
