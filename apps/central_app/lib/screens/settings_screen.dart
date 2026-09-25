@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
 import '../state/central_state.dart';
@@ -42,35 +43,8 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Spacing.lg),
-          const SectionTitle(text: 'Integracoes'),
-          AppCard(
-            child: Column(
-              children: [
-                _IntegrationRow(
-                  icon: Icons.local_fire_department,
-                  title: 'Firebase Firestore',
-                  subtitle: AppConfig.hasFirebase
-                      ? 'Projeto ${AppConfig.firebaseProjectId}'
-                      : 'Nao configurado - rodando com dados locais',
-                  connected: AppConfig.hasFirebase,
-                ),
-                const AppDivider(),
-                _IntegrationRow(
-                  icon: Icons.cloud_outlined,
-                  title: 'Backend (API)',
-                  subtitle: AppConfig.hasApi ? AppConfig.apiUrl : 'Nao configurado',
-                  connected: AppConfig.hasApi,
-                ),
-                const AppDivider(),
-                _IntegrationRow(
-                  icon: Icons.map_outlined,
-                  title: 'OpenStreetMap',
-                  subtitle: 'Tiles CARTO Dark Matter - sem chave de API',
-                  connected: true,
-                ),
-              ],
-            ),
-          ),
+          const SectionTitle(text: 'Conexoes'),
+          const _StatusDasConexoes(),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Diagnostico'),
           AppCard(
@@ -82,7 +56,7 @@ class SettingsScreen extends StatelessWidget {
                 const AppDivider(),
                 _InfoRow(
                   label: 'Fonte de dados',
-                  value: central.isDemo ? 'Demonstracao local' : 'API / Firestore',
+                  value: central.isDemo ? 'Demonstracao local' : 'Servidor real (PostgreSQL)',
                 ),
                 const AppDivider(),
                 _InfoRow(label: 'Motoristas na fila', value: '${central.pendingCount}'),
@@ -168,6 +142,103 @@ class _InfoRow extends StatelessWidget {
         Expanded(child: Text(label, style: AppText.caption.copyWith(color: AppColors.textMuted))),
         Text(value, style: AppText.caption),
       ],
+    );
+  }
+}
+
+/// Estado REAL das conexoes, perguntado ao servidor quando a tela abre.
+///
+/// Substitui a antiga linha fixa do Firebase: esta plataforma nao usa
+/// Firebase. Os dados moram no PostgreSQL (Supabase) e so o servidor fala
+/// com o banco — nenhum aplicativo acessa o banco direto.
+class _StatusDasConexoes extends StatefulWidget {
+  const _StatusDasConexoes();
+
+  @override
+  State<_StatusDasConexoes> createState() => _StatusDasConexoesState();
+}
+
+class _StatusDasConexoesState extends State<_StatusDasConexoes> {
+  bool _carregando = true;
+  bool _servidor = false;
+  bool _banco = false;
+  bool _cache = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _verificar();
+  }
+
+  Future<void> _verificar() async {
+    setState(() => _carregando = true);
+    var servidor = false;
+    var banco = false;
+    var cache = false;
+    try {
+      final r = await ApiClient().request('GET', '/health');
+      final Map<dynamic, dynamic> m =
+          (r is Map && r['data'] is Map) ? r['data'] as Map : (r as Map? ?? const {});
+      final dep = (m['dependencies'] as Map?) ?? const {};
+      servidor = true;
+      banco = dep['database'] == 'up';
+      cache = dep['redis'] == 'up';
+    } catch (_) {
+      // Sem resposta: tudo aparece como fora do ar, que e a verdade.
+    }
+    if (!mounted) return;
+    setState(() {
+      _carregando = false;
+      _servidor = servidor;
+      _banco = banco;
+      _cache = cache;
+    });
+  }
+
+  String _texto(bool ok, String quandoOk) =>
+      _carregando ? 'Verificando...' : (ok ? quandoOk : 'Sem resposta');
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        children: [
+          _IntegrationRow(
+            icon: Icons.cloud_outlined,
+            title: 'Servidor (API)',
+            subtitle: _texto(_servidor, AppConfig.apiUrl),
+            connected: _servidor,
+          ),
+          const AppDivider(),
+          _IntegrationRow(
+            icon: Icons.storage_outlined,
+            title: 'Banco de dados',
+            subtitle: _texto(_banco, 'PostgreSQL + PostGIS (Supabase)'),
+            connected: _banco,
+          ),
+          const AppDivider(),
+          _IntegrationRow(
+            icon: Icons.bolt_outlined,
+            title: 'Cache e tempo real',
+            subtitle: _texto(_cache, 'Redis'),
+            connected: _cache,
+          ),
+          const AppDivider(),
+          _IntegrationRow(
+            icon: Icons.map_outlined,
+            title: 'Mapa',
+            subtitle: 'OpenStreetMap público (tile.openstreetmap.org), sem chave',
+            connected: true,
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _carregando ? null : _verificar,
+              child: const Text('Verificar de novo'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
