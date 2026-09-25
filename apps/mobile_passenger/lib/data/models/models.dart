@@ -40,6 +40,7 @@ class UserProfile {
     required this.phone,
     this.email,
     this.role = 'PASSENGER',
+    this.termsAccepted = false,
   });
 
   final String id;
@@ -48,12 +49,17 @@ class UserProfile {
   final String? email;
   final String role;
 
+  /// Se a pessoa ja tocou em "Aceito os Termos". Enquanto for falso, o
+  /// aplicativo mostra a tela de aceite antes de qualquer outra coisa.
+  final bool termsAccepted;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
         'phone': phone,
         'email': email,
         'role': role,
+        'termsAccepted': termsAccepted,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -62,14 +68,16 @@ class UserProfile {
         phone: json['phone'] as String? ?? '',
         email: json['email'] as String?,
         role: json['role'] as String? ?? 'PASSENGER',
+        termsAccepted: json['termsAccepted'] as bool? ?? false,
       );
 
-  UserProfile copyWith({String? name, String? email}) => UserProfile(
+  UserProfile copyWith({String? name, String? email, bool? termsAccepted}) => UserProfile(
         id: id,
         name: name ?? this.name,
         phone: phone,
         email: email ?? this.email,
         role: role,
+        termsAccepted: termsAccepted ?? this.termsAccepted,
       );
 
   String get firstName => name.split(' ').first;
