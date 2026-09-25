@@ -90,7 +90,6 @@ class CentralDemo {
         cnhExpiresAt: '2030-12-31',
         city: applicant[3],
         vehicle: VehicleSummary(
-          categorySlug: vehicle[0],
           brand: vehicle[1],
           model: vehicle[2],
           year: int.parse(vehicle[3]),
@@ -172,13 +171,35 @@ class CentralDemo {
   }
 
   /// Tarifas iniciais por categoria (centavos).
-  static List<FareSettings> fares() => const [
-        FareSettings(categorySlug: 'moto', baseFareCents: 300, perKmCents: 120, perMinuteCents: 20, minimumFareCents: 600, platformFeePercent: 20),
-        FareSettings(categorySlug: 'ride', baseFareCents: 500, perKmCents: 180, perMinuteCents: 30, minimumFareCents: 900, platformFeePercent: 20),
-        FareSettings(categorySlug: 'comfort', baseFareCents: 700, perKmCents: 240, perMinuteCents: 40, minimumFareCents: 1200, platformFeePercent: 22),
-        FareSettings(categorySlug: 'black', baseFareCents: 1100, perKmCents: 380, perMinuteCents: 60, minimumFareCents: 2000, platformFeePercent: 25),
-        FareSettings(categorySlug: 'van', baseFareCents: 900, perKmCents: 300, perMinuteCents: 45, minimumFareCents: 1800, platformFeePercent: 20),
-      ];
+  /// Bandeiras da demonstracao: os mesmos valores da semente do servidor.
+  static Tariffs tariffs() => const Tariffs(
+        diurna: TariffFlag(
+          flag: FareFlag.diurna,
+          startHour: 6,
+          endHour: 22,
+          baseFareCents: 1000,
+          perKmCents: 250,
+          waitingPerMinuteCents: 50,
+          freeDistanceMeters: 1500,
+          freeWaitingSeconds: 180,
+          minFareCents: 1000,
+          cancellationFeeCents: 500,
+          commissionPercent: 20,
+        ),
+        noturna: TariffFlag(
+          flag: FareFlag.noturna,
+          startHour: 22,
+          endHour: 6,
+          baseFareCents: 2000,
+          perKmCents: 250,
+          waitingPerMinuteCents: 50,
+          freeDistanceMeters: 1500,
+          freeWaitingSeconds: 180,
+          minFareCents: 2000,
+          cancellationFeeCents: 500,
+          commissionPercent: 20,
+        ),
+      );
 
   /// Metricas financeiras do painel.
   static FinancialSummary financials({int extraRides = 0, int extraRevenueCents = 0}) {
