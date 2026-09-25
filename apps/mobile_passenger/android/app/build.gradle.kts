@@ -65,6 +65,18 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+
+            // Producao: reduz o tamanho do APK e dificulta engenharia
+            // reversa. As regras ficam em proguard-rules.pro; o segundo
+            // arquivo (proguard-android-optimize.txt) e o padrao que o
+            // proprio Android Studio gera, com as otimizacoes seguras
+            // que o SDK ja testa a cada versao.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
