@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'package:geolocator/geolocator.dart';
 
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
+import '../core/native/corridas_nativo.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/driver_demo.dart';
@@ -15,7 +17,7 @@ import '../data/models/driver_models.dart';
 
 /// Estado do motorista: cadastro, documentos, status online, ofertas,
 /// corrida em andamento e carteira.
-class DriverState extends ChangeNotifier {
+class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   final ApiClient _client = ApiClient();
 
   DriverProfile? profile;
@@ -32,6 +34,11 @@ class DriverState extends ChangeNotifier {
   bool locationDenied = false;
   Timer? _heartbeat;
   Timer? _statusTimer;
+
+  /// Autorizacoes do Android (localizacao, notificacao, sobrepor, bateria,
+  /// tela cheia). null = ainda nao conferidas.
+  Map<String, bool> permissoes = const {};
+  bool? permissoesOk;
   int? _ganhoReal;
   StreamSubscription<Position>? _gps;
 
@@ -88,9 +95,48 @@ class DriverState extends ChangeNotifier {
       }
     }
 
+    WidgetsBinding.instance.addObserver(this);
+    await checarPermissoes();
     ready = true;
     notifyListeners();
     if (profile != null) _vigiarAprovacao();
+    // Reabriu o aplicativo ja disponivel: religa tudo, senao ele ficaria
+    // "disponivel" sem estar ouvindo chamado nenhum.
+    if (isOnline) {
+      unawaited(_iniciarGps());
+      _startHeartbeat();
+      unawaited(_ligarServicoNativo());
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Autorizacoes do Android e servico nativo de alarme
+  // ------------------------------------------------------------------
+
+  Future<void> checarPermissoes() async {
+    permissoes = await CorridasNativo.permissoes();
+    permissoesOk = CorridasNativo.essenciaisOk(permissoes);
+    notifyListeners();
+  }
+
+  /// Liga o vigia nativo: consulta chamados e toca o alarme mesmo com o
+  /// aplicativo fechado e a tela apagada.
+  Future<void> _ligarServicoNativo() async {
+    if (!AppConfig.hasApi) return;
+    final token = await AppStorage.read(AppStorage.accessToken);
+    if (token == null || token.isEmpty) return;
+    await CorridasNativo.iniciar(AppConfig.apiUrl, token);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    checarPermissoes();
+    // Voltou por causa de um chamado (ou o motorista abriu o app): busca
+    // na hora, sem esperar a proxima volta do relogio.
+    if (isOnline && offer == null && activeRide == null && AppConfig.hasApi) {
+      _buscarChamados();
+    }
   }
 
   // ------------------------------------------------------------------
@@ -333,6 +379,15 @@ class DriverState extends ChangeNotifier {
       return;
     }
 
+    // Sem estas autorizacoes o alarme falha com o celular no bolso — e o
+    // motorista perderia corrida achando que estava disponivel.
+    await checarPermissoes();
+    if (permissoesOk != true) {
+      error = 'Libere as autorizações do aplicativo antes de ficar disponível.';
+      notifyListeners();
+      return;
+    }
+
     if (!documentsComplete) {
       error = 'Envie todos os documentos antes de ficar online.';
       notifyListeners();
@@ -357,6 +412,7 @@ class DriverState extends ChangeNotifier {
     }
     await _iniciarGps();
     _startHeartbeat();
+    await _ligarServicoNativo();
   }
 
   Future<void> goOffline() async {
@@ -364,6 +420,7 @@ class DriverState extends ChangeNotifier {
     if (current == null) return;
 
     profile = current.copyWith(isOnline: false);
+    await CorridasNativo.parar();
     _stopHeartbeat();
     _pararGps();
     if (AppConfig.hasApi) {
@@ -554,6 +611,7 @@ class DriverState extends ChangeNotifier {
   }
 
   void _clearOffer() {
+    CorridasNativo.pararAlarme();
     _offerTimer?.cancel();
     _offerTimer = null;
     offer = null;
@@ -563,6 +621,8 @@ class DriverState extends ChangeNotifier {
   Future<void> acceptOffer() async {
     final current = offer;
     if (current == null) return;
+    // Cala o alarme no toque, antes mesmo da resposta do servidor.
+    CorridasNativo.pararAlarme();
 
     if (AppConfig.hasApi) {
       try {
@@ -685,6 +745,7 @@ class DriverState extends ChangeNotifier {
     _stopHeartbeat();
     _pararGps();
     _statusTimer?.cancel();
+    await CorridasNativo.parar();
     await AppStorage.clearDriverSession();
     profile = null;
     vehicle = null;
@@ -708,6 +769,7 @@ class DriverState extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _heartbeat?.cancel();
     _offerTimer?.cancel();
     super.dispose();
