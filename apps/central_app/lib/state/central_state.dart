@@ -25,7 +25,8 @@ class CentralState extends ChangeNotifier {
   List<DriverApplication> pending = [];
   List<DriverApplication> approved = [];
   List<ActiveRide> rides = [];
-  List<FareSettings> fares = [];
+  /// As duas bandeiras. Nulo enquanto nao carregou.
+  Tariffs? tariffs;
   FinancialSummary? financials;
 
   Timer? _monitorTimer;
@@ -95,14 +96,14 @@ class CentralState extends ChangeNotifier {
         _repository.pendingApplications(),
         _repository.approvedDrivers(),
         _repository.activeRides(),
-        _repository.fares(),
+        _repository.tariffs(),
         _repository.financials(),
       ]);
 
       pending = results[0] as List<DriverApplication>;
       approved = results[1] as List<DriverApplication>;
       rides = results[2] as List<ActiveRide>;
-      fares = results[3] as List<FareSettings>;
+      tariffs = results[3] as Tariffs;
       financials = results[4] as FinancialSummary;
     } finally {
       loading = false;
@@ -219,23 +220,25 @@ class CentralState extends ChangeNotifier {
   // ------------------------------------------------------------------
   // Tarifas
   // ------------------------------------------------------------------
-  /// Grava as tarifas alteradas e recarrega a lista.
-  Future<bool> saveFare(FareSettings fare) async {
+  /// Grava as duas bandeiras.
+  ///
+  /// Guarda o novo valor na memoria so depois que o servidor confirmou.
+  /// Se guardasse antes, a tela mostraria um preco que o banco nao tem.
+  Future<bool> saveTariffs(Tariffs novas) async {
     loading = true;
     error = null;
     notifyListeners();
 
-    final ok = await _repository.saveFare(fare);
+    final ok = await _repository.saveTariffs(novas);
     loading = false;
 
     if (!ok) {
-      error = 'Falha ao salvar as tarifas.';
+      error = 'Falha ao salvar as bandeiras. Confira se uma termina onde a outra comeca.';
       notifyListeners();
       return false;
     }
 
-    final index = fares.indexWhere((f) => f.categorySlug == fare.categorySlug);
-    if (index >= 0) fares[index] = fare;
+    tariffs = novas;
     notifyListeners();
     return true;
   }
