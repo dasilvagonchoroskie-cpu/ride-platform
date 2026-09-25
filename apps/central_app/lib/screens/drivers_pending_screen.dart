@@ -130,7 +130,7 @@ class _ApplicationTile extends StatelessWidget {
                       Text(application.name, style: AppText.bodyStrong.copyWith(fontSize: 16)),
                       const SizedBox(height: 2),
                       Text(
-                        '${application.city} - ${application.vehicle.categoryName}',
+                        '${application.city} - ${application.vehicle.description}',
                         style: AppText.caption.copyWith(color: AppColors.textMuted),
                       ),
                     ],
@@ -142,6 +142,26 @@ class _ApplicationTile extends StatelessWidget {
                 ),
               ],
             ),
+            if (application.temAlerta) ...[
+              const SizedBox(height: Spacing.sm),
+              Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 15, color: AppColors.danger),
+                  const SizedBox(width: Spacing.xs),
+                  Expanded(
+                    child: Text(
+                      application.divergencias.first +
+                          (application.divergencias.length > 1
+                              ? ' (+${application.divergencias.length - 1})'
+                              : ''),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption.copyWith(color: AppColors.danger),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const AppDivider(),
             Row(
               children: [
