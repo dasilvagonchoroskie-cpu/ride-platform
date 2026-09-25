@@ -18,9 +18,11 @@ class MapMarker {
 
 /// Mapa do app, baseado em **OpenStreetMap** via `flutter_map`.
 ///
-/// Nao exige chave de API. Os tiles escuros vem do CARTO Dark Matter, que
-/// usa os dados do OpenStreetMap — a atribuicao exigida pela licenca ODbL
-/// fica visivel no canto inferior direito.
+/// Usa o servidor padrao tile.openstreetmap.org: nao exige chave de API
+/// e nao tem limite de uso para volumes normais de aplicativo. (O CARTO
+/// Dark Matter foi usado antes para um visual escuro, mas passou a
+/// recusar requisicoes sem chave — por isso a troca.) A atribuicao
+/// exigida pela licenca ODbL fica visivel no canto inferior direito.
 class RideMap extends StatefulWidget {
   const RideMap({
     super.key,
@@ -139,10 +141,12 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             backgroundColor: AppColors.mapBackground,
           ),
           children: [
-            // Tiles do OpenStreetMap no tema escuro (CARTO Dark Matter).
+            // Tiles padrao do OpenStreetMap — servidor oficial, sem chave
+            // de API. O CARTO Dark Matter (tema escuro) exigia chave e
+            // travava o mapa com "API KEY REQUIRED"; a troca perde o tema
+            // escuro do mapa, mas garante que ele sempre carrega.
             TileLayer(
-              urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.rideplatform.central_app',
               maxZoom: 19,
               tileProvider: NetworkTileProvider(),
@@ -190,7 +194,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
               borderRadius: BorderRadius.circular(4),
             ),
             child: const Text(
-              '© OpenStreetMap · CARTO',
+              '© OpenStreetMap contributors',
               style: TextStyle(
                 fontFamily: AppText.family,
                 color: AppColors.textFaint,
