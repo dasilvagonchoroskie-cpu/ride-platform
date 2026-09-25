@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../widgets/ui.dart';
 import 'otp_screen.dart';
