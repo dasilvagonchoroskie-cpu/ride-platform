@@ -2,13 +2,23 @@
     <!-- Localizacao do motorista: enviada em tempo real durante o servico -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <!-- Servico em primeiro plano para manter o rastreio durante a corrida -->
+    <!-- Sem "localizacao em segundo plano": o servico em primeiro plano, ligado
+         quando o motorista fica disponivel, ja pode usar o GPS com a tela
+         apagada. Declarar a de segundo plano exigiria video e justificativa
+         na Google Play sem trazer nenhum ganho. -->
+    <!-- Servico em primeiro plano: vigia de chamados com o app fechado -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Alarme de chamado: acordar a tela, tocar com o celular no bolso e
+         abrir a tela de chamada por cima de qualquer coisa -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:label="Fortaleza Mov Motorista"
@@ -36,6 +46,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <service
+            android:name=".CorridasService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
