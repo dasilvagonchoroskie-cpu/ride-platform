@@ -71,10 +71,47 @@ class _DriverReviewScreenState extends State<DriverReviewScreen> {
   Widget build(BuildContext context) {
     final application = widget.application;
     final tablet = MediaQuery.of(context).size.width >= 900;
+    final alertas = application.divergencias;
 
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Alerta em vermelho: so aparece quando ha algo para conferir.
+        // Nao trava a aprovacao — e um aviso para o administrador olhar
+        // antes de decidir, nao uma trava automatica.
+        if (alertas.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(Spacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.12),
+              border: Border.all(color: AppColors.danger),
+              borderRadius: BorderRadius.circular(Radii.sm),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, size: 18, color: AppColors.danger),
+                    const SizedBox(width: Spacing.xs),
+                    Text(
+                      'Confira antes de aprovar',
+                      style: AppText.bodyStrong.copyWith(color: AppColors.danger),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Spacing.xs),
+                for (final a in alertas)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text('• $a', style: AppText.body.copyWith(color: AppColors.danger)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Spacing.lg),
+        ],
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,10 +147,6 @@ class _DriverReviewScreenState extends State<DriverReviewScreen> {
               _Row(label: 'Validade da CNH', value: application.cnhExpiresAt),
               const AppDivider(),
               _Row(label: 'Veiculo', value: application.vehicle.description),
-              _Row(
-                label: 'Categoria',
-                value: application.vehicle.categoryName,
-              ),
               _Row(label: 'Cor', value: application.vehicle.color),
               _Row(label: 'Placa', value: application.vehicle.plate),
             ],
