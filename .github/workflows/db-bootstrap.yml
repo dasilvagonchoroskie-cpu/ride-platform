@@ -37,6 +37,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -o pipefail
           mkdir -p /tmp/rel
           pnpm exec prisma db push --accept-data-loss --skip-generate 2>&1 | tee /tmp/rel/saida.txt
 
@@ -47,7 +48,7 @@ jobs:
         working-directory: apps/backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm exec prisma db execute --file prisma/sql/post-init.sql --schema prisma/schema.prisma 2>&1 | tee -a /tmp/rel/saida.txt
+        run: set -o pipefail; pnpm exec prisma db execute --file prisma/sql/post-init.sql --schema prisma/schema.prisma 2>&1 | tee -a /tmp/rel/saida.txt
 
       - name: Semear as bandeiras de tarifa
         id: seed
@@ -56,7 +57,7 @@ jobs:
         working-directory: apps/backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm exec tsx prisma/seed.ts 2>&1 | tee -a /tmp/rel/saida.txt
+        run: set -o pipefail; pnpm exec tsx prisma/seed.ts 2>&1 | tee -a /tmp/rel/saida.txt
 
       - name: Guardar o relatorio
         if: always()
