@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
+import '../core/legal/legal_content.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/driver_demo.dart';
@@ -12,6 +14,8 @@ import '../data/models/driver_models.dart';
 /// Estado do motorista: cadastro, documentos, status online, ofertas,
 /// corrida em andamento e carteira.
 class DriverState extends ChangeNotifier {
+  final ApiClient _client = ApiClient();
+
   DriverProfile? profile;
   VehicleInfo? vehicle;
   List<DriverDocumentItem> documents = DriverDemo.initialDocuments();
@@ -83,6 +87,28 @@ class DriverState extends ChangeNotifier {
 
   Future<void> demoLogin(String name, String phone) async {
     profile = DriverProfile(id: 'demo-$phone', name: name, phone: phone);
+    await _persistProfile();
+    notifyListeners();
+  }
+
+  /// Registra o aceite dos Termos/Privacidade.
+  ///
+  /// Mesma logica do app do passageiro: tenta avisar o servidor, mas
+  /// aceita localmente de qualquer jeito se a rede falhar — o motorista
+  /// nao pode ficar preso na tela so porque a conexao caiu.
+  Future<void> acceptTerms() async {
+    final current = profile;
+    if (current == null) return;
+
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/auth/accept-terms', body: {'version': kTermsVersion});
+      } catch (_) {
+        // Segue aceitando localmente; sincroniza no proximo login.
+      }
+    }
+
+    profile = current.copyWith(termsAccepted: true);
     await _persistProfile();
     notifyListeners();
   }
