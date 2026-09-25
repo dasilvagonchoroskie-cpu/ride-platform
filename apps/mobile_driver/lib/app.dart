@@ -7,6 +7,7 @@ import 'screens/home_screen.dart';
 import 'screens/offer_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/pending_screen.dart';
+import 'screens/permissions_screen.dart';
 import 'screens/ride_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/terms_screen.dart';
@@ -53,6 +54,11 @@ class _Root extends StatelessWidget {
     }
 
     if (driver.offer != null) return const OfferScreen();
+
+    // Antes de trabalhar: sem estas autorizacoes o alarme de chamado falha
+    // com o celular no bolso. Pedido ja na espera da aprovacao, para o
+    // motorista estar pronto quando a Central liberar.
+    if (driver.permissoesOk == false) return const PermissionsScreen();
 
     if (profile.approval != DriverApproval.approved) return const PendingScreen();
 
