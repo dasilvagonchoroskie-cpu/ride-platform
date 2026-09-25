@@ -90,3 +90,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // NotificationCompat e ContextCompat, usados pelo servico de alarme nativo.
+    implementation("androidx.core:core-ktx:1.13.1")
+}
