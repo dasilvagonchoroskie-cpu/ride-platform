@@ -60,6 +60,54 @@ class AdminUser {
       );
 }
 
+/// Divergencias que merecem alerta em vermelho na Central.
+///
+/// So compara o que ja esta no cadastro — nada de OCR ou adivinhacao.
+/// A ideia e pegar erro de digitacao e prazo vencido antes que virem
+/// problema na rua, nao auditar o motorista.
+extension DriverApplicationAlerts on DriverApplication {
+  List<String> get divergencias {
+    final alertas = <String>[];
+
+    final validade = DateTime.tryParse(cnhExpiresAt);
+    if (validade == null) {
+      alertas.add('Validade da CNH em formato invalido.');
+    } else {
+      final dias = validade.difference(DateTime.now()).inDays;
+      if (dias < 0) {
+        alertas.add('CNH vencida.');
+      } else if (dias <= 30) {
+        alertas.add('CNH vence em $dias dia${dias == 1 ? '' : 's'}.');
+      }
+    }
+
+    if (!_placaValida(vehicle.plate)) {
+      alertas.add('Placa "${vehicle.plate}" fora do padrao (nem antigo, nem Mercosul).');
+    }
+
+    final anoAtual = DateTime.now().year;
+    if (vehicle.year < 1990 || vehicle.year > anoAtual + 1) {
+      alertas.add('Ano do veiculo (${vehicle.year}) parece errado.');
+    }
+
+    final reprovados = documents.where((d) => d.isRejected).length;
+    if (reprovados > 0) {
+      alertas.add('$reprovados documento${reprovados == 1 ? '' : 's'} reprovado${reprovados == 1 ? '' : 's'} — precisa reenvio.');
+    }
+
+    return alertas;
+  }
+
+  bool get temAlerta => divergencias.isNotEmpty;
+
+  static bool _placaValida(String placa) {
+    final p = placa.toUpperCase().replaceAll('-', '').replaceAll(' ', '');
+    final antiga = RegExp(r'^[A-Z]{3}[0-9]{4}$');
+    final mercosul = RegExp(r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$');
+    return antiga.hasMatch(p) || mercosul.hasMatch(p);
+  }
+}
+
 class DriverDocumentFile {
   const DriverDocumentFile({required this.type, required this.status, this.rejectionReason});
 
