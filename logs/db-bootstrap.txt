@@ -1,16 +1,30 @@
 Prisma schema loaded from prisma/schema.prisma
 Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-sa-east-1.pooler.supabase.com:5432"
-Error: ERROR: type "citext" does not exist
-   0: sql_schema_connector::apply_migration::migration_step
-           with step=CreateTable { table_id: TableId(0) }
-             at schema-engine/connectors/sql-schema-connector/src/apply_migration.rs:21
-   1: sql_schema_connector::apply_migration::apply_migration
-             at schema-engine/connectors/sql-schema-connector/src/apply_migration.rs:10
-   2: schema_core::state::SchemaPush
-             at schema-engine/core/src/state.rs:504
 
+🚀  Your database is now in sync with your Prisma schema. Done in 17.83s
+
+┌─────────────────────────────────────────────────────────┐
+│  Update available 5.22.0 -> 8.0.0-rc.17                 │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+Error: P1014
+
+The underlying table for model `surge_zones` does not exist.
+
+Semeando banco...
+  bandeira DIURNA: R$ 10,00 das 6h as 22h
+  bandeira NOTURNA: R$ 20,00 das 22h as 6h
+  admin ok: admin@ride.local (senha: Admin@123)
+  cupom ok: PRIMEIRACORRIDA
+Seed concluido.
 
 === resultado ===
-push:     failure
-postinit: skipped
-seed:     skipped
+push:     success
+postinit: failure
+seed:     success
