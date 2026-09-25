@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { FareFlag } from '@prisma/client';
+import type { FareConfig } from '@prisma/client';
 import { ERROR_CODES, haversineKm } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
@@ -73,7 +74,9 @@ export class FareService {
 
   /** A tabela vigente neste instante. */
   async tabelaVigente(quando: Date = new Date()) {
-    const tabelas = await this.prisma.fareConfig.findMany({ where: { isActive: true } });
+    const tabelas: FareConfig[] = await this.prisma.fareConfig.findMany({
+      where: { isActive: true },
+    });
     if (tabelas.length === 0) {
       throw new BusinessException(
         ERROR_CODES.NOT_FOUND,
