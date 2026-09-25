@@ -1,0 +1,37 @@
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "db.tuohtguzfywmrcigcems.supabase.co:5432"
+
+Error: P1001: Can't reach database server at `db.tuohtguzfywmrcigcems.supabase.co:5432`
+
+Please make sure your database server is running at `db.tuohtguzfywmrcigcems.supabase.co:5432`.
+Error: P1001
+
+Can't reach database server at `db.tuohtguzfywmrcigcems.supabase.co:5432`
+
+Please make sure your database server is running at `db.tuohtguzfywmrcigcems.supabase.co:5432`.
+
+Semeando banco...
+Falha no seed: PrismaClientInitializationError: 
+Invalid `prisma.fareConfig.upsert()` invocation in
+/home/runner/work/ride-platform/ride-platform/apps/backend/prisma/seed.ts:49:29
+
+  46 console.log('Semeando banco...');
+  47 
+  48 for (const bandeira of BANDEIRAS) {
+→ 49   await prisma.fareConfig.upsert(
+Can't reach database server at `db.tuohtguzfywmrcigcems.supabase.co:5432`
+
+Please make sure your database server is running at `db.tuohtguzfywmrcigcems.supabase.co:5432`.
+    at $n.handleRequestError (/home/runner/work/ride-platform/ride-platform/node_modules/@prisma/client/runtime/library.js:121:7615)
+    at $n.handleAndLogRequestError (/home/runner/work/ride-platform/ride-platform/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/home/runner/work/ride-platform/ride-platform/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/home/runner/work/ride-platform/ride-platform/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async main (/home/runner/work/ride-platform/ride-platform/apps/backend/prisma/seed.ts:49:5) {
+  clientVersion: '5.22.0',
+  errorCode: undefined
+}
+
+=== resultado ===
+push:     success
+postinit: success
+seed:     success
