@@ -172,6 +172,8 @@ jobs:
           echo "key.properties criado para ${{ matrix.app }}"
 
       - name: Compilar o APK
+        id: compilar
+        continue-on-error: true
         working-directory: apps/${{ matrix.app }}
         run: |
           set -euo pipefail
@@ -181,7 +183,31 @@ jobs:
             BUILD_TYPE=release
           fi
 
-          flutter build apk --$BUILD_TYPE --build-number=${{ github.run_number }}
+          flutter build apk --$BUILD_TYPE --build-number=${{ github.run_number }} \
+            2>&1 | tee "$RUNNER_TEMP/build-${{ matrix.app }}.txt"
+
+      # O token normal nao consegue ler o log de uma tarefa pela API.
+      # Mesmo truque do job de validacao: grava o resultado no repositorio.
+      - name: Guardar o relatorio da compilacao
+        if: always() && steps.compilar.outcome != 'skipped'
+        run: |
+          set -euo pipefail
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs
+          cp "$RUNNER_TEMP/build-${{ matrix.app }}.txt" "logs/build-${{ matrix.app }}.txt"
+          git add "logs/build-${{ matrix.app }}.txt"
+          git commit -m "relatorio de build: ${{ matrix.app }} (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3 4 5; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            echo "tentativa $t nao passou; repetindo"; sleep 5
+          done
+
+      - name: Falhar se a compilacao nao passou
+        if: steps.compilar.outcome != 'success'
+        run: |
+          echo "A compilacao nao passou. O relatorio esta em logs/build-${{ matrix.app }}.txt"
+          exit 1
 
       - name: Localizar o APK
         id: apk
