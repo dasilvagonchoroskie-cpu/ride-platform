@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/storage/app_storage.dart';
+import '../core/legal/legal_content.dart';
 import '../data/models/models.dart';
 
 /// Sessao do passageiro: OTP por SMS no modo API, login local no modo demo.
@@ -121,6 +122,30 @@ class AuthState extends ChangeNotifier {
     }
 
     user = current.copyWith(name: name, email: email);
+    await AppStorage.write(AppStorage.user, jsonEncode(user!.toJson()));
+    notifyListeners();
+  }
+
+  /// Registra o aceite dos Termos/Privacidade.
+  ///
+  /// Chama o servidor quando ha rede; se falhar (ou em modo
+  /// demonstracao), aceita mesmo assim localmente — a pessoa nao pode
+  /// ficar presa na tela de aceite so porque a internet caiu bem
+  /// naquele instante. Na proxima vez que houver rede, o proximo login
+  /// sincroniza de novo.
+  Future<void> acceptTerms() async {
+    final current = user;
+    if (current == null) return;
+
+    if (AppConfig.hasApi && !isDemoSession) {
+      try {
+        await _client.request('POST', '/auth/accept-terms', body: {'version': kTermsVersion});
+      } catch (_) {
+        // Segue aceitando localmente; sincroniza no proximo login.
+      }
+    }
+
+    user = current.copyWith(termsAccepted: true);
     await AppStorage.write(AppStorage.user, jsonEncode(user!.toJson()));
     notifyListeners();
   }
