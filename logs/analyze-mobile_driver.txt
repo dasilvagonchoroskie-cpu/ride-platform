@@ -17,4 +17,4 @@ Got dependencies!
 13 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Analyzing mobile_driver...                                      
-No issues found! (ran in 8.3s)
+No issues found! (ran in 6.2s)
