@@ -26,20 +26,5 @@ Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
 "Install CMake 3.22.1 v.3.22.1" complete.
 "Install CMake 3.22.1 v.3.22.1" finished.
 Caught exception: Already watching path: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/android
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':app:packageRelease'.
-> A failure occurred while executing com.android.build.gradle.tasks.PackageAndroidArtifact$IncrementalSplitterRunnable
-   > com.android.ide.common.signing.KeytoolException: Failed to read key ridemov from store "/home/runner/work/_temp/assinatura.jks": Get Key failed: Given final block not properly padded. Such issues can arise if a bad key is used during decryption.
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights from a Build Scan (powered by Develocity).
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 4m 17s
-Running Gradle task 'assembleRelease'...                          257.8s
-Gradle task assembleRelease failed with exit code 1
+Running Gradle task 'assembleRelease'...                          262.2s
+✓ Built build/app/outputs/flutter-apk/app-release.apk (54.6MB)
