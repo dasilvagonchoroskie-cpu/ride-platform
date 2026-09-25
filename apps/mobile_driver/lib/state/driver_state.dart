@@ -93,9 +93,10 @@ class DriverState extends ChangeNotifier {
 
   /// Registra o aceite dos Termos/Privacidade.
   ///
-  /// Mesma logica do app do passageiro: tenta avisar o servidor, mas
-  /// aceita localmente de qualquer jeito se a rede falhar — o motorista
-  /// nao pode ficar preso na tela so porque a conexao caiu.
+  /// Mesma receita do aplicativo do passageiro: tenta avisar o servidor
+  /// quando ha rede, mas aceita localmente mesmo se a chamada falhar —
+  /// o motorista nao pode ficar presos na tela de aceite so porque a
+  /// internet caiu naquele instante.
   Future<void> acceptTerms() async {
     final current = profile;
     if (current == null) return;
