@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Assinatura de producao: gerada pelo CI a partir de GitHub Secrets.
+# Nunca deve ser commitada.
+android/key.properties
+*.jks
+*.keystore
