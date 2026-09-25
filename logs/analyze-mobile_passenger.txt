@@ -20,4 +20,4 @@ Analyzing mobile_passenger...
 
   error • The getter 'label' isn't defined for the type 'FareFlag'. Try importing the library that defines 'label', correcting the name to the name of an existing getter, or defining a getter or field named 'label' • lib/screens/complete_screen.dart:97:73 • undefined_getter
 
-1 issue found. (ran in 7.4s)
+1 issue found. (ran in 7.7s)
