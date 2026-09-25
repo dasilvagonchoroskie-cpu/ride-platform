@@ -19,6 +19,9 @@ export interface AuthResult extends IssuedTokens {
     driverId: string | null;
     driverStatus: string | null;
     isOnline: boolean | null;
+    /** Falso enquanto a pessoa nao tocou em "Aceito os Termos" no app. */
+    termsAccepted: boolean;
+    termsVersion: string | null;
   };
   isNewUser: boolean;
 }
@@ -99,18 +102,7 @@ export class AuthService {
     return {
       ...issued,
       isNewUser: !existing,
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        avatarUrl: user.avatarUrl,
-        status: user.status,
-        driverId: user.driver?.id ?? null,
-        driverStatus: user.driver?.status ?? null,
-        isOnline: user.driver?.isOnline ?? null,
-      },
+      user: this.paraUsuario(user),
     };
   }
 
@@ -161,18 +153,7 @@ export class AuthService {
     return {
       ...issued,
       isNewUser: true,
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        avatarUrl: user.avatarUrl,
-        status: user.status,
-        driverId: null,
-        driverStatus: null,
-        isOnline: null,
-      },
+      user: this.paraUsuario(user),
     };
   }
 
@@ -215,18 +196,7 @@ export class AuthService {
     return {
       ...issued,
       isNewUser: false,
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        avatarUrl: user.avatarUrl,
-        status: user.status,
-        driverId: user.driver?.id ?? null,
-        driverStatus: user.driver?.status ?? null,
-        isOnline: user.driver?.isOnline ?? null,
-      },
+      user: this.paraUsuario(user),
     };
   }
 
@@ -275,6 +245,17 @@ export class AuthService {
 
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
 
+    return this.paraUsuario(user);
+  }
+
+  /**
+   * Monta o retrato publico do usuario a partir da linha do banco.
+   *
+   * Um lugar so: assim um campo novo (como o aceite dos termos) so
+   * precisa ser lembrado aqui, nao nos quatro pontos que devolvem
+   * usuario para o aplicativo.
+   */
+  private paraUsuario(user: any): AuthResult['user'] {
     return {
       id: user.id,
       role: user.role,
@@ -286,7 +267,25 @@ export class AuthService {
       driverId: user.driver?.id ?? null,
       driverStatus: user.driver?.status ?? null,
       isOnline: user.driver?.isOnline ?? null,
+      termsAccepted: user.termsAcceptedAt != null,
+      termsVersion: user.termsVersion ?? null,
     };
+  }
+
+  /**
+   * Registra que a pessoa tocou em "Aceito os Termos".
+   *
+   * So grava para frente: uma vez aceito, aceitar de novo so atualiza a
+   * versao (por exemplo quando os termos mudam), nunca apaga o aceite
+   * anterior.
+   */
+  async acceptTerms(userId: string, version: string): Promise<AuthResult['user']> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { termsAcceptedAt: new Date(), termsVersion: version },
+      include: { driver: { select: { id: true, status: true, isOnline: true } } },
+    });
+    return this.paraUsuario(user);
   }
 
   async registerDevice(current: AuthenticatedUser, device: DeviceContext): Promise<{ deviceId: string }> {
