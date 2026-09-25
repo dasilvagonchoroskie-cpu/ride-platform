@@ -1,0 +1,64 @@
+name: Preparar o banco de dados
+
+# Roda uma vez (ou sempre que o esquema mudar), para deixar o banco real
+# na nuvem com as tabelas, as extensoes espaciais e a semente de precos.
+# Nao roda em todo push: e uma operacao de infraestrutura, disparada na
+# mao, nunca por acidente.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Gerar o cliente Prisma
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm exec prisma generate
+
+      # Primeira vez: o banco esta vazio. "db push" sincroniza o esquema
+      # direto, sem exigir historico de migracao previo — o jeito certo
+      # de fazer o "genesis" de um banco novo. Depois disto, mudancas de
+      # esquema devem passar a usar migrate deploy com arquivos versionados.
+      - name: Criar as tabelas (db push)
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm exec prisma db push --accept-data-loss --skip-generate
+
+      - name: Indices espaciais, triggers e views (post-init)
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm exec prisma db execute --file prisma/sql/post-init.sql --schema prisma/schema.prisma
+
+      - name: Semear as bandeiras de tarifa
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm exec tsx prisma/seed.ts
+
+      - name: Confirmar
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Tabelas criadas e banco semeado com sucesso."
+          pnpm exec prisma db execute --stdin --schema prisma/schema.prisma <<< \
+            "SELECT flag, base_fare_cents, per_km_cents FROM fare_configs ORDER BY flag;"
