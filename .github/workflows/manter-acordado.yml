@@ -1,0 +1,37 @@
+name: Manter o servidor acordado
+
+# O plano gratuito do Render dorme apos 15 minutos sem visita e leva cerca
+# de 1 minuto para acordar — inaceitavel para corrida. Esta visita a cada
+# 5 minutos impede o sono. Cabe no gratuito: 750 h/mes contra no maximo
+# 744 h de um mes de 31 dias.
+#
+# De brinde: /api/health consulta o banco (Supabase) e o Redis. Assim o
+# banco tambem nao entra em pausa por inatividade, e se algo cair esta
+# tarefa falha e o GitHub avisa o dono da conta por e-mail.
+
+on:
+  schedule:
+    # Fora do minuto zero: o GitHub avisa que agendamentos no inicio da
+    # hora sao os que mais atrasam.
+    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  visitar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Visitar o servidor
+        run: |
+          URL="https://fortaleza-mov-backend.onrender.com/api/health"
+          for t in 1 2 3; do
+            RESP=$(curl -s --max-time 90 "$URL" || true)
+            echo "tentativa $t: $RESP"
+            if echo "$RESP" | grep -q '"status":"ok"'; then
+              echo "Servidor acordado, banco e Redis no ar."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "O servidor nao respondeu 'ok' em 3 tentativas."
+          exit 1
