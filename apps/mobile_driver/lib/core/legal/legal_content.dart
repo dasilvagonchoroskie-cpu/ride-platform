@@ -8,9 +8,9 @@ const String kTermsVersion = '1.0.0';
 /// demonstracao) e por isso nao consegue buscar o texto oficial no
 /// servidor. E um resumo, nao substitui o texto completo do `/legal/terms`.
 const String kTermsFallback = '''
-# Termos de Uso — Fortaleza Mov (resumo, sem conexao)
+# Termos de Uso — Fortaleza Mov Motorista (resumo, sem conexao)
 
-A Fortaleza Mov e uma plataforma de tecnologia que aproxima passageiros
+A Fortaleza Mov Motorista e uma plataforma de tecnologia que aproxima passageiros
 e motoristas parceiros. E proibido usar o servico para transporte de
 substancias ilicitas, armas, objetos roubados ou qualquer atividade
 criminosa. O passageiro assume total responsabilidade civil e criminal
@@ -20,7 +20,7 @@ Conecte-se a internet para ler o texto completo.
 ''';
 
 const String kPrivacyFallback = '''
-# Politica de Privacidade — Fortaleza Mov (resumo, sem conexao)
+# Politica de Privacidade — Fortaleza Mov Motorista (resumo, sem conexao)
 
 Coletamos localizacao por GPS para encontrar motoristas e tracar
 rotas, e dados de cadastro para identificacao. Nao vendemos dados a
