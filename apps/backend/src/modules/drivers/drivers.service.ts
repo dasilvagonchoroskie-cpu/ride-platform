@@ -178,7 +178,7 @@ export class DriversService {
         user: {
           select: { id: true, name: true, phone: true, email: true, avatarUrl: true, status: true, createdAt: true },
         },
-        vehicles: { include: { category: true } },
+        vehicles: true,
         documents: { orderBy: { createdAt: 'desc' } },
         wallet: true,
       },
@@ -314,7 +314,7 @@ export class DriversService {
       where: { id: driverId },
       include: {
         user: { select: { id: true, name: true, phone: true, email: true, avatarUrl: true } },
-        vehicles: { where: { isActive: true }, include: { category: true } },
+        vehicles: { where: { isActive: true } },
         wallet: true,
       },
     });
