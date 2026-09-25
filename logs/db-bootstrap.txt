@@ -13,10 +13,7 @@ The database is already in sync with the Prisma schema.
 │    npm i --save-dev prisma@latest                       │
 │    npm i @prisma/client@latest                          │
 └─────────────────────────────────────────────────────────┘
-Error: P1014
-
-The underlying table for model `vehicle_categories` does not exist.
-
+Script executed successfully.
 Semeando banco...
   bandeira DIURNA: R$ 10,00 das 6h as 22h
   bandeira NOTURNA: R$ 20,00 das 22h as 6h
@@ -26,5 +23,5 @@ Seed concluido.
 
 === resultado ===
 push:     success
-postinit: failure
+postinit: success
 seed:     success
