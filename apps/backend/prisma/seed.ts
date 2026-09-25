@@ -72,14 +72,9 @@ async function main(): Promise<void> {
   });
   console.log(`  admin ok: ${admin.email} (senha: ${adminPassword})`);
 
-  for (const setting of SETTINGS) {
-    await prisma.setting.upsert({
-      where: { key: setting.key },
-      create: { key: setting.key, value: setting.value, description: setting.description },
-      update: { description: setting.description },
-    });
-  }
-  console.log(`  ${SETTINGS.length} configuracoes ok`);
+  // A tabela `settings` (chave/valor generico) existe no esquema como
+  // ponto de extensao, mas nada no backend le dela ainda — por isso nao
+  // ha nada para semear aqui.
 
   const coupon = await prisma.coupon.upsert({
     where: { code: 'PRIMEIRACORRIDA' },
