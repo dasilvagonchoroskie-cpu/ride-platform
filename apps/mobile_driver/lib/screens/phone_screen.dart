@@ -4,6 +4,10 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../widgets/ui.dart';
 import 'otp_screen.dart';
+import 'package:provider/provider.dart';
+import '../core/config/app_config.dart';
+import '../core/api/api_client.dart';
+import '../state/driver_state.dart';
 
 class PhoneScreen extends StatefulWidget {
   const PhoneScreen({super.key});
@@ -27,15 +31,28 @@ class _PhoneScreenState extends State<PhoneScreen> {
     return digits.length >= 10 && digits.length <= 11;
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     if (!_isValid) {
       setState(() => _error = 'Informe um telefone com DDD.');
       return;
     }
+    final phone = '+55${onlyDigits(_controller.text)}';
+
+    String? debugCode;
+    if (AppConfig.hasApi) {
+      setState(() => _error = null);
+      try {
+        debugCode = await context.read<DriverState>().requestOtp(phone);
+      } on ApiException catch (e) {
+        if (mounted) setState(() => _error = e.message);
+        return;
+      }
+    }
+    if (!mounted) return;
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => OtpScreen(phone: '+55${onlyDigits(_controller.text)}'),
+        builder: (_) => OtpScreen(phone: phone, debugCode: debugCode),
       ),
     );
   }
