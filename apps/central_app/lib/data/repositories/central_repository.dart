@@ -38,6 +38,9 @@ class CentralRepository {
       final items = data['items'] as List<dynamic>? ?? const [];
       return items.map((item) => _fromApi(item as Map<String, dynamic>)).toList();
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return CentralDemo.applications();
     }
@@ -93,6 +96,9 @@ class CentralRepository {
       final items = data['items'] as List<dynamic>? ?? const [];
       return items.map((item) => _activeRideFromApi(item as Map<String, dynamic>)).toList();
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return CentralDemo.activeRides();
     }
@@ -109,6 +115,9 @@ class CentralRepository {
       final data = await _client.request('GET', '/admin/tariffs') as Map<String, dynamic>;
       return Tariffs.fromJson(data);
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return CentralDemo.tariffs();
     }
@@ -160,6 +169,9 @@ class CentralRepository {
             (data['hourlyRevenue'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? const [],
       );
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return CentralDemo.financials();
     }
