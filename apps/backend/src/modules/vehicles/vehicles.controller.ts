@@ -3,22 +3,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { createVehicleSchema, updateVehicleSchema, UserRole } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { VehiclesService } from './vehicles.service';
-
-@ApiTags('Categorias de veiculo')
-@Controller('vehicle-categories')
-export class VehicleCategoriesController {
-  constructor(private readonly vehicles: VehiclesService) {}
-
-  @Public()
-  @Get()
-  @ApiOperation({ summary: 'Categorias ativas com tarifa vigente (usado na estimativa)' })
-  list() {
-    return this.vehicles.listActiveCategories();
-  }
-}
 
 @ApiTags('Veiculos do motorista')
 @ApiBearerAuth()
