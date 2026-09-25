@@ -159,6 +159,11 @@ model User {
   lastLoginAt   DateTime?  @map("last_login_at")
   blockedReason String?    @map("blocked_reason")
   metadata      Json?
+
+  /// Aceite dos Termos de Uso e da Politica de Privacidade. Sem isto
+  /// preenchido, o aplicativo bloqueia o uso na tela de aceite.
+  termsAcceptedAt DateTime? @map("terms_accepted_at")
+  termsVersion    String?   @map("terms_version") @db.VarChar(20)
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
   deletedAt     DateTime?  @map("deleted_at")
