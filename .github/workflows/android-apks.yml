@@ -238,6 +238,25 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # Artefato do GitHub Actions expira em 30 dias e so abre para quem
+      # esta logado no GitHub. Um asset de Release fica disponivel para
+      # sempre e a propria Actions API entrega o arquivo sem exigir
+      # login no navegador — e o link que de fato se entrega ao cliente.
+      - name: Publicar no Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="apk-${{ matrix.apk_name }}-mais-recente"
+          if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "${{ github.repository }}" \
+              --title "${{ matrix.label }} - APK mais recente" \
+              --notes "Gerado automaticamente pelo GitHub Actions. Sempre o build mais recente da branch main." \
+              --latest=false
+          fi
+          gh release upload "$TAG" "${{ steps.apk.outputs.path }}" \
+            --repo "${{ github.repository }}" --clobber
+
       - name: Resumo do build
         run: |
           {
