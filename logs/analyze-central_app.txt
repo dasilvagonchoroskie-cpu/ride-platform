@@ -15,4 +15,8 @@ Got dependencies!
 11 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Analyzing central_app...                                        
-No issues found! (ran in 7.1s)
+
+  error • The getter 'categoryName' isn't defined for the type 'VehicleSummary'. Try importing the library that defines 'categoryName', correcting the name to the name of an existing getter, or defining a getter or field named 'categoryName' • lib/screens/driver_review_screen.dart:115:44 • undefined_getter
+  error • The getter 'categoryName' isn't defined for the type 'VehicleSummary'. Try importing the library that defines 'categoryName', correcting the name to the name of an existing getter, or defining a getter or field named 'categoryName' • lib/screens/drivers_pending_screen.dart:133:70 • undefined_getter
+
+2 issues found. (ran in 7.0s)
