@@ -6,12 +6,12 @@
 class AppConfig {
   const AppConfig._();
 
-  static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: '');
+  static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://fortaleza-mov-backend.onrender.com');
   static const bool forceDemo = bool.fromEnvironment('FORCE_DEMO', defaultValue: false);
 
 
   static const String appVersion = '0.1.0';
-  static const Duration apiTimeout = Duration(seconds: 15);
+  static const Duration apiTimeout = Duration(seconds: 60);
 
   static bool get hasApi => apiUrl.isNotEmpty && !forceDemo;
 }
