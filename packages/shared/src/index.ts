@@ -9,3 +9,4 @@ export * from './schemas/document.schema';
 export * from './schemas/vehicle.schema';
 export * from './schemas/ride.schema';
 export * from './schemas/tariff.schema';
+export * from './schemas/legal.schema';
