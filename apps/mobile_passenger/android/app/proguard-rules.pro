@@ -14,3 +14,11 @@
 -keep class io.flutter.view.**  { *; }
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
+
+# O motor do Flutter referencia o Play Core (componentes adiaveis) de
+# forma defensiva, mesmo quando o app nao usa essa funcionalidade — o
+# que e o nosso caso. Sem esta linha, o R8 trata a classe ausente como
+# erro fatal em vez de aviso. Este e o problema mais comum de builds
+# release com Flutter + R8, documentado no proprio flutter.dev.
+-dontwarn com.google.android.play.core.**
+-keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
