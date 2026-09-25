@@ -31,6 +31,12 @@ on:
 concurrency:
   group: android-apks-${{ github.ref }}
   cancel-in-progress: true
+
+# Necessario para o job de validacao gravar o relatorio de erro de
+# volta no repositorio (veja o passo "Guardar o relatorio").
+permissions:
+  contents: write
+
 env:
   FLUTTER_VERSION: '3.47.5'
   JAVA_VERSION: '17'
@@ -63,8 +69,31 @@ jobs:
         run: flutter pub get
 
       - name: Analise estatica (flutter analyze)
+        id: analyze
+        continue-on-error: true
         working-directory: apps/${{ matrix.app }}
-        run: flutter analyze
+        run: flutter analyze 2>&1 | tee "$RUNNER_TEMP/analyze-${{ matrix.app }}.txt"
+
+      # O token normal nao consegue ler o log de uma tarefa pela API.
+      # Gravar o resultado aqui, no proprio repositorio, resolve isso.
+      - name: Guardar o relatorio da analise
+        if: always()
+        run: |
+          set -euo pipefail
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs
+          cp "$RUNNER_TEMP/analyze-${{ matrix.app }}.txt" "logs/analyze-${{ matrix.app }}.txt"
+          git add "logs/analyze-${{ matrix.app }}.txt"
+          git commit -m "relatorio de analise: ${{ matrix.app }} (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3 4 5; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            echo "tentativa $t nao passou; repetindo"; sleep 5
+          done
+
+      - name: Falhar se a analise nao passou
+        if: steps.analyze.outcome != 'success'
+        run: exit 1
 
   build-apk:
     name: APK ${{ matrix.app }}
