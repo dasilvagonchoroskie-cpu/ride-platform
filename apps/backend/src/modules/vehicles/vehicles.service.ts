@@ -3,13 +3,10 @@ import { ERROR_CODES, normalizePlate } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
-import {
-  CreateVehicleCategoryInput,
-  CreateVehicleInput,
-  UpdateVehicleCategoryInput,
-  UpdateVehicleInput,
-} from '@ride/shared';
+import { CreateVehicleInput, UpdateVehicleInput } from '@ride/shared';
 
+/// Modalidade unica: nao ha categoria de veiculo. O que existe aqui e so
+/// o cadastro do veiculo do motorista e a listagem administrativa.
 @Injectable()
 export class VehiclesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -22,7 +19,6 @@ export class VehiclesService {
 
     return this.prisma.vehicle.findMany({
       where: { driverId: driver.id },
-      include: { category: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -30,11 +26,6 @@ export class VehiclesService {
   async create(userId: string, input: CreateVehicleInput) {
     const driver = await this.prisma.driver.findUnique({ where: { userId } });
     if (!driver) throw BusinessException.notFound('Cadastro de motorista nao encontrado.');
-
-    const category = await this.prisma.vehicleCategory.findFirst({
-      where: { id: input.categoryId, isActive: true },
-    });
-    if (!category) throw BusinessException.validation('Categoria de veiculo invalida.');
 
     const plate = normalizePlate(input.plate);
     const plateTaken = await this.prisma.vehicle.findUnique({ where: { plate } });
@@ -45,7 +36,6 @@ export class VehiclesService {
     return this.prisma.vehicle.create({
       data: {
         driverId: driver.id,
-        categoryId: input.categoryId,
         plate,
         brand: input.brand,
         model: input.model,
@@ -53,7 +43,6 @@ export class VehiclesService {
         color: input.color,
         isActive: input.isActive,
       },
-      include: { category: true },
     });
   }
 
@@ -70,7 +59,6 @@ export class VehiclesService {
     return this.prisma.vehicle.update({
       where: { id: vehicleId },
       data: { ...input, ...(input.plate ? { plate: normalizePlate(input.plate) } : {}) },
-      include: { category: true },
     });
   }
 
@@ -86,78 +74,7 @@ export class VehiclesService {
     await this.prisma.vehicle.update({ where: { id: vehicleId }, data: { isActive: false } });
   }
 
-  // ------------------------------ PUBLICO ------------------------------
-
-  listActiveCategories() {
-    return this.prisma.vehicleCategory.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        fareConfigs: { where: { isActive: true }, orderBy: { validFrom: 'desc' }, take: 1 },
-      },
-    });
-  }
-
   // ------------------------------- ADMIN -------------------------------
-
-  async adminListCategories() {
-    return this.prisma.vehicleCategory.findMany({
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        fareConfigs: { orderBy: { validFrom: 'desc' } },
-        _count: { select: { vehicles: true, rides: true } },
-      },
-    });
-  }
-
-  async adminCreateCategory(input: CreateVehicleCategoryInput) {
-    const exists = await this.prisma.vehicleCategory.findUnique({ where: { slug: input.slug } });
-    if (exists) throw BusinessException.conflict('Ja existe uma categoria com este slug.');
-    return this.prisma.vehicleCategory.create({ data: input });
-  }
-
-  async adminUpdateCategory(categoryId: string, input: UpdateVehicleCategoryInput) {
-    const category = await this.prisma.vehicleCategory.findUnique({ where: { id: categoryId } });
-    if (!category) throw BusinessException.notFound('Categoria nao encontrada.');
-    return this.prisma.vehicleCategory.update({ where: { id: categoryId }, data: input });
-  }
-
-  /** Define a tarifa vigente de uma categoria (histórico preservado). */
-  async adminUpsertFare(categoryId: string, fare: {
-    baseFareCents: number;
-    perKmCents: number;
-    perMinuteCents: number;
-    minFareCents: number;
-    bookingFeeCents?: number;
-    cancellationFeeCents?: number;
-    waitingPerMinuteCents?: number;
-    surgeEnabled?: boolean;
-    maxSurgeMultiplier?: number;
-    commissionPercent?: number;
-  }) {
-    const category = await this.prisma.vehicleCategory.findUnique({ where: { id: categoryId } });
-    if (!category) throw BusinessException.notFound('Categoria nao encontrada.');
-
-    return this.prisma.$transaction(async (tx) => {
-      await tx.fareConfig.updateMany({ where: { categoryId, isActive: true }, data: { isActive: false } });
-      return tx.fareConfig.create({
-        data: {
-          categoryId,
-          baseFareCents: fare.baseFareCents,
-          perKmCents: fare.perKmCents,
-          perMinuteCents: fare.perMinuteCents,
-          minFareCents: fare.minFareCents,
-          bookingFeeCents: fare.bookingFeeCents ?? 0,
-          cancellationFeeCents: fare.cancellationFeeCents ?? 0,
-          waitingPerMinuteCents: fare.waitingPerMinuteCents ?? 0,
-          surgeEnabled: fare.surgeEnabled ?? true,
-          maxSurgeMultiplier: fare.maxSurgeMultiplier ?? 2,
-          commissionPercent: fare.commissionPercent ?? 20,
-          isActive: true,
-        },
-      });
-    });
-  }
 
   async adminListVehicles(params: { page: number; limit: number; search?: string }) {
     const where = params.search
@@ -177,7 +94,6 @@ export class VehiclesService {
         take: params.limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          category: true,
           driver: { select: { id: true, status: true, user: { select: { name: true, phone: true } } } },
         },
       }),
