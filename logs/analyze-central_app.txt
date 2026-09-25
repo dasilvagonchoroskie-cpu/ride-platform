@@ -15,4 +15,4 @@ Got dependencies!
 11 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Analyzing central_app...                                        
-No issues found! (ran in 7.7s)
+No issues found! (ran in 7.6s)
