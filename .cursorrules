@@ -1,0 +1,52 @@
+# Regras da casa — Fortaleza Mov (ride-platform)
+
+Este arquivo vale para qualquer edicao neste repositorio, feita por
+Claude, por Cursor ou por qualquer outra ferramenta de codigo.
+
+## 1. Termos de Uso: toda tela nova de entrada precisa passar por eles
+
+Qualquer tela nova que fique no caminho de login -> uso do aplicativo
+(nos tres apps: mobile_passenger, mobile_driver, central_app) DEVE
+respeitar o portao de aceite dos Termos/Privacidade ja existente em
+cada `app.dart`:
+
+- passageiro e motorista: a pessoa so alcanca a tela inicial depois de
+  `termsAccepted == true` no perfil.
+- ao criar uma tela nova que troque a logica de roteamento em
+  `_Root` (app.dart), o portao dos termos tem que continuar vindo
+  ANTES dela — nunca depois.
+- se os Termos ou a Privacidade mudarem de conteudo
+  (`apps/backend/src/modules/legal/legal-content.ts`), suba tambem o
+  numero em `LEGAL_VERSION` ali e em `kTermsVersion` nos tres apps
+  Flutter (`core/legal/legal_content.dart`). Sem isso, quem ja aceitou
+  a versao antiga nunca ve o aviso da nova.
+
+## 2. Chaves de assinatura nunca vao para o codigo
+
+- Nenhum `.jks`, `.keystore`, senha de keystore ou senha de alias entra
+  em commit, em `key.properties` versionado, ou em qualquer arquivo
+  texto do repositorio.
+- As quatro credenciais de assinatura (`ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+  `ANDROID_KEY_PASSWORD`) vivem SOMENTE em GitHub Actions Secrets. O
+  arquivo `apps/*/android/key.properties` e gerado em tempo de build
+  pela etapa "Preparar a assinatura de producao" do workflow
+  `android-apks.yml` — ele nunca deve ser criado a mao e commitado.
+- O mesmo vale para qualquer outra credencial nova que aparecer no
+  projeto (chave de API, senha de banco, token de pagamento): sempre
+  GitHub Secrets ou variavel de ambiente, nunca hardcoded.
+
+## 3. Antes de renomear ou apagar um arquivo
+
+Um rename que nao atualiza todo mundo que importa o arquivo quebra a
+compilacao sem avisar antes do CI rodar. Depois de renomear ou apagar
+um arquivo, procure por toda referencia ao nome antigo no repositorio
+inteiro (nao so na pasta onde a mudanca foi feita) antes de dar como
+concluido.
+
+## 4. Antes de mudar `schema.prisma`
+
+Rode a checagem de tipos do backend (o motor de preco, os controllers
+e os DTOs de corrida e bandeira dependem diretamente dos campos do
+banco). Um campo removido ou renomeado sem atualizar quem le esse
+campo derruba o backend inteiro, nao so a tela que motivou a mudanca.
