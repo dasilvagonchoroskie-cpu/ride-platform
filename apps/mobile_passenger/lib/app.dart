@@ -8,6 +8,7 @@ import 'screens/home_screen.dart';
 import 'screens/ride_screen.dart';
 import 'screens/searching_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/terms_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
 import 'state/auth_state.dart';
@@ -39,6 +40,10 @@ class _Root extends StatelessWidget {
 
     if (!app.bootstrapped || !auth.ready) return const SplashScreen();
     if (auth.user == null) return const WelcomeScreen();
+
+    // Ninguem passa daqui sem aceitar. Fica antes de qualquer outra
+    // tela, inclusive corrida em andamento.
+    if (!auth.user!.termsAccepted) return const TermsScreen();
 
     final active = ride.activeRide;
     if (active != null) {
