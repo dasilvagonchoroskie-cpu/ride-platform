@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
+import '../data/models/models.dart';
 import '../state/ride_state.dart';
 import '../widgets/ui.dart';
 import 'history_screen.dart';
