@@ -51,6 +51,7 @@ class DriverProfile {
     this.rating = 5,
     this.totalRides = 0,
     this.acceptanceRate = 100,
+    this.termsAccepted = false,
   });
 
   final String id;
@@ -65,6 +66,11 @@ class DriverProfile {
   final double rating;
   final int totalRides;
   final int acceptanceRate;
+
+  /// Se o motorista ja tocou em "Aceito os Termos". Enquanto for falso,
+  /// o aplicativo mostra a tela de aceite antes de qualquer outra coisa
+  /// — inclusive antes do cadastro do veiculo.
+  final bool termsAccepted;
 
   bool get isOnboarded => cpf != null && cnhNumber != null;
 
@@ -88,6 +94,7 @@ class DriverProfile {
         'rating': rating,
         'totalRides': totalRides,
         'acceptanceRate': acceptanceRate,
+        'termsAccepted': termsAccepted,
       };
 
   factory DriverProfile.fromJson(Map<String, dynamic> json) => DriverProfile(
@@ -106,6 +113,7 @@ class DriverProfile {
         rating: (json['rating'] as num?)?.toDouble() ?? 5,
         totalRides: (json['totalRides'] as num?)?.toInt() ?? 0,
         acceptanceRate: (json['acceptanceRate'] as num?)?.toInt() ?? 100,
+        termsAccepted: json['termsAccepted'] as bool? ?? false,
       );
 
   DriverProfile copyWith({
@@ -116,6 +124,7 @@ class DriverProfile {
     String? cnhExpiresAt,
     DriverApproval? approval,
     bool? isOnline,
+    bool? termsAccepted,
   }) =>
       DriverProfile(
         id: id,
@@ -130,6 +139,7 @@ class DriverProfile {
         rating: rating,
         totalRides: totalRides,
         acceptanceRate: acceptanceRate,
+        termsAccepted: termsAccepted ?? this.termsAccepted,
       );
 }
 
