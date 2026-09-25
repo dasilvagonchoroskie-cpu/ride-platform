@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/uber_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../state/driver_state.dart';
 import '../widgets/ui.dart';
