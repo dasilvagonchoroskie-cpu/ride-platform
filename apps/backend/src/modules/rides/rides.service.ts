@@ -196,9 +196,10 @@ export class RidesService {
   /** Chamados abertos para este motorista, ainda dentro do prazo. */
   async chamados(driverId: string) {
     const agora = new Date();
-    const ofertas: Array<RideOffer & { ride: Ride }> = await this.prisma.rideOffer.findMany({
+    const ofertas: Array<RideOffer & { ride: Ride & { passenger: { name: string } } }> =
+      await this.prisma.rideOffer.findMany({
       where: { driverId, status: OfferStatus.PENDING, expiresAt: { gt: agora } },
-      include: { ride: true },
+      include: { ride: { include: { passenger: { select: { name: true } } } } },
       orderBy: { createdAt: 'asc' },
     });
     return ofertas
@@ -213,6 +214,16 @@ export class RidesService {
         distanceKm: o.distanceKm,
         etaSeconds: o.etaSeconds,
         expiresAt: o.expiresAt,
+        // Coordenadas: a tela de oferta desenha embarque e destino no mapa
+        // ANTES do motorista aceitar. So o endereco escrito nao basta.
+        pickupLat: o.ride.pickupLat,
+        pickupLng: o.ride.pickupLng,
+        dropoffLat: o.ride.dropoffLat,
+        dropoffLng: o.ride.dropoffLng,
+        tripDistanceMeters: o.ride.distanceMeters,
+        tripDurationSeconds: o.ride.durationSeconds,
+        commissionPercent: Number(o.ride.commissionPercent),
+        passengerName: o.ride.passenger?.name ?? 'Passageiro',
       }));
   }
 
