@@ -34,6 +34,26 @@ class ApiClient {
     Map<String, dynamic>? body,
     Map<String, String>? query,
   }) async {
+    try {
+      return await _enviar(method, path, body: body, query: query);
+    } on ApiException catch (e) {
+      // Uma queda de rede pode ser passageira — um pico de sinal, um
+      // roaming entre torres. Antes de desistir e cair para o modo
+      // demonstracao, tenta mais uma vez apos uma pausa curta. Erro de
+      // aplicacao (senha errada, corrida ja aceita) nao se beneficia de
+      // repetir, entao so repete quando o problema foi de conexao.
+      if (!e.isNetworkError) rethrow;
+      await Future<void>.delayed(const Duration(seconds: 2));
+      return _enviar(method, path, body: body, query: query);
+    }
+  }
+
+  Future<dynamic> _enviar(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String>? query,
+  }) async {
     final base = Uri.parse('${AppConfig.apiUrl}/api$path');
     final uri = query == null ? base : base.replace(queryParameters: query);
 
