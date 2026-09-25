@@ -532,7 +532,7 @@ export class RidesService {
         driver: {
           select: {
             id: true,
-            ratingAverage: true,
+            ratingAvg: true,
             user: { select: { name: true, phone: true } },
           },
         },
