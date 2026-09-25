@@ -8,9 +8,6 @@
 CREATE INDEX IF NOT EXISTS driver_locations_location_gist
   ON driver_locations USING GIST (location);
 
-CREATE INDEX IF NOT EXISTS surge_zones_boundary_gist
-  ON surge_zones USING GIST (boundary);
-
 -- ---------- Busca textual (autocomplete de enderecos/cidades) ----------
 CREATE INDEX IF NOT EXISTS users_name_trgm
   ON users USING GIN (name gin_trgm_ops);
@@ -34,7 +31,7 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'users','devices','drivers','driver_documents','vehicles','vehicle_categories',
     'fare_configs','coupons','rides','payments','payment_methods','wallets',
-    'payouts','surge_zones','driver_locations'
+    'payouts','driver_locations'
   ]
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS trg_%s_updated_at ON %I', t, t);
