@@ -9,6 +9,8 @@ import {
   registerPasswordSchema,
   requestOtpSchema,
   verifyOtpSchema,
+  acceptTermsSchema,
+  AcceptTermsInput,
   deviceInfoSchema,
   DeviceInfoInput,
   UserRole,
@@ -129,6 +131,16 @@ export class AuthController {
   @ApiOperation({ summary: 'Retorna o usuario autenticado' })
   me(@CurrentUser() user: AuthenticatedUser) {
     return this.auth.me(user.id);
+  }
+
+  @ApiBearerAuth()
+  @Post('accept-terms')
+  @ApiOperation({ summary: 'Registra o aceite dos Termos de Uso / Politica de Privacidade' })
+  acceptTerms(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(acceptTermsSchema)) body: AcceptTermsInput,
+  ) {
+    return this.auth.acceptTerms(user.id, body.version);
   }
 
   @ApiBearerAuth()
