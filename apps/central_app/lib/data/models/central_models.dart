@@ -146,7 +146,6 @@ class DriverApplication {
 
 class VehicleSummary {
   const VehicleSummary({
-    required this.categorySlug,
     required this.brand,
     required this.model,
     required this.year,
@@ -154,7 +153,6 @@ class VehicleSummary {
     required this.plate,
   });
 
-  final String categorySlug;
   final String brand;
   final String model;
   final int year;
@@ -163,13 +161,6 @@ class VehicleSummary {
 
   String get description => '$brand $model $year';
 
-  String get categoryName => switch (categorySlug) {
-        'moto' => 'Moto',
-        'comfort' => 'Viagem',
-        'black' => 'Viagem',
-        'van' => 'Van',
-        _ => 'Viagem',
-      };
 }
 
 /// Corrida ativa no mapa de monitoramento.
@@ -229,47 +220,125 @@ class ActiveRide {
       );
 }
 
-/// Tarifas configuradas pelo administrador (valores em centavos).
-class FareSettings {
-  const FareSettings({
-    required this.categorySlug,
+/// Qual bandeira. Modalidade unica: o que muda o preco e a HORA.
+enum FareFlag { diurna, noturna }
+
+extension FareFlagLabel on FareFlag {
+  String get chave => this == FareFlag.noturna ? 'noturna' : 'diurna';
+  String get titulo =>
+      this == FareFlag.noturna ? 'BANDEIRA 2 - Noturna' : 'BANDEIRA 1 - Diurna';
+}
+
+/// Uma bandeira, como o administrador ve e edita (valores em centavos).
+///
+/// A bandeirada ja inclui a franquia: so o que passa dela e cobrado a
+/// mais. Por isso "valor por km" aqui e sempre por km EXCEDENTE.
+class TariffFlag {
+  const TariffFlag({
+    required this.flag,
+    required this.startHour,
+    required this.endHour,
     required this.baseFareCents,
     required this.perKmCents,
-    required this.perMinuteCents,
-    required this.minimumFareCents,
-    required this.platformFeePercent,
+    required this.waitingPerMinuteCents,
+    required this.freeDistanceMeters,
+    required this.freeWaitingSeconds,
+    required this.minFareCents,
+    required this.cancellationFeeCents,
+    required this.commissionPercent,
   });
 
-  final String categorySlug;
+  final FareFlag flag;
+  final int startHour;
+  final int endHour;
   final int baseFareCents;
   final int perKmCents;
-  final int perMinuteCents;
-  final int minimumFareCents;
-  final double platformFeePercent;
+  final int waitingPerMinuteCents;
+  final int freeDistanceMeters;
+  final int freeWaitingSeconds;
+  final int minFareCents;
+  final int cancellationFeeCents;
+  final double commissionPercent;
 
-  String get categoryName => switch (categorySlug) {
-        'moto' => 'Moto',
-        'comfort' => 'Viagem',
-        'black' => 'Viagem',
-        'van' => 'Van',
-        _ => 'Viagem',
+  String get faixa => '${startHour}h as ${endHour}h';
+
+  factory TariffFlag.fromJson(FareFlag flag, Map<String, dynamic> json) => TariffFlag(
+        flag: flag,
+        startHour: (json['startHour'] as num?)?.toInt() ?? (flag == FareFlag.noturna ? 22 : 6),
+        endHour: (json['endHour'] as num?)?.toInt() ?? (flag == FareFlag.noturna ? 6 : 22),
+        baseFareCents: (json['baseFareCents'] as num?)?.toInt() ?? 0,
+        perKmCents: (json['perKmCents'] as num?)?.toInt() ?? 0,
+        waitingPerMinuteCents: (json['waitingPerMinuteCents'] as num?)?.toInt() ?? 0,
+        freeDistanceMeters: (json['freeDistanceMeters'] as num?)?.toInt() ?? 1500,
+        freeWaitingSeconds: (json['freeWaitingSeconds'] as num?)?.toInt() ?? 180,
+        minFareCents: (json['minFareCents'] as num?)?.toInt() ?? 0,
+        cancellationFeeCents: (json['cancellationFeeCents'] as num?)?.toInt() ?? 0,
+        commissionPercent: (json['commissionPercent'] as num?)?.toDouble() ?? 20,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'startHour': startHour,
+        'endHour': endHour,
+        'baseFareCents': baseFareCents,
+        'perKmCents': perKmCents,
+        'waitingPerMinuteCents': waitingPerMinuteCents,
+        'freeDistanceMeters': freeDistanceMeters,
+        'freeWaitingSeconds': freeWaitingSeconds,
+        'minFareCents': minFareCents,
+        'cancellationFeeCents': cancellationFeeCents,
+        'commissionPercent': commissionPercent,
       };
 
-  FareSettings copyWith({
+  TariffFlag copyWith({
+    int? startHour,
+    int? endHour,
     int? baseFareCents,
     int? perKmCents,
-    int? perMinuteCents,
-    int? minimumFareCents,
-    double? platformFeePercent,
+    int? waitingPerMinuteCents,
+    int? freeDistanceMeters,
+    int? freeWaitingSeconds,
+    int? minFareCents,
+    int? cancellationFeeCents,
+    double? commissionPercent,
   }) =>
-      FareSettings(
-        categorySlug: categorySlug,
+      TariffFlag(
+        flag: flag,
+        startHour: startHour ?? this.startHour,
+        endHour: endHour ?? this.endHour,
         baseFareCents: baseFareCents ?? this.baseFareCents,
         perKmCents: perKmCents ?? this.perKmCents,
-        perMinuteCents: perMinuteCents ?? this.perMinuteCents,
-        minimumFareCents: minimumFareCents ?? this.minimumFareCents,
-        platformFeePercent: platformFeePercent ?? this.platformFeePercent,
+        waitingPerMinuteCents: waitingPerMinuteCents ?? this.waitingPerMinuteCents,
+        freeDistanceMeters: freeDistanceMeters ?? this.freeDistanceMeters,
+        freeWaitingSeconds: freeWaitingSeconds ?? this.freeWaitingSeconds,
+        minFareCents: minFareCents ?? this.minFareCents,
+        cancellationFeeCents: cancellationFeeCents ?? this.cancellationFeeCents,
+        commissionPercent: commissionPercent ?? this.commissionPercent,
       );
+}
+
+/// As duas bandeiras juntas. Andam em par: salvar uma so deixaria um
+/// horario do dia sem tabela de preco.
+class Tariffs {
+  const Tariffs({required this.diurna, required this.noturna});
+
+  final TariffFlag diurna;
+  final TariffFlag noturna;
+
+  factory Tariffs.fromJson(Map<String, dynamic> json) => Tariffs(
+        diurna: TariffFlag.fromJson(
+          FareFlag.diurna,
+          json['diurna'] as Map<String, dynamic>? ?? const {},
+        ),
+        noturna: TariffFlag.fromJson(
+          FareFlag.noturna,
+          json['noturna'] as Map<String, dynamic>? ?? const {},
+        ),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'diurna': diurna.toJson(),
+        'noturna': noturna.toJson(),
+      };
 }
 
 /// Metricas do painel financeiro.
