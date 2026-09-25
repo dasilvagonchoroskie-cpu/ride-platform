@@ -94,12 +94,7 @@ export class FareService {
     origem: { latitude: number; longitude: number },
     destino: { latitude: number; longitude: number },
   ): RotaMedida {
-    const linhaRetaKm = haversineKm(
-      origem.latitude,
-      origem.longitude,
-      destino.latitude,
-      destino.longitude,
-    );
+    const linhaRetaKm = haversineKm(origem, destino);
     const ruaKm = linhaRetaKm * FareService.FATOR_DE_RUA;
     return {
       distanceMeters: Math.round(ruaKm * 1000),
