@@ -1,12 +1,10 @@
 name: Preparar o banco de dados
 
-# Roda uma vez (ou sempre que o esquema mudar), para deixar o banco real
-# na nuvem com as tabelas, as extensoes espaciais e a semente de precos.
-# Nao roda em todo push: e uma operacao de infraestrutura, disparada na
-# mao, nunca por acidente.
-
 on:
   workflow_dispatch: {}
+
+permissions:
+  contents: write
 
 jobs:
   preparar:
@@ -32,33 +30,56 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: pnpm exec prisma generate
 
-      # Primeira vez: o banco esta vazio. "db push" sincroniza o esquema
-      # direto, sem exigir historico de migracao previo — o jeito certo
-      # de fazer o "genesis" de um banco novo. Depois disto, mudancas de
-      # esquema devem passar a usar migrate deploy com arquivos versionados.
       - name: Criar as tabelas (db push)
-        working-directory: apps/backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm exec prisma db push --accept-data-loss --skip-generate
-
-      - name: Indices espaciais, triggers e views (post-init)
-        working-directory: apps/backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm exec prisma db execute --file prisma/sql/post-init.sql --schema prisma/schema.prisma
-
-      - name: Semear as bandeiras de tarifa
-        working-directory: apps/backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm exec tsx prisma/seed.ts
-
-      - name: Confirmar
+        id: push
+        continue-on-error: true
         working-directory: apps/backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          echo "Tabelas criadas e banco semeado com sucesso."
-          pnpm exec prisma db execute --stdin --schema prisma/schema.prisma <<< \
-            "SELECT flag, base_fare_cents, per_km_cents FROM fare_configs ORDER BY flag;"
+          mkdir -p /tmp/rel
+          pnpm exec prisma db push --accept-data-loss --skip-generate 2>&1 | tee /tmp/rel/saida.txt
+
+      - name: Indices espaciais, triggers e views (post-init)
+        id: postinit
+        if: steps.push.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm exec prisma db execute --file prisma/sql/post-init.sql --schema prisma/schema.prisma 2>&1 | tee -a /tmp/rel/saida.txt
+
+      - name: Semear as bandeiras de tarifa
+        id: seed
+        if: steps.push.outcome == 'success'
+        continue-on-error: true
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm exec tsx prisma/seed.ts 2>&1 | tee -a /tmp/rel/saida.txt
+
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          {
+            echo ""; echo "=== resultado ==="
+            echo "push:     ${{ steps.push.outcome }}"
+            echo "postinit: ${{ steps.postinit.outcome }}"
+            echo "seed:     ${{ steps.seed.outcome }}"
+          } >> /tmp/rel/saida.txt
+          git config user.name  "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs
+          cp /tmp/rel/saida.txt logs/db-bootstrap.txt
+          git add logs/db-bootstrap.txt
+          git commit -m "relatorio: preparacao do banco (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            sleep 5
+          done
+
+      - name: Falhar se algo deu errado
+        if: steps.push.outcome != 'success' || steps.postinit.outcome != 'success' || steps.seed.outcome != 'success'
+        run: |
+          echo "Alguma etapa falhou. Veja logs/db-bootstrap.txt no repositorio."
+          exit 1
