@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:geolocator/geolocator.dart';
+
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
@@ -26,7 +28,10 @@ class DriverState extends ChangeNotifier {
 
   // ---- Online/offline e posicao ----
   Coords position = fallbackCoords;
+  double? positionAccuracy;
+  bool locationDenied = false;
   Timer? _heartbeat;
+  StreamSubscription<Position>? _gps;
 
   // ---- Oferta recebida ----
   RideOffer? offer;
@@ -213,6 +218,7 @@ class DriverState extends ChangeNotifier {
     await _persistProfile();
     notifyListeners();
 
+    await _iniciarGps();
     _startHeartbeat();
   }
 
@@ -222,8 +228,78 @@ class DriverState extends ChangeNotifier {
 
     profile = current.copyWith(isOnline: false);
     _stopHeartbeat();
+    _pararGps();
     await _persistProfile();
     notifyListeners();
+  }
+
+  /// Pede a permissao e comeca a ouvir o GPS de verdade.
+  ///
+  /// Diferente do passageiro (que fica parado esperando a MELHOR leitura),
+  /// o motorista esta se movendo — por isso aqui aceita-se toda leitura
+  /// razoavel (ate 60 m de erro) em vez de so a melhor de todas, senao a
+  /// posicao no mapa ficaria presa no ponto onde ele ligou o aplicativo.
+  Future<void> _iniciarGps() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        locationDenied = true;
+        notifyListeners();
+        return;
+      }
+      var permissao = await Geolocator.checkPermission();
+      if (permissao == LocationPermission.denied) {
+        permissao = await Geolocator.requestPermission();
+      }
+      if (permissao == LocationPermission.denied || permissao == LocationPermission.deniedForever) {
+        locationDenied = true;
+        notifyListeners();
+        return;
+      }
+      locationDenied = false;
+
+      _gps?.cancel();
+      _gps = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15),
+      ).listen((p) {
+        if (p.accuracy > 60) return; // leitura ruim demais: descarta
+        position = Coords(p.latitude, p.longitude);
+        positionAccuracy = p.accuracy;
+        notifyListeners();
+        _mandarPosicao(p);
+      }, onError: (_) {
+        // Um erro isolado do stream nao para o motorista: o heartbeat
+        // continua tentando enviar a ultima posicao boa conhecida.
+      });
+    } catch (_) {
+      locationDenied = true;
+      notifyListeners();
+    }
+  }
+
+  void _pararGps() {
+    _gps?.cancel();
+    _gps = null;
+  }
+
+  /// Avisa o servidor da posicao atual.
+  ///
+  /// So em modo API real, e nunca deixa uma falha de rede derrubar o
+  /// motorista da tela — o ApiClient ja tenta de novo sozinho uma vez;
+  /// se ainda assim falhar, so registra e segue, porque a proxima leitura
+  /// do GPS chega em poucos segundos de qualquer jeito.
+  Future<void> _mandarPosicao(Position p) async {
+    if (!AppConfig.hasApi) return;
+    try {
+      await _client.request('POST', '/drivers/me/location', body: {
+        'latitude': p.latitude,
+        'longitude': p.longitude,
+        if (!p.heading.isNaN) 'heading': p.heading,
+        if (!p.speed.isNaN) 'speed': p.speed,
+        'accuracy': p.accuracy,
+      });
+    } catch (_) {
+      // Sem sorte desta vez; a proxima leitura do GPS tenta de novo.
+    }
   }
 
   /// Heartbeat: envia a posicao a cada poucos segundos e, estando online e
@@ -233,11 +309,16 @@ class DriverState extends ChangeNotifier {
     _heartbeat = Timer.periodic(AppConfig.locationInterval, (_) {
       if (!isOnline) return;
 
-      position = Coords(
-        position.latitude + (DateTime.now().millisecond % 7 - 3) * 0.00008,
-        position.longitude + (DateTime.now().microsecond % 7 - 3) * 0.00008,
-      );
-      notifyListeners();
+      // A posicao agora vem do GPS de verdade (_iniciarGps); em modo
+      // demonstracao (sem GPS disponivel ou sem API), mantem o pequeno
+      // passeio aleatorio para o mapa nao ficar parado na tela.
+      if (!AppConfig.hasApi || locationDenied) {
+        position = Coords(
+          position.latitude + (DateTime.now().millisecond % 7 - 3) * 0.00008,
+          position.longitude + (DateTime.now().microsecond % 7 - 3) * 0.00008,
+        );
+        notifyListeners();
+      }
 
       if (activeRide == null && offer == null && DateTime.now().second % 12 == 0) {
         receiveOffer();
@@ -368,6 +449,7 @@ class DriverState extends ChangeNotifier {
 
   Future<void> logout() async {
     _stopHeartbeat();
+    _pararGps();
     await AppStorage.clearDriverSession();
     profile = null;
     vehicle = null;
