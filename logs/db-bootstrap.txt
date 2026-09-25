@@ -1,7 +1,7 @@
 Prisma schema loaded from prisma/schema.prisma
 Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-sa-east-1.pooler.supabase.com:5432"
 
-🚀  Your database is now in sync with your Prisma schema. Done in 17.83s
+The database is already in sync with the Prisma schema.
 
 ┌─────────────────────────────────────────────────────────┐
 │  Update available 5.22.0 -> 8.0.0-rc.17                 │
@@ -15,7 +15,7 @@ Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-sa-ea
 └─────────────────────────────────────────────────────────┘
 Error: P1014
 
-The underlying table for model `surge_zones` does not exist.
+The underlying table for model `vehicle_categories` does not exist.
 
 Semeando banco...
   bandeira DIURNA: R$ 10,00 das 6h as 22h
