@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
 import '../widgets/ui.dart';
+import '../core/config/app_config.dart';
+import '../core/api/api_client.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key, required this.phone, this.debugCode});
@@ -19,6 +21,14 @@ class _OtpScreenState extends State<OtpScreen> {
   final TextEditingController _controller = TextEditingController();
   String? _error;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ambiente de teste: o servidor devolve o codigo e ele ja vem
+    // preenchido — entra sem gastar com SMS.
+    if (widget.debugCode != null) _controller.text = widget.debugCode!;
+  }
 
   @override
   void dispose() {
@@ -37,8 +47,23 @@ class _OtpScreenState extends State<OtpScreen> {
       _loading = true;
     });
 
-    // Em modo demonstracao qualquer codigo de 6 digitos autentica.
-    await context.read<DriverState>().demoLogin('Motorista Demo', widget.phone);
+    final driver = context.read<DriverState>();
+    if (AppConfig.hasApi) {
+      try {
+        await driver.verifyOtp(widget.phone, _controller.text);
+      } on ApiException catch (e) {
+        if (mounted) {
+          setState(() {
+            _error = e.message;
+            _loading = false;
+          });
+        }
+        return;
+      }
+    } else {
+      // Sem servidor configurado: modo demonstracao.
+      await driver.demoLogin('Motorista Demo', widget.phone);
+    }
 
     if (mounted) setState(() => _loading = false);
   }
