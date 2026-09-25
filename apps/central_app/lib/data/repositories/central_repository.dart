@@ -101,50 +101,34 @@ class CentralRepository {
   // ------------------------------------------------------------------
   // Tarifas
   // ------------------------------------------------------------------
-  Future<List<FareSettings>> fares() async {
-    if (_useDemo) return CentralDemo.fares();
+  /// Le as duas bandeiras do servidor.
+  Future<Tariffs> tariffs() async {
+    if (_useDemo) return CentralDemo.tariffs();
 
     try {
-      final data = await _client.request('GET', '/admin/vehicle-categories') as List<dynamic>;
-      return data.map((item) {
-        final map = item as Map<String, dynamic>;
-        final configs = map['fareConfigs'] as List<dynamic>? ?? const [];
-        final active = configs.isEmpty ? const <String, dynamic>{} : configs.first as Map<String, dynamic>;
-        return FareSettings(
-          categorySlug: map['slug'] as String? ?? 'ride',
-          baseFareCents: (active['baseFareCents'] as num?)?.toInt() ?? 0,
-          perKmCents: (active['perKmCents'] as num?)?.toInt() ?? 0,
-          perMinuteCents: (active['perMinuteCents'] as num?)?.toInt() ?? 0,
-          minimumFareCents: (active['minFareCents'] as num?)?.toInt() ?? 0,
-          platformFeePercent: (active['commissionPercent'] as num?)?.toDouble() ?? 20,
-        );
-      }).toList();
+      final data = await _client.request('GET', '/admin/tariffs') as Map<String, dynamic>;
+      return Tariffs.fromJson(data);
     } catch (_) {
       _useDemo = true;
-      return CentralDemo.fares();
+      return CentralDemo.tariffs();
     }
   }
 
-  /// Grava as tarifas da categoria.
+  /// Grava as duas bandeiras de uma vez.
   ///
-  /// Backend:  PUT /admin/vehicle-categories/:id/fare
-  /// Firestore: colecao `fare_configs`, documento `{slug}`:
-  ///   { "baseFareCents": 500, "perKmCents": 180, "perMinuteCents": 30,
-  ///     "minFareCents": 900, "commissionPercent": 20 }`
-  Future<bool> saveFare(FareSettings fare) async {
+  /// As duas juntas de proposito: salvar so uma abriria a chance de deixar
+  /// um horario do dia sem tabela de preco. O servidor recusa se as faixas
+  /// nao cobrirem as 24 horas.
+  ///
+  /// Backend: PUT /admin/tariffs
+  Future<bool> saveTariffs(Tariffs tariffs) async {
     if (_useDemo) {
       await Future<void>.delayed(const Duration(milliseconds: 400));
       return true;
     }
 
     try {
-      await _client.request('PUT', '/admin/vehicle-categories/${fare.categorySlug}/fare', body: {
-        'baseFareCents': fare.baseFareCents,
-        'perKmCents': fare.perKmCents,
-        'perMinuteCents': fare.perMinuteCents,
-        'minFareCents': fare.minimumFareCents,
-        'commissionPercent': fare.platformFeePercent,
-      });
+      await _client.request('PUT', '/admin/tariffs', body: tariffs.toJson());
       return true;
     } catch (_) {
       return false;
@@ -186,7 +170,6 @@ class CentralRepository {
     final user = json['user'] as Map<String, dynamic>? ?? const {};
     final vehicles = json['vehicles'] as List<dynamic>? ?? const [];
     final vehicleJson = vehicles.isEmpty ? const <String, dynamic>{} : vehicles.first as Map<String, dynamic>;
-    final categoryJson = vehicleJson['category'] as Map<String, dynamic>? ?? const {};
     final documentsJson = json['documents'] as List<dynamic>? ?? const [];
 
     return DriverApplication(
@@ -200,7 +183,6 @@ class CentralRepository {
       cnhExpiresAt: json['cnhExpiresAt'] as String? ?? '',
       city: json['city'] as String? ?? '',
       vehicle: VehicleSummary(
-        categorySlug: categoryJson['slug'] as String? ?? 'ride',
         brand: vehicleJson['brand'] as String? ?? '',
         model: vehicleJson['model'] as String? ?? '',
         year: (vehicleJson['year'] as num?)?.toInt() ?? DateTime.now().year,
