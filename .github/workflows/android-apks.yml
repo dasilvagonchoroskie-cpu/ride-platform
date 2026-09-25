@@ -120,6 +120,28 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: flutter pub get
 
+      # Sem isto, o passageiro, o motorista e a central sairiam
+      # assinados com a chave de depuracao — a Play Store rejeita.
+      # Nao se aplica ao taximetro (fora do escopo desta rodada).
+      - name: Preparar a assinatura de producao
+        if: matrix.app != 'taximetro'
+        env:
+          CHAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SENHA_LOJA: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SENHA_CHAVE: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APELIDO: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CHAVE" ]; then
+            echo "::error::Falta o segredo ANDROID_KEYSTORE_BASE64 — o APK sairia sem assinatura de producao."
+            exit 1
+          fi
+          echo "$CHAVE" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/assinatura.jks" "$SENHA_LOJA" "$APELIDO" "$SENHA_CHAVE" \
+            > "apps/${{ matrix.app }}/android/key.properties"
+          echo "key.properties criado para ${{ matrix.app }}"
+
       - name: Compilar o APK
         working-directory: apps/${{ matrix.app }}
         run: |
@@ -130,7 +152,7 @@ jobs:
             BUILD_TYPE=release
           fi
 
-          flutter build apk --$BUILD_TYPE \
+          flutter build apk --$BUILD_TYPE --build-number=${{ github.run_number }}
 
       - name: Localizar o APK
         id: apk
