@@ -64,7 +64,7 @@ export class DriversRepository {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, phone: true, email: true, avatarUrl: true, status: true } },
-          vehicles: { where: { isActive: true }, include: { category: true } },
+          vehicles: { where: { isActive: true } },
           _count: { select: { documents: true } },
         },
       }),
