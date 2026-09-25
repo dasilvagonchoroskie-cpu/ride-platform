@@ -34,6 +34,9 @@ class RideRepository {
 
       return EstimateResult(quote: RideQuote.fromJson(data));
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return DemoEngine.estimate(origin, destination);
     }
@@ -65,6 +68,9 @@ class RideRepository {
 
       return Ride.fromJson(data['ride'] as Map<String, dynamic>);
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return DemoEngine.createRide(
         origin: origin,
@@ -85,6 +91,9 @@ class RideRepository {
       final items = data['items'] as List<dynamic>? ?? const [];
       return items.map((item) => Ride.fromJson(item as Map<String, dynamic>)).toList();
     } catch (_) {
+      // Com servidor configurado, erro aparece como erro — nada de
+      // dados de mentira no lugar sem avisar ninguem.
+      if (AppConfig.hasApi) rethrow;
       _useDemo = true;
       return DemoEngine.history(origin);
     }
