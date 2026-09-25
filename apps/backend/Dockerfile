@@ -1,6 +1,9 @@
 # ---------- build ----------
 FROM node:20-alpine AS builder
-RUN corepack enable
+# OpenSSL tambem aqui: e neste estagio que o Prisma gera o motor de
+# consulta. Sem ele, o Prisma chuta a versao 1.1 e o motor gerado nao
+# roda no estagio final, que tem OpenSSL 3.
+RUN apk add --no-cache openssl && corepack enable
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
