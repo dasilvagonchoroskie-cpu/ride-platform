@@ -20,6 +20,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
 
   final _cpf = TextEditingController();
+
+  final _nascimento = TextEditingController();
   final _cnh = TextEditingController();
   final _cnhExpiry = TextEditingController(text: '31/12/2030');
   String _cnhCategory = 'B';
@@ -91,6 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final driver = context.read<DriverState>();
 
     await driver.completeOnboarding(
+      birthDate: _nascimento.text,
       cpf: onlyDigits(_cpf.text),
       cnhNumber: onlyDigits(_cnh.text),
       cnhCategory: _cnhCategory,
@@ -146,6 +149,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Text('Seus dados', style: AppText.title),
         const SizedBox(height: Spacing.lg),
         AppField(label: 'CPF', hint: '000.000.000-00', controller: _cpf, keyboardType: TextInputType.number, onChanged: (_) => setState(() {})),
+        const SizedBox(height: Spacing.md),
+        AppField(label: 'Data de nascimento', hint: 'DD/MM/AAAA', controller: _nascimento, keyboardType: TextInputType.datetime, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
         AppField(label: 'Numero da CNH', hint: '00000000000', controller: _cnh, keyboardType: TextInputType.number, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
