@@ -1,0 +1,34 @@
+name: Teste de ponta a ponta
+
+# Percorre no servidor REAL o caminho completo: Central, passageiro,
+# motorista, aprovacao e uma corrida inteira. Grava o relatorio em logs/.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rodar o teste no servidor real
+        id: teste
+        continue-on-error: true
+        env:
+          ADMIN_SENHA: ${{ secrets.ADMIN_SENHA }}
+          REL: /tmp/relatorio.txt
+        run: bash scripts/teste-ponta-a-ponta.sh
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs && cp /tmp/relatorio.txt logs/teste-ponta-a-ponta.txt
+          git add logs/teste-ponta-a-ponta.txt
+          git commit -m "relatorio: teste de ponta a ponta (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
+      - name: Falhar se alguma etapa falhou
+        if: steps.teste.outcome != 'success'
+        run: exit 1
