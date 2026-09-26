@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 26/09/2026 00:47 UTC
+Teste de ponta a ponta - 26/09/2026 06:04 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login real do administrador
@@ -21,8 +21,19 @@ OK     Motorista: accept
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
-OK     Motorista: corrida finalizada, valor 1000 centavos
-OK     Bandeira certa pela hora de Brasilia (21h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 2 corrida(s)
+OK     Motorista: corrida finalizada, valor 2000 centavos
+OK     Bandeira certa pela hora de Brasilia (3h, noturna: 2000 centavos)
+OK     Central: resumo de hoje com 1 corrida(s)
+FALHA  Motorista: Atividades de hoje
+       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cadastro de motorista nao encontrado."},"timestamp":"2026-09-26T06:05:25.003Z","path":"/api/driver/activity?period=day"}
+FALHA  Motorista: grafico week
+       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cadastro de motorista nao encontrado."},"timestamp":"2026-09-26T06:05:25.130Z","path":"/api/driver/activity?period=week"}
+FALHA  Motorista: grafico month
+       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cadastro de motorista nao encontrado."},"timestamp":"2026-09-26T06:05:25.254Z","path":"/api/driver/activity?period=month"}
+FALHA  Motorista: carteira pre-paga
+       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cadastro de motorista nao encontrado."},"timestamp":"2026-09-26T06:05:25.387Z","path":"/api/driver/wallet"}
+OK     Central: recarga lancada, saldo agora 600 centavos
+OK     Central: contato de recarga carregado
+OK     Motorista: historico de corridas com 1 corrida(s)
 
-Resultado: 0 falha(s).
+Resultado: 4 falha(s).
