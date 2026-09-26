@@ -62,13 +62,30 @@ export class FareService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Qual bandeira vale agora, pela hora do servidor.
+   * Hora de Brasilia (0 a 23), qualquer que seja o fuso do servidor.
+   *
+   * O servidor roda no horario de Londres (UTC). Com getHours() puro, das
+   * 19h as 22h de Brasilia a corrida saia na bandeira NOTURNA (o dobro), e
+   * das 3h as 6h na diurna. Achado pelo teste de ponta a ponta.
+   */
+  private horaDeBrasilia(quando: Date): number {
+    return Number(
+      new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        hourCycle: 'h23',
+        timeZone: 'America/Sao_Paulo',
+      }).format(quando),
+    );
+  }
+
+  /**
+   * Qual bandeira vale agora, pela hora de BRASILIA.
    *
    * A faixa noturna atravessa a meia-noite (22h as 6h), por isso o teste
    * muda de forma quando o inicio e maior que o fim.
    */
   bandeiraDe(quando: Date, inicio: number, fim: number): boolean {
-    const hora = quando.getHours();
+    const hora = this.horaDeBrasilia(quando);
     return inicio <= fim ? hora >= inicio && hora < fim : hora >= inicio || hora < fim;
   }
 
