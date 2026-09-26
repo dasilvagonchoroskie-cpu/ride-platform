@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 26/09/2026 00:41 UTC
+Teste de ponta a ponta - 26/09/2026 00:47 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login real do administrador
@@ -21,7 +21,8 @@ OK     Motorista: accept
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
-OK     Motorista: corrida finalizada, valor 2000 centavos
-OK     Central: resumo de hoje com 1 corrida(s)
+OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Bandeira certa pela hora de Brasilia (21h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 2 corrida(s)
 
 Resultado: 0 falha(s).
