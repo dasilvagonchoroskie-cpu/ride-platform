@@ -1,7 +1,7 @@
 name: mobile_passenger
 description: "App do passageiro da plataforma Ride"
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ^3.13.4
@@ -27,6 +27,7 @@ flutter:
   assets:
     - assets/map_styles/
     - assets/markers/
+    - assets/brand/
 
   fonts:
     - family: Inter

@@ -9,6 +9,7 @@ class AppStorage {
   static const String user = 'ride.user';
   static const String activeRide = 'ride.activeRide';
   static const String recentPlaces = 'ride.recentPlaces';
+  static const String recentDestinations = 'ride.recentDestinations';
 
   static Future<void> write(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();

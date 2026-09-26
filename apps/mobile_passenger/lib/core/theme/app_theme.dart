@@ -9,43 +9,53 @@ import 'package:flutter/material.dart';
 class AppColors {
   const AppColors._();
 
-  // ---- Base escura ----
-  static const Color background = Color(0xFF000000);
-  static const Color surface = Color(0xFF141414);
-  static const Color surfaceElevated = Color(0xFF1C1C1C);
-  static const Color border = Color(0xFF2A2A2A);
+  // ---- Base clara (padrao dos aplicativos de motorista) ----
+  // Fundo cinza bem claro, cartoes brancos, texto quase preto: legivel no
+  // sol do meio-dia, que e onde o motorista trabalha.
+  static const Color background = Color(0xFFEEF0F3);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceElevated = Color(0xFFF4F5F7);
+  static const Color border = Color(0xFFE3E6EA);
 
-  static const Color text = Color(0xFFFFFFFF);
-  static const Color textMuted = Color(0xFF9A9A9A);
-  static const Color textFaint = Color(0xFF6B6B6B);
+  static const Color text = Color(0xFF14181F);
+  static const Color textMuted = Color(0xFF667085);
+  static const Color textFaint = Color(0xFF98A2B3);
 
-  // ---- Destaques ----
-  static const Color primary = Color(0xFF27A770);
-  static const Color primaryDark = Color(0xFF1E8558);
-  static const Color primarySoft = Color(0x2427A770);
+  // ---- Marca Fortaleza Mov: azul do icone + dourado das asas ----
+  static const Color brand = Color(0xFF1E5BB8);
+  static const Color brandDark = Color(0xFF143E80);
+  static const Color brandSoft = Color(0x1A1E5BB8);
+  static const Color gold = Color(0xFFF2B81B);
 
-  static const Color accent = Color(0xFF286EF1);
-  static const Color accentSoft = Color(0x28286EF1);
+  // ---- Estados ----
+  /// Verde: conectado, credito, valor positivo.
+  static const Color primary = Color(0xFF2E9E5B);
+  static const Color primaryDark = Color(0xFF237A46);
+  static const Color primarySoft = Color(0x1F2E9E5B);
 
-  static const Color danger = Color(0xFFE11900);
-  static const Color dangerSoft = Color(0x24E11900);
-  static const Color warning = Color(0xFFFFC043);
+  static const Color accent = brand;
+  static const Color accentSoft = brandSoft;
 
-  static const Color info = Color(0xFF286EF1);
-  static const Color infoSoft = Color(0x28286EF1);
+  static const Color danger = Color(0xFFD93A3A);
+  static const Color dangerSoft = Color(0x1AD93A3A);
+  static const Color warning = Color(0xFFE8710A);
+  static const Color warningSoft = Color(0x1AE8710A);
+
+  static const Color info = brand;
+  static const Color infoSoft = brandSoft;
 
   // ---- Superficie clara (bottom sheet branco) ----
   static const Color sheet = Color(0xFFFFFFFF);
-  static const Color sheetText = Color(0xFF000000);
-  static const Color sheetMuted = Color(0xFF6B6B6B);
-  static const Color sheetFaint = Color(0xFFAFAFAF);
-  static const Color sheetBorder = Color(0xFFE2E2E2);
-  static const Color sheetField = Color(0xFFF3F3F3);
+  static const Color sheetText = Color(0xFF14181F);
+  static const Color sheetMuted = Color(0xFF667085);
+  static const Color sheetFaint = Color(0xFFA9B1BE);
+  static const Color sheetBorder = Color(0xFFE3E6EA);
+  static const Color sheetField = Color(0xFFF4F5F7);
 
-  // ---- Mapa (estilo Aubergine) ----
-  static const Color mapBackground = Color(0xFF0B0B0F);
-  static const Color mapRoad = Color(0xFF23232F);
-  static const Color mapRoadLight = Color(0xFF2E2E3D);
+  // ---- Mapa ----
+  static const Color mapBackground = Color(0xFFE9E7E2);
+  static const Color mapRoad = Color(0xFFFFFFFF);
+  static const Color mapRoadLight = Color(0xFFF7F6F3);
 }
 
 /// Espacamento em multiplos de 4.
@@ -140,33 +150,36 @@ class AppText {
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData get dark {
+  static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       fontFamily: AppText.family,
     );
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: base.colorScheme.copyWith(
-        primary: AppColors.primary,
-        secondary: AppColors.accent,
+        primary: AppColors.brand,
+        secondary: AppColors.gold,
         surface: AppColors.surface,
         error: AppColors.danger,
-        onPrimary: AppColors.text,
+        onPrimary: Colors.white,
         onSurface: AppColors.text,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        centerTitle: false,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 1,
+        scrolledUnderElevation: 1,
+        shadowColor: Color(0x33000000),
+        centerTitle: true,
         iconTheme: IconThemeData(color: AppColors.text),
         titleTextStyle: TextStyle(
           fontFamily: AppText.family,
           color: AppColors.text,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontSize: 19,
+          fontWeight: FontWeight.w500,
         ),
       ),
       textTheme: base.textTheme.apply(
@@ -174,9 +187,21 @@ class AppTheme {
         displayColor: AppColors.text,
       ),
       dividerColor: AppColors.border,
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.primary),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.brand),
+      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Colors.white : const Color(0xFFBFC5CE),
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? AppColors.primary : const Color(0xFFE6E8EC),
+        ),
+      ),
     );
   }
+
+  /// Nome antigo, mantido para nao quebrar quem ainda chama `dark`.
+  static ThemeData get dark => light;
 }
 
 /// Estilos reutilizados nas superficies claras (bottom sheets brancos).

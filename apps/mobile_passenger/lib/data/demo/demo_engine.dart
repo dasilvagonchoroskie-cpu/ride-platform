@@ -193,20 +193,5 @@ class DemoEngine {
     });
   }
 
-  static List<PaymentOption> paymentMethods() => const [
-        PaymentOption(id: 'pm1', label: 'Pix', detail: 'Aprovacao imediata', type: 'PIX'),
-        PaymentOption(
-          id: 'pm2',
-          label: 'Cartao de credito',
-          detail: 'Mastercard - 4291',
-          type: 'CREDIT_CARD',
-        ),
-        PaymentOption(id: 'pm3', label: 'Dinheiro', detail: 'Pague ao motorista', type: 'CASH'),
-        PaymentOption(
-          id: 'pm4',
-          label: 'Carteira Ride',
-          detail: 'Saldo R\$ 42,50',
-          type: 'WALLET',
-        ),
-      ];
+  static List<PaymentOption> paymentMethods() => kFormasDePagamento;
 }

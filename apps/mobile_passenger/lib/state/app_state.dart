@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,6 +8,7 @@ import '../core/config/app_config.dart';
 import '../core/api/api_client.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
+import '../data/models/models.dart';
 
 enum DataSource { api, demo, unknown }
 
@@ -47,6 +49,9 @@ class AppState extends ChangeNotifier {
   StreamSubscription<Position>? _vigia;
   List<String> recentPlaces = [];
 
+  /// Destinos usados antes, com as coordenadas (para ir direto, sem buscar).
+  List<PlaceSuggestion> destinosRecentes = [];
+
   bool get isDemo => dataSource != DataSource.api;
 
   Future<void> bootstrap() async {
@@ -79,6 +84,17 @@ class AppState extends ChangeNotifier {
     if (stored != null && stored.isNotEmpty) {
       recentPlaces = stored.split('|').where((p) => p.isNotEmpty).toList();
     }
+    final destinos = await AppStorage.read(AppStorage.recentDestinations);
+    if (destinos != null && destinos.isNotEmpty) {
+      try {
+        destinosRecentes = [
+          for (final d in jsonDecode(destinos) as List<dynamic>)
+            PlaceSuggestion.fromJson(d as Map<String, dynamic>),
+        ];
+      } catch (_) {
+        destinosRecentes = [];
+      }
+    }
 
     bootstrapped = true;
     notifyListeners();
@@ -87,6 +103,18 @@ class AppState extends ChangeNotifier {
   void forceDemo() {
     if (dataSource == DataSource.demo) return;
     dataSource = DataSource.demo;
+    notifyListeners();
+  }
+
+  Future<void> addDestinoRecente(PlaceSuggestion lugar) async {
+    destinosRecentes = [
+      lugar,
+      ...destinosRecentes.where((d) => d.address != lugar.address || d.detail != lugar.detail),
+    ].take(8).toList();
+    await AppStorage.write(
+      AppStorage.recentDestinations,
+      jsonEncode([for (final d in destinosRecentes) d.toJson()]),
+    );
     notifyListeners();
   }
 

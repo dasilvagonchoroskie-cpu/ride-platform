@@ -55,6 +55,7 @@ class RideRepository {
     required String pickupAddress,
     required String dropoffAddress,
     required String paymentMethod,
+    String paymentType = 'CASH',
   }) async {
     if (_useDemo) {
       return DemoEngine.createRide(
@@ -70,7 +71,7 @@ class RideRepository {
       final data = await _client.request('POST', '/rides', body: {
         'pickup': {'address': pickupAddress, ...origin.toJson()},
         'dropoff': {'address': dropoffAddress, ...destination.toJson()},
-        'paymentMethodType': 'CASH',
+        'paymentMethodType': paymentType,
       }) as Map<String, dynamic>;
 
       return Ride.fromJson(data['ride'] as Map<String, dynamic>);
@@ -106,5 +107,60 @@ class RideRepository {
     }
   }
 
-  List<DriverInfo> nearbyDrivers(Coords origin) => DemoEngine.nearbyDrivers(origin);
+  /// Carros disponiveis por perto (posicao aproximada, vinda do servidor).
+  /// Antes eram carros INVENTADOS pelo motor de demonstracao, mesmo com o
+  /// servidor ligado.
+  Future<List<DriverInfo>> nearbyDrivers(Coords origin) async {
+    if (_useDemo) return DemoEngine.nearbyDrivers(origin);
+    try {
+      final data = await _client.request('GET', '/rides/nearby-drivers', query: {
+        'lat': '${origin.latitude}',
+        'lng': '${origin.longitude}',
+      }) as List<dynamic>;
+      return [
+        for (final c in data)
+          DriverInfo(
+            id: (c as Map<String, dynamic>)['id'] as String? ?? '',
+            name: 'Motorista',
+            rating: 5,
+            totalRides: 0,
+            vehicle: '',
+            plate: '',
+            color: '',
+            position: Coords((c['latitude'] as num).toDouble(), (c['longitude'] as num).toDouble()),
+          ),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Busca de endereco (OpenStreetMap, pelo servidor).
+  Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin) async {
+    if (_useDemo) {
+      return DemoEngine.suggestions(origin)
+          .where((s) => s.address.toLowerCase().contains(texto.toLowerCase()))
+          .toList();
+    }
+    final data = await _client.request('GET', '/geo/search', query: {
+      'q': texto,
+      'lat': '${origin.latitude}',
+      'lng': '${origin.longitude}',
+    }) as List<dynamic>;
+    return [for (final j in data) PlaceSuggestion.fromGeo(j as Map<String, dynamic>)];
+  }
+
+  /// Endereco escrito de um ponto (embarque pelo GPS, ponto escolhido no mapa).
+  Future<PlaceSuggestion?> addressOf(Coords point) async {
+    if (_useDemo) return null;
+    try {
+      final data = await _client.request('GET', '/geo/reverse', query: {
+        'lat': '${point.latitude}',
+        'lng': '${point.longitude}',
+      }) as Map<String, dynamic>;
+      return PlaceSuggestion.fromGeo(data);
+    } catch (_) {
+      return null;
+    }
+  }
 }

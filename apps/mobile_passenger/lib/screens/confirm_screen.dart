@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
-import '../data/demo/demo_engine.dart';
 import '../data/models/models.dart';
 import '../state/app_state.dart';
 import '../state/ride_state.dart';
@@ -27,8 +26,22 @@ class ConfirmScreen extends StatefulWidget {
 }
 
 class _ConfirmScreenState extends State<ConfirmScreen> {
-  PaymentOption _payment = DemoEngine.paymentMethods().first;
+  PaymentOption _payment = kFormasDePagamento.first;
   bool _submitting = false;
+
+  /// Endereco escrito do embarque (pelo GPS). O motorista precisa ler a rua,
+  /// e nao "Local de embarque (GPS)".
+  String? _embarque;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final ponto = context.read<AppState>().coords;
+      final lugar = await context.read<RideState>().addressOf(ponto);
+      if (mounted && lugar != null) setState(() => _embarque = lugar.fullAddress);
+    });
+  }
 
   Future<void> _confirm() async {
     setState(() => _submitting = true);
@@ -36,9 +49,10 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     await context.read<RideState>().requestRide(
           origin: context.read<AppState>().coords,
           destination: widget.destination,
-          pickupAddress: 'Local de embarque (GPS)',
+          pickupAddress: _embarque ?? 'Local de embarque (GPS)',
           dropoffAddress: widget.address,
           paymentMethod: _payment.label,
+          paymentType: _payment.type,
         );
 
     if (!mounted) return;
@@ -120,11 +134,34 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                           children: [
                             Text('Confirmar viagem', style: SheetText.title),
                             const SizedBox(height: Spacing.xs),
-                            Text(
-                              widget.address,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: SheetText.muted,
+                            Row(
+                              children: [
+                                const Icon(Icons.circle, size: 10, color: AppColors.primary),
+                                const SizedBox(width: Spacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    _embarque ?? 'Embarque: sua localização atual',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: SheetText.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.stop, size: 12, color: AppColors.danger),
+                                const SizedBox(width: Spacing.sm),
+                                Expanded(
+                                  child: Text(
+                                    widget.address,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: SheetText.muted,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -166,7 +203,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.credit_card, size: 20, color: AppColors.sheetText),
+                          Icon(_iconePagamento(_payment.type), size: 20, color: AppColors.sheetText),
                           const SizedBox(width: Spacing.md),
                           Expanded(
                             child: Text(
@@ -224,10 +261,12 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             const SizedBox(height: Spacing.lg),
             Text('Forma de pagamento', style: SheetText.title),
             const SizedBox(height: Spacing.md),
-            for (final method in DemoEngine.paymentMethods())
+            Text('Você paga direto ao motorista, no fim da corrida.', style: SheetText.muted),
+            const SizedBox(height: Spacing.sm),
+            for (final method in kFormasDePagamento)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.payments_outlined, color: AppColors.sheetText),
+                leading: Icon(_iconePagamento(method.type), color: AppColors.sheetText),
                 title: Text(method.label, style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
                 subtitle: Text(method.detail, style: SheetText.muted),
                 trailing: method.id == _payment.id
@@ -243,6 +282,12 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     if (chosen != null) setState(() => _payment = chosen);
   }
 }
+
+IconData _iconePagamento(String tipo) => switch (tipo) {
+      'PIX' => Icons.qr_code_2,
+      'CREDIT_CARD' || 'DEBIT_CARD' => Icons.credit_card,
+      _ => Icons.payments_outlined,
+    };
 
 /// Card unico com o preco da viagem.
 ///

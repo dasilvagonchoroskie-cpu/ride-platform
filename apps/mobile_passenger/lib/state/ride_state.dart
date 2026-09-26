@@ -27,11 +27,15 @@ class RideState extends ChangeNotifier {
   String? error;
 
   /// Popula os carros visiveis no mapa da tela inicial.
-  void refreshNearby(Coords origin) {
-    if (nearbyDrivers.isNotEmpty) return;
-    nearbyDrivers = _repository.nearbyDrivers(origin);
+  Future<void> refreshNearby(Coords origin) async {
+    nearbyDrivers = await _repository.nearbyDrivers(origin);
     notifyListeners();
   }
+
+  Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin) =>
+      _repository.searchPlaces(texto, origin);
+
+  Future<PlaceSuggestion?> addressOf(Coords point) => _repository.addressOf(point);
 
   Future<RideQuote?> estimate(
     Coords origin,
@@ -45,7 +49,6 @@ class RideState extends ChangeNotifier {
       final result = await _repository.estimate(origin, destination,
           pickupAddress: pickupAddress, dropoffAddress: dropoffAddress);
       quote = result.quote;
-      nearbyDrivers = _repository.nearbyDrivers(origin);
       return result.quote;
     } on ApiException catch (e) {
       avisar(e.message);
@@ -66,6 +69,7 @@ class RideState extends ChangeNotifier {
     required String pickupAddress,
     required String dropoffAddress,
     required String paymentMethod,
+    String paymentType = 'CASH',
   }) async {
     final ride = await _repository.createRide(
       origin: origin,
@@ -73,6 +77,7 @@ class RideState extends ChangeNotifier {
       pickupAddress: pickupAddress,
       dropoffAddress: dropoffAddress,
       paymentMethod: paymentMethod,
+      paymentType: paymentType,
     );
 
     activeRide = ride;

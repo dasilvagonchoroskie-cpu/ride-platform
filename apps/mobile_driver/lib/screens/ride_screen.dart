@@ -45,13 +45,15 @@ class RideScreen extends StatelessWidget {
         ),
       RidePhase.waitingPassenger => (
           'Aguardando o passageiro',
-          'Confirme o PIN ${ride.pin} antes de iniciar',
+          ride.pin.isEmpty
+              ? 'Confirme o nome do passageiro antes de iniciar'
+              : 'Peça o PIN ao passageiro: tem que ser ${ride.pin}',
         ),
       RidePhase.inProgress => (
           'Corrida em andamento',
           '${formatDuration(offer.durationSeconds)} ate o destino',
         ),
-      RidePhase.completed => ('Corrida concluida', 'Valor a receber'),
+      RidePhase.completed => ('Corrida concluída', 'Cobre do passageiro • ${offer.paymentMethod}'),
     };
 
     return Scaffold(
@@ -145,8 +147,8 @@ class RideScreen extends StatelessWidget {
                       ),
                       if (isCompleted)
                         Text(
-                          formatMoney(offer.earningCents),
-                          style: SheetText.title.copyWith(color: AppColors.primary, fontSize: 26),
+                          formatMoney(driver.valorFinalCents ?? offer.fareCents),
+                          style: SheetText.title.copyWith(color: AppColors.primary, fontSize: 28),
                         ),
                     ],
                   ),
@@ -226,8 +228,8 @@ class RideScreen extends StatelessWidget {
                         onLight: true,
                       ),
                       MetricTile(
-                        value: formatMoney(offer.fareCents),
-                        label: 'Tarifa',
+                        value: formatMoney(driver.valorFinalCents ?? offer.fareCents),
+                        label: isCompleted ? 'Valor final' : 'Estimativa',
                         onLight: true,
                       ),
                     ],
@@ -253,7 +255,7 @@ class RideScreen extends StatelessWidget {
                         onPressed: () => context.read<DriverState>().finishRide(),
                       ),
                     RidePhase.completed => AppButton(
-                        label: 'Receber e ficar disponivel',
+                        label: 'Recebi — ficar disponível',
                         variant: AppButtonVariant.accent,
                         onPressed: () => context.read<DriverState>().closeRide(),
                       ),

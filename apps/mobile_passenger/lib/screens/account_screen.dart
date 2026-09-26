@@ -114,11 +114,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
               ),
               const SizedBox(height: Spacing.lg),
-              const SectionTitle(text: 'Enderecos recentes'),
+              const SectionTitle(text: 'Endereços recentes'),
               AppCard(
                 child: app.recentPlaces.isEmpty
                     ? const Text(
-                        'Nenhum endereco salvo ainda.',
+                        'Nenhum endereço usado ainda.',
                         style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                       )
                     : Column(
@@ -136,25 +136,16 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
               ),
               const SizedBox(height: Spacing.lg),
-              const SectionTitle(text: 'Diagnostico'),
+              const SectionTitle(text: 'Aplicativo'),
               AppCard(
                 child: Column(
                   children: [
-                    _DiagRow(label: 'Versao do app', value: AppConfig.appVersion),
+                    _DiagRow(label: 'Versão do app', value: AppConfig.appVersion),
                     const AppDivider(),
                     _DiagRow(
-                      label: 'Fonte de dados',
-                      value: app.isDemo ? 'Demonstracao local' : 'API',
+                      label: 'Localização',
+                      value: app.locationGranted ? 'Liberada' : 'Não liberada',
                     ),
-                    const AppDivider(),
-                    _DiagRow(
-                      label: 'Permissao de localizacao',
-                      value: app.locationGranted ? 'Concedida' : 'Negada (usando padrao)',
-                    ),
-                    const AppDivider(),
-                    _DiagRow(label: 'Posicao atual', value: app.coords.toString()),
-                    const AppDivider(),
-                    _DiagRow(label: 'Stack', value: 'Flutter / Dart'),
                   ],
                 ),
               ),

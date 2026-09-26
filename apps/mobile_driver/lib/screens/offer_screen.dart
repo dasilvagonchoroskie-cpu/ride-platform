@@ -145,9 +145,9 @@ class OfferScreen extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('VOCE RECEBE', style: SheetText.label),
+                            Text('VALOR DA CORRIDA', style: SheetText.label),
                             Text(
-                              formatMoney(offer.earningCents),
+                              formatMoney(offer.fareCents),
                               style: SheetText.title.copyWith(fontSize: 28),
                             ),
                           ],
@@ -155,8 +155,20 @@ class OfferScreen extends StatelessWidget {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('Tarifa', style: SheetText.muted),
-                            Text(formatMoney(offer.fareCents), style: SheetText.heading),
+                            Text('Seu ganho', style: SheetText.muted),
+                            Text(formatMoney(offer.earningCents), style: SheetText.heading),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.brandSoft,
+                                borderRadius: BorderRadius.circular(Radii.pill),
+                              ),
+                              child: Text(
+                                offer.paymentMethod,
+                                style: SheetText.label.copyWith(color: AppColors.brand, letterSpacing: 0),
+                              ),
+                            ),
                           ],
                         ),
                       ],

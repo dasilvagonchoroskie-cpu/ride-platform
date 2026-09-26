@@ -106,6 +106,9 @@ export class RidesService {
       const criada = await tx.ride.create({
         data: {
           code: await this.codigoUnico(tx),
+          // PIN de embarque: o passageiro diz ao motorista, que confere
+          // antes de iniciar — garante que entrou a pessoa certa.
+          pin: generateNumericCode(4),
           passengerId,
           status: RideStatus.REQUESTED,
           fareFlag: orcamento.flag,
@@ -236,7 +239,30 @@ export class RidesService {
         tripDurationSeconds: o.ride.durationSeconds,
         commissionPercent: Number(o.ride.commissionPercent),
         passengerName: o.ride.passenger?.name ?? 'Passageiro',
+        // O motorista precisa saber antes de aceitar como vai receber.
+        paymentMethodType: o.ride.paymentMethodType,
       }));
+  }
+
+  /**
+   * Carros disponiveis perto do passageiro, para o mapa da tela inicial.
+   * Posicao arredondada (uns 50 m) e sem identificar o motorista: o
+   * passageiro ve que ha carro por perto, nao onde cada um esta parado.
+   */
+  async carrosPerto(lat: number, lng: number) {
+    const perto = await this.prisma.findNearbyDrivers({
+      latitude: lat,
+      longitude: lng,
+      radiusMeters: 5000,
+      limit: 12,
+    });
+    const arredondar = (n: number) => Math.round(n * 2000) / 2000;
+    return perto.map((m, i) => ({
+      id: `carro-${i + 1}`,
+      latitude: arredondar(m.latitude),
+      longitude: arredondar(m.longitude),
+      distanceMeters: Math.round(m.distanceMeters),
+    }));
   }
 
   async aceitar(driverId: string, rideId: string) {
@@ -299,7 +325,8 @@ export class RidesService {
           actorRole: UserRole.DRIVER,
         },
       });
-      return { ok: true, rideId };
+      const pin = (await tx.ride.findUnique({ where: { id: rideId }, select: { pin: true } }))?.pin ?? null;
+      return { ok: true, rideId, pin };
     });
   }
 

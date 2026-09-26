@@ -38,6 +38,11 @@ EMB='{"latitude":-18.0125,"longitude":-49.3547,"address":"Praca da Matriz, Goiat
 DES='{"latitude":-18.0050,"longitude":-49.3610,"address":"Rodoviaria de Goiatuba"}'
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP")
 sucesso "$X" && ok "Passageiro: preco da corrida calculado" || falha "Passageiro: preco da corrida" "$X"
+X=$(get "/geo/search?q=Avenida%20Brasilia&lat=-18.0125&lng=-49.3547" "$TP")
+N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
+[ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: busca de destino real ($N resultado(s), 1o: $(echo "$X" | jq -r '.data[0].address') - $(echo "$X" | jq -r '.data[0].detail'))" || falha "Passageiro: busca de destino" "$X"
+X=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
+[ -n "$(echo "$X" | jq -r '.data.address // empty')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
 
 TM=$(entrar "+55649${SUF}72" DRIVER)
 [ -n "$TM" ] && ok "Motorista: login pelo codigo de teste" || falha "Motorista: login" "sem token"
@@ -60,13 +65,20 @@ X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":t
 sucesso "$X" && ok "Central: motorista aprovado com conferencia presencial" || falha "Central: aprovar motorista" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Motorista: ficou disponivel" || falha "Motorista: ficar disponivel" "$X"
 X=$(post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM"); sucesso "$X" && ok "Motorista: posicao enviada" || falha "Motorista: posicao" "$X"
+X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
+N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
+[ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: ve $N carro(s) disponivel(is) no mapa (dado real)" || falha "Passageiro: carros por perto" "$X"
 
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP")
 RID=$(echo "$X" | jq -r '.data.ride.id // empty')
 sucesso "$X" && ok "Passageiro: corrida pedida" || falha "Passageiro: pedir corrida" "$X"
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Motorista: chamado chegou" || falha "Motorista: chamado chegou" "$X"
-for passo in accept arriving arrived start; do
+[ "$(echo "$X" | jq -r '.data[0].paymentMethodType' 2>/dev/null)" = "CASH" ] && ok "Motorista: chamado mostra a forma de pagamento (CASH)" || falha "Motorista: forma de pagamento no chamado" "$X"
+X=$(post "/driver/rides/$RID/accept" '{}' "$TM")
+PIN=$(echo "$X" | jq -r '.data.pin // empty')
+sucesso "$X" && [ ${#PIN} -eq 4 ] && ok "Motorista: accept (PIN de embarque $PIN vindo do servidor)" || falha "Motorista: accept com PIN" "$X"
+for passo in arriving arrived start; do
   X=$(post "/driver/rides/$RID/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM")
   sucesso "$X" && ok "Motorista: $passo" || falha "Motorista: $passo" "$X"
 done

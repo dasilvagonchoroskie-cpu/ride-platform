@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
 
-/// Variantes de botao.
+/// Variantes de botao (superficies claras).
 ///
-/// `primary`  -> preto com texto branco em negrito (superficies CLARAS)
-/// `inverted` -> branco com texto preto em negrito (superficies ESCURAS) — padrao
-/// `accent`   -> verde #27A770 (confirmacoes e status)
+/// `primary`   -> azul da marca, texto branco (acao principal) — padrao
+/// `inverted`  -> igual ao primary (nome antigo, mantido)
+/// `secondary` -> branco com borda, texto escuro
+/// `accent`    -> verde (confirmar, conectar)
+/// `ghost`     -> so o texto
+/// `danger`    -> vermelho, texto branco (desconectar, excluir)
 enum AppButtonVariant { primary, inverted, secondary, accent, ghost, danger }
 
 /// Botao de acao principal no da plataforma: **largura total** (block button),
@@ -16,7 +19,7 @@ class AppButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
-    this.variant = AppButtonVariant.inverted,
+    this.variant = AppButtonVariant.primary,
     this.loading = false,
     this.enabled = true,
     this.margin,
@@ -36,17 +39,14 @@ class AppButton extends StatelessWidget {
     final isDisabled = !enabled || loading;
 
     final (Color background, Color foreground, BorderSide side) = switch (variant) {
-      AppButtonVariant.primary => (AppColors.sheetText, AppColors.sheet, BorderSide.none),
-      AppButtonVariant.inverted ||
+      AppButtonVariant.primary ||
+      AppButtonVariant.inverted =>
+        (AppColors.brand, Colors.white, BorderSide.none),
       AppButtonVariant.secondary =>
-        (AppColors.sheet, AppColors.sheetText, BorderSide.none),
-      AppButtonVariant.accent => (AppColors.primary, AppColors.sheet, BorderSide.none),
+        (AppColors.surface, AppColors.text, const BorderSide(color: AppColors.border)),
+      AppButtonVariant.accent => (AppColors.primary, Colors.white, BorderSide.none),
       AppButtonVariant.ghost => (Colors.transparent, AppColors.textMuted, BorderSide.none),
-      AppButtonVariant.danger => (
-          AppColors.dangerSoft,
-          AppColors.danger,
-          const BorderSide(color: AppColors.danger),
-        ),
+      AppButtonVariant.danger => (AppColors.danger, Colors.white, BorderSide.none),
     };
 
     final child = loading
@@ -96,7 +96,7 @@ class AppButton extends StatelessWidget {
   }
 }
 
-/// Card escuro (superficies do app).
+/// Cartao branco sobre o fundo cinza claro.
 class AppCard extends StatelessWidget {
   const AppCard({super.key, required this.child, this.padding});
 
@@ -110,8 +110,8 @@ class AppCard extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(Spacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(Radii.lg),
+        borderRadius: BorderRadius.circular(Radii.sm),
+        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 6, offset: Offset(0, 1))],
       ),
       child: child,
     );
@@ -142,7 +142,7 @@ class SheetSurface extends StatelessWidget {
           top: Radius.circular(roundedTop ? Radii.sheet : 0),
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x59000000), blurRadius: 24, offset: Offset(0, -6)),
+          BoxShadow(color: Color(0x26000000), blurRadius: 18, offset: Offset(0, -4)),
         ],
       ),
       child: child,

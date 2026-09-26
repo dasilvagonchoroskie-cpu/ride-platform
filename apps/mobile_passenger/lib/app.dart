@@ -27,7 +27,7 @@ class RideApp extends StatelessWidget {
       scaffoldMessengerKey: avisos,
       title: 'Fortaleza Mov',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       // Logo ao instalar: autorizacoes antes de qualquer outra tela.
       home: PortaoPermissoes(
         itens: const [

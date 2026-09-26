@@ -51,6 +51,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   // ---- Corrida em andamento ----
   DriverRide? activeRide;
+
+  /// Valor final calculado pelo servidor ao encerrar: e o que o motorista
+  /// cobra do passageiro (pode diferir da estimativa).
+  int? valorFinalCents;
   List<Coords> routeToPickup = [];
   List<Coords> tripRoute = [];
 
@@ -701,7 +705,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         durationSeconds: (o['tripDurationSeconds'] as num?)?.toInt() ?? 0,
         fareCents: tarifa,
         earningCents: (tarifa * (100 - comissao) / 100).round(),
-        paymentMethod: 'Dinheiro',
+        paymentMethod: switch (o['paymentMethodType'] as String?) {
+          'PIX' => 'Pix',
+          'CREDIT_CARD' || 'DEBIT_CARD' => 'Cartão (maquininha)',
+          _ => 'Dinheiro',
+        },
         expiresInSeconds: restam,
       );
       offerSecondsLeft = restam;
@@ -735,9 +743,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     // Cala o alarme no toque, antes mesmo da resposta do servidor.
     CorridasNativo.pararAlarme();
 
+    String? pinDoServidor;
     if (AppConfig.hasApi) {
       try {
-        await _client.request('POST', '/driver/rides/${current.id}/accept');
+        final aceite = await _client.request('POST', '/driver/rides/${current.id}/accept');
+        if (aceite is Map<String, dynamic>) pinDoServidor = aceite['pin'] as String?;
         // O servidor so aceita "cheguei" depois de "a caminho". Como o app
         // nao tem um botao separado para isso, o aceite ja emenda os dois.
         await _client.request('POST', '/driver/rides/${current.id}/arriving',
@@ -754,7 +764,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     activeRide = DriverRide(
       offer: current,
       phase: RidePhase.toPickup,
-      pin: '${1000 + DateTime.now().millisecond % 9000}',
+      // O PIN vem do servidor (o mesmo que o passageiro ve). So a
+      // demonstracao inventa um.
+      pin: pinDoServidor ?? (AppConfig.hasApi ? '' : '${1000 + DateTime.now().millisecond % 9000}'),
       startedAt: DateTime.now().toIso8601String(),
     );
 
@@ -808,7 +820,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       try {
         // Sem medicao propria, o servidor usa a estimativa do pedido e
         // calcula o valor pela bandeira gravada na corrida.
-        await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {});
+        final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {});
+        if (r is Map<String, dynamic>) valorFinalCents = (r['finalFareCents'] as num?)?.toInt();
       } on ApiException catch (e) {
         _avisar(e.message);
         return;
@@ -828,6 +841,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
 
     activeRide = null;
+    valorFinalCents = null;
     routeToPickup = [];
     tripRoute = [];
     await AppStorage.remove(AppStorage.activeRide);

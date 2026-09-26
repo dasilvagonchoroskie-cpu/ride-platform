@@ -10,7 +10,7 @@ class AppConfig {
   static const bool forceDemo = bool.fromEnvironment('FORCE_DEMO', defaultValue: false);
 
 
-  static const String appVersion = '0.1.0';
+  static const String appVersion = '0.2.0';
   static const Duration apiTimeout = Duration(seconds: 60);
 
   static bool get hasApi => apiUrl.isNotEmpty && !forceDemo;

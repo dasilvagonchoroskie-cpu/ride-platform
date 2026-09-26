@@ -14,6 +14,12 @@ import {
   requestRideSchema,
   rideLocationSchema,
 } from './dto';
+import { z } from 'zod';
+
+const pertoSchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+});
 
 @ApiTags('Corridas - Passageiro')
 @ApiBearerAuth()
@@ -44,6 +50,12 @@ export class RidesController {
   @ApiOperation({ summary: 'Corridas anteriores do passageiro' })
   history(@CurrentUser('id') userId: string, @Query(new ZodValidationPipe(listRidesSchema)) query: never) {
     return this.rides.historico(userId, UserRole.PASSENGER, query);
+  }
+
+  @Get('nearby-drivers')
+  @ApiOperation({ summary: 'Carros disponiveis perto do passageiro (posicao aproximada)' })
+  nearby(@Query(new ZodValidationPipe(pertoSchema)) q: { lat: number; lng: number }) {
+    return this.rides.carrosPerto(q.lat, q.lng);
   }
 
   @Get(':id')

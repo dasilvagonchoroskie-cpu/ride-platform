@@ -355,12 +355,54 @@ class PlaceSuggestion {
     required this.address,
     required this.coords,
     required this.distanceKm,
+    this.detail = '',
   });
 
   final String address;
   final Coords coords;
   final double distanceKm;
+
+  /// Bairro e cidade (segunda linha da lista).
+  final String detail;
+
+  /// Endereco completo numa linha so (vai para o motorista).
+  String get fullAddress => detail.isEmpty ? address : '$address - $detail';
+
+  /// Resposta de /geo/search e /geo/reverse.
+  factory PlaceSuggestion.fromGeo(Map<String, dynamic> j) => PlaceSuggestion(
+        address: j['address'] as String? ?? 'Endereço',
+        detail: j['detail'] as String? ?? '',
+        coords: Coords((j['latitude'] as num).toDouble(), (j['longitude'] as num).toDouble()),
+        distanceKm: (j['distanceKm'] as num?)?.toDouble() ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'address': address,
+        'detail': detail,
+        'latitude': coords.latitude,
+        'longitude': coords.longitude,
+      };
+
+  factory PlaceSuggestion.fromJson(Map<String, dynamic> j) => PlaceSuggestion(
+        address: j['address'] as String? ?? '',
+        detail: j['detail'] as String? ?? '',
+        coords: Coords((j['latitude'] as num).toDouble(), (j['longitude'] as num).toDouble()),
+        distanceKm: 0,
+      );
 }
+
+/// Formas de pagamento aceitas: o passageiro paga DIRETO ao motorista —
+/// o dinheiro nao passa pela plataforma. Nada de cartao salvo nem saldo.
+const List<PaymentOption> kFormasDePagamento = [
+  PaymentOption(id: 'dinheiro', label: 'Dinheiro', detail: 'Pague direto ao motorista', type: 'CASH'),
+  PaymentOption(id: 'pix', label: 'Pix', detail: 'Pix direto para o motorista, no fim da corrida', type: 'PIX'),
+  PaymentOption(
+    id: 'cartao',
+    label: 'Cartão',
+    detail: 'Débito ou crédito, na maquininha do motorista',
+    type: 'CREDIT_CARD',
+  ),
+];
 
 class EstimateResult {
   const EstimateResult({required this.quote});

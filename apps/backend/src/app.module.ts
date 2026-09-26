@@ -26,6 +26,7 @@ import { TariffsModule } from './modules/tariffs/tariffs.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { PainelMotoristaModule } from './modules/painel-motorista/painel-motorista.module';
+import { GeoModule } from './modules/geo/geo.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { PainelMotoristaModule } from './modules/painel-motorista/painel-motoris
     HealthModule,
     LegalModule,
     PainelMotoristaModule,
+    GeoModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis
