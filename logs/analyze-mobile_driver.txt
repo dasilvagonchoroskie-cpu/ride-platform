@@ -1,23 +1,6 @@
-Resolving dependencies...
-Downloading packages...
-  code_assets 1.2.1 (2.1.0 available)
-  flutter_lints 5.0.0 (6.0.0 available)
-  geolocator 13.0.4 (14.0.3 available)
-  geolocator_android 4.6.2 (5.0.3 available)
-  hooks 2.0.2 (2.2.0 available)
-  intl 0.19.0 (0.20.3 available)
-  lints 5.1.1 (6.1.0 available)
-  material_color_utilities 0.13.0 (0.13.1 available)
-  meta 1.18.3 (1.19.0 available)
-  objective_c 9.5.0 (9.6.0 available)
-  record_use 0.6.0 (1.1.1 available)
-  test_api 0.7.12 (0.7.14 available)
-  vector_math 2.4.0 (2.4.3 available)
-Got dependencies!
-13 packages have newer versions incompatible with dependency constraints.
-Try `flutter pub outdated` for more information.
 Analyzing mobile_driver...                                      
 
    info • The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/widgets.dart'. Try removing the import directive • lib/state/driver_state.dart:4:8 • unnecessary_import
+warning • The value of the field '_ganhoReal' isn't used. Try removing the field, or using it • lib/state/driver_state.dart:46:8 • unused_field
 
-1 issue found. (ran in 7.6s)
+2 issues found. (ran in 8.0s)
