@@ -28,5 +28,5 @@ Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
 Caught exception: Already watching path: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/android
 Note: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/android/app/src/main/java/com/rideplatform/mobile_driver/CorridasService.java uses or overrides a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
-Running Gradle task 'assembleRelease'...                          276.5s
+Running Gradle task 'assembleRelease'...                          259.6s
 ✓ Built build/app/outputs/flutter-apk/app-release.apk (55.0MB)
