@@ -11,6 +11,7 @@ import 'fare_config_screen.dart';
 import 'monitoring_screen.dart';
 import 'rides_screen.dart';
 import 'settings_screen.dart';
+import 'wallets_screen.dart';
 
 /// Casca da Central: Drawer no celular, NavigationRail no tablet.
 class ShellScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class _ShellScreenState extends State<ShellScreen> {
         badge: central.activeRidesCount == 0 ? null : central.activeRidesCount,
       ),
       const ShellDestination(icon: Icons.receipt_long_outlined, label: 'Corridas'),
+      const ShellDestination(icon: Icons.account_balance_wallet_outlined, label: 'Carteiras'),
       const ShellDestination(icon: Icons.tune, label: 'Tarifas'),
       const ShellDestination(icon: Icons.settings_outlined, label: 'Ajustes'),
     ];
@@ -49,6 +51,7 @@ class _ShellScreenState extends State<ShellScreen> {
       'Aprovacao de motoristas',
       'Monitoramento em tempo real',
       'Corridas',
+      'Carteiras dos motoristas',
       'Configuracao de tarifas',
       'Ajustes',
     ];
@@ -58,6 +61,7 @@ class _ShellScreenState extends State<ShellScreen> {
       const DriversPendingScreen(),
       const MonitoringScreen(),
       const RidesScreen(),
+      const WalletsScreen(),
       const FareConfigScreen(),
       const SettingsScreen(),
     ];

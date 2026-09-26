@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:geolocator/geolocator.dart';
@@ -43,7 +42,6 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// true so quando o aparelho informou a posicao REAL.
   bool posicaoReal = false;
-  int? _ganhoReal;
   StreamSubscription<Position>? _gps;
 
   // ---- Oferta recebida ----
@@ -810,9 +808,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       try {
         // Sem medicao propria, o servidor usa a estimativa do pedido e
         // calcula o valor pela bandeira gravada na corrida.
-        final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {})
-            as Map<String, dynamic>;
-        _ganhoReal = (r['driverEarningCents'] as num?)?.toInt();
+        await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {});
       } on ApiException catch (e) {
         _avisar(e.message);
         return;
@@ -830,7 +826,6 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final ride = activeRide;
     if (ride == null) return;
 
-    _ganhoReal = null;
 
     activeRide = null;
     routeToPickup = [];

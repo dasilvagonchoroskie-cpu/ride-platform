@@ -79,6 +79,28 @@ if [ "$HORA" -ge 6 ] && [ "$HORA" -lt 22 ]; then BAND=diurna; ESP=$(echo "$TAR" 
 [ "$VAL" = "$ESP" ] && ok "Bandeira certa pela hora de Brasilia (${HORA}h, $BAND: $VAL centavos)" || falha "Bandeira pela hora de Brasilia (${HORA}h deveria ser $BAND, $ESP centavos; cobrou $VAL)" "$TAR"
 X=$(get /admin/reports/summary "$TA"); sucesso "$X" && ok "Central: resumo de hoje com $(echo "$X" | jq -r '.data.ridesToday') corrida(s)" || falha "Central: resumo" "$X"
 
+# ---- Painel do motorista (Atividades, Carteira pre-paga, Corridas) ----
+X=$(get "/driver/activity?period=day" "$TM")
+if sucesso "$X" && [ "$(echo "$X" | jq -r '.data.rides')" -ge 1 ] 2>/dev/null; then
+  ok "Motorista: Atividades de hoje - $(echo "$X" | jq -r '.data.rides') corrida(s), ganho $(echo "$X" | jq -r '.data.earningCents') centavos, online $(echo "$X" | jq -r '.data.onlineSeconds')s"
+else falha "Motorista: Atividades de hoje" "$X"; fi
+for per in week month; do
+  X=$(get "/driver/activity?period=$per" "$TM")
+  sucesso "$X" && [ "$(echo "$X" | jq -r '.data.buckets | length')" -ge 7 ] 2>/dev/null \
+    && ok "Motorista: grafico $per com $(echo "$X" | jq -r '.data.buckets | length') dias" || falha "Motorista: grafico $per" "$X"
+done
+X=$(get /driver/wallet "$TM")
+COM=$(echo "$X" | jq -r '[.data.transactions[] | select(.type=="COMMISSION")] | length' 2>/dev/null)
+GAN=$(echo "$X" | jq -r '[.data.transactions[] | select(.type=="RIDE_EARNING")] | length' 2>/dev/null)
+if sucesso "$X" && [ "${COM:-0}" -ge 1 ] && [ "${GAN:-1}" = "0" ]; then
+  ok "Motorista: carteira pre-paga so descontou a comissao (saldo $(echo "$X" | jq -r '.data.balanceCents') centavos)"
+else falha "Motorista: carteira pre-paga" "$X"; fi
+X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":1000,"description":"Recarga via Pix (teste)"}' "$TA")
+sucesso "$X" && ok "Central: recarga lancada, saldo agora $(echo "$X" | jq -r '.data.balanceCents') centavos" || falha "Central: lancar recarga" "$X"
+X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de recarga carregado" || falha "Central: contato de recarga" "$X"
+X=$(get "/driver/rides/history" "$TM")
+[ "$(echo "$X" | jq -r '.data.total' 2>/dev/null)" -ge 1 ] 2>/dev/null && ok "Motorista: historico de corridas com $(echo "$X" | jq -r '.data.total') corrida(s)" || falha "Motorista: historico de corridas" "$X"
+
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
 patch "/admin/drivers/$DID/review" '{"status":"SUSPENDED","reason":"Conta de teste automatico"}' "$TA" >/dev/null
