@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 26/09/2026 06:08 UTC
+Teste de ponta a ponta - 26/09/2026 17:35 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login real do administrador
@@ -9,26 +9,30 @@ OK     Central carrega /admin/tariffs
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
 OK     Passageiro: preco da corrida calculado
+OK     Passageiro: busca de destino real (1 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
+OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
 OK     Motorista: cadastro (CPF e CNH) aceito
 OK     Motorista: veiculo cadastrado depois do cadastro
 OK     Central: motorista aprovado com conferencia presencial
 OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
+OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
-OK     Motorista: accept
+OK     Motorista: chamado mostra a forma de pagamento (CASH)
+OK     Motorista: accept (PIN de embarque 3939 vindo do servidor)
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
-OK     Motorista: corrida finalizada, valor 2000 centavos
-OK     Bandeira certa pela hora de Brasilia (3h, noturna: 2000 centavos)
-OK     Central: resumo de hoje com 2 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1600 centavos, online 29s
+OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Bandeira certa pela hora de Brasilia (14h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 3 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 29s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 30 dias
-OK     Motorista: carteira pre-paga so descontou a comissao (saldo -400 centavos)
-OK     Central: recarga lancada, saldo agora 600 centavos
+OK     Motorista: carteira pre-paga so descontou a comissao (saldo -200 centavos)
+OK     Central: recarga lancada, saldo agora 800 centavos
 OK     Central: contato de recarga carregado
 OK     Motorista: historico de corridas com 1 corrida(s)
 
