@@ -32,8 +32,10 @@ List<AvisoMotorista> avisosDo(DriverState d) {
   final c = d.carteira;
   if (c != null && c.isInsufficient) {
     lista.add(AvisoMotorista(
-      titulo: 'Saldo abaixo do mínimo',
-      texto: 'Sua carteira está com ${formatMoney(c.balanceCents)}. Adicione créditos para continuar recebendo corridas.',
+      titulo: c.blocking ? 'Você não está recebendo corridas' : 'Saldo abaixo do mínimo',
+      texto: c.blocking
+          ? 'Sua carteira está com ${formatMoney(c.balanceCents)}, abaixo do mínimo. Recarregue para voltar a receber chamados.'
+          : 'Sua carteira está com ${formatMoney(c.balanceCents)}. Adicione créditos para continuar recebendo corridas.',
       icone: Icons.account_balance_wallet,
       cor: AppColors.danger,
       abrir: (_) => const WalletScreen(),

@@ -6,6 +6,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { FareService } from './fare.service';
 import { tocarJornada } from '../painel-motorista/jornada';
+import { regrasDaCarteira } from '../painel-motorista/regras-carteira';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -155,6 +156,10 @@ export class RidesService {
 
     await this.mudarSituacao(rideId, RideStatus.SEARCHING, null, null);
 
+    // Carteira pre-paga: com o bloqueio ligado na Central, quem esta abaixo
+    // do saldo minimo nao recebe chamado (a comissao nao teria de onde sair).
+    const carteira = await regrasDaCarteira(this.prisma);
+
     for (const raio of RidesService.RAIOS_METROS) {
       const proximos = await this.prisma.findNearbyDrivers({
         latitude: corrida.pickupLat,
@@ -172,6 +177,10 @@ export class RidesService {
           where: { rideId_driverId: { rideId, driverId: m.driverId } },
         });
         if (jaOfertado) continue;
+        if (carteira.bloquear) {
+          const w = await this.prisma.wallet.findUnique({ where: { driverId: m.driverId } });
+          if ((w?.balanceCents ?? 0) < carteira.minimoCents) continue;
+        }
         await this.prisma.rideOffer.create({
           data: {
             rideId,

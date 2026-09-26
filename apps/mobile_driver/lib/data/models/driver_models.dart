@@ -522,10 +522,15 @@ class WalletInfo {
     required this.status,
     required this.central,
     required this.entries,
+    this.blocking = false,
   });
 
   final int balanceCents;
   final int minimumCents;
+
+  /// A Central ligou o bloqueio e o saldo esta abaixo do minimo: nao chega
+  /// chamado ate recarregar.
+  final bool blocking;
 
   /// ok | low | insufficient
   final String status;
@@ -539,6 +544,7 @@ class WalletInfo {
         balanceCents: _int(j['balanceCents']),
         minimumCents: _int(j['minimumCents']),
         status: j['status'] as String? ?? 'ok',
+        blocking: j['blocking'] == true,
         central: CentralContact.fromJson(j['central'] as Map<String, dynamic>?),
         entries: [
           for (final t in (j['transactions'] as List<dynamic>? ?? const []))

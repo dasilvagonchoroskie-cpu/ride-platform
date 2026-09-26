@@ -138,7 +138,9 @@ class _Saldo extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.sm),
           Text(
-            alerta
+            c.blocking
+                ? 'Você não está recebendo corridas. Adicione créditos para voltar.'
+                : alerta
                 ? 'Adicione créditos ou você deixará de receber corridas.'
                 : 'A comissão de cada corrida é descontada deste saldo.',
             style: AppText.body.copyWith(color: AppColors.textMuted, fontSize: 16),

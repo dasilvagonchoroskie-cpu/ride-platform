@@ -3,18 +3,17 @@ import { OfferStatus, RideStatus, UserRole } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { segundosOnline } from './jornada';
+import { CHAVE_BLOQUEAR, CHAVE_MINIMO, regrasDaCarteira } from './regras-carteira';
 
 /** Brasilia (UTC-3, sem horario de verao desde 2019). */
 const FUSO_MS = 3 * 60 * 60 * 1000;
 const DIA_MS = 24 * 60 * 60 * 1000;
 
-/** Chaves de configuracao da Central (tabela settings). */
+/** Chave de configuracao da Central (tabela settings). */
 const CHAVE_CONTATO = 'central.contato';
-const CHAVE_MINIMO = 'carteira.minimoCents';
 
 /** Contato padrao da Central enquanto o dono nao configura outro. */
 const CONTATO_PADRAO = { whatsapp: '5564996472794', pixKey: null as string | null, pixHolder: null as string | null };
-const MINIMO_PADRAO_CENTS = 200;
 
 export type Periodo = 'day' | 'week' | 'month';
 
@@ -162,12 +161,15 @@ export class PainelMotoristaService {
       take: 60,
       include: { ride: { select: { code: true } } },
     });
-    const minimo = await this.minimoCents();
+    const { minimoCents: minimo, bloquear } = await regrasDaCarteira(this.prisma);
     const saldo = carteira.balanceCents;
 
     return {
       balanceCents: saldo,
       minimumCents: minimo,
+      // Com o bloqueio ligado na Central, abaixo do minimo nao chega chamado.
+      blocking: bloquear && saldo < minimo,
+      blockEnabled: bloquear,
       // ok: tranquilo | low: se esgotando | insufficient: abaixo do minimo
       status: saldo < minimo ? 'insufficient' : saldo < minimo * 3 ? 'low' : 'ok',
       central: await this.contato(),
@@ -227,13 +229,21 @@ export class PainelMotoristaService {
   }
 
   async minimoCents(): Promise<number> {
-    const s = await this.prisma.setting.findUnique({ where: { key: CHAVE_MINIMO } });
-    const v = s?.value;
-    return typeof v === 'number' ? v : MINIMO_PADRAO_CENTS;
+    return (await regrasDaCarteira(this.prisma)).minimoCents;
+  }
+
+  async bloqueioLigado(): Promise<boolean> {
+    return (await regrasDaCarteira(this.prisma)).bloquear;
   }
 
   async configurarCentral(
-    input: { whatsapp?: string | null; pixKey?: string | null; pixHolder?: string | null; minimumCents?: number },
+    input: {
+      whatsapp?: string | null;
+      pixKey?: string | null;
+      pixHolder?: string | null;
+      minimumCents?: number;
+      blockWhenInsufficient?: boolean;
+    },
     adminId: string,
   ) {
     const atual = await this.contato();
@@ -254,7 +264,28 @@ export class PainelMotoristaService {
         create: { key: CHAVE_MINIMO, value: input.minimumCents, updatedBy: adminId, description: 'Saldo minimo da carteira' },
       });
     }
-    return { central: await this.contato(), minimumCents: await this.minimoCents() };
+    if (input.blockWhenInsufficient !== undefined) {
+      await this.prisma.setting.upsert({
+        where: { key: CHAVE_BLOQUEAR },
+        update: { value: input.blockWhenInsufficient, updatedBy: adminId },
+        create: {
+          key: CHAVE_BLOQUEAR,
+          value: input.blockWhenInsufficient,
+          updatedBy: adminId,
+          description: 'Motorista abaixo do saldo minimo deixa de receber chamados',
+        },
+      });
+    }
+    return this.lerConfiguracao();
+  }
+
+  async lerConfiguracao() {
+    const regras = await regrasDaCarteira(this.prisma);
+    return {
+      central: await this.contato(),
+      minimumCents: regras.minimoCents,
+      blockWhenInsufficient: regras.bloquear,
+    };
   }
 
   /**

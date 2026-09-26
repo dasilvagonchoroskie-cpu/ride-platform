@@ -52,6 +52,48 @@ class _WalletsScreenState extends State<WalletsScreen> {
   }
 
   int get _minimo => (_config?['minimumCents'] as num?)?.toInt() ?? 200;
+  bool get _bloqueio => _config?['blockWhenInsufficient'] == true;
+  bool _salvandoBloqueio = false;
+
+  Future<void> _alternarBloqueio(bool ligar) async {
+    if (ligar) {
+      final abaixo = context
+          .read<CentralState>()
+          .approved
+          .where((m) => (_saldos[m.id] ?? 0) < _minimo)
+          .length;
+      final confirmou = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text('Ligar o bloqueio?', style: AppText.heading),
+          content: Text(
+            abaixo == 0
+                ? 'Motorista com saldo abaixo de ${formatMoney(_minimo)} deixa de receber chamados até recarregar.'
+                : 'Hoje $abaixo motorista(s) está(ão) abaixo de ${formatMoney(_minimo)} e vão parar de receber '
+                    'chamados até recarregar.',
+            style: AppText.body,
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Ligar')),
+          ],
+        ),
+      );
+      if (confirmou != true || !mounted) return;
+    }
+    setState(() => _salvandoBloqueio = true);
+    try {
+      _config = await _api.request('PUT', '/admin/settings/central', body: {'blockWhenInsufficient': ligar})
+          as Map<String, dynamic>;
+      _aviso(ligar ? 'Bloqueio por saldo ligado.' : 'Bloqueio por saldo desligado.');
+    } on ApiException catch (e) {
+      _aviso(e.message);
+    } catch (_) {
+      _aviso('Não foi possível salvar agora.');
+    }
+    if (mounted) setState(() => _salvandoBloqueio = false);
+  }
 
   Future<void> _lancar(DriverApplication m) async {
     final valor = TextEditingController();
@@ -193,6 +235,30 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 _Info(rotulo: 'Chave Pix', valor: c['pixKey'] as String? ?? 'não informada'),
                 _Info(rotulo: 'Titular', valor: c['pixHolder'] as String? ?? '—'),
                 _Info(rotulo: 'Saldo mínimo', valor: formatMoney(_minimo)),
+                const Divider(height: Spacing.xl),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Bloquear sem saldo', style: AppText.bodyStrong),
+                          Text(
+                            _bloqueio
+                                ? 'Ligado: abaixo do mínimo o motorista não recebe chamados.'
+                                : 'Desligado: o motorista só recebe o aviso para recarregar.',
+                            style: AppText.caption.copyWith(color: AppColors.textMuted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _bloqueio,
+                      activeTrackColor: AppColors.success,
+                      onChanged: _salvandoBloqueio || _config == null ? null : _alternarBloqueio,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

@@ -148,6 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.md),
                     child: _AvisoSaldo(
                       critico: carteira.isInsufficient,
+                      bloqueado: carteira.blocking,
                       saldo: formatMoney(carteira.balanceCents),
                       onTap: () => _abrir(const WalletScreen()),
                     ),
@@ -234,9 +235,10 @@ class _PilulaGanhos extends StatelessWidget {
 }
 
 class _AvisoSaldo extends StatelessWidget {
-  const _AvisoSaldo({required this.critico, required this.saldo, required this.onTap});
+  const _AvisoSaldo({required this.critico, required this.saldo, required this.onTap, this.bloqueado = false});
 
   final bool critico;
+  final bool bloqueado;
   final String saldo;
   final VoidCallback onTap;
 
@@ -259,7 +261,9 @@ class _AvisoSaldo extends StatelessWidget {
               const SizedBox(width: Spacing.md),
               Expanded(
                 child: Text(
-                  critico
+                  bloqueado
+                      ? 'Você não está recebendo corridas: saldo $saldo, abaixo do mínimo. Toque para recarregar.'
+                      : critico
                       ? 'Saldo insuficiente ($saldo). Recarregue para receber corridas.'
                       : 'Saldo se esgotando ($saldo). Recarregue a carteira.',
                   style: AppText.body.copyWith(fontWeight: FontWeight.w600),

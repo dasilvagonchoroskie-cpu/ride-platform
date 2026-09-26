@@ -22,6 +22,7 @@ const centralSchema = z.object({
   pixKey: z.string().max(140).nullable().optional(),
   pixHolder: z.string().max(120).nullable().optional(),
   minimumCents: z.number().int().min(0).max(100_000).optional(),
+  blockWhenInsufficient: z.boolean().optional(),
 });
 
 @ApiTags('Motorista - Painel')
@@ -78,8 +79,8 @@ export class AdminCarteiraController {
 
   @Get('settings/central')
   @ApiOperation({ summary: 'Contato da Central e saldo minimo da carteira' })
-  async lerCentral() {
-    return { central: await this.painel.contato(), minimumCents: await this.painel.minimoCents() };
+  lerCentral() {
+    return this.painel.lerConfiguracao();
   }
 
   @Put('settings/central')
