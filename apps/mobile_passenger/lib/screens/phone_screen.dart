@@ -33,6 +33,9 @@ class _PhoneScreenState extends State<PhoneScreen> {
   }
 
   Future<void> _continue() async {
+    // Toque duplo mandava varios pedidos de codigo de uma vez: o primeiro
+    // funcionava e os outros voltavam "Aguarde 59s", que era o que aparecia.
+    if (_sending) return;
     if (!_isValid) {
       setState(() => _error = 'Informe um telefone com DDD.');
       return;

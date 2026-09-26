@@ -13,6 +13,10 @@ import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
 import 'state/auth_state.dart';
 import 'state/ride_state.dart';
+import 'core/avisos.dart';
+import 'core/permissoes_nativas.dart';
+import 'screens/locating_screen.dart';
+import 'screens/permissoes_screen.dart';
 
 class RideApp extends StatelessWidget {
   const RideApp({super.key});
@@ -20,10 +24,24 @@ class RideApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: avisos,
       title: 'Fortaleza Mov',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: const _Root(),
+      // Logo ao instalar: autorizacoes antes de qualquer outra tela.
+      home: PortaoPermissoes(
+        itens: const [
+          ItemPermissao('localizacao', 'Localização',
+              'Para achar você no mapa e o motorista saber onde buscar.'),
+          ItemPermissao('gps', 'GPS do celular ligado',
+              'Sem o GPS ligado o celular não sabe onde você está.'),
+          ItemPermissao('notificacao', 'Notificações',
+              'Para avisar quando o motorista aceitar e quando ele chegar.',
+              obrigatoria: false),
+        ],
+        aoLiberar: () => context.read<AppState>().atualizarLocalizacao(),
+        child: const _Root(),
+      ),
     );
   }
 }
@@ -57,6 +75,13 @@ class _Root extends StatelessWidget {
       }
     }
 
+    // O mapa so abre com a posicao real do aparelho.
+    if (!app.localizacaoReal) {
+      return LocatingScreen(
+        tentarDeNovo: () => app.atualizarLocalizacao(),
+        ligarGps: () => PermissoesNativas.pedir('gps'),
+      );
+    }
     return const HomeScreen();
   }
 }

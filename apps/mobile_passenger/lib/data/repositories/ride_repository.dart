@@ -23,13 +23,20 @@ class RideRepository {
   ///
   /// Nao ha categoria a enviar — a plataforma opera modalidade unica, e a
   /// bandeira quem decide e o relogio do servidor.
-  Future<EstimateResult> estimate(Coords origin, Coords destination) async {
+  Future<EstimateResult> estimate(
+    Coords origin,
+    Coords destination, {
+    String pickupAddress = 'Minha localizacao atual',
+    String dropoffAddress = 'Destino escolhido',
+  }) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);
 
     try {
       final data = await _client.request('POST', '/rides/estimate', body: {
-        'pickup': origin.toJson(),
-        'dropoff': destination.toJson(),
+        // O servidor exige o endereco escrito em cada ponto. Sem ele,
+        // TODO pedido de preco voltava "Dados invalidos".
+        'pickup': {'address': pickupAddress, ...origin.toJson()},
+        'dropoff': {'address': dropoffAddress, ...destination.toJson()},
       }) as Map<String, dynamic>;
 
       return EstimateResult(quote: RideQuote.fromJson(data));

@@ -90,3 +90,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // ContextCompat/ActivityCompat das autorizacoes pedidas na primeira abertura.
+    implementation("androidx.core:core-ktx:1.13.1")
+}

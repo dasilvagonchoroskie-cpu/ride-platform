@@ -28,6 +28,8 @@ class _Item {
 const _itens = [
   _Item('localizacao', 'Localização',
       'Para o sistema saber que você está perto do passageiro e mandar a corrida certa.'),
+  _Item('gps', 'GPS do celular ligado',
+      'Sem o GPS ligado o celular não sabe onde você está.'),
   _Item('notificacao', 'Notificações',
       'Para o aviso de corrida aparecer e o Android manter o aplicativo ativo.'),
   _Item('sobrepor', 'Aparecer sobre outros apps',

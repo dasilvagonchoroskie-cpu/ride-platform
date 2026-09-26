@@ -13,6 +13,9 @@ import 'screens/splash_screen.dart';
 import 'screens/terms_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'state/driver_state.dart';
+import 'core/avisos.dart';
+import 'core/native/corridas_nativo.dart';
+import 'screens/locating_screen.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({super.key});
@@ -20,6 +23,7 @@ class DriverApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: avisos,
       title: 'Fortaleza Mov Motorista',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
@@ -38,30 +42,28 @@ class _Root extends StatelessWidget {
 
     if (!driver.ready) return const SplashScreen();
 
+    // Corrida ou chamado em andamento vem antes de qualquer outra tela.
+    if (driver.activeRide != null) return const RideScreen();
+    if (driver.offer != null) return const OfferScreen();
+
+    // Logo ao instalar: autorizacoes antes de tudo — inclusive do login.
+    if (driver.permissoesOk == false) return const PermissionsScreen();
+
     final profile = driver.profile;
     if (profile == null) return const WelcomeScreen();
 
-    // Antes ate do cadastro do veiculo: nao faz sentido pedir CNH e
-    // documentos sem a pessoa ter aceitado como esses dados sao usados.
+    // Antes do cadastro: ninguem entrega CNH sem aceitar como ela e usada.
     if (!profile.termsAccepted) return const TermsScreen();
-
     if (!driver.isOnboarded) return const OnboardingScreen();
-
-    final ride = driver.activeRide;
-    if (ride != null) {
-      if (ride.phase == RidePhase.completed) return const RideScreen();
-      return const RideScreen();
-    }
-
-    if (driver.offer != null) return const OfferScreen();
-
-    // Antes de trabalhar: sem estas autorizacoes o alarme de chamado falha
-    // com o celular no bolso. Pedido ja na espera da aprovacao, para o
-    // motorista estar pronto quando a Central liberar.
-    if (driver.permissoesOk == false) return const PermissionsScreen();
-
     if (profile.approval != DriverApproval.approved) return const PendingScreen();
 
+    // O mapa so abre com a posicao real do aparelho.
+    if (!driver.posicaoReal) {
+      return LocatingScreen(
+        tentarDeNovo: () => driver.lerPosicaoInicial(),
+        ligarGps: () => CorridasNativo.pedir('gps'),
+      );
+    }
     return const HomeScreen();
   }
 }

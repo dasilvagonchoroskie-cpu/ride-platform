@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import '../storage/app_storage.dart';
+import '../avisos.dart';
 
 class ApiException implements Exception {
   ApiException(this.code, this.message, {this.statusCode});
@@ -100,11 +101,29 @@ class ApiClient {
     }
 
     final error = decoded['error'] as Map<String, dynamic>?;
-    throw ApiException(
+    // O servidor diz QUAL campo esta errado em "details" ("CPF invalido.",
+    // "CNH vencida..."). Antes isso era jogado fora e so aparecia "Dados
+    // invalidos" — ninguem sabia o que corrigir.
+    var mensagem = error?['message'] as String? ?? 'Falha na requisicao.';
+    final detalhes = error?['details'];
+    if (detalhes is List && detalhes.isNotEmpty) {
+      final primeiro = detalhes.first;
+      final texto = primeiro is Map ? primeiro['message']?.toString() : primeiro.toString();
+      if (texto != null && texto.isNotEmpty) mensagem = texto;
+    }
+    final falha = ApiException(
       error?['code'] as String? ?? 'HTTP_${response.statusCode}',
-      error?['message'] as String? ?? 'Falha na requisicao.',
+      mensagem,
       statusCode: response.statusCode,
     );
+    // Acao da pessoa (enviar, salvar, aceitar) mostra o motivo na tela.
+    // Consulta em segundo plano nao, para nao encher a tela de avisos.
+    final metodo = response.request?.method ?? 'GET';
+    final caminho = response.request?.url.path ?? '';
+    if (metodo != 'GET' && response.statusCode != 409 && !caminho.contains('/location')) {
+      avisar(falha.message);
+    }
+    throw falha;
   }
 
   /// Verifica se a API esta acessivel (decide entre modo API e demonstracao).

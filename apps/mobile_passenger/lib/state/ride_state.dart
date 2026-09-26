@@ -7,6 +7,8 @@ import '../core/utils/geo.dart';
 import '../data/demo/demo_engine.dart';
 import '../data/models/models.dart';
 import '../data/repositories/ride_repository.dart';
+import '../core/api/api_client.dart';
+import '../core/avisos.dart';
 
 /// Ciclo de vida da corrida: estimativa, pareamento, viagem, recibo e historico.
 class RideState extends ChangeNotifier {
@@ -31,17 +33,31 @@ class RideState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<RideQuote> estimate(Coords origin, Coords destination) async {
+  Future<RideQuote?> estimate(
+    Coords origin,
+    Coords destination, {
+    String pickupAddress = 'Minha localizacao atual',
+    String dropoffAddress = 'Destino escolhido',
+  }) async {
     estimating = true;
     notifyListeners();
-
-    final result = await _repository.estimate(origin, destination);
-    quote = result.quote;
-    nearbyDrivers = _repository.nearbyDrivers(origin);
-    estimating = false;
-    notifyListeners();
-
-    return result.quote;
+    try {
+      final result = await _repository.estimate(origin, destination,
+          pickupAddress: pickupAddress, dropoffAddress: dropoffAddress);
+      quote = result.quote;
+      nearbyDrivers = _repository.nearbyDrivers(origin);
+      return result.quote;
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return null;
+    } catch (_) {
+      avisar('Sem conexao com o servidor. Confira a internet e tente de novo.');
+      return null;
+    } finally {
+      // Antes, qualquer falha deixava a tela girando para sempre.
+      estimating = false;
+      notifyListeners();
+    }
   }
 
   Future<Ride> requestRide({

@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (target == null || !mounted) return;
 
     await app.addRecentPlace(target.address);
-    await ride.estimate(app.coords, target.coords);
+    await ride.estimate(app.coords, target.coords, dropoffAddress: target.address);
 
     if (!mounted) return;
     await Navigator.of(context).push(

@@ -37,6 +37,10 @@ class AppState extends ChangeNotifier {
   Coords coords = fallbackCoords;
   bool locationGranted = false;
 
+  /// true so quando o aparelho informou a posicao REAL. Ate la o mapa nao
+  /// abre — nada de cidade fixa na tela.
+  bool localizacaoReal = false;
+
   /// Margem de erro da melhor leitura ate agora.
   double? accuracyMeters;
 
@@ -50,6 +54,7 @@ class AppState extends ChangeNotifier {
     coords = location.coords;
     locationGranted = location.granted;
     accuracyMeters = location.accuracyMeters;
+    localizacaoReal = !location.mocked;
 
     // A primeira leitura do GPS costuma vir torta — as vezes com centenas
     // de metros de erro. Em vez de congelar nela, o aparelho segue
@@ -61,7 +66,13 @@ class AppState extends ChangeNotifier {
     if (!AppConfig.hasApi) {
       dataSource = DataSource.demo;
     } else {
-      dataSource = await _client.healthCheck() ? DataSource.api : DataSource.demo;
+      // Com servidor configurado o aplicativo NUNCA vira demonstracao
+      // sozinho. Antes, este teste tinha 4 s de limite: com o servidor
+      // acordando (ate 1 minuto) ele falhava e o app virava demonstracao
+      // calado — login de mentira, sem termos, mapa parado. Agora o teste
+      // serve so para acordar o servidor enquanto a pessoa digita.
+      dataSource = DataSource.api;
+      unawaited(_client.healthCheck());
     }
 
     final stored = await AppStorage.read(AppStorage.recentPlaces);
@@ -85,22 +96,44 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Chamado pela tela de Autorizacoes assim que a localizacao e o GPS
+  /// ficam liberados — e pelo botao "Tentar de novo".
+  Future<void> atualizarLocalizacao() async {
+    if (localizacaoReal) return;
+    final r = await _resolveLocation();
+    locationGranted = r.granted;
+    if (!r.mocked) {
+      coords = r.coords;
+      accuracyMeters = r.accuracyMeters;
+      localizacaoReal = true;
+    }
+    if (r.granted && _vigia == null) _vigiarPosicao();
+    notifyListeners();
+  }
+
   Future<LocationResult> _resolveLocation() async {
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        return const LocationResult(coords: fallbackCoords, granted: false, mocked: true);
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
+      // So CONFERE. Quem pede e a tela de Autorizacoes, na primeira
+      // abertura, explicando o porque — nao um pedido solto na abertura.
+      final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         return const LocationResult(coords: fallbackCoords, granted: false, mocked: true);
       }
-
-      final position = await Geolocator.getCurrentPosition();
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        return const LocationResult(coords: fallbackCoords, granted: false, mocked: true);
+      }
+      // Com teto de tempo: dentro de casa o GPS pode demorar muito. Se nao
+      // vier, usa a ultima posicao conhecida e o vigia acerta depois.
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition();
+      }
+      if (position == null) {
+        return const LocationResult(coords: fallbackCoords, granted: true, mocked: true);
+      }
       return LocationResult(
         coords: Coords(position.latitude, position.longitude),
         granted: true,
@@ -128,6 +161,7 @@ class AppState extends ChangeNotifier {
         if (!melhorou) return;
 
         coords = Coords(position.latitude, position.longitude);
+          localizacaoReal = true;
         accuracyMeters = position.accuracy;
         notifyListeners();
       }, onError: (_) {});

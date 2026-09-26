@@ -14,6 +14,7 @@ import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/driver_demo.dart';
 import '../data/models/driver_models.dart';
+import '../core/avisos.dart';
 
 /// Estado do motorista: cadastro, documentos, status online, ofertas,
 /// corrida em andamento e carteira.
@@ -39,6 +40,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// tela cheia). null = ainda nao conferidas.
   Map<String, bool> permissoes = const {};
   bool? permissoesOk;
+
+  /// true so quando o aparelho informou a posicao REAL.
+  bool posicaoReal = false;
   int? _ganhoReal;
   StreamSubscription<Position>? _gps;
 
@@ -117,6 +121,23 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     permissoes = await CorridasNativo.permissoes();
     permissoesOk = CorridasNativo.essenciaisOk(permissoes);
     notifyListeners();
+    if (permissoes['localizacao'] == true) unawaited(lerPosicaoInicial());
+  }
+
+  /// Primeira posicao, antes mesmo de ficar disponivel: o mapa abre onde o
+  /// motorista esta, nunca numa cidade fixa.
+  Future<void> lerPosicaoInicial() async {
+    if (posicaoReal) return;
+    try {
+      final p = await Geolocator.getLastKnownPosition() ??
+          await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
+      position = Coords(p.latitude, p.longitude);
+        posicaoReal = true;
+      posicaoReal = true;
+      notifyListeners();
+    } catch (_) {
+      // Sem sinal agora; a tela "Localizando" oferece tentar de novo.
+    }
   }
 
   /// Liga o vigia nativo: consulta chamados e toca o alarme mesmo com o
@@ -194,6 +215,60 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// "25/09/1990" vira "1990-09-25", o formato que o servidor aceita.
   /// Se ja vier no formato ISO, passa direto.
+  /// Mostra o motivo na tela e guarda em [error].
+  void _avisar(String mensagem) {
+    error = mensagem;
+    avisar(mensagem);
+    notifyListeners();
+  }
+
+  /// Confere o cadastro ANTES de enviar, com a mensagem certa para cada
+  /// campo. Dados errados eram recusados pelo servidor sem explicacao.
+  static String? _validarCadastro({
+    required String cpf,
+    required String nascimento,
+    required String cnh,
+    required String validade,
+  }) {
+    if (!_cpfValido(cpf)) return 'CPF invalido. Confira os 11 numeros.';
+    final hoje = DateTime.now();
+    final nasc = _lerData(nascimento);
+    if (nasc == null || !nasc.isBefore(hoje)) return 'Data de nascimento invalida. Use DD/MM/AAAA.';
+    if (hoje.difference(nasc).inDays < 18 * 365) return 'E preciso ter 18 anos ou mais.';
+    if (cnh.replaceAll(RegExp(r'\D'), '').length != 11) return 'O numero da CNH tem 11 digitos.';
+    final venc = _lerData(validade);
+    if (venc == null) return 'Validade da CNH invalida. Use DD/MM/AAAA.';
+    if (!venc.isAfter(hoje)) return 'A CNH esta vencida.';
+    return null;
+  }
+
+  static DateTime? _lerData(String s) {
+    final m = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(s.trim());
+    if (m == null) return DateTime.tryParse(s.trim());
+    final dia = int.parse(m.group(1)!);
+    final mes = int.parse(m.group(2)!);
+    final ano = int.parse(m.group(3)!);
+    final data = DateTime(ano, mes, dia);
+    // 31/02 "vira" marco no DateTime; aqui isso e data invalida.
+    if (data.year != ano || data.month != mes || data.day != dia) return null;
+    return data;
+  }
+
+  static bool _cpfValido(String entrada) {
+    final c = entrada.replaceAll(RegExp(r'\D'), '');
+    if (c.length != 11 || RegExp(r'^(\d)\1{10}$').hasMatch(c)) return false;
+    int digito(int n) {
+      var soma = 0;
+      for (var i = 0; i < n; i++) {
+        soma += int.parse(c[i]) * (n + 1 - i);
+      }
+      final r = (soma * 10) % 11;
+      return r == 10 ? 0 : r;
+    }
+
+    return digito(9) == int.parse(c[9]) && digito(10) == int.parse(c[10]);
+  }
+
   static String _paraIso(String data) {
     final p = data.trim().split('/');
     if (p.length == 3) {
@@ -270,6 +345,19 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (current == null) return;
 
     if (AppConfig.hasApi) {
+      final problema = _validarCadastro(
+        cpf: cpf,
+        nascimento: birthDate ?? '',
+        cnh: cnhNumber,
+        validade: cnhExpiresAt,
+      );
+      if (problema != null) {
+        _avisar(problema);
+        return;
+      }
+    }
+
+    if (AppConfig.hasApi) {
       try {
         await _client.request('POST', '/drivers/onboarding', body: {
           'cpf': cpf.replaceAll(RegExp(r'\D'), ''),
@@ -281,9 +369,27 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       } on ApiException catch (e) {
         // Cadastro ja existente (reinstalou o app) nao e erro de verdade.
         if (e.statusCode != 409) {
-          error = e.message;
-          notifyListeners();
+          _avisar(e.message);
           return;
+        }
+      }
+      // O veiculo so pode ir DEPOIS que o motorista existe no servidor.
+      // Antes ele ia na etapa 2 e voltava "cadastro nao encontrado".
+      final v = vehicle;
+      if (v != null) {
+        try {
+          await _client.request('POST', '/vehicles', body: {
+            'plate': v.plate.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), ''),
+            'brand': v.brand,
+            'model': v.model,
+            'year': v.year,
+            'color': v.color,
+          });
+        } on ApiException catch (e) {
+          if (e.statusCode != 409) {
+            _avisar(e.message);
+            return;
+          }
         }
       }
     }
@@ -299,7 +405,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> registerVehicle(VehicleInfo info) async {
-    if (AppConfig.hasApi) {
+    // No primeiro cadastro o veiculo fica guardado e segue junto com os
+    // dados do motorista; depois disso, trocas de veiculo vao na hora.
+    if (AppConfig.hasApi && isOnboarded) {
       try {
         await _client.request('POST', '/vehicles', body: {
           'plate': info.plate.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), ''),
@@ -310,8 +418,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         });
       } on ApiException catch (e) {
         if (e.statusCode != 409) {
-          error = e.message;
-          notifyListeners();
+          _avisar(e.message);
           return;
         }
       }
@@ -374,8 +481,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
     await refreshFromServer();
     if ((profile ?? current).approval != DriverApproval.approved) {
-      error = 'Sua conta ainda nao foi aprovada para ficar online.';
-      notifyListeners();
+      _avisar('Sua conta ainda nao foi aprovada para ficar online.');
       return;
     }
 
@@ -383,20 +489,17 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     // motorista perderia corrida achando que estava disponivel.
     await checarPermissoes();
     if (permissoesOk != true) {
-      error = 'Libere as autorizações do aplicativo antes de ficar disponível.';
-      notifyListeners();
+      _avisar('Libere as autorizações do aplicativo antes de ficar disponível.');
       return;
     }
 
     if (!documentsComplete) {
-      error = 'Envie todos os documentos antes de ficar online.';
-      notifyListeners();
+      _avisar('Envie todos os documentos antes de ficar online.');
       return;
     }
 
     if (vehicle == null) {
-      error = 'Cadastre um veiculo antes de ficar online.';
-      notifyListeners();
+      _avisar('Cadastre um veiculo antes de ficar online.');
       return;
     }
 
@@ -462,6 +565,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       ).listen((p) {
         if (p.accuracy > 60) return; // leitura ruim demais: descarta
         position = Coords(p.latitude, p.longitude);
+        posicaoReal = true;
         positionAccuracy = p.accuracy;
         notifyListeners();
         _mandarPosicao(p);
@@ -701,8 +805,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
             as Map<String, dynamic>;
         _ganhoReal = (r['driverEarningCents'] as num?)?.toInt();
       } on ApiException catch (e) {
-        error = e.message;
-        notifyListeners();
+        _avisar(e.message);
         return;
       }
     }
@@ -731,8 +834,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> requestPayout(int amountCents) async {
     if (amountCents < wallet.minPayoutCents) {
-      error = 'O valor minimo de saque nao foi atingido.';
-      notifyListeners();
+      _avisar('O valor minimo de saque nao foi atingido.');
       return;
     }
 

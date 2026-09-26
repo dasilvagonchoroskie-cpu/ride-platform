@@ -23,6 +23,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { HealthModule } from './modules/health/health.module';
 import { RidesModule } from './modules/rides/rides.module';
 import { TariffsModule } from './modules/tariffs/tariffs.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { LegalModule } from './modules/legal/legal.module';
 
 @Module({
@@ -41,6 +42,7 @@ import { LegalModule } from './modules/legal/legal.module';
     VehiclesModule,
     RidesModule,
     TariffsModule,
+    ReportsModule,
     HealthModule,
     LegalModule,
   ],

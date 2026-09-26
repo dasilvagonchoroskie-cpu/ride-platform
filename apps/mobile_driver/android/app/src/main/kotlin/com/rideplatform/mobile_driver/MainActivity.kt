@@ -100,7 +100,8 @@ class MainActivity : FlutterActivity() {
                 == PackageManager.PERMISSION_GRANTED),
             "sobrepor" to (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this)),
             "bateria" to (Build.VERSION.SDK_INT < 23 || pm.isIgnoringBatteryOptimizations(packageName)),
-            "telaCheia" to (Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent())
+            "telaCheia" to (Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent()),
+            "gps" to gpsLigado()
         )
     }
 
@@ -127,8 +128,15 @@ class MainActivity : FlutterActivity() {
             "telaCheia" -> if (Build.VERSION.SDK_INT >= 34) {
                 startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pacote))
             }
+            "gps" -> startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
             else -> abrirAjustesDoApp()
         }
+    }
+
+    private fun gpsLigado(): Boolean {
+        val lm = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
     }
 
     /** Para quando o motorista negou de vez: so pelos ajustes do Android. */

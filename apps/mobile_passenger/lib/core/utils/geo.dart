@@ -14,7 +14,9 @@ class Coords {
 }
 
 /// Centro inicial do mapa (Sao Paulo), usado enquanto o GPS nao responde.
-const Coords fallbackCoords = Coords(-23.5613, -46.6565);
+// Valor TECNICO inicial, nunca mostrado: os mapas so abrem com a posicao
+// real do aparelho (tela "Localizando voce"). Nada de cidade fixa na tela.
+const Coords fallbackCoords = Coords(-18.0125, -49.3547);
 
 const double _earthRadiusKm = 6371;
 

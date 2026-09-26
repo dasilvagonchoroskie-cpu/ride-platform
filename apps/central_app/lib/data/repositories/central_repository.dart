@@ -3,6 +3,7 @@ import '../../core/config/app_config.dart';
 import '../../core/utils/geo.dart';
 import '../demo/central_demo.dart';
 import '../models/central_models.dart';
+import '../../core/storage/app_storage.dart';
 
 /// Acesso aos dados da Central.
 ///
@@ -29,6 +30,20 @@ class CentralRepository {
   // ------------------------------------------------------------------
   // Motoristas
   // ------------------------------------------------------------------
+  /// Login real do administrador (e-mail e senha no servidor).
+  Future<AdminUser> login(String email, String password) async {
+    final data = await _client.request('POST', '/auth/password/login',
+        body: {'email': email, 'password': password}) as Map<String, dynamic>;
+    await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
+    final u = data['user'] as Map<String, dynamic>? ?? const {};
+    return AdminUser(
+      id: u['id'] as String? ?? '',
+      name: u['name'] as String? ?? 'Administrador',
+      email: u['email'] as String? ?? email,
+      role: u['role'] as String? ?? 'ADMIN',
+    );
+  }
+
   Future<List<DriverApplication>> pendingApplications() async {
     if (_useDemo) return CentralDemo.applications();
 

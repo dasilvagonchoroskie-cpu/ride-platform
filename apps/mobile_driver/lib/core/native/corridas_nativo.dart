@@ -15,7 +15,7 @@ class CorridasNativo {
 
   /// Sem estas, o alarme pode falhar. O motorista so fica disponivel com
   /// todas liberadas.
-  static const List<String> essenciais = ['localizacao', 'notificacao', 'sobrepor', 'bateria'];
+  static const List<String> essenciais = ['localizacao', 'gps', 'notificacao', 'sobrepor', 'bateria'];
 
   static Future<void> iniciar(String api, String token) =>
       _chamar('iniciar', {'api': api, 'token': token});

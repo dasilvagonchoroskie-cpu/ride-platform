@@ -17,6 +17,7 @@ class PhoneScreen extends StatefulWidget {
 }
 
 class _PhoneScreenState extends State<PhoneScreen> {
+  DateTime? _ultimoEnvio;
   final TextEditingController _controller = TextEditingController();
   String? _error;
 
@@ -36,6 +37,10 @@ class _PhoneScreenState extends State<PhoneScreen> {
       setState(() => _error = 'Informe um telefone com DDD.');
       return;
     }
+    // Toque duplo mandava varios pedidos de codigo de uma vez.
+    final agora = DateTime.now();
+    if (_ultimoEnvio != null && agora.difference(_ultimoEnvio!) < const Duration(seconds: 3)) return;
+    _ultimoEnvio = agora;
     final phone = '+55${onlyDigits(_controller.text)}';
 
     String? debugCode;

@@ -8,6 +8,7 @@ import '../data/models/central_models.dart';
 import '../state/central_state.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
+import '../core/posicao_aparelho.dart';
 
 /// Monitoramento: mapa com todas as corridas ativas (passageiro + motorista).
 class MonitoringScreen extends StatefulWidget {
@@ -186,7 +187,9 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
   }
 
   static Coords fallbackCenter(List<ActiveRide> rides) {
-    if (rides.isEmpty) return const Coords(-23.5613, -46.6565);
+    // Sem corrida: abre onde o aparelho esta. Sem posicao ainda, mostra o
+    // Brasil inteiro — nunca uma cidade fixa.
+    if (rides.isEmpty) return PosicaoDoAparelho.atual ?? const Coords(-14.235, -51.925);
     final lat = rides.map((r) => r.driverCoords.latitude).reduce((a, b) => a + b) / rides.length;
     final lng = rides.map((r) => r.driverCoords.longitude).reduce((a, b) => a + b) / rides.length;
     return Coords(lat, lng);

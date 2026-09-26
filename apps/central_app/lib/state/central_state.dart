@@ -8,6 +8,8 @@ import '../core/storage/app_storage.dart';
 import '../data/demo/central_demo.dart';
 import '../data/models/central_models.dart';
 import '../data/repositories/central_repository.dart';
+import '../core/api/api_client.dart';
+import '../core/avisos.dart';
 
 /// Estado da Central: sessao, fila de aprovacoes, monitoramento, tarifas
 /// e metricas financeiras.
@@ -57,15 +59,32 @@ class CentralState extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    // Modo demonstracao: qualquer e-mail/senha entra.
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-
-    admin = AdminUser(
-      id: 'admin-1',
-      name: email.split('@').first.isEmpty ? 'Administrador' : _titleCase(email.split('@').first),
-      email: email,
-      role: 'ADMIN',
-    );
+    if (AppConfig.hasApi) {
+      // Login DE VERDADE no servidor. A versao recebida entrava com
+      // qualquer e-mail e senha e nunca se identificava — por isso nenhum
+      // dado real carregava e o painel ficava girando.
+      try {
+        admin = await _repository.login(email.trim(), password);
+      } on ApiException catch (e) {
+        error = e.statusCode == 401 ? 'E-mail ou senha incorretos.' : e.message;
+        loading = false;
+        notifyListeners();
+        return;
+      } catch (_) {
+        error = 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+        loading = false;
+        notifyListeners();
+        return;
+      }
+    } else {
+      // Sem servidor configurado: demonstracao local.
+      admin = AdminUser(
+        id: 'admin-1',
+        name: email.split('@').first.isEmpty ? 'Administrador' : _titleCase(email.split('@').first),
+        email: email,
+        role: 'ADMIN',
+      );
+    }
 
     await AppStorage.write(AppStorage.adminUser, jsonEncode(admin!.toJson()));
     loading = false;
@@ -77,6 +96,7 @@ class CentralState extends ChangeNotifier {
   Future<void> logout() async {
     _monitorTimer?.cancel();
     await AppStorage.remove(AppStorage.adminUser);
+    await AppStorage.remove(AppStorage.accessToken);
     admin = null;
     pending = [];
     approved = [];
@@ -91,25 +111,51 @@ class CentralState extends ChangeNotifier {
     loading = true;
     notifyListeners();
 
-    try {
-      final results = await Future.wait([
-        _repository.pendingApplications(),
-        _repository.approvedDrivers(),
-        _repository.activeRides(),
-        _repository.tariffs(),
-        _repository.financials(),
-      ]);
+    // Cada parte carrega por conta propria: uma falha nao derruba as
+    // outras, e o motivo aparece na tela em vez de um circulo girando.
+    final falhas = <String>[];
+    var sessaoExpirou = false;
+    Future<void> parte(String nome, Future<void> Function() carregar) async {
+      try {
+        await carregar();
+      } on ApiException catch (e) {
+        if (e.statusCode == 401 || e.statusCode == 403) sessaoExpirou = true;
+        falhas.add(nome);
+      } catch (_) {
+        falhas.add(nome);
+      }
+    }
 
-      pending = results[0] as List<DriverApplication>;
-      approved = results[1] as List<DriverApplication>;
-      rides = results[2] as List<ActiveRide>;
-      tariffs = results[3] as Tariffs;
-      financials = results[4] as FinancialSummary;
-    } finally {
-      loading = false;
+    await Future.wait([
+      parte('cadastros pendentes', () async {
+        pending = await _repository.pendingApplications();
+      }),
+      parte('motoristas', () async {
+        approved = await _repository.approvedDrivers();
+      }),
+      parte('corridas', () async {
+        rides = await _repository.activeRides();
+      }),
+      parte('bandeiras', () async {
+        tariffs = await _repository.tariffs();
+      }),
+      parte('financeiro', () async {
+        financials = await _repository.financials();
+      }),
+    ]);
+
+    loading = false;
+    notifyListeners();
+
+    if (sessaoExpirou) {
+      await logout();
+      error = 'Sua sessao expirou. Entre de novo.';
       notifyListeners();
+    } else if (falhas.isNotEmpty) {
+      avisar('Nao foi possivel carregar: ${falhas.join(', ')}. Tente de novo.');
     }
   }
+
 
   Future<void> refreshFinancials() async {
     financials = await _repository.financials();
