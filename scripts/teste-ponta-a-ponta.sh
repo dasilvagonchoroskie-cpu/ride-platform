@@ -72,6 +72,11 @@ for passo in accept arriving arrived start; do
 done
 X=$(post "/driver/rides/$RID/finish" '{}' "$TM")
 sucesso "$X" && ok "Motorista: corrida finalizada, valor $(echo "$X" | jq -r '.data.finalFareCents // "?"') centavos" || falha "Motorista: finalizar" "$X"
+VAL=$(echo "$X" | jq -r '.data.finalFareCents // 0')
+HORA=$((10#$(TZ=America/Sao_Paulo date +%H)))
+TAR=$(get /admin/tariffs "$TA")
+if [ "$HORA" -ge 6 ] && [ "$HORA" -lt 22 ]; then BAND=diurna; ESP=$(echo "$TAR" | jq -r '.data.diurna.baseFareCents // .data.DIURNA.baseFareCents // 1000'); else BAND=noturna; ESP=$(echo "$TAR" | jq -r '.data.noturna.baseFareCents // .data.NOTURNA.baseFareCents // 2000'); fi
+[ "$VAL" = "$ESP" ] && ok "Bandeira certa pela hora de Brasilia (${HORA}h, $BAND: $VAL centavos)" || falha "Bandeira pela hora de Brasilia (${HORA}h deveria ser $BAND, $ESP centavos; cobrou $VAL)" "$TAR"
 X=$(get /admin/reports/summary "$TA"); sucesso "$X" && ok "Central: resumo de hoje com $(echo "$X" | jq -r '.data.ridesToday') corrida(s)" || falha "Central: resumo" "$X"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
