@@ -56,9 +56,21 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   List<Coords> routeToPickup = [];
   List<Coords> tripRoute = [];
 
-  // ---- Carteira ----
-  int extraEarningsCents = 0;
-  int extraRides = 0;
+  // ---- Painel (dados reais do servidor) ----
+  /// Resumo de hoje: alimenta o valor no topo da tela inicial.
+  ActivitySummary? hoje;
+
+  /// Carteira pre-paga (comissao descontada a cada corrida).
+  WalletInfo? carteira;
+
+  /// Cadastro como esta no servidor (dados pessoais, CNH, Pix).
+  Map<String, dynamic>? dadosCadastro;
+
+  /// Veiculos cadastrados no servidor.
+  List<Map<String, dynamic>> veiculos = const [];
+
+  /// Olho na tela Atividades: esconde os valores de quem estiver do lado.
+  bool ocultarValores = false;
 
   bool get isOnline => profile?.isOnline ?? false;
   bool get isApproved => profile?.approval == DriverApproval.approved;
@@ -70,12 +82,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   bool get hasPendingDocuments => documents.any((d) => d.isPending);
   bool get hasRejectedDocuments => documents.any((d) => d.isRejected);
 
-  WalletSummary get wallet => DriverDemo.wallet(
-        extraEarningsCents: extraEarningsCents,
-        extraRides: extraRides,
-      );
-
-  List<EarningEntry> get statement => DriverDemo.statement();
+  int get ganhosHojeCents => hoje?.earningCents ?? 0;
 
   // ------------------------------------------------------------------
   // Ciclo de vida
@@ -104,6 +111,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     ready = true;
     notifyListeners();
     if (profile != null) _vigiarAprovacao();
+    if (profile != null && isApproved) unawaited(atualizarPainel());
     // Reabriu o aplicativo ja disponivel: religa tudo, senao ele ficaria
     // "disponivel" sem estar ouvindo chamado nenhum.
     if (isOnline) {
@@ -289,6 +297,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         profile = profile!.copyWith(approval: nova);
         await _persistProfile();
         notifyListeners();
+        if (nova == DriverApproval.approved) unawaited(atualizarPainel());
       }
     } catch (_) {
       // Sem rede agora; tenta de novo na proxima volta do relogio.
@@ -493,11 +502,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
-    if (!documentsComplete) {
-      _avisar('Envie todos os documentos antes de ficar online.');
-      return;
-    }
+    // Documentos: a aprovacao e presencial, na Central. Quem decide se o
+    // motorista pode rodar e o servidor (status APROVADO) — nao uma lista
+    // de fotos guardada no aparelho, que some ao reinstalar.
 
+    if (vehicle == null) await sincronizarCadastro();
     if (vehicle == null) {
       _avisar('Cadastre um veiculo antes de ficar online.');
       return;
@@ -821,25 +830,141 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final ride = activeRide;
     if (ride == null) return;
 
-    extraEarningsCents += _ganhoReal ?? ride.offer.earningCents;
     _ganhoReal = null;
-    extraRides += 1;
 
     activeRide = null;
     routeToPickup = [];
     tripRoute = [];
     await AppStorage.remove(AppStorage.activeRide);
     notifyListeners();
+    // Ganho do dia e comissao descontada: busca do servidor, que e quem
+    // fez a conta de verdade.
+    unawaited(atualizarPainel());
   }
 
-  Future<void> requestPayout(int amountCents) async {
-    if (amountCents < wallet.minPayoutCents) {
-      _avisar('O valor minimo de saque nao foi atingido.');
-      return;
-    }
+  // ------------------------------------------------------------------
+  // Painel: atividades, carteira, historico, cadastro
+  // ------------------------------------------------------------------
 
-    extraEarningsCents -= amountCents;
-    error = null;
+  /// Hoje + carteira + cadastro. Chamado ao abrir, ao voltar para a tela
+  /// inicial e depois de cada corrida.
+  Future<void> atualizarPainel() async {
+    if (!AppConfig.hasApi || profile == null) return;
+    await Future.wait([
+      carregarHoje(),
+      carregarCarteira(),
+      sincronizarCadastro(),
+    ]);
+  }
+
+  Future<ActivitySummary?> carregarAtividade(String periodo, int deslocamento) async {
+    if (!AppConfig.hasApi) return null;
+    try {
+      final r = await _client.request('GET', '/driver/activity', query: {
+        'period': periodo,
+        'offset': '$deslocamento',
+      }) as Map<String, dynamic>;
+      final resumo = ActivitySummary.fromJson(r);
+      if (periodo == 'day' && deslocamento == 0) {
+        hoje = resumo;
+        notifyListeners();
+      }
+      return resumo;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> carregarHoje() async {
+    await carregarAtividade('day', 0);
+  }
+
+  Future<void> carregarCarteira() async {
+    if (!AppConfig.hasApi) return;
+    try {
+      final r = await _client.request('GET', '/driver/wallet') as Map<String, dynamic>;
+      carteira = WalletInfo.fromJson(r);
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: fica o ultimo valor conhecido.
+    }
+  }
+
+  /// Corridas do motorista, da mais nova para a mais antiga.
+  Future<List<RideHistoryItem>?> carregarHistorico({int pagina = 1}) async {
+    if (!AppConfig.hasApi) return const [];
+    try {
+      final r = await _client.request('GET', '/driver/rides/history', query: {
+        'page': '$pagina',
+        'pageSize': '30',
+      }) as Map<String, dynamic>;
+      return [
+        for (final c in (r['items'] as List<dynamic>? ?? const []))
+          RideHistoryItem.fromJson(c as Map<String, dynamic>),
+      ];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Traz do servidor o cadastro e o veiculo. Sem isto, quem reinstalava o
+  /// aplicativo ficava sem veiculo no aparelho e nao conseguia se conectar.
+  Future<void> sincronizarCadastro() async {
+    if (!AppConfig.hasApi || profile == null) return;
+    try {
+      final d = await _client.request('GET', '/drivers/me') as Map<String, dynamic>;
+      dadosCadastro = d;
+      final nota = double.tryParse('${d['ratingAvg'] ?? ''}');
+      final aceite = double.tryParse('${d['acceptanceRate'] ?? ''}');
+      final u = d['user'] as Map<String, dynamic>?;
+      profile = profile!.copyWith(
+        name: (u?['name'] as String?)?.trim().isNotEmpty == true ? u!['name'] as String : null,
+        cpf: d['cpf'] as String?,
+        cnhNumber: d['cnhNumber'] as String?,
+        cnhCategory: d['cnhCategory'] as String?,
+        cnhExpiresAt: (d['cnhExpiresAt'] as String?)?.substring(0, 10),
+        rating: nota,
+        totalRides: (d['totalRides'] as num?)?.toInt(),
+        acceptanceRate: aceite?.round(),
+      );
+      await _persistProfile();
+    } catch (_) {
+      // Ainda sem cadastro no servidor, ou sem rede.
+    }
+    try {
+      final lista = await _client.request('GET', '/vehicles/me') as List<dynamic>;
+      veiculos = [for (final v in lista) v as Map<String, dynamic>];
+      final ativo = veiculos.where((v) => v['isActive'] != false).toList();
+      if (ativo.isNotEmpty && vehicle == null) {
+        final v = ativo.first;
+        vehicle = VehicleInfo(
+          brand: v['brand'] as String? ?? '',
+          model: v['model'] as String? ?? '',
+          year: (v['year'] as num?)?.toInt() ?? DateTime.now().year,
+          color: v['color'] as String? ?? '',
+          plate: v['plate'] as String? ?? '',
+        );
+      }
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  /// WhatsApp e chave Pix da Central (vem junto da carteira; se ainda nao
+  /// carregou, pergunta direto ao servidor).
+  Future<CentralContact?> contatoCentral() async {
+    final c = carteira?.central;
+    if (c != null) return c;
+    if (!AppConfig.hasApi) return null;
+    try {
+      final r = await _client.request('GET', '/driver/central') as Map<String, dynamic>;
+      return CentralContact.fromJson(r);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void alternarValores() {
+    ocultarValores = !ocultarValores;
     notifyListeners();
   }
 
@@ -853,6 +978,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     vehicle = null;
     documents = DriverDemo.initialDocuments();
     activeRide = null;
+    hoje = null;
+    carteira = null;
+    dadosCadastro = null;
+    veiculos = const [];
     notifyListeners();
   }
 

@@ -11,7 +11,10 @@ import '../widgets/ui.dart';
 /// Cada uma explica POR QUE e necessaria: autorizacao pedida sem motivo o
 /// motorista nega, e ai o alarme falha no meio da rua.
 class PermissionsScreen extends StatefulWidget {
-  const PermissionsScreen({super.key});
+  const PermissionsScreen({super.key, this.podeVoltar = false});
+
+  /// Aberta pelo menu (Configuracoes): mostra a seta de voltar.
+  final bool podeVoltar;
 
   @override
   State<PermissionsScreen> createState() => _PermissionsScreenState();
@@ -70,9 +73,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        automaticallyImplyLeading: false,
-        title: Text('Autorizações', style: AppText.title),
+        automaticallyImplyLeading: widget.podeVoltar,
+        title: Text(widget.podeVoltar ? 'Configurações' : 'Autorizações'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(Spacing.lg),

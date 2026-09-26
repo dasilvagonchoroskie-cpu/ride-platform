@@ -8,7 +8,7 @@ class AppConfig {
   static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://fortaleza-mov-backend.onrender.com');
   static const bool forceDemo = bool.fromEnvironment('FORCE_DEMO', defaultValue: false);
 
-  static const String appVersion = '0.1.0';
+  static const String appVersion = '0.2.0';
   static const Duration apiTimeout = Duration(seconds: 60);
 
   /// Intervalo de envio da posicao do motorista (heartbeat).

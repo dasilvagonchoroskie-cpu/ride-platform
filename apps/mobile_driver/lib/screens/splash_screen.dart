@@ -28,7 +28,7 @@ class SplashScreen extends StatelessWidget {
               'MOV  -  MOTORISTA',
               style: TextStyle(
                 fontFamily: AppText.family,
-                color: AppColors.primary,
+                color: AppColors.brand,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 3,
@@ -38,7 +38,7 @@ class SplashScreen extends StatelessWidget {
             SizedBox(
               height: 22,
               width: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brand),
             ),
           ],
         ),

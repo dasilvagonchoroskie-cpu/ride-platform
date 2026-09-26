@@ -26,7 +26,7 @@ class DriverApp extends StatelessWidget {
       scaffoldMessengerKey: avisos,
       title: 'Fortaleza Mov Motorista',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       home: const _Root(),
     );
   }

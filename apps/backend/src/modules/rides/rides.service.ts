@@ -5,6 +5,7 @@ import { ERROR_CODES, generateNumericCode } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { FareService } from './fare.service';
+import { tocarJornada } from '../painel-motorista/jornada';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -196,6 +197,8 @@ export class RidesService {
   /** Chamados abertos para este motorista, ainda dentro do prazo. */
   async chamados(driverId: string) {
     const agora = new Date();
+    // Enquanto o aparelho pergunta por chamados, ele esta online.
+    await tocarJornada(this.prisma, driverId).catch(() => undefined);
     const ofertas: Array<RideOffer & { ride: Ride & { passenger: { name: string } } }> =
       await this.prisma.rideOffer.findMany({
       where: { driverId, status: OfferStatus.PENDING, expiresAt: { gt: agora } },
@@ -384,46 +387,33 @@ export class RidesService {
         },
       });
 
-      // A carteira e um extrato: nada se apaga, correcao vira lancamento
-      // novo. Assim o saldo e sempre a soma do que esta escrito, e da
-      // para explicar cada centavo para o motorista.
-      const carteira = await tx.wallet.findUnique({ where: { driverId } });
-      if (carteira) {
-        // Cada lancamento guarda o saldo que ficou depois dele. Assim o
-        // extrato se explica sozinho e um erro de soma aparece na hora,
-        // em vez de so no fim do mes.
-        const aposGanho = carteira.balanceCents + orcamento.driverEarningCents;
-        await tx.walletTransaction.create({
-          data: {
-            walletId: carteira.id,
-            type: 'RIDE_EARNING',
-            amountCents: orcamento.driverEarningCents,
-            balanceAfterCents: aposGanho,
-            description: `Corrida ${corrida.code}`,
-            rideId,
-          },
-        });
-
-        const aposComissao = aposGanho - orcamento.commissionCents;
+      // Carteira PRE-PAGA: o passageiro paga o motorista direto (o dinheiro
+      // nao passa pela plataforma). Por isso a carteira nao recebe o valor
+      // da corrida — so desconta a comissao dos creditos que o motorista
+      // comprou com a Central. Nada se apaga: correcao vira lancamento novo,
+      // e cada linha guarda o saldo que ficou depois dela.
+      const carteira = await tx.wallet.upsert({ where: { driverId }, update: {}, create: { driverId } });
+      const aposComissao = carteira.balanceCents - orcamento.commissionCents;
+      if (orcamento.commissionCents > 0) {
         await tx.walletTransaction.create({
           data: {
             walletId: carteira.id,
             type: 'COMMISSION',
             amountCents: -orcamento.commissionCents,
             balanceAfterCents: aposComissao,
-            description: `Comissao da corrida ${corrida.code}`,
+            description: 'Corrida finalizada',
             rideId,
           },
         });
-
-        await tx.wallet.update({
-          where: { id: carteira.id },
-          data: {
-            balanceCents: aposComissao,
-            totalEarnedCents: { increment: orcamento.driverEarningCents },
-          },
-        });
       }
+      await tx.wallet.update({
+        where: { id: carteira.id },
+        data: {
+          balanceCents: aposComissao,
+          totalEarnedCents: { increment: orcamento.driverEarningCents },
+        },
+      });
+      await tx.driver.update({ where: { id: driverId }, data: { totalRides: { increment: 1 } } });
 
       // O motorista volta para a fila assim que encerra.
       await tx.driverLocation.updateMany({ where: { driverId }, data: { isAvailable: true } });

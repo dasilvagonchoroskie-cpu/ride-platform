@@ -27,3 +27,45 @@ String formatDateTime(String iso) {
     return iso;
   }
 }
+
+// ---------------------------------------------------------------------
+// Datas e duracoes em portugues, sem depender de pacote de idioma.
+// ---------------------------------------------------------------------
+
+const List<String> mesesCurtos = [
+  'jan.', 'fev.', 'mar.', 'abr.', 'maio', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.',
+];
+
+const List<String> mesesLongos = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+const List<String> diasCurtos = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+String _dois(int n) => n.toString().padLeft(2, '0');
+
+/// "21 de set."
+String diaMes(DateTime d) => '${d.day} de ${mesesCurtos[d.month - 1]}';
+
+/// "23 de set - 17:12"
+String diaMesHora(DateTime d) =>
+    '${d.day} de ${mesesCurtos[d.month - 1].replaceAll('.', '')} - ${_dois(d.hour)}:${_dois(d.minute)}';
+
+/// "25/09/2026"
+String dataCurta(DateTime d) => '${_dois(d.day)}/${_dois(d.month)}/${d.year}';
+
+/// 7080 -> "1h 58min"; 660 -> "11min"; 20 -> "0min"
+String formatDuracao(int segundos) {
+  final minutos = segundos ~/ 60;
+  final h = minutos ~/ 60;
+  final m = minutos % 60;
+  if (h == 0) return '${m}min';
+  return m == 0 ? '${h}h' : '${h}h ${m}min';
+}
+
+/// Valor em reais, ou pontinhos quando o motorista escondeu os valores.
+String dinheiro(int centavos, {bool oculto = false}) => oculto ? r'R$ ••••' : formatMoney(centavos);
+
+/// "2 corridas" / "1 corrida"
+String corridas(int n) => n == 1 ? '1 corrida' : '$n corridas';

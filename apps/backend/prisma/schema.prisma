@@ -302,10 +302,28 @@ model Driver {
   wallet          Wallet?
   payouts         Payout[]
   ratingsReceived Rating[]         @relation("RatingTarget")
+  onlineSessions  DriverOnlineSession[]
 
   @@index([status, isOnline])
   @@index([createdAt])
   @@map("drivers")
+}
+
+/// Jornada do motorista: cada vez que ele fica disponivel abre uma, e ao
+/// sair fecha. `lastSeenAt` e renovado enquanto o aparelho consulta
+/// chamados — se o celular desligar sem avisar, a jornada termina no
+/// ultimo sinal, e nao conta horas que ele nao trabalhou.
+model DriverOnlineSession {
+  id         String    @id @default(uuid()) @db.Uuid
+  driverId   String    @map("driver_id") @db.Uuid
+  startedAt  DateTime  @default(now()) @map("started_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  endedAt    DateTime? @map("ended_at")
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, startedAt])
+  @@map("driver_online_sessions")
 }
 
 model DriverDocument {

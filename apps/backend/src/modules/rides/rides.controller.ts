@@ -147,7 +147,7 @@ export class DriverRidesController {
 
   @Get('history')
   @ApiOperation({ summary: 'Corridas anteriores do motorista' })
-  history(@CurrentUser('id') userId: string, @Query(new ZodValidationPipe(listRidesSchema)) query: never) {
-    return this.rides.historico(userId, UserRole.DRIVER, query);
+  history(@CurrentUser('driverId') driverId: string, @Query(new ZodValidationPipe(listRidesSchema)) query: never) {
+    return this.rides.historico(driverId, UserRole.DRIVER, query);
   }
 }

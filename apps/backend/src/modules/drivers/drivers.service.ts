@@ -1,3 +1,4 @@
+import { abrirJornada, fecharJornada } from '../painel-motorista/jornada';
 import { Injectable, Logger } from '@nestjs/common';
 import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
@@ -123,6 +124,10 @@ export class DriversService {
     }
 
     const updated = await this.repo.update(driver.id, { isOnline });
+
+    // Tempo online da tela Atividades.
+    if (isOnline) await abrirJornada(this.prisma, driver.id);
+    else await fecharJornada(this.prisma, driver.id);
 
     await this.prisma.$executeRaw`
       UPDATE driver_locations SET is_online = ${isOnline}, is_available = ${isOnline}, updated_at = NOW()

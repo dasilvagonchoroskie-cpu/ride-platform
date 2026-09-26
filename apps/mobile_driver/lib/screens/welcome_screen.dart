@@ -42,7 +42,7 @@ class WelcomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppText.family,
-                  color: AppColors.primary,
+                  color: AppColors.brand,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 3,
