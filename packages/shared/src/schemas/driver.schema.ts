@@ -30,10 +30,21 @@ export const updateDriverLocationSchema = z.object({
   accuracy: z.number().min(0).max(1000).optional(),
 });
 
-export const reviewDriverSchema = z.object({
-  status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED']),
-  reason: z.string().trim().min(3).max(500).optional(),
-});
+export const reviewDriverSchema = z
+  .object({
+    status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED']),
+    reason: z.string().trim().min(3).max(500).optional(),
+    /**
+     * Aprovacao com conferencia PRESENCIAL dos documentos, enquanto o envio
+     * de fotos pelo aplicativo nao existe. Exige descrever o que foi
+     * conferido — fica gravado na auditoria.
+     */
+    presentialCheck: z.boolean().optional(),
+  })
+  .refine((v) => !v.presentialCheck || (v.reason?.length ?? 0) >= 10, {
+    message: 'Descreva o que foi conferido pessoalmente.',
+    path: ['reason'],
+  });
 
 export const listDriversSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED']).optional(),

@@ -12,6 +12,10 @@ import {
   ReviewDriverInput,
 } from '@ride/shared';
 
+
+/** Acao gravada na auditoria quando a Central aprova sem as fotos no sistema. */
+const APROVACAO_PRESENCIAL = 'DRIVER_APPROVED_PRESENTIAL';
+
 @Injectable()
 export class DriversService {
   private readonly logger = new Logger(DriversService.name);
@@ -97,7 +101,9 @@ export class DriversService {
       }
 
       const progress = await this.getDocumentProgress(driver.id);
-      if (!progress.isComplete) {
+      // Aprovado com conferencia presencial: as fotos ainda nao existem no
+      // sistema, mas os documentos foram vistos pela Central.
+      if (!progress.isComplete && !(await this.aprovadoPresencialmente(driver.id))) {
         throw new BusinessException(
           ERROR_CODES.DOCUMENTS_INCOMPLETE,
           `Documentos pendentes: ${progress.missing.join(', ')}.`,
@@ -200,20 +206,35 @@ export class DriversService {
     };
   }
 
+  /** A Central aprovou este motorista conferindo os documentos pessoalmente? */
+  private async aprovadoPresencialmente(driverId: string): Promise<boolean> {
+    const registro = await this.prisma.auditLog.findFirst({
+      where: { entity: 'Driver', entityId: driverId, action: APROVACAO_PRESENCIAL },
+      select: { id: true },
+    });
+    return registro !== null;
+  }
+
   /** Aprova, reprova ou suspende o motorista. */
   async adminReview(driverId: string, reviewerId: string, input: ReviewDriverInput) {
     const driver = await this.repo.findById(driverId);
     if (!driver) throw BusinessException.notFound('Motorista nao encontrado.');
 
+    // Documentos sem foto no sistema, aprovados por conferencia presencial.
+    let semFoto: string[] | null = null;
     if (input.status === DriverStatus.APPROVED) {
       const progress = await this.getDocumentProgress(driverId);
       if (!progress.isComplete) {
-        throw new BusinessException(
-          ERROR_CODES.DOCUMENTS_INCOMPLETE,
-          `Nao e possivel aprovar: documentos pendentes (${progress.missing.join(', ')}).`,
-          422,
-          progress,
-        );
+        if (!input.presentialCheck) {
+          throw new BusinessException(
+            ERROR_CODES.DOCUMENTS_INCOMPLETE,
+            `Nao e possivel aprovar: documentos pendentes (${progress.missing.join(', ')}). ` +
+              'Para aprovar conferindo pessoalmente, use a conferencia presencial na Central.',
+            422,
+            progress,
+          );
+        }
+        semFoto = progress.missing;
       }
       if (driver.cnhExpiresAt < new Date()) {
         throw BusinessException.validation('CNH vencida: reprove e solicite atualizacao.');
@@ -227,6 +248,20 @@ export class DriversService {
       rejectionReason: input.status === DriverStatus.APPROVED ? null : (input.reason ?? 'Sem justificativa informada.'),
       isOnline: input.status === DriverStatus.APPROVED ? driver.isOnline : false,
     });
+
+    if (semFoto) {
+      // Registro permanente: quem aprovou sem as fotos, quando e o que conferiu.
+      await this.prisma.auditLog.create({
+        data: {
+          actorId: reviewerId,
+          actorRole: 'ADMIN',
+          action: APROVACAO_PRESENCIAL,
+          entity: 'Driver',
+          entityId: driverId,
+          after: { conferencia: input.reason ?? '', documentosSemFoto: semFoto },
+        },
+      });
+    }
 
     this.logger.log(`Motorista ${driverId} revisado -> ${input.status} por ${reviewerId}`);
     return this.withProgress(updated.id);

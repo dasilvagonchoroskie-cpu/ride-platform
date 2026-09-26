@@ -191,7 +191,8 @@ class CentralState extends ChangeNotifier {
   // Aprovacao de motoristas
   // ------------------------------------------------------------------
   /// Aprova o motorista. Atualiza o status e move da fila.
-  Future<bool> approveDriver(DriverApplication application) async {
+  /// [conferencia]: o que foi conferido pessoalmente (aprovacao presencial).
+  Future<bool> approveDriver(DriverApplication application, {String? conferencia}) async {
     loading = true;
     error = null;
     notifyListeners();
@@ -199,6 +200,8 @@ class CentralState extends ChangeNotifier {
     final ok = await _repository.reviewDriver(
       driverId: application.id,
       decision: DriverApproval.approved,
+      reason: conferencia,
+      presencial: conferencia != null,
     );
 
     loading = false;

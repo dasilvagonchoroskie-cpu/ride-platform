@@ -83,6 +83,7 @@ class CentralRepository {
     required String driverId,
     required DriverApproval decision,
     String? reason,
+    bool presencial = false,
   }) async {
     if (_useDemo) {
       await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -93,6 +94,7 @@ class CentralRepository {
       await _client.request('PATCH', '/admin/drivers/$driverId/review', body: {
         'status': decision.name.toUpperCase(),
         if (reason != null) 'reason': reason,
+        if (presencial) 'presentialCheck': true,
       });
       return true;
     } catch (_) {

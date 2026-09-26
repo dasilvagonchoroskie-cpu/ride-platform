@@ -56,8 +56,8 @@ PLACA="TST$((RANDOM%10))A$(printf '%02d' $((RANDOM%100)))"
 X=$(post /vehicles "{\"plate\":\"$PLACA\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"}" "$TM")
 sucesso "$X" && ok "Motorista: veiculo cadastrado depois do cadastro" || falha "Motorista: veiculo" "$X"
 
-X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED"}' "$TA")
-sucesso "$X" && ok "Central: motorista aprovado" || falha "Central: aprovar motorista" "$X"
+X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
+sucesso "$X" && ok "Central: motorista aprovado com conferencia presencial" || falha "Central: aprovar motorista" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Motorista: ficou disponivel" || falha "Motorista: ficar disponivel" "$X"
 X=$(post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM"); sucesso "$X" && ok "Motorista: posicao enviada" || falha "Motorista: posicao" "$X"
 
@@ -75,6 +75,7 @@ sucesso "$X" && ok "Motorista: corrida finalizada, valor $(echo "$X" | jq -r '.d
 X=$(get /admin/reports/summary "$TA"); sucesso "$X" && ok "Central: resumo de hoje com $(echo "$X" | jq -r '.data.ridesToday') corrida(s)" || falha "Central: resumo" "$X"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
+post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
 patch "/admin/drivers/$DID/review" '{"status":"SUSPENDED","reason":"Conta de teste automatico"}' "$TA" >/dev/null
 echo | tee -a "$REL"; echo "Resultado: $FALHAS falha(s)." | tee -a "$REL"
 exit $FALHAS

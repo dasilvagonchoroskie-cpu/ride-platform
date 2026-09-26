@@ -21,8 +21,17 @@ class _DriverReviewScreenState extends State<DriverReviewScreen> {
   bool _busy = false;
 
   Future<void> _approve() async {
+    // Enquanto o envio de fotos nao existe, a aprovacao e por conferencia
+    // PRESENCIAL dos documentos — e fica registrada no servidor.
+    final conferencia = await showDialog<String>(
+      context: context,
+      builder: (_) => _ConferenciaPresencial(nome: widget.application.name),
+    );
+    if (conferencia == null || !mounted) return;
     setState(() => _busy = true);
-    final ok = await context.read<CentralState>().approveDriver(widget.application);
+    final ok = await context
+        .read<CentralState>()
+        .approveDriver(widget.application, conferencia: conferencia);
     if (!mounted) return;
     setState(() => _busy = false);
 
@@ -417,6 +426,87 @@ class _RejectDialogState extends State<_RejectDialog> {
           },
           style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
           child: const Text('Confirmar rejeicao'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Confirmacao do que foi conferido PESSOALMENTE antes de aprovar.
+///
+/// Os itens seguem a Lei 13.640/2018 (transporte por aplicativo): CNH com
+/// EAR, CRLV em dia e certidao negativa de antecedentes criminais — mais a
+/// vistoria do veiculo. Todos precisam estar marcados para aprovar.
+class _ConferenciaPresencial extends StatefulWidget {
+  const _ConferenciaPresencial({required this.nome});
+
+  final String nome;
+
+  @override
+  State<_ConferenciaPresencial> createState() => _ConferenciaPresencialState();
+}
+
+class _ConferenciaPresencialState extends State<_ConferenciaPresencial> {
+  static const _itens = [
+    'CNH original, válida e com a observação EAR',
+    'Documento do veículo (CRLV) em dia',
+    'Certidão negativa de antecedentes criminais',
+    'Vi o veículo e a placa confere com o cadastro',
+  ];
+  final _marcados = List<bool>.filled(_itens.length, false);
+  final _obs = TextEditingController();
+
+  @override
+  void dispose() {
+    _obs.dispose();
+    super.dispose();
+  }
+
+  bool get _tudoConferido => _marcados.every((m) => m);
+
+  void _aprovar() {
+    final obs = _obs.text.trim();
+    Navigator.of(context).pop(
+      'Conferencia presencial: CNH com EAR, CRLV em dia, certidao negativa '
+      'de antecedentes e vistoria do veiculo.${obs.isEmpty ? '' : ' Obs: $obs'}',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Conferência presencial'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Marque o que você conferiu pessoalmente de ${widget.nome}. '
+              'Fica registrado quem aprovou, quando e o que foi conferido.',
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < _itens.length; i++)
+              CheckboxListTile(
+                value: _marcados[i],
+                onChanged: (v) => setState(() => _marcados[i] = v ?? false),
+                title: Text(_itens[i]),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+            TextField(
+              controller: _obs,
+              maxLength: 200,
+              decoration: const InputDecoration(labelText: 'Observação (opcional)'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        FilledButton(
+          onPressed: _tudoConferido ? _aprovar : null,
+          child: const Text('Aprovar'),
         ),
       ],
     );
