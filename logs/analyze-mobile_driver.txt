@@ -20,4 +20,4 @@ Analyzing mobile_driver...
 
    info • The import of 'package:flutter/foundation.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/widgets.dart'. Try removing the import directive • lib/state/driver_state.dart:4:8 • unnecessary_import
 
-1 issue found. (ran in 7.5s)
+1 issue found. (ran in 7.6s)
