@@ -257,6 +257,17 @@ export class PainelMotoristaService {
     return { central: await this.contato(), minimumCents: await this.minimoCents() };
   }
 
+  /**
+   * Id do motorista do usuario logado. O token emitido antes do cadastro
+   * nao traz `driverId` — por isso, na falta dele, procura pelo usuario.
+   */
+  async motoristaDo(user: { id: string; driverId?: string | null } | undefined): Promise<string | null> {
+    if (!user) return null;
+    if (user.driverId) return user.driverId;
+    const d = await this.prisma.driver.findUnique({ where: { userId: user.id }, select: { id: true } });
+    return d?.id ?? null;
+  }
+
   private exigirMotorista(driverId: string | null | undefined): string {
     if (!driverId) throw BusinessException.notFound('Cadastro de motorista nao encontrado.');
     return driverId;

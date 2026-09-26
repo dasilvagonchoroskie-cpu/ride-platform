@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PainelMotoristaService, type Periodo } from './painel-motorista.service';
 
@@ -33,17 +33,17 @@ export class PainelMotoristaController {
 
   @Get('activity')
   @ApiOperation({ summary: 'Ganhos, corridas, tempo online e trabalhado do dia, semana ou mes' })
-  atividade(
-    @CurrentUser('driverId') driverId: string | null,
+  async atividade(
+    @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(atividadeSchema)) q: { period: Periodo; offset: number },
   ) {
-    return this.painel.atividade(driverId, q.period, q.offset);
+    return this.painel.atividade(await this.painel.motoristaDo(user), q.period, q.offset);
   }
 
   @Get('wallet')
   @ApiOperation({ summary: 'Carteira pre-paga: saldo, minimo, contato da Central e historico' })
-  carteira(@CurrentUser('driverId') driverId: string | null) {
-    return this.painel.carteira(driverId);
+  async carteira(@CurrentUser() user: AuthenticatedUser) {
+    return this.painel.carteira(await this.painel.motoristaDo(user));
   }
 
   @Get('central')
