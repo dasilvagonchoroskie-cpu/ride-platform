@@ -2,8 +2,9 @@ Resolving dependencies...
 Downloading packages...
   code_assets 1.2.1 (2.1.0 available)
   flutter_lints 5.0.0 (6.0.0 available)
-  geolocator 13.0.4 (14.0.3 available)
-  geolocator_android 4.6.2 (5.0.3 available)
+  geolocator 13.0.4 (14.1.1 available)
+  geolocator_android 4.6.2 (5.1.1 available)
+  geolocator_platform_interface 4.3.0 (4.4.0 available)
   hooks 2.0.2 (2.2.0 available)
   intl 0.19.0 (0.20.3 available)
   lints 5.1.1 (6.1.0 available)
@@ -14,7 +15,7 @@ Downloading packages...
   test_api 0.7.12 (0.7.14 available)
   vector_math 2.4.0 (2.4.3 available)
 Got dependencies!
-13 packages have newer versions incompatible with dependency constraints.
+14 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Running Gradle task 'assembleRelease'...                        
 Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 3568 bytes (99.8% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
@@ -26,5 +27,3 @@ Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
 "Install CMake 3.22.1 v.3.22.1" complete.
 "Install CMake 3.22.1 v.3.22.1" finished.
 Caught exception: Already watching path: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/android
-Running Gradle task 'assembleRelease'...                          265.1s
-✓ Built build/app/outputs/flutter-apk/app-release.apk (55.4MB)
