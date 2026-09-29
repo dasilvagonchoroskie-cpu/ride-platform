@@ -10,6 +10,7 @@ import '../data/models/central_models.dart';
 import '../data/repositories/central_repository.dart';
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
+import '../data/models/motorista_no_mapa.dart';
 
 /// Estado da Central: sessao, fila de aprovacoes, monitoramento, tarifas
 /// e metricas financeiras.
@@ -32,6 +33,9 @@ class CentralState extends ChangeNotifier {
   FinancialSummary? financials;
 
   Timer? _monitorTimer;
+
+  /// Motoristas online na posicao real (mapa da tela principal).
+  List<MotoristaNoMapa> motoristasOnline = const [];
 
   bool get isDemo => _repository.isDemo;
   int get pendingCount => pending.length;
@@ -136,6 +140,9 @@ class CentralState extends ChangeNotifier {
       parte('corridas', () async {
         rides = await _repository.activeRides();
       }),
+      parte('mapa da operacao', () async {
+        motoristasOnline = await _repository.motoristasOnline();
+      }),
       parte('bandeiras', () async {
         tariffs = await _repository.tariffs();
       }),
@@ -183,6 +190,13 @@ class CentralState extends ChangeNotifier {
   }
 
   Future<void> refreshRides() async {
+    // O mapa da tela principal acompanha a operacao na mesma batida.
+    try {
+      motoristasOnline = await _repository.motoristasOnline();
+      notifyListeners();
+    } catch (_) {
+      // Sem rede nesta volta: mantem a ultima posicao conhecida.
+    }
     rides = await _repository.activeRides();
     notifyListeners();
   }

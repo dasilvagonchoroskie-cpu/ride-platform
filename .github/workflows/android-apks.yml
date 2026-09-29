@@ -74,6 +74,12 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: flutter analyze 2>&1 | tee "$RUNNER_TEMP/analyze-${{ matrix.app }}.txt"
 
+      # Regras de cobranca e outras contas com teste automatico: se alguem
+      # quebrar a conta, o APK nem chega a ser gerado.
+      - name: Testes automaticos (flutter test)
+        working-directory: apps/${{ matrix.app }}
+        run: if [ -d test ]; then flutter test; else echo "Sem testes neste app."; fi
+
       # O token normal nao consegue ler o log de uma tarefa pela API.
       # Gravar o resultado aqui, no proprio repositorio, resolve isso.
       - name: Guardar o relatorio da analise

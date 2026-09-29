@@ -205,18 +205,18 @@ class MedidorScreen extends StatelessWidget {
                     _Linha(rotulo: 'Bandeirada', valor: Formato.moedaComPrefixo(s.bandeiradaAtual)),
                     _Linha(
                       rotulo: 'Distancia cobrada',
-                      valor: '${Formato.km(s.estado.kmIncluidoUsado)} km',
+                      valor: '${Formato.km(s.kmCobrados)} km',
                     ),
                     _Linha(
                       rotulo: 'Tempo parado',
                       valor: Formato.tempo(s.estado.tempoParadoS),
                     ),
                     _Linha(rotulo: 'Valor da espera', valor: Formato.moedaComPrefixo(s.estado.valorEspera)),
-                    if (!s.estado.jaAndou)
+                    if (s.kmFranquiaRestante > 0 || s.minutosFranquiaRestantes > 0)
                       _Linha(
-                        rotulo: 'Franquia',
-                        valor: '${Formato.km(s.config.kmIncluidoNaBandeirada)} km / '
-                            '${s.config.minutosIncluidoNaBandeirada.round()} min',
+                        rotulo: 'Franquia restante',
+                        valor: '${Formato.km(s.kmFranquiaRestante)} km / '
+                            '${s.minutosFranquiaRestantes.ceil()} min',
                       ),
                   ],
                 ),

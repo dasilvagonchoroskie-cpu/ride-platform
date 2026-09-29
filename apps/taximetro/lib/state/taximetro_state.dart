@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constantes.dart';
 import '../core/licenca.dart';
+import '../core/tarifador.dart';
 import '../models/aparencia.dart';
 import '../models/config.dart';
 import '../models/estado_corrida.dart';
@@ -39,6 +40,16 @@ class TaximetroState extends ChangeNotifier {
   // ---- Corrida ----
   EstadoCorrida estado = EstadoCorrida();
   bool corridaAtiva = false;
+
+  /// Bandeirada CONGELADA no inicio: a corrida que comeca as 21h50 segue
+  /// na bandeira do dia mesmo passando das 22h.
+  double _bandeiradaDaCorrida = 0;
+
+  /// Tempos com as fracoes de segundo. Antes o tempo era somado cortando
+  /// as fracoes: um intervalo de 0,98 s somava ZERO e o tempo parado andava
+  /// aos solavancos.
+  double _paradoExatoS = 0;
+  double _totalExatoS = 0;
   bool licenciado = false;
   String? codigoAparelho;
   String? erroLicenca;
@@ -68,7 +79,40 @@ class TaximetroState extends ChangeNotifier {
   Position? _ancora;
 
   bool get emHorarioNoturno => config.emHorarioNoturno;
-  double get bandeiradaAtual => config.bandeiradaAtual;
+  double get bandeiradaAtual => corridaAtiva ? _bandeiradaDaCorrida : config.bandeiradaAtual;
+
+  Tarifador get _tarifador => Tarifador(
+        taxaKm: config.taxaKm,
+        taxaEsperaPorMinuto: config.taxaEspera,
+        kmIncluido: config.kmIncluidoNaBandeirada,
+        minutosIncluido: config.minutosIncluidoNaBandeirada,
+      );
+
+  /// Distancia que ja passou da franquia (a que entra na conta).
+  double get kmCobrados => _tarifador.kmCobraveis(estado.distanciaTotalKm);
+
+  double get kmFranquiaRestante =>
+      math.max(0.0, config.kmIncluidoNaBandeirada - estado.distanciaTotalKm);
+
+  double get minutosFranquiaRestantes =>
+      math.max(0.0, config.minutosIncluidoNaBandeirada - _paradoExatoS / 60);
+
+  /// Refaz a conta a partir dos TOTAIS de distancia e tempo parado.
+  void _recalcular() {
+    final t = _tarifador;
+    estado.kmIncluidoUsado = t.kmFranquiaUsada(estado.distanciaTotalKm);
+    estado.minutosIncluidoUsado = t.minutosFranquiaUsados(_paradoExatoS);
+    estado.esperaInicialS = math.min(_paradoExatoS, t.minutosIncluido * 60);
+    estado.valorEspera = t.valorEspera(_paradoExatoS);
+    estado.valorTotal = t.adicional(estado.distanciaTotalKm, _paradoExatoS);
+    estado.tempoParadoS = _paradoExatoS.floor();
+    estado.tempoTotalS = _totalExatoS.floor();
+  }
+
+  void _zerarContagem() {
+    _paradoExatoS = 0;
+    _totalExatoS = 0;
+  }
 
   // ==================================================================
   // Ciclo de vida
@@ -196,9 +240,12 @@ class TaximetroState extends ChangeNotifier {
     }
 
     estado.reiniciar();
+    _zerarContagem();
     _bufferDistanciaM = 0;
     _ultimoInstanteMs = null;
     _ancora = null;
+    _bandeiradaDaCorrida = config.bandeiradaAtual;
+    _zerarContagem();
     corridaAtiva = true;
     velocidadeAtualKmh = null;
     avisoGps = null;
@@ -216,6 +263,7 @@ class TaximetroState extends ChangeNotifier {
     desligarRelogioDaCorrida();
     await _pararRastreamento();
     estado.reiniciar();
+    _zerarContagem();
     velocidadeAtualKmh = null;
     statusTexto = 'Corrida cancelada';
     statusClasse = 'aguardando';
@@ -224,6 +272,7 @@ class TaximetroState extends ChangeNotifier {
 
   Future<void> reiniciarCorrida() async {
     estado.reiniciar();
+    _zerarContagem();
     _bufferDistanciaM = 0;
     _ultimoInstanteMs = null;
     _ancora = null;
@@ -261,6 +310,7 @@ class TaximetroState extends ChangeNotifier {
     await _gravarHistorico();
 
     estado.reiniciar();
+    _zerarContagem();
     _ultimoInstanteMs = null;
     _ancora = null;
     velocidadeAtualKmh = null;
@@ -292,10 +342,22 @@ class TaximetroState extends ChangeNotifier {
   Future<void> _iniciarRastreamento() async {
     await _pararRastreamento();
 
-    const settings = LocationSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      distanceFilter: 0,
-    );
+    // Servico em primeiro plano: com a tela apagada o Android corta o GPS
+    // de aplicativo comum e o medidor congelava — "travava e depois pulava".
+    // Com o aviso fixo e a trava de processador ele segue medindo.
+    final LocationSettings settings = Platform.isAndroid
+        ? AndroidSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 0,
+            intervalDuration: const Duration(seconds: 1),
+            foregroundNotificationConfig: const ForegroundNotificationConfig(
+              notificationTitle: 'Taxímetro medindo a corrida',
+              notificationText: 'A cobrança continua mesmo com a tela apagada.',
+              enableWakeLock: true,
+              setOngoing: true,
+            ),
+          )
+        : const LocationSettings(accuracy: LocationAccuracy.bestForNavigation, distanceFilter: 0);
 
     _posicaoSub = Geolocator.getPositionStream(locationSettings: settings).listen(
       (posicao) {
@@ -363,6 +425,9 @@ class TaximetroState extends ChangeNotifier {
       final velocidadeMs = metros / segundos;
       if (velocidadeMs > Constantes.velocidadeImpossivelMs) {
         _ancora = pos;
+        // Descarta a distancia do salto, mas o tempo passou de verdade.
+        _totalExatoS += segundos;
+        _recalcular();
         notifyListeners();
         return;
       }
@@ -375,7 +440,7 @@ class TaximetroState extends ChangeNotifier {
 
     if (parado) {
       if (segundos != null) {
-        estado.tempoTotalS += segundos.toInt();
+        _totalExatoS += segundos;
         cobrarComoParado(segundos);
       }
       _ancora = pos;
@@ -392,23 +457,16 @@ class TaximetroState extends ChangeNotifier {
     if (_bufferDistanciaM >= Constantes.distanciaMinimaRuidoM) {
       final km = _bufferDistanciaM / 1000;
       estado.distanciaTotalKm += km;
-      if (segundos != null) estado.tempoTotalS += segundos.toInt();
+      if (segundos != null) _totalExatoS += segundos;
 
       // Encerra a franquia quando o carro realmente sai do lugar.
       if (!estado.jaAndou && _bufferDistanciaM >= Constantes.distanciaSaiuDoLugarM) {
         estado.jaAndou = true;
       }
 
-      // Cobra distancia somente acima da franquia de km.
-      if (estado.jaAndou) {
-        final jaCobrado = estado.kmIncluidoUsado;
-        final disponivel = estado.distanciaTotalKm - jaCobrado;
-        if (disponivel > 0) {
-          final aCobrar = disponivel < km ? disponivel : km;
-          estado.kmIncluidoUsado += aCobrar;
-          estado.valorTotal += aCobrar * config.taxaKm;
-        }
-      }
+      // A distancia so e cobrada no que passar da franquia (1,5 km).
+      // Antes cobrava tudo depois dos primeiros 50 m.
+      _recalcular();
 
       _bufferDistanciaM = 0;
         _ancora = pos;
@@ -418,6 +476,9 @@ class TaximetroState extends ChangeNotifier {
       // Ainda nao deu distancia confiavel: mantem a ancora anterior e nao
       // joga o pedacinho fora (era o bug do original).
       _ancora = anterior;
+      // O tempo desse trecho e tempo andando: nao pode se perder.
+      if (segundos != null) _totalExatoS += segundos;
+      _recalcular();
     }
 
     notifyListeners();
@@ -428,7 +489,7 @@ class TaximetroState extends ChangeNotifier {
     final agoraMs = DateTime.now().millisecondsSinceEpoch;
     final segundos = _tempoDesdeAUltimaContagem(agoraMs);
     if (segundos == null) return;
-    estado.tempoTotalS += segundos.toInt();
+    _totalExatoS += segundos;
     cobrarComoParado(segundos);
   }
 
@@ -449,27 +510,12 @@ class TaximetroState extends ChangeNotifier {
   // ==================================================================
   // Cobranca
   // ==================================================================
-  /// Cobranca do tempo parado (logica identica ao original).
-  double cobrancaDoTempoParado(double segundosNovos) {
-    if (estado.jaAndou) {
-      return (segundosNovos / 60) * config.taxaEspera;
-    }
-    final incluidoS = config.minutosIncluidoNaBandeirada * 60;
-    final antes = estado.esperaInicialS;
-    final depois = antes + segundosNovos;
-    final cobraveis = (depois - (incluidoS > antes ? incluidoS : antes));
-    return (cobraveis < 0 ? 0 : cobraveis) / 60 * config.taxaEspera;
-  }
-
+  /// Tempo parado: soma e refaz a conta. A espera so e cobrada no que
+  /// passar da franquia (5 min), esteja o carro parado no comeco ou no meio
+  /// da corrida. Antes, depois de andar 50 m, cobrava desde o 1o segundo.
   void cobrarComoParado(double segundosParado) {
-    final cobranca = cobrancaDoTempoParado(segundosParado);
-    if (!estado.jaAndou) {
-      estado.esperaInicialS += segundosParado;
-      estado.minutosIncluidoUsado = estado.esperaInicialS / 60;
-    }
-    estado.valorEspera += cobranca;
-    estado.tempoParadoS += segundosParado.toInt();
-    estado.valorTotal += cobranca;
+    _paradoExatoS += segundosParado;
+    _recalcular();
   }
 
   // ==================================================================
@@ -492,7 +538,7 @@ class TaximetroState extends ChangeNotifier {
         final segundos = _tempoDesdeAUltimaContagem(agoraMs);
         if (segundos == null) return;
 
-        estado.tempoTotalS += segundos.toInt();
+        _totalExatoS += segundos;
         cobrarComoParado(segundos);
         _bufferDistanciaM = 0;
         notifyListeners();

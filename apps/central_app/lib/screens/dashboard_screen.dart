@@ -5,6 +5,7 @@ import '../core/theme/central_theme.dart';
 import '../core/utils/formatters.dart';
 import '../state/central_state.dart';
 import '../widgets/ui.dart';
+import '../widgets/mapa_operacao.dart';
 
 /// Painel financeiro: faturamento do dia, da semana, corridas e operacao.
 class DashboardScreen extends StatelessWidget {
@@ -89,6 +90,11 @@ class DashboardScreen extends StatelessWidget {
             ),
 
           const SizedBox(height: Spacing.sm),
+          // Mapa da operacao na tela principal, com a posicao real de quem
+          // esta online. Atualiza sozinho a cada volta do monitoramento.
+          const SectionTitle(text: 'Mapa da operacao'),
+          const MapaOperacao(),
+          const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Faturamento por hora'),
           AppCard(
             child: Column(

@@ -4,6 +4,7 @@ import '../../core/utils/geo.dart';
 import '../demo/central_demo.dart';
 import '../models/central_models.dart';
 import '../../core/storage/app_storage.dart';
+import '../models/motorista_no_mapa.dart';
 
 /// Acesso aos dados da Central.
 ///
@@ -30,6 +31,25 @@ class CentralRepository {
   // ------------------------------------------------------------------
   // Motoristas
   // ------------------------------------------------------------------
+  /// Motoristas online agora, na posicao REAL (mapa da operacao).
+  Future<List<MotoristaNoMapa>> motoristasOnline() async {
+    if (_useDemo) return const [];
+    final data = await _client.request('GET', '/admin/drivers/active/map');
+    final lista = data is List
+        ? data
+        : (data is Map && data['items'] is List ? data['items'] as List : const []);
+    return [
+      for (final m in lista.whereType<Map>())
+        if (m['latitude'] is num && m['longitude'] is num)
+          MotoristaNoMapa(
+            id: m['driverId']?.toString() ?? '',
+            nome: m['name']?.toString() ?? 'Motorista',
+            coords: Coords((m['latitude'] as num).toDouble(), (m['longitude'] as num).toDouble()),
+            livre: m['isAvailable'] == true,
+          ),
+    ];
+  }
+
   /// Login real do administrador (e-mail e senha no servidor).
   Future<AdminUser> login(String email, String password) async {
     final data = await _client.request('POST', '/auth/password/login',
