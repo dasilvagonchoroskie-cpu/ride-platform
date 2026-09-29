@@ -50,6 +50,13 @@ class TaximetroState extends ChangeNotifier {
   /// aos solavancos.
   double _paradoExatoS = 0;
   double _totalExatoS = 0;
+
+  /// Tempo do trecho rodado ainda aberto (portado do original).
+  double _bufferTempoS = 0;
+
+  /// Km cobrados de fato: so os trechos que valeram por distancia, no que
+  /// passou da franquia.
+  double _kmCobradoAcumulado = 0;
   bool licenciado = false;
   String? codigoAparelho;
   String? erroLicenca;
@@ -88,8 +95,8 @@ class TaximetroState extends ChangeNotifier {
         minutosIncluido: config.minutosIncluidoNaBandeirada,
       );
 
-  /// Distancia que ja passou da franquia (a que entra na conta).
-  double get kmCobrados => _tarifador.kmCobraveis(estado.distanciaTotalKm);
+  /// Km cobrados de fato (trechos que valeram por distancia).
+  double get kmCobrados => _kmCobradoAcumulado;
 
   double get kmFranquiaRestante =>
       math.max(0.0, config.kmIncluidoNaBandeirada - estado.distanciaTotalKm);
@@ -104,7 +111,7 @@ class TaximetroState extends ChangeNotifier {
     estado.minutosIncluidoUsado = t.minutosFranquiaUsados(_paradoExatoS);
     estado.esperaInicialS = math.min(_paradoExatoS, t.minutosIncluido * 60);
     estado.valorEspera = t.valorEspera(_paradoExatoS);
-    estado.valorTotal = t.adicional(estado.distanciaTotalKm, _paradoExatoS);
+    estado.valorTotal = _kmCobradoAcumulado * t.taxaKm + estado.valorEspera;
     estado.tempoParadoS = _paradoExatoS.floor();
     estado.tempoTotalS = _totalExatoS.floor();
   }
@@ -112,6 +119,35 @@ class TaximetroState extends ChangeNotifier {
   void _zerarContagem() {
     _paradoExatoS = 0;
     _totalExatoS = 0;
+    _bufferTempoS = 0;
+    _kmCobradoAcumulado = 0;
+  }
+
+  /// Fecha um trecho rodado (portado do original): a distancia sempre
+  /// entra no odometro, e o trecho e cobrado por distancia OU por tempo —
+  /// o que der mais, nunca os dois.
+  void _fecharTrechoRodado() {
+    if (_bufferDistanciaM <= 0 && _bufferTempoS <= 0) {
+      _recalcular();
+      return;
+    }
+    final t = _tarifador;
+    final km = _bufferDistanciaM / 1000;
+    final antes = estado.distanciaTotalKm;
+    estado.distanciaTotalKm += km;
+    if (!estado.jaAndou && estado.distanciaTotalKm * 1000 >= Constantes.distanciaSaiuDoLugarM) {
+      estado.jaAndou = true;
+    }
+    if (t.trechoPorTempo(km, _bufferTempoS)) {
+      // Tao devagar que o minuto rende mais que o km: o trecho vira espera
+      // (e conta na franquia de 5 minutos).
+      _paradoExatoS += _bufferTempoS;
+    } else {
+      _kmCobradoAcumulado += t.kmCobravelDoTrecho(antes, estado.distanciaTotalKm);
+    }
+    _bufferDistanciaM = 0;
+    _bufferTempoS = 0;
+    _recalcular();
   }
 
   // ==================================================================
@@ -284,15 +320,15 @@ class TaximetroState extends ChangeNotifier {
 
   /// Finaliza a corrida e grava no historico. Devolve o registro criado.
   Future<RegistroCorrida> finalizarCorrida({String formaPagamento = ''}) async {
+    // Fecha o ultimo pedaco rodado antes de gravar (como no original).
+    _fecharTrechoRodado();
     final registro = RegistroCorrida(
       data: DateTime.now(),
       valor: estado.valorTotal,
       distanciaKm: estado.distanciaTotalKm,
       tempoS: estado.tempoTotalS,
       bandeirada: bandeiradaAtual,
-      valorDistancia: estado.distanciaTotalKm > estado.kmIncluidoUsado
-          ? (estado.distanciaTotalKm - estado.kmIncluidoUsado) * config.taxaKm
-          : 0,
+      valorDistancia: _kmCobradoAcumulado * config.taxaKm,
       valorEspera: estado.valorEspera,
       tempoParadoS: estado.tempoParadoS,
       esperaInicialS: estado.esperaInicialS,
@@ -441,7 +477,9 @@ class TaximetroState extends ChangeNotifier {
     if (parado) {
       if (segundos != null) {
         _totalExatoS += segundos;
-        cobrarComoParado(segundos);
+        // O tempo do trecho aberto tambem era espera (tremida do GPS parado).
+        cobrarComoParado(segundos + _bufferTempoS);
+        _bufferTempoS = 0;
       }
       _ancora = pos;
       _bufferDistanciaM = 0;
@@ -451,33 +489,22 @@ class TaximetroState extends ChangeNotifier {
       return;
     }
 
-    // Acumula o trecho ate dar distancia confiavel.
+    // Acumula o trecho (distancia E tempo) ate dar distancia confiavel.
     _bufferDistanciaM += metros;
+    if (segundos != null) {
+      _bufferTempoS += segundos;
+      _totalExatoS += segundos;
+    }
 
     if (_bufferDistanciaM >= Constantes.distanciaMinimaRuidoM) {
-      final km = _bufferDistanciaM / 1000;
-      estado.distanciaTotalKm += km;
-      if (segundos != null) _totalExatoS += segundos;
-
-      // Encerra a franquia quando o carro realmente sai do lugar.
-      if (!estado.jaAndou && _bufferDistanciaM >= Constantes.distanciaSaiuDoLugarM) {
-        estado.jaAndou = true;
-      }
-
-      // A distancia so e cobrada no que passar da franquia (1,5 km).
-      // Antes cobrava tudo depois dos primeiros 50 m.
-      _recalcular();
-
-      _bufferDistanciaM = 0;
-        _ancora = pos;
+      _fecharTrechoRodado();
+      _ancora = pos;
       statusTexto = 'Corrida em andamento';
       statusClasse = 'ativo';
     } else {
       // Ainda nao deu distancia confiavel: mantem a ancora anterior e nao
       // joga o pedacinho fora (era o bug do original).
       _ancora = anterior;
-      // O tempo desse trecho e tempo andando: nao pode se perder.
-      if (segundos != null) _totalExatoS += segundos;
       _recalcular();
     }
 
@@ -539,7 +566,8 @@ class TaximetroState extends ChangeNotifier {
         if (segundos == null) return;
 
         _totalExatoS += segundos;
-        cobrarComoParado(segundos);
+        cobrarComoParado(segundos + _bufferTempoS);
+        _bufferTempoS = 0;
         _bufferDistanciaM = 0;
         notifyListeners();
       },

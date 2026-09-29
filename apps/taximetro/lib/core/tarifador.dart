@@ -2,14 +2,16 @@ import 'dart:math' as math;
 
 /// Regra de cobranca do taximetro, isolada do GPS e da tela.
 ///
-/// A bandeirada inclui uma FRANQUIA de distancia e uma FRANQUIA de tempo
-/// parado. So o que passa de cada franquia e cobrado, cada uma por conta
-/// propria: com 1,5 km e 5 min, a corrida fica na bandeirada ate rodar
-/// 1,5 km e ate ficar 5 min parada — o limite que passar primeiro comeca a
-/// somar. A parada vale no comeco ou no meio da corrida (semaforo, espera).
+/// Portada da versao original (a que roda na rua desde setembro), com a
+/// regra de franquia combinada em 26/09/2026:
 ///
-/// A conta e feita sempre a partir dos TOTAIS, nunca somando pedacinhos:
-/// assim nenhum arredondamento acumula erro ao longo da corrida.
+/// * A bandeirada inclui 1,5 km RODADOS e 5 minutos de ESPERA, em qualquer
+///   momento da corrida. Enquanto nenhum dos dois passar, fica na bandeirada.
+/// * Cada trecho rodado e cobrado por distancia OU por tempo — o que der
+///   mais, nunca os dois —, como taximetro de verdade: devagar (abaixo de
+///   ~11 km/h com R\$ 3,00/km e R\$ 0,55/min) o trecho vira espera.
+/// * A distancia sempre entra no odometro; a franquia de km conta pelo
+///   odometro, e so os trechos cobrados por distancia pagam o que passar.
 class Tarifador {
   const Tarifador({
     required this.taxaKm,
@@ -23,17 +25,20 @@ class Tarifador {
   final double kmIncluido;
   final double minutosIncluido;
 
-  double kmCobraveis(double distanciaKm) => math.max(0.0, distanciaKm - kmIncluido);
+  /// O trecho vale mais por tempo do que por distancia (carro devagar)?
+  /// Compara os valores CHEIOS, sem franquia: a franquia decide quanto se
+  /// paga, nunca qual dos dois modos vale.
+  bool trechoPorTempo(double km, double segundos) =>
+      km * taxaKm < segundos / 60 * taxaEsperaPorMinuto;
 
-  double minutosCobraveis(double paradoS) => math.max(0.0, paradoS / 60 - minutosIncluido);
+  /// Quanto de um trecho (odometro de [antesKm] ate [depoisKm]) passou da
+  /// franquia — certo mesmo quando o trecho cruza a marca no meio.
+  double kmCobravelDoTrecho(double antesKm, double depoisKm) =>
+      math.max(0.0, depoisKm - math.max(kmIncluido, antesKm));
 
-  double valorDistancia(double distanciaKm) => kmCobraveis(distanciaKm) * taxaKm;
-
-  double valorEspera(double paradoS) => minutosCobraveis(paradoS) * taxaEsperaPorMinuto;
-
-  /// Tudo o que passa da bandeirada.
-  double adicional(double distanciaKm, double paradoS) =>
-      valorDistancia(distanciaKm) + valorEspera(paradoS);
+  /// Espera cobrada: so o que passar dos minutos incluidos.
+  double valorEspera(double paradoS) =>
+      math.max(0.0, paradoS / 60 - minutosIncluido) * taxaEsperaPorMinuto;
 
   double kmFranquiaUsada(double distanciaKm) => math.min(distanciaKm, kmIncluido);
 
