@@ -25,4 +25,4 @@ Got dependencies!
 21 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Analyzing taximetro...                                          
-No issues found! (ran in 7.9s)
+No issues found! (ran in 12.9s)
