@@ -3,7 +3,7 @@ import 'dart:math' as math;
 /// Regra de cobranca do taximetro, isolada do GPS e da tela.
 ///
 /// Portada da versao original (a que roda na rua desde setembro), com a
-/// regra de franquia combinada em 26/09/2026:
+/// regra de franquia combinada em 29/09/2026:
 ///
 /// * A bandeirada inclui 1,5 km RODADOS e 5 minutos de ESPERA, em qualquer
 ///   momento da corrida. Enquanto nenhum dos dois passar, fica na bandeirada.
