@@ -15,7 +15,7 @@ on:
         required: true
         default: 'all'
         type: choice
-        options: ['all', 'mobile_passenger', 'mobile_driver', 'central_app', 'taximetro']
+        options: ['all', 'mobile_passenger', 'mobile_driver', 'central_app']
       build_type:
         description: 'Tipo de build'
         required: true
@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [mobile_passenger, mobile_driver, central_app, taximetro]
+        app: [mobile_passenger, mobile_driver, central_app]
     steps:
       - uses: actions/checkout@v4
 
@@ -122,10 +122,6 @@ jobs:
             label: Central
             artifact: fortaleza-central-apk
             apk_name: fortaleza-central
-          - app: taximetro
-            label: Taximetro
-            artifact: taximetro-apk
-            apk_name: taximetro
     steps:
       - uses: actions/checkout@v4
 
