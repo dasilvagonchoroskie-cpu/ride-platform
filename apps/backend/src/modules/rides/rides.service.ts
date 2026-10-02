@@ -489,12 +489,16 @@ export class RidesService {
     papel: UserRole,
     rideId: string,
     input: CancelRideInput,
+    driverId?: string | null,
   ) {
     const corrida = await this.prisma.ride.findUnique({ where: { id: rideId } });
     if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
 
-    const ehPassageiro = corrida.passengerId === atorId;
-    const ehMotorista = corrida.driverId === atorId;
+    // O motorista e identificado pelo cadastro de motorista (driverId), nao
+    // pelo usuario — antes a comparacao era com o usuario e o motorista
+    // nunca conseguia cancelar ("Esta corrida nao e sua").
+    const ehMotorista = !!driverId && corrida.driverId === driverId && papel === UserRole.DRIVER;
+    const ehPassageiro = !ehMotorista && corrida.passengerId === atorId;
     if (!ehPassageiro && !ehMotorista && papel !== UserRole.ADMIN) {
       throw BusinessException.forbidden('Esta corrida nao e sua.');
     }
@@ -553,7 +557,90 @@ export class RidesService {
       where: { passengerId, status: { in: EM_ABERTO } },
       orderBy: { requestedAt: 'desc' },
     });
-    return corrida ? this.detalhe(corrida.id) : { ride: null };
+    if (!corrida) return { ride: null };
+    await this.acompanharProcura(corrida.id);
+    return this.detalhe(corrida.id, { userId: passengerId, papel: UserRole.PASSENGER });
+  }
+
+  /** Tempo maximo procurando motorista antes de desistir. */
+  private static readonly MINUTOS_PROCURANDO = 4;
+
+  /**
+   * Enquanto o passageiro acompanha a tela, a procura continua: chamado
+   * vencido sem resposta abre para os outros motoristas (inclusive quem
+   * ficou online depois) e, passado o limite, a corrida e encerrada como
+   * "nenhum motorista disponivel" em vez de ficar procurando para sempre.
+   */
+  async acompanharProcura(rideId: string): Promise<void> {
+    const corrida = await this.prisma.ride.findUnique({ where: { id: rideId } });
+    if (!corrida || (corrida.status !== RideStatus.SEARCHING && corrida.status !== RideStatus.REQUESTED)) return;
+
+    const limite = new Date(corrida.requestedAt.getTime() + RidesService.MINUTOS_PROCURANDO * 60_000);
+    if (new Date() > limite) {
+      const mudou = await this.prisma.ride.updateMany({
+        where: { id: rideId, status: { in: [RideStatus.SEARCHING, RideStatus.REQUESTED] } },
+        data: { status: RideStatus.EXPIRED, cancelledAt: new Date(), cancellationReason: 'Nenhum motorista disponivel.' },
+      });
+      if (mudou.count > 0) {
+        await this.prisma.rideOffer.updateMany({
+          where: { rideId, status: OfferStatus.PENDING },
+          data: { status: OfferStatus.EXPIRED, respondedAt: new Date() },
+        });
+        await this.prisma.rideStatusHistory.create({
+          data: { rideId, status: RideStatus.EXPIRED, note: 'Nenhum motorista disponivel.' },
+        });
+      }
+      return;
+    }
+
+    const abertos = await this.prisma.rideOffer.count({
+      where: { rideId, status: OfferStatus.PENDING, expiresAt: { gt: new Date() } },
+    });
+    if (abertos === 0) await this.procurarMotorista(rideId);
+  }
+
+  /** Corrida que o passageiro esta acompanhando (a procura continua por aqui). */
+  async acompanharDoPassageiro(userId: string, papel: UserRole, rideId: string, driverId?: string | null) {
+    await this.acompanharProcura(rideId);
+    return this.detalhe(rideId, { userId, papel, driverId });
+  }
+
+  /** Passageiro avalia o motorista depois da corrida concluida (uma vez). */
+  async avaliar(passengerId: string, rideId: string, input: { score: number; comment?: string; tags?: string[] }) {
+    const corrida = await this.prisma.ride.findUnique({
+      where: { id: rideId },
+      include: { driver: { select: { id: true, userId: true, ratingAvg: true, ratingCount: true } } },
+    });
+    if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
+    if (corrida.passengerId !== passengerId) throw BusinessException.forbidden('Esta corrida nao e sua.');
+    if (corrida.status !== RideStatus.COMPLETED || !corrida.driver) {
+      throw BusinessException.validation('So da para avaliar corrida concluida.');
+    }
+    const ja = await this.prisma.rating.findUnique({ where: { rideId_authorId: { rideId, authorId: passengerId } } });
+    if (ja) return { rideId, score: ja.score, jaAvaliada: true };
+
+    const motorista = corrida.driver;
+    const contagem = motorista.ratingCount;
+    const media = Number(motorista.ratingAvg);
+    const nova = contagem === 0 ? input.score : (media * contagem + input.score) / (contagem + 1);
+    await this.prisma.withTransaction(async (tx) => {
+      await tx.rating.create({
+        data: {
+          rideId,
+          authorId: passengerId,
+          targetId: motorista.userId,
+          targetDriverId: motorista.id,
+          score: input.score,
+          comment: input.comment,
+          tags: input.tags ?? [],
+        },
+      });
+      await tx.driver.update({
+        where: { id: motorista.id },
+        data: { ratingAvg: new Prisma.Decimal(nova.toFixed(2)), ratingCount: contagem + 1 },
+      });
+    });
+    return { rideId, score: input.score, jaAvaliada: false };
   }
 
   /** A corrida aberta do motorista, se houver. */
@@ -565,7 +652,12 @@ export class RidesService {
     return corrida ? this.detalhe(corrida.id) : { ride: null };
   }
 
-  async detalhe(rideId: string) {
+  /**
+   * Detalhe da corrida. Com [quem], so o passageiro dela, o motorista dela
+   * ou a Central enxergam (antes qualquer conta lia qualquer corrida, com
+   * nome e telefone das duas pontas).
+   */
+  async detalhe(rideId: string, quem?: { userId: string; papel: UserRole; driverId?: string | null }) {
     const corrida = await this.prisma.ride.findUnique({
       where: { id: rideId },
       include: {
@@ -574,14 +666,41 @@ export class RidesService {
           select: {
             id: true,
             ratingAvg: true,
+            totalRides: true,
             user: { select: { name: true, phone: true } },
           },
         },
         vehicle: { select: { plate: true, brand: true, model: true, color: true } },
+        ratings: { select: { authorId: true, score: true } },
       },
     });
     if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
-    return { ride: corrida };
+    if (quem && quem.papel !== UserRole.ADMIN) {
+      const ehDono = corrida.passengerId === quem.userId;
+      const ehMotorista = !!quem.driverId && corrida.driverId === quem.driverId;
+      if (!ehDono && !ehMotorista) throw BusinessException.forbidden('Esta corrida nao e sua.');
+    }
+
+    // Onde o carro esta agora: o passageiro acompanha o motorista chegando.
+    const comCarro: RideStatus[] = [
+      RideStatus.DRIVER_ASSIGNED,
+      RideStatus.DRIVER_ARRIVING,
+      RideStatus.DRIVER_WAITING,
+      RideStatus.IN_PROGRESS,
+    ];
+    const driverPosition =
+      corrida.driverId && comCarro.includes(corrida.status) ? await this.posicaoDoMotorista(corrida.driverId) : null;
+    const minhaNota = quem ? (corrida.ratings.find((r) => r.authorId === quem.userId)?.score ?? null) : null;
+    const { ratings: _notas, ...semNotas } = corrida;
+    return { ride: { ...semNotas, driverPosition, minhaNota } };
+  }
+
+  async posicaoDoMotorista(driverId: string): Promise<{ latitude: number; longitude: number; updatedAt: string } | null> {
+    const linhas = await this.prisma.$queryRaw<Array<{ latitude: number; longitude: number; atualizado: Date }>>`
+      SELECT ST_Y(location::geometry) AS "latitude", ST_X(location::geometry) AS "longitude", last_seen_at AS "atualizado"
+      FROM driver_locations WHERE driver_id = ${driverId}::uuid LIMIT 1`;
+    const l = linhas[0];
+    return l ? { latitude: Number(l.latitude), longitude: Number(l.longitude), updatedAt: l.atualizado.toISOString() } : null;
   }
 
   async historico(userId: string, papel: UserRole, filtro: ListRidesInput) {

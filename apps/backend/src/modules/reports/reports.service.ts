@@ -41,6 +41,15 @@ export class ReportsService {
         vehicle: { select: { plate: true } },
       },
     });
+    // Posicao real de cada carro (antes a Central desenhava o motorista no
+    // ponto de embarque).
+    const ids = corridas.map((c) => c.driverId).filter((x): x is string => !!x);
+    const posicoes = ids.length
+      ? await this.prisma.$queryRaw<Array<{ driverId: string; latitude: number; longitude: number }>>`
+          SELECT driver_id::text AS "driverId", ST_Y(location::geometry) AS "latitude", ST_X(location::geometry) AS "longitude"
+          FROM driver_locations WHERE driver_id::text = ANY(${ids})`
+      : [];
+    const ondeEsta = new Map(posicoes.map((p) => [p.driverId, { latitude: Number(p.latitude), longitude: Number(p.longitude) }]));
     return {
       items: corridas.map((c) => ({
         id: c.id,
@@ -53,6 +62,7 @@ export class ReportsService {
         dropoff: { latitude: c.dropoffLat, longitude: c.dropoffLng, address: c.dropoffAddress },
         estimatedFareCents: c.estimatedFareCents,
         requestedAt: c.requestedAt.toISOString(),
+        driverPosition: c.driverId ? (ondeEsta.get(c.driverId) ?? null) : null,
       })),
     };
   }

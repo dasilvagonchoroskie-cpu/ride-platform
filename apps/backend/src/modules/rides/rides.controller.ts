@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { DriverApprovedGuard } from '../../common/guards/driver-approved.guard';
 import { RidesService } from './rides.service';
@@ -15,6 +16,12 @@ import {
   rideLocationSchema,
 } from './dto';
 import { z } from 'zod';
+
+const avaliacaoSchema = z.object({
+  score: z.number().int().min(1, 'De 1 a 5 estrelas.').max(5, 'De 1 a 5 estrelas.'),
+  comment: z.string().trim().max(500).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(8).optional(),
+});
 
 const pertoSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
@@ -60,19 +67,29 @@ export class RidesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Detalhe de uma corrida' })
-  detail(@Param('id') rideId: string) {
-    return this.rides.detalhe(rideId);
+  @ApiOperation({ summary: 'Detalhe de uma corrida (so de quem participa dela)' })
+  detail(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) rideId: string) {
+    return this.rides.acompanharDoPassageiro(user.id, user.role, rideId, user.driverId);
   }
 
   @Post(':id/cancel')
   @ApiOperation({ summary: 'Cancela a corrida (pode gerar multa se o motorista ja saiu)' })
   cancel(
     @CurrentUser('id') userId: string,
-    @Param('id') rideId: string,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
     @Body(new ZodValidationPipe(cancelRideSchema)) body: never,
   ) {
     return this.rides.cancelar(userId, UserRole.PASSENGER, rideId, body);
+  }
+
+  @Post(':id/rate')
+  @ApiOperation({ summary: 'Avalia o motorista (1 a 5 estrelas), uma vez por corrida' })
+  rate(
+    @CurrentUser('id') userId: string,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Body(new ZodValidationPipe(avaliacaoSchema)) body: { score: number; comment?: string; tags?: string[] },
+  ) {
+    return this.rides.avaliar(userId, rideId, body);
   }
 }
 
@@ -145,11 +162,11 @@ export class DriverRidesController {
   @Post(':id/cancel')
   @ApiOperation({ summary: 'Cancela a corrida que havia aceitado' })
   cancel(
-    @CurrentUser('id') userId: string,
-    @Param('id') rideId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
     @Body(new ZodValidationPipe(cancelRideSchema)) body: never,
   ) {
-    return this.rides.cancelar(userId, UserRole.DRIVER, rideId, body);
+    return this.rides.cancelar(user.id, UserRole.DRIVER, rideId, body, user.driverId);
   }
 
   @Get('current')

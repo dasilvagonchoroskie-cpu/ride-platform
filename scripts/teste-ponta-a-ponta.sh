@@ -118,6 +118,9 @@ N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(ec
 X=$(post "/driver/rides/$RID/accept" '{}' "$TM")
 PIN=$(echo "$X" | jq -r '.data.pin // empty')
 sucesso "$X" && [ ${#PIN} -eq 4 ] && ok "Motorista: accept (PIN de embarque $PIN vindo do servidor)" || falha "Motorista: accept com PIN" "$X"
+X=$(get "/rides/$RID" "$TP")
+[ "$(echo "$X" | jq -r '.data.ride.status')" = "DRIVER_ASSIGNED" ] && [ "$(echo "$X" | jq -r '.data.ride.driver.user.name')" = "Motorista Teste Automatico" ] && [ "$(echo "$X" | jq -r '.data.ride.pin')" = "$PIN" ] && [ "$(echo "$X" | jq -r '.data.ride.driverPosition.latitude // empty')" != "" ] \
+  && ok "Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)" || falha "Passageiro: acompanhar a corrida" "$X"
 for passo in arriving arrived start; do
   X=$(post "/driver/rides/$RID/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM")
   sucesso "$X" && ok "Motorista: $passo" || falha "Motorista: $passo" "$X"
@@ -150,6 +153,21 @@ else falha "Motorista: carteira pre-paga" "$X"; fi
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":1000,"description":"Recarga via Pix (teste)"}' "$TA")
 sucesso "$X" && ok "Central: recarga lancada, saldo agora $(echo "$X" | jq -r '.data.balanceCents') centavos" || falha "Central: lancar recarga" "$X"
 X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de recarga carregado" || falha "Central: contato de recarga" "$X"
+X=$(post "/rides/$RID/rate" '{"score":5,"tags":["Carro limpo"]}' "$TP")
+[ "$(echo "$X" | jq -r '.data.score')" = "5" ] && ok "Passageiro: avaliou o motorista com 5 estrelas" || falha "Passageiro: avaliar" "$X"
+X=$(get "/rides/$RID" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "COMPLETED" ] && [ "$(echo "$X" | jq -r '.data.ride.minhaNota')" = "5" ] && ok "Passageiro: recibo da corrida concluida com a nota" || falha "Passageiro: recibo" "$X"
+# Segunda corrida: o motorista cancela depois de aceitar e o passageiro fica sabendo.
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"PIX\"}" "$TP"); RID2=$(echo "$X" | jq -r '.data.ride.id // empty')
+N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
+post "/driver/rides/$RID2/accept" '{}' "$TM" >/dev/null
+X=$(post "/driver/rides/$RID2/cancel" '{"reason":"Pneu furado (teste)"}' "$TM")
+[ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_DRIVER" ] && ok "Motorista: cancelou a corrida aceita" || falha "Motorista: cancelar corrida" "$X"
+X=$(get "/rides/$RID2" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "CANCELLED_BY_DRIVER" ] && ok "Passageiro: fica sabendo que o motorista cancelou" || falha "Passageiro: ver cancelamento do motorista" "$X"
+# Terceira: o passageiro cancela enquanto procura (sem multa).
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP"); RID3=$(echo "$X" | jq -r '.data.ride.id // empty')
+X=$(post "/rides/$RID3/cancel" '{"reason":"Desisti (teste)"}' "$TP")
+[ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_PASSENGER" ] && [ "$(echo "$X" | jq -r '.data.cancellationFeeCents')" = "0" ] && ok "Passageiro: cancelou enquanto procurava, sem taxa" || falha "Passageiro: cancelar" "$X"
+X=$(get /rides/current "$TP"); [ "$(echo "$X" | jq -r '.data.ride')" = "null" ] && ok "Passageiro: nenhuma corrida aberta depois de cancelar" || falha "Passageiro: corrida atual" "$X"
 X=$(get "/driver/rides/history" "$TM")
 [ "$(echo "$X" | jq -r '.data.total' 2>/dev/null)" -ge 1 ] 2>/dev/null && ok "Motorista: historico de corridas com $(echo "$X" | jq -r '.data.total') corrida(s)" || falha "Motorista: historico de corridas" "$X"
 
@@ -173,6 +191,8 @@ X=$(get /auth/me "$TD")
 [ "$(echo "$X" | jq -r '.data.role')" = "DRIVER" ] && ok "Mesmo telefone abre o app do motorista e vira motorista" || falha "Passageiro virar motorista" "$X"
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TD")
 sucesso "$X" && ok "Motorista tambem pede corrida como passageiro" || falha "Motorista pedir corrida como passageiro" "$X"
+X=$(get "/rides/$RID" "$TE")
+[ "$(echo "$X" | jq -r '.error.code // .code // empty')" != "" ] && [ "$(echo "$X" | jq -r '.data.ride.id // empty')" = "" ] && ok "Seguranca: outra conta nao ve a corrida (nem nome e telefone)" || falha "Seguranca: corrida de outra pessoa aberta" "$(echo "$X" | jq -c '.data.ride.id')"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
