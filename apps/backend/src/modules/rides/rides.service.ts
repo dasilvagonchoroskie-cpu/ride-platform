@@ -163,6 +163,9 @@ export class RidesService {
     // do saldo minimo nao recebe chamado (a comissao nao teria de onde sair).
     const carteira = await regrasDaCarteira(this.prisma);
 
+    // Motorista que pediu corrida como passageiro nao recebe o proprio chamado.
+    const proprio = await this.prisma.driver.findUnique({ where: { userId: corrida.passengerId }, select: { id: true } });
+
     for (const raio of RidesService.RAIOS_METROS) {
       const proximos = await this.prisma.findNearbyDrivers({
         latitude: corrida.pickupLat,
@@ -180,6 +183,7 @@ export class RidesService {
           where: { rideId_driverId: { rideId, driverId: m.driverId } },
         });
         if (jaOfertado) continue;
+        if (proprio && m.driverId === proprio.id) continue;
         if (carteira.bloquear) {
           const w = await this.prisma.wallet.findUnique({ where: { driverId: m.driverId } });
           if ((w?.balanceCents ?? 0) < carteira.minimoCents) continue;

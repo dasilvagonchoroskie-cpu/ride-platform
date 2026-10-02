@@ -23,7 +23,8 @@ const pertoSchema = z.object({
 
 @ApiTags('Corridas - Passageiro')
 @ApiBearerAuth()
-@Roles(UserRole.PASSENGER, UserRole.ADMIN)
+// Motorista tambem pode pedir corrida como passageiro (mesma conta).
+@Roles(UserRole.PASSENGER, UserRole.DRIVER, UserRole.ADMIN)
 @Controller('rides')
 export class RidesController {
   constructor(private readonly rides: RidesService) {}

@@ -30,6 +30,8 @@ export const envSchema = z.object({
   OTP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   OTP_DEBUG_RETURN: booleanFromEnv(false),
+  /** Chave do teste automatico: com ela no cabecalho x-chave-teste o codigo volta na resposta. */
+  OTP_CHAVE_TESTE: z.string().optional(),
 
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('us-east-1'),
@@ -46,6 +48,10 @@ export const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().default('Ride <no-reply@ride.local>'),
+  /** Envio de e-mail pela API da Brevo (gratis ate 300 por dia). */
+  BREVO_API_KEY: z.string().optional(),
+  EMAIL_REMETENTE: z.string().optional(),
+  EMAIL_REMETENTE_NOME: z.string().default('Fortaleza Mov'),
   FCM_PROJECT_ID: z.string().optional(),
   FCM_CLIENT_EMAIL: z.string().optional(),
   FCM_PRIVATE_KEY: z.string().optional(),

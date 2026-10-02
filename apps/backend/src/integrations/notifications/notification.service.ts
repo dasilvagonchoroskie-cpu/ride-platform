@@ -57,14 +57,48 @@ export class NotificationService {
     return { delivered: true };
   }
 
+  /** E-mail de verdade ligado (chave da Brevo e remetente configurados). */
+  get emailConfigurado(): boolean {
+    const m = this.config.mail;
+    return !!m.brevoApiKey && !!m.remetente;
+  }
+
+  /**
+   * Envia pela API da Brevo (HTTPS). Nao usa SMTP: o plano gratis do
+   * Render bloqueia as portas de SMTP.
+   */
   private async sendEmail(input: SendNotificationInput): Promise<{ delivered: boolean; error?: string }> {
-    if (!this.config.mail.host) {
-      this.logger.log(`[DEV] E-mail para ${input.to ?? input.userId}: ${input.title} - ${input.body}`);
-      return { delivered: false, error: 'SMTP nao configurado.' };
+    const m = this.config.mail;
+    const para = input.to ?? '';
+    if (!this.emailConfigurado || !para) {
+      this.logger.log(`[DEV] E-mail para ${this.mask(para)}: ${input.title}`);
+      return { delivered: false, error: 'E-mail nao configurado.' };
     }
-    // TODO(F8): enviar via SMTP (nodemailer) usando config.mail.
-    this.logger.log(`E-mail enfileirado para ${input.to ?? input.userId}: ${input.title}`);
-    return { delivered: true };
+    const html = typeof input.data?.html === 'string' ? (input.data.html as string) : undefined;
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': m.brevoApiKey as string, 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({
+          sender: { name: m.remetenteNome, email: m.remetente },
+          to: [{ email: para }],
+          subject: input.title,
+          textContent: input.body,
+          ...(html ? { htmlContent: html } : {}),
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!r.ok) {
+        const motivo = (await r.text()).slice(0, 200);
+        this.logger.error(`Brevo recusou o e-mail (${r.status}): ${motivo}`);
+        return { delivered: false, error: `Brevo ${r.status}` };
+      }
+      this.logger.log(`E-mail enviado para ${this.mask(para)}: ${input.title}`);
+      return { delivered: true };
+    } catch (e) {
+      this.logger.error(`Falha ao falar com a Brevo: ${(e as Error).message}`);
+      return { delivered: false, error: 'Sem conexao com o provedor de e-mail.' };
+    }
   }
 
   private async sendSms(input: SendNotificationInput): Promise<{ delivered: boolean; error?: string }> {

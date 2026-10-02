@@ -7,6 +7,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PrismaService } from '../../database/prisma.service';
+import { AuthService } from '../auth/auth.service';
 import { apagarAviso, gravarCidades, lerAvisos, lerCidades, publicarAviso, whatsappDaCentral } from './operacao.store';
 
 const cidadesSchema = z.object({
@@ -28,12 +29,16 @@ const avisoSchema = z.object({
 @Public()
 @Controller('app')
 export class AppPublicoController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auth: AuthService,
+  ) {}
 
   @Get('config')
-  @ApiOperation({ summary: 'Cidades atendidas, WhatsApp da Central e avisos para o passageiro' })
+  @ApiOperation({ summary: 'Cidades, WhatsApp da Central, avisos e formas de entrar que funcionam agora' })
   async config() {
     return {
+      login: { ...this.auth.canaisDeLogin(), senha: true },
       cidades: await lerCidades(this.prisma),
       whatsapp: await whatsappDaCentral(this.prisma),
       avisos: await lerAvisos(this.prisma),

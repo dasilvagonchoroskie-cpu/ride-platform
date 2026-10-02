@@ -8,7 +8,11 @@ REL="${REL:-/tmp/relatorio.txt}"
 FALHAS=0
 ok()    { echo "OK     $1" | tee -a "$REL"; }
 falha() { echo "FALHA  $1" | tee -a "$REL"; echo "       resposta: $(echo "$2" | head -c 400)" | tee -a "$REL"; FALHAS=$((FALHAS+1)); }
-post()  { curl -s -m 90 -X POST "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
+# A chave do teste (segredo do GitHub) faz o servidor devolver o codigo
+# na resposta so para esta esteira; ninguem mais recebe codigo assim.
+CHAVE="${OTP_CHAVE_TESTE:-}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@ride.local}"
+post()  { curl -s -m 90 -X POST "$API$1" -H 'Content-Type: application/json' ${CHAVE:+-H "x-chave-teste: $CHAVE"} ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 patch() { curl -s -m 90 -X PATCH "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 get()   { curl -s -m 90 "$API$1" ${2:+-H "Authorization: Bearer $2"}; }
 sucesso() { echo "$1" | jq -e '.success == true' >/dev/null 2>&1; }
@@ -23,9 +27,11 @@ echo "Teste de ponta a ponta - $(date -u '+%d/%m/%Y %H:%M UTC')" | tee -a "$REL"
 
 S=$(get /health); echo "$S" | grep -q '"status":"ok"' && ok "Servidor, banco e Redis no ar" || falha "Servidor, banco e Redis" "$S"
 
-L=$(post /auth/password/login "{\"email\":\"admin@ride.local\",\"password\":\"$ADMIN_SENHA\"}")
+P=$(post /auth/otp/request "{\"email\":\"$ADMIN_EMAIL\",\"purpose\":\"LOGIN\"}")
+C=$(echo "$P" | jq -r '.data.debugCode // empty')
+L=$(post /auth/otp/verify "{\"email\":\"$ADMIN_EMAIL\",\"code\":\"${C:-000000}\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}")
 TA=$(echo "$L" | jq -r '.data.accessToken // empty')
-[ -n "$TA" ] && ok "Central: login real do administrador" || falha "Central: login do administrador" "$L"
+[ "$(echo "$L" | jq -r '.data.user.role' 2>/dev/null)" = "ADMIN" ] && ok "Central: login do administrador pelo codigo do e-mail" || falha "Central: login do administrador pelo codigo do e-mail" "$P $L"
 for rota in "/admin/drivers?status=PENDING" /admin/rides/active /admin/reports/summary /admin/tariffs; do
   X=$(get "$rota" "$TA"); sucesso "$X" && ok "Central carrega $rota" || falha "Central carrega $rota" "$X"
 done
@@ -36,6 +42,7 @@ TP=$(entrar "+55649${SUF}71" PASSENGER)
 X=$(post /auth/accept-terms '{"version":"1.0.0"}' "$TP"); sucesso "$X" && ok "Passageiro: aceite dos termos gravado" || falha "Passageiro: aceite dos termos" "$X"
 # ---- Cadastro do passageiro (igual ao modelo: cidade, nome, e-mail, genero, CPF, senha) ----
 X=$(get /app/config)
+[ "$(echo "$X" | jq -r '.data.login.email' 2>/dev/null)" = "true" ] && ok "App: entrada por codigo no e-mail disponivel (telefone: $(echo "$X" | jq -r '.data.login.telefone'))" || falha "App: canais de entrada" "$X"
 CID=$(echo "$X" | jq -r '.data.cidades[0] // empty' 2>/dev/null)
 sucesso "$X" && ok "App: configuracao publica ($(echo "$X" | jq -r '.data.cidades | length') cidade(s), WhatsApp $(echo "$X" | jq -r '.data.whatsapp // "nenhum"'))" || falha "App: configuracao publica" "$X"
 X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos carregados" || falha "Central: cidades e avisos" "$X"
@@ -86,9 +93,10 @@ for k in (10,11):
     s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
 print(''.join(map(str,n)))")
 CNH=$(python3 -c "import random;print(''.join(str(random.randint(0,9)) for _ in range(11)))")
-X=$(post /drivers/onboarding "{\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
+X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
 DID=$(echo "$X" | jq -r '.data.id // .data.driver.id // empty')
-sucesso "$X" && ok "Motorista: cadastro (CPF e CNH) aceito" || falha "Motorista: cadastro" "$X"
+sucesso "$X" && ok "Motorista: cadastro (nome, CPF e CNH) aceito" || falha "Motorista: cadastro" "$X"
+X=$(get /auth/me "$TM"); [ "$(echo "$X" | jq -r '.data.name')" = "Motorista Teste Automatico" ] && ok "Central ve o nome do motorista (nao mais \"Passageiro 1234\")" || falha "Motorista: nome no cadastro" "$X"
 PLACA="TST$((RANDOM%10))A$(printf '%02d' $((RANDOM%100)))"
 X=$(post /vehicles "{\"plate\":\"$PLACA\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"}" "$TM")
 sucesso "$X" && ok "Motorista: veiculo cadastrado depois do cadastro" || falha "Motorista: veiculo" "$X"
@@ -144,6 +152,27 @@ sucesso "$X" && ok "Central: recarga lancada, saldo agora $(echo "$X" | jq -r '.
 X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de recarga carregado" || falha "Central: contato de recarga" "$X"
 X=$(get "/driver/rides/history" "$TM")
 [ "$(echo "$X" | jq -r '.data.total' 2>/dev/null)" -ge 1 ] 2>/dev/null && ok "Motorista: historico de corridas com $(echo "$X" | jq -r '.data.total') corrida(s)" || falha "Motorista: historico de corridas" "$X"
+
+# ---- Entrar pelo e-mail (conta nova) e o mesmo telefone virar motorista ----
+EM2="passageiro2.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
+P=$(post /auth/otp/request "{\"email\":\"$EM2\",\"purpose\":\"LOGIN\"}")
+C=$(echo "$P" | jq -r '.data.debugCode // empty')
+X=$(post /auth/otp/verify "{\"email\":\"$EM2\",\"code\":\"${C:-000000}\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}")
+TE=$(echo "$X" | jq -r '.data.accessToken // empty')
+[ -n "$TE" ] && [ "$(echo "$X" | jq -r '.data.user.telefonePendente')" = "true" ] && ok "Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)" || falha "Passageiro: entrar pelo e-mail" "$X"
+CPF3=$(python3 -c "
+import random
+n=[random.randint(0,9) for _ in range(9)]
+for k in (10,11):
+    s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
+print(''.join(map(str,n)))")
+X=$(post /auth/cadastro "{\"name\":\"Passageira Email Teste\",\"email\":\"$EM2\",\"gender\":\"FEMININO\",\"cpf\":\"$CPF3\",\"password\":\"Teste1234\",\"phone\":\"+55649${SUF}74\"${CID:+,\"city\":\"$CID\"}}" "$TE")
+[ "$(echo "$X" | jq -r '.data.phone')" = "+55649${SUF}74" ] && ok "Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail" || falha "Passageiro: telefone no cadastro" "$X"
+TD=$(entrar "+55649${SUF}74" DRIVER)
+X=$(get /auth/me "$TD")
+[ "$(echo "$X" | jq -r '.data.role')" = "DRIVER" ] && ok "Mesmo telefone abre o app do motorista e vira motorista" || falha "Passageiro virar motorista" "$X"
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TD")
+sucesso "$X" && ok "Motorista tambem pede corrida como passageiro" || falha "Motorista pedir corrida como passageiro" "$X"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null

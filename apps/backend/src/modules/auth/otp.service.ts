@@ -27,9 +27,39 @@ export class OtpService {
     return this.config.jwt.refreshSecret;
   }
 
+  /** O teste automatico manda esta chave para receber o codigo na resposta. */
+  chaveTesteValida(chave?: string): boolean {
+    const certa = this.config.otp.chaveTeste;
+    return !!certa && !!chave && chave.length === certa.length && safeCompare(chave, certa);
+  }
+
+  /**
+   * O codigo chega de verdade ao dono do contato? Por e-mail, sim, quando a
+   * Brevo esta configurada. Por telefone, ainda nao (sem SMS).
+   */
+  entregaReal(target: { phone?: string; email?: string }): boolean {
+    return !target.phone && !!target.email && this.notifications.emailConfigurado;
+  }
+
+  /** Canais de login que funcionam agora (mostrados pelos aplicativos). */
+  canais(): { telefone: boolean; email: boolean } {
+    const teste = this.config.otp.debugReturn;
+    return { telefone: teste, email: this.notifications.emailConfigurado || teste };
+  }
+
   /** Cria e envia um novo codigo. Invalida codigos anteriores do mesmo alvo. */
-  async request(target: OtpTarget, ip?: string): Promise<{ expiresIn: number; debugCode?: string }> {
+  async request(target: OtpTarget, ip?: string, chaveTeste?: string): Promise<{ expiresIn: number; debugCode?: string; enviadoPor: 'email' | 'tela' }> {
     const { phone, email, purpose } = target;
+    // Teste automatico: o codigo volta na resposta e nenhum e-mail sai
+    // (os enderecos do teste nao existem).
+    const teste = this.chaveTesteValida(chaveTeste);
+    const entrega = !teste && this.entregaReal(target);
+    const devolver = teste || (this.config.otp.debugReturn && !this.entregaReal(target));
+    if (!entrega && !devolver) {
+      throw BusinessException.validation(
+        phone ? 'Entrada pelo telefone indisponivel no momento. Use o e-mail.' : 'Envio de codigo por e-mail indisponivel no momento.',
+      );
+    }
 
     if (!phone && !email) {
       throw BusinessException.validation('Informe telefone ou e-mail.');
@@ -77,20 +107,25 @@ export class OtpService {
 
     if (phone) {
       await this.notifications.sendOtpCode(phone, code, this.config.otp.ttlSeconds);
-    } else if (email) {
-      await this.notifications.send({
+    } else if (email && entrega) {
+      const minutos = Math.round(this.config.otp.ttlSeconds / 60);
+      const r = await this.notifications.send({
         userId: email,
         channel: NotificationChannel.EMAIL,
         to: email,
-        title: 'Seu codigo de acesso Ride',
-        body: `Seu codigo e ${code}. Valido por ${Math.round(this.config.otp.ttlSeconds / 60)} minutos.`,
+        title: `${code} e o seu codigo Fortaleza Mov`,
+        body: `Seu codigo de acesso Fortaleza Mov e ${code}. Ele vale por ${minutos} minutos. Se nao foi voce que pediu, ignore este e-mail.`,
+        data: { html: htmlDoCodigo(code, minutos) },
       });
-      this.logger.log(`[DEV] OTP de e-mail para ${email}: ${code}`);
+      if (!r.delivered) {
+        throw BusinessException.internal('Nao foi possivel enviar o e-mail agora. Tente de novo em instantes.');
+      }
     }
 
     return {
       expiresIn: this.config.otp.ttlSeconds,
-      ...(this.config.otp.debugReturn ? { debugCode: code } : {}),
+      enviadoPor: entrega ? 'email' : 'tela',
+      ...(devolver ? { debugCode: code } : {}),
     };
   }
 
@@ -133,4 +168,14 @@ export class OtpService {
       data: { consumedAt: new Date() },
     });
   }
+}
+
+/** E-mail simples, legivel no celular, com o codigo bem grande. */
+function htmlDoCodigo(code: string, minutos: number): string {
+  return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#14181F">
+  <div style="background:#1E5BB8;color:#fff;font-size:22px;font-weight:bold;padding:14px 20px;border-radius:999px;display:inline-block">Fortaleza Mov</div>
+  <p style="font-size:17px;margin-top:24px">Seu codigo de acesso:</p>
+  <p style="font-size:40px;font-weight:bold;letter-spacing:8px;margin:8px 0;color:#1E5BB8">${code}</p>
+  <p style="font-size:15px;color:#667085">Ele vale por ${minutos} minutos. Se nao foi voce que pediu, ignore este e-mail.</p>
+</div>`;
 }

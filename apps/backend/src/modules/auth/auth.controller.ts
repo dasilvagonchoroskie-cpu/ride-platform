@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, Patch, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -47,6 +47,7 @@ const cadastroSchema = z.object({
   cpf: cpfSchema,
   password: passwordSchema,
   city: cidadeSchema.optional(),
+  phone: phoneSchema.optional(),
 });
 
 const perfilSchema = z
@@ -56,15 +57,19 @@ const perfilSchema = z
     gender: generoSchema.optional(),
     city: cidadeSchema.optional(),
     cpf: cpfSchema.optional(),
+    phone: phoneSchema.optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nada para atualizar.' });
 
-const redefinirSchema = z.object({
-  phone: phoneSchema,
-  code: z.string().trim().regex(/^\d{4,8}$/, 'Codigo invalido.'),
-  newPassword: passwordSchema,
-  device: deviceInfoSchema.optional(),
-});
+const redefinirSchema = z
+  .object({
+    phone: phoneSchema.optional(),
+    email: emailSchema.optional(),
+    code: z.string().trim().regex(/^\d{4,8}$/, 'Codigo invalido.'),
+    newPassword: passwordSchema,
+    device: deviceInfoSchema.optional(),
+  })
+  .refine((d) => Boolean(d.phone) !== Boolean(d.email), { message: 'Informe o telefone ou o e-mail.', path: ['phone'] });
 
 @ApiTags('Autenticacao')
 @Controller('auth')
@@ -76,10 +81,15 @@ export class AuthController {
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicita codigo OTP por SMS ou e-mail' })
-  requestOtp(@Body(new ZodValidationPipe(requestOtpSchema)) body: { phone?: string; email?: string; purpose: string }, @Req() req: Request) {
+  requestOtp(
+    @Body(new ZodValidationPipe(requestOtpSchema)) body: { phone?: string; email?: string; purpose: string },
+    @Req() req: Request,
+    @Headers('x-chave-teste') chaveTeste?: string,
+  ) {
     return this.auth.requestOtp(
       { phone: body.phone, email: body.email, purpose: body.purpose as never },
       getClientIp(req),
+      chaveTeste,
     );
   }
 
@@ -92,8 +102,10 @@ export class AuthController {
     @Body(new ZodValidationPipe(verifyOtpSchema))
     body: { phone?: string; email?: string; code: string; purpose: string; role: UserRole; device?: DeviceInfoInput },
     @Req() req: Request,
+    @Headers('x-chave-teste') chaveTeste?: string,
   ): Promise<AuthResult> {
     return this.auth.verifyOtp({
+      chaveTeste,
       phone: body.phone,
       email: body.email,
       code: body.code,
@@ -147,11 +159,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Esqueci a senha: codigo do telefone + senha nova (ja entra na conta)' })
   resetPassword(
     @Body(new ZodValidationPipe(redefinirSchema))
-    body: { phone: string; code: string; newPassword: string; device?: DeviceInfoInput },
+    body: { phone?: string; email?: string; code: string; newPassword: string; device?: DeviceInfoInput },
     @Req() req: Request,
+    @Headers('x-chave-teste') chaveTeste?: string,
   ): Promise<AuthResult> {
     return this.auth.redefinirSenha({
+      chaveTeste,
       phone: body.phone,
+      email: body.email,
       code: body.code,
       newPassword: body.newPassword,
       device: body.device ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) } : undefined,
@@ -166,7 +181,7 @@ export class AuthController {
   cadastro(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(cadastroSchema))
-    body: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string },
+    body: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string; phone?: string },
   ) {
     return this.auth.concluirCadastro(user.id, body);
   }
@@ -177,7 +192,7 @@ export class AuthController {
   perfil(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(perfilSchema))
-    body: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string },
+    body: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string },
   ) {
     return this.auth.atualizarPerfil(user.id, body);
   }

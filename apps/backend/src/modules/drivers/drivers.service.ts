@@ -39,6 +39,23 @@ export class DriversService {
       throw BusinessException.conflict('CPF ou CNH ja vinculados a outro motorista.', ERROR_CODES.CONFLICT);
     }
 
+    // Nome, e-mail e telefone vem no mesmo envio: a conta nasce so com o
+    // telefone (ou so com o e-mail) e "Motorista 1234" no lugar do nome.
+    const usuario = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!usuario) throw BusinessException.notFound('Usuario nao encontrado.');
+    const semTelefone = !usuario.phone || usuario.phone.startsWith('pend-');
+    if (semTelefone && !input.phone) throw BusinessException.validation('Informe o seu telefone com DDD.');
+    if (input.email && input.email !== usuario.email) {
+      const dono = await this.prisma.user.findFirst({ where: { email: input.email, NOT: { id: userId } }, select: { id: true } });
+      if (dono) throw BusinessException.conflict('Este e-mail ja esta em outra conta.', ERROR_CODES.EMAIL_ALREADY_USED);
+    }
+    if (semTelefone && input.phone) {
+      const dono = await this.prisma.user.findFirst({ where: { phone: input.phone, NOT: { id: userId } }, select: { id: true } });
+      if (dono) throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
+    }
+    const cpfDeOutro = await this.prisma.user.findFirst({ where: { cpf: input.cpf, NOT: { id: userId } }, select: { id: true } });
+    if (cpfDeOutro) throw BusinessException.conflict('Este CPF ja esta em outra conta.', ERROR_CODES.CONFLICT);
+
     const driver = await this.prisma.$transaction(async (tx) => {
       const created = await tx.driver.create({
         data: {
@@ -57,7 +74,15 @@ export class DriversService {
 
       await tx.user.update({
         where: { id: userId },
-        data: { role: UserRole.DRIVER, status: UserStatus.ACTIVE, cpf: input.cpf, birthDate: input.birthDate },
+        data: {
+          role: UserRole.DRIVER,
+          status: UserStatus.ACTIVE,
+          cpf: input.cpf,
+          birthDate: input.birthDate,
+          ...(input.name ? { name: input.name.replace(/\s+/g, ' ').trim() } : {}),
+          ...(input.email && input.email !== usuario.email ? { email: input.email, emailVerifiedAt: null } : {}),
+          ...(semTelefone && input.phone ? { phone: input.phone, phoneVerifiedAt: null } : {}),
+        },
       });
 
       return created;

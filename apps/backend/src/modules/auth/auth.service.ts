@@ -20,6 +20,17 @@ interface MetaUsuario {
   [k: string]: unknown;
 }
 
+/** Conta criada pelo e-mail ainda sem telefone (o campo e obrigatorio e unico). */
+const PREFIXO_PROVISORIO = 'pend-';
+
+function telefoneProvisorio(): string {
+  return `${PREFIXO_PROVISORIO}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function telefonePendente(phone: string | null | undefined): boolean {
+  return !phone || phone.startsWith(PREFIXO_PROVISORIO);
+}
+
 function metaDe(user: { metadata?: unknown }): MetaUsuario {
   const m = user.metadata;
   return m && typeof m === 'object' && !Array.isArray(m) ? { ...(m as MetaUsuario) } : {};
@@ -55,6 +66,8 @@ export interface AuthResult extends IssuedTokens {
     cidade: string | null;
     /** Se ja existe senha (para entrar pelo e-mail). Nunca devolve a senha. */
     temSenha: boolean;
+    /** Entrou pelo e-mail e ainda nao informou o telefone. */
+    telefonePendente: boolean;
   };
   isNewUser: boolean;
 }
@@ -67,8 +80,13 @@ export class AuthService {
     private readonly otp: OtpService,
   ) {}
 
-  async requestOtp(params: { phone?: string; email?: string; purpose: OtpPurpose }, ip?: string) {
-    return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip);
+  async requestOtp(params: { phone?: string; email?: string; purpose: OtpPurpose }, ip?: string, chaveTeste?: string) {
+    return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip, chaveTeste);
+  }
+
+  /** Canais de entrada que funcionam agora (telefone so com SMS ou em teste). */
+  canaisDeLogin() {
+    return this.otp.canais();
   }
 
   /** Login por OTP: cria a conta na primeira entrada (entra pelo telefone, sem senha). */
@@ -79,6 +97,7 @@ export class AuthService {
     purpose: OtpPurpose;
     role: UserRole;
     device?: DeviceContext;
+    chaveTeste?: string;
   }): Promise<AuthResult> {
     await this.otp.verify({
       phone: params.phone,
@@ -97,14 +116,25 @@ export class AuthService {
     // Enquanto o codigo de teste volta na resposta (sem SMS), o codigo
     // nao prova que a pessoa e dona do telefone. A conta da Central nunca
     // entra por codigo: so por e-mail e senha.
+    // Por e-mail com envio de verdade, o codigo prova que a pessoa e dona do
+    // endereco — ai a Central pode entrar por codigo tambem.
     if (existing?.role === UserRole.ADMIN) {
-      throw BusinessException.forbidden('A conta da Central entra so com e-mail e senha.');
+      const provado =
+        !!params.email && (this.otp.entregaReal({ email: params.email }) || this.otp.chaveTesteValida(params.chaveTeste));
+      if (!provado) {
+        throw BusinessException.forbidden('A conta da Central entra com o codigo enviado ao e-mail ou com a senha.');
+      }
     }
+
+    // Passageiro que abre o aplicativo do motorista vira motorista (a mesma
+    // conta continua pedindo corridas no aplicativo do passageiro).
+    const viraMotorista = role === UserRole.DRIVER && existing?.role === UserRole.PASSENGER;
 
     const user = existing
       ? await this.prisma.user.update({
           where: { id: existing.id },
           data: {
+            ...(viraMotorista ? { role: UserRole.DRIVER } : {}),
             lastLoginAt: new Date(),
             ...(params.phone ? { phoneVerifiedAt: new Date() } : {}),
             ...(params.email ? { emailVerifiedAt: new Date() } : {}),
@@ -115,8 +145,8 @@ export class AuthService {
           data: {
             role,
             status: UserStatus.ACTIVE,
-            name: params.phone ? `Passageiro ${params.phone.slice(-4)}` : 'Novo usuario',
-            phone: params.phone ?? `pending-${Date.now()}`,
+            name: `${role === UserRole.DRIVER ? 'Motorista' : 'Passageiro'}${params.phone ? ` ${params.phone.slice(-4)}` : ''}`,
+            phone: params.phone ?? telefoneProvisorio(),
             email: params.email,
             phoneVerifiedAt: params.phone ? new Date() : null,
             emailVerifiedAt: params.email ? new Date() : null,
@@ -300,7 +330,7 @@ export class AuthService {
       id: user.id,
       role: user.role,
       name: user.name,
-      phone: user.phone,
+      phone: telefonePendente(user.phone) ? '' : user.phone,
       email: user.email,
       avatarUrl: user.avatarUrl,
       status: user.status,
@@ -314,6 +344,7 @@ export class AuthService {
       genero: metaDe(user).genero ?? null,
       cidade: metaDe(user).cidade ?? null,
       temSenha: !!user.passwordHash,
+      telefonePendente: telefonePendente(user.phone),
     };
   }
 
@@ -346,13 +377,14 @@ export class AuthService {
    */
   async concluirCadastro(
     userId: string,
-    input: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string },
+    input: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string; phone?: string },
   ): Promise<AuthResult['user']> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
-    if (user.role !== UserRole.PASSENGER) {
-      throw BusinessException.forbidden('Este cadastro e so para contas de passageiro.');
+    if (user.role !== UserRole.PASSENGER && user.role !== UserRole.DRIVER) {
+      throw BusinessException.forbidden('Este cadastro e so para passageiros.');
     }
+    const novoTelefone = await this.validarTelefoneNovo(userId, user.phone, input.phone);
     const meta = metaDe(user);
     if (meta.cadastroCompleto === true) {
       throw BusinessException.conflict('Seu cadastro ja foi concluido. Para mudar algum dado, use Meus dados.');
@@ -369,6 +401,7 @@ export class AuthService {
           email: input.email,
           ...(user.email !== input.email ? { emailVerifiedAt: null } : {}),
           cpf: input.cpf,
+          ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null } : {}),
           passwordHash: await hashPassword(input.password),
           metadata: {
             ...meta,
@@ -389,10 +422,11 @@ export class AuthService {
   /** Meus dados: nome, e-mail, genero e cidade. O CPF so entra se ainda estiver vazio. */
   async atualizarPerfil(
     userId: string,
-    input: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string },
+    input: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string },
   ): Promise<AuthResult['user']> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
+    const novoTelefone = input.phone ? await this.validarTelefoneNovo(userId, user.phone, input.phone) : null;
 
     if (input.cpf && user.cpf && input.cpf !== user.cpf) {
       throw BusinessException.validation('O CPF nao pode ser trocado depois do cadastro. Fale com a Central.');
@@ -408,6 +442,7 @@ export class AuthService {
           ...(input.name ? { name: input.name.replace(/\s+/g, ' ').trim() } : {}),
           ...(input.email && input.email !== user.email ? { email: input.email, emailVerifiedAt: null } : {}),
           ...(input.cpf && !user.cpf ? { cpf: input.cpf } : {}),
+          ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null } : {}),
           ...(input.gender || cidade
             ? {
                 metadata: {
@@ -431,19 +466,30 @@ export class AuthService {
    * senha nova. Ja deixa a pessoa conectada e derruba as outras sessoes.
    */
   async redefinirSenha(params: {
-    phone: string;
+    phone?: string;
+    email?: string;
     code: string;
     newPassword: string;
     device?: DeviceContext;
+    chaveTeste?: string;
   }): Promise<AuthResult> {
-    const conta = await this.prisma.user.findUnique({ where: { phone: params.phone } });
+    const conta = await this.prisma.user.findFirst({
+      where: params.phone ? { phone: params.phone } : { email: params.email },
+    });
     if (conta?.role === UserRole.ADMIN) {
-      throw BusinessException.forbidden('A senha da Central nao e trocada por codigo.');
+      const provado =
+        !!params.email && (this.otp.entregaReal({ email: params.email }) || this.otp.chaveTesteValida(params.chaveTeste));
+      if (!provado) throw BusinessException.forbidden('A senha da Central so e trocada pelo codigo enviado ao e-mail.');
     }
 
-    await this.otp.verify({ phone: params.phone, purpose: OtpPurpose.PASSWORD_RESET, code: params.code });
+    await this.otp.verify({
+      phone: params.phone,
+      email: params.email,
+      purpose: OtpPurpose.PASSWORD_RESET,
+      code: params.code,
+    });
 
-    if (!conta) throw BusinessException.notFound('Nao ha conta com este telefone.');
+    if (!conta) throw BusinessException.notFound(params.phone ? 'Nao ha conta com este telefone.' : 'Nao ha conta com este e-mail.');
     this.assertUserActive(conta.status);
 
     await this.prisma.user.update({
@@ -468,6 +514,23 @@ export class AuthService {
       params.device,
     );
     return { ...issued, isNewUser: false, user: this.paraUsuario(user) };
+  }
+
+  /**
+   * Telefone de quem entrou pelo e-mail. Obrigatorio enquanto a conta nao
+   * tem telefone; depois disso so muda pela Central.
+   */
+  private async validarTelefoneNovo(userId: string, atual: string, novo?: string): Promise<string | null> {
+    if (!telefonePendente(atual)) {
+      if (novo && novo !== atual) {
+        throw BusinessException.validation('O telefone nao pode ser trocado por aqui. Fale com a Central.');
+      }
+      return null;
+    }
+    if (!novo) throw BusinessException.validation('Informe o seu telefone com DDD.');
+    const dono = await this.prisma.user.findFirst({ where: { phone: novo, NOT: { id: userId } }, select: { id: true } });
+    if (dono) throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
+    return novo;
   }
 
   /** Cidade da lista da Central (nome oficial). Sem lista configurada, aceita o que veio. */
@@ -495,6 +558,9 @@ export class AuthService {
     const campo = campoDuplicado(e);
     if (campo === null) return e;
     if (campo.includes('cpf')) return BusinessException.conflict('Este CPF ja esta em outra conta.');
+    if (campo.includes('phone')) {
+      return BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
+    }
     if (campo.includes('email')) {
       return BusinessException.conflict('Este e-mail ja esta em outra conta.', ERROR_CODES.EMAIL_ALREADY_USED);
     }

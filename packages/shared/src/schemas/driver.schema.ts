@@ -1,7 +1,12 @@
 import { z } from 'zod';
-import { cpfSchema, uuidSchema } from './common.schema';
+import { cpfSchema, emailSchema, nameSchema, phoneSchema, uuidSchema } from './common.schema';
 
 export const driverOnboardingSchema = z.object({
+  /** Nome completo (a conta nasce como "Motorista 1234"). */
+  name: nameSchema.optional(),
+  email: emailSchema.optional(),
+  /** So para quem entrou pelo e-mail e ainda nao tem telefone. */
+  phone: phoneSchema.optional(),
   cpf: cpfSchema,
   birthDate: z.coerce.date().refine((date) => date < new Date(), 'Data de nascimento invalida.'),
   cnhNumber: z

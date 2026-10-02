@@ -18,6 +18,8 @@ jobs:
         continue-on-error: true
         env:
           ADMIN_SENHA: ${{ secrets.ADMIN_SENHA }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
           REL: /tmp/relatorio.txt
         run: bash scripts/teste-ponta-a-ponta.sh
       - name: Guardar o relatorio

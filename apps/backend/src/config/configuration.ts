@@ -17,7 +17,7 @@ export interface AppConfiguration {
     refreshSecret: string;
     refreshTtl: number;
   };
-  otp: { length: number; ttlSeconds: number; maxAttempts: number; debugReturn: boolean };
+  otp: { length: number; ttlSeconds: number; maxAttempts: number; debugReturn: boolean; chaveTeste?: string };
   s3: {
     endpoint?: string;
     region: string;
@@ -29,7 +29,16 @@ export interface AppConfiguration {
     signedUrlTtl: number;
     publicUrl?: string;
   };
-  mail: { host?: string; port: number; user?: string; password?: string; from: string };
+  mail: {
+    host?: string;
+    port: number;
+    user?: string;
+    password?: string;
+    from: string;
+    brevoApiKey?: string;
+    remetente?: string;
+    remetenteNome: string;
+  };
   fcm: { projectId?: string; clientEmail?: string; privateKey?: string };
   maps: { apiKey?: string; cacheTtl: number };
   payments: {
@@ -77,6 +86,7 @@ export function configuration(): AppConfiguration {
       ttlSeconds: env.OTP_TTL_SECONDS,
       maxAttempts: env.OTP_MAX_ATTEMPTS,
       debugReturn: env.OTP_DEBUG_RETURN,
+      chaveTeste: env.OTP_CHAVE_TESTE && env.OTP_CHAVE_TESTE.length >= 24 ? env.OTP_CHAVE_TESTE : undefined,
     },
     s3: {
       endpoint: env.S3_ENDPOINT || undefined,
@@ -95,6 +105,9 @@ export function configuration(): AppConfiguration {
       user: env.SMTP_USER || undefined,
       password: env.SMTP_PASSWORD || undefined,
       from: env.SMTP_FROM,
+      brevoApiKey: env.BREVO_API_KEY || undefined,
+      remetente: env.EMAIL_REMETENTE || undefined,
+      remetenteNome: env.EMAIL_REMETENTE_NOME,
     },
     fcm: {
       projectId: env.FCM_PROJECT_ID || undefined,
