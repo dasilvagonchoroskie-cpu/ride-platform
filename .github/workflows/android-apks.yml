@@ -77,8 +77,12 @@ jobs:
       # Regras de cobranca e outras contas com teste automatico: se alguem
       # quebrar a conta, o APK nem chega a ser gerado.
       - name: Testes automaticos (flutter test)
+        id: testes
+        continue-on-error: true
         working-directory: apps/${{ matrix.app }}
-        run: if [ -d test ]; then flutter test; else echo "Sem testes neste app."; fi
+        run: |
+          set -o pipefail
+          if [ -d test ]; then flutter test --reporter expanded 2>&1 | tee "$RUNNER_TEMP/test-${{ matrix.app }}.txt"; else echo "Sem testes neste app." | tee "$RUNNER_TEMP/test-${{ matrix.app }}.txt"; fi
 
       # O token normal nao consegue ler o log de uma tarefa pela API.
       # Gravar o resultado aqui, no proprio repositorio, resolve isso.
@@ -90,6 +94,7 @@ jobs:
           git config user.email "ci@fortalezadigitalsecurity.com.br"
           mkdir -p logs
           cp "$RUNNER_TEMP/analyze-${{ matrix.app }}.txt" "logs/analyze-${{ matrix.app }}.txt"
+          if [ -f "$RUNNER_TEMP/test-${{ matrix.app }}.txt" ]; then tail -c 60000 "$RUNNER_TEMP/test-${{ matrix.app }}.txt" > "logs/test-${{ matrix.app }}.txt"; git add "logs/test-${{ matrix.app }}.txt"; fi
           git add "logs/analyze-${{ matrix.app }}.txt"
           git commit -m "relatorio de analise: ${{ matrix.app }} (execucao ${{ github.run_number }})" || exit 0
           for t in 1 2 3 4 5; do
@@ -97,8 +102,8 @@ jobs:
             echo "tentativa $t nao passou; repetindo"; sleep 5
           done
 
-      - name: Falhar se a analise nao passou
-        if: steps.analyze.outcome != 'success'
+      - name: Falhar se a analise ou os testes nao passaram
+        if: steps.analyze.outcome != 'success' || steps.testes.outcome != 'success'
         run: exit 1
 
   build-apk:

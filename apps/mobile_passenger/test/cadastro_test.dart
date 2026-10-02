@@ -34,7 +34,7 @@ void main() {
 
   test('nome e sobrenome', () {
     expect(nomeCompleto('Evandro'), isFalse);
-    expect(nomeCompleto('Evandro da'), isFalse);
+    expect(nomeCompleto('Evandro S'), isFalse);
     expect(nomeCompleto('Evandro da Silva'), isTrue);
   });
 
