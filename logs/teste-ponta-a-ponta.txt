@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 26/09/2026 17:35 UTC
+Teste de ponta a ponta - 02/10/2026 04:26 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login real do administrador
@@ -8,6 +8,14 @@ OK     Central carrega /admin/reports/summary
 OK     Central carrega /admin/tariffs
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
+OK     App: configuracao publica (1 cidade(s), WhatsApp 5564996472794)
+OK     Central: cidades e avisos carregados
+OK     Passageiro: cadastro completo gravado (cidade: Goiatuba - GO)
+OK     Passageiro: cadastro repetido recusado
+OK     Passageiro: entra pelo e-mail e senha
+OK     Passageiro: esqueci a senha (codigo do telefone + senha nova)
+OK     Passageiro: Meus dados atualizados
+OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
 OK     Passageiro: busca de destino real (1 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
@@ -21,18 +29,18 @@ OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 3939 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 7930 vindo do servidor)
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
-OK     Motorista: corrida finalizada, valor 1000 centavos
-OK     Bandeira certa pela hora de Brasilia (14h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 3 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 29s
+OK     Motorista: corrida finalizada, valor 2000 centavos
+OK     Bandeira certa pela hora de Brasilia (1h, noturna: 2000 centavos)
+OK     Central: resumo de hoje com 1 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1600 centavos, online 29s
 OK     Motorista: grafico week com 7 dias
-OK     Motorista: grafico month com 30 dias
-OK     Motorista: carteira pre-paga so descontou a comissao (saldo -200 centavos)
-OK     Central: recarga lancada, saldo agora 800 centavos
+OK     Motorista: grafico month com 31 dias
+OK     Motorista: carteira pre-paga so descontou a comissao (saldo -400 centavos)
+OK     Central: recarga lancada, saldo agora 600 centavos
 OK     Central: contato de recarga carregado
 OK     Motorista: historico de corridas com 1 corrida(s)
 
