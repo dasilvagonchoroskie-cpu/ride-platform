@@ -41,6 +41,11 @@ class UserProfile {
     this.email,
     this.role = 'PASSENGER',
     this.termsAccepted = false,
+    this.cadastroCompleto = false,
+    this.cpf,
+    this.genero,
+    this.cidade,
+    this.temSenha = false,
   });
 
   final String id;
@@ -53,6 +58,18 @@ class UserProfile {
   /// aplicativo mostra a tela de aceite antes de qualquer outra coisa.
   final bool termsAccepted;
 
+  /// Cadastro feito (nome, e-mail, genero, CPF, senha e cidade). Enquanto
+  /// for falso, o aplicativo mostra Cidade e Cadastro logo apos o login.
+  final bool cadastroCompleto;
+  final String? cpf;
+
+  /// FEMININO, MASCULINO, OUTRO ou NAO_INFORMAR.
+  final String? genero;
+  final String? cidade;
+
+  /// Ja tem senha para entrar pelo e-mail (a senha nunca vem do servidor).
+  final bool temSenha;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -60,6 +77,11 @@ class UserProfile {
         'email': email,
         'role': role,
         'termsAccepted': termsAccepted,
+        'cadastroCompleto': cadastroCompleto,
+        'cpf': cpf,
+        'genero': genero,
+        'cidade': cidade,
+        'temSenha': temSenha,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -69,6 +91,11 @@ class UserProfile {
         email: json['email'] as String?,
         role: json['role'] as String? ?? 'PASSENGER',
         termsAccepted: json['termsAccepted'] as bool? ?? false,
+        cadastroCompleto: json['cadastroCompleto'] as bool? ?? false,
+        cpf: json['cpf'] as String?,
+        genero: json['genero'] as String?,
+        cidade: json['cidade'] as String?,
+        temSenha: json['temSenha'] as bool? ?? false,
       );
 
   UserProfile copyWith({String? name, String? email, bool? termsAccepted}) => UserProfile(
@@ -78,9 +105,57 @@ class UserProfile {
         email: email ?? this.email,
         role: role,
         termsAccepted: termsAccepted ?? this.termsAccepted,
+        cadastroCompleto: cadastroCompleto,
+        cpf: cpf,
+        genero: genero,
+        cidade: cidade,
+        temSenha: temSenha,
       );
 
   String get firstName => name.split(' ').first;
+
+  /// Iniciais para o circulo da foto: "Evandro da Silva" -> "ES".
+  String get iniciais {
+    final partes = name.trim().split(RegExp(r'\s+')).where((p) => p.length > 2 || p == name.trim()).toList();
+    if (partes.isEmpty) return 'P';
+    final primeira = partes.first.substring(0, 1);
+    final ultima = partes.length > 1 ? partes.last.substring(0, 1) : '';
+    return (primeira + ultima).toUpperCase();
+  }
+}
+
+/// Opcoes de genero do cadastro (valor que vai ao servidor, texto na tela).
+const List<(String, String)> kGeneros = [
+  ('FEMININO', 'Feminino'),
+  ('MASCULINO', 'Masculino'),
+  ('OUTRO', 'Outro'),
+  ('NAO_INFORMAR', 'Prefiro não informar'),
+];
+
+String rotuloGenero(String? valor) {
+  for (final g in kGeneros) {
+    if (g.$1 == valor) return g.$2;
+  }
+  return 'Selecione';
+}
+
+/// Aviso publicado pela Central (sino da tela inicial).
+class AvisoCentral {
+  const AvisoCentral({required this.id, required this.titulo, required this.texto, required this.criadoEm});
+
+  final String id;
+  final String titulo;
+  final String texto;
+  final String criadoEm;
+
+  factory AvisoCentral.fromJson(Map<String, dynamic> j) => AvisoCentral(
+        id: j['id'] as String? ?? '',
+        titulo: j['titulo'] as String? ?? '',
+        texto: j['texto'] as String? ?? '',
+        criadoEm: j['criadoEm'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {'id': id, 'titulo': titulo, 'texto': texto, 'criadoEm': criadoEm};
 }
 
 /// Bandeira do horario. Quem decide e o servidor, pelo relogio dele.

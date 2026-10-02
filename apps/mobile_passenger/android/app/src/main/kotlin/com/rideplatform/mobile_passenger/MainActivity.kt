@@ -34,6 +34,7 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         }
                         "posicao" -> result.success(posicao())
+                        "abrirLink" -> result.success(abrirLink(call.argument<String>("url") ?: ""))
                         else -> result.notImplemented()
                     }
                 } catch (e: Exception) {
@@ -92,6 +93,17 @@ class MainActivity : FlutterActivity() {
         }
         val m = melhor ?: return null
         return mapOf("latitude" to m.latitude, "longitude" to m.longitude)
+    }
+
+    /** Abre WhatsApp, e-mail ou pagina no aplicativo certo do celular. */
+    private fun abrirLink(url: String): Boolean {
+        if (url.isBlank()) return false
+        return try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun abrirAjustes() {

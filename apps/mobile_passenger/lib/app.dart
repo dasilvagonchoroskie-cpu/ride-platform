@@ -4,14 +4,17 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'data/models/models.dart';
 import 'screens/complete_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/city_screen.dart';
+import 'screens/home_shell.dart';
 import 'screens/ride_screen.dart';
 import 'screens/searching_screen.dart';
+import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/terms_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
 import 'state/auth_state.dart';
+import 'state/config_state.dart';
 import 'state/ride_state.dart';
 import 'core/avisos.dart';
 import 'core/permissoes_nativas.dart';
@@ -55,9 +58,19 @@ class _Root extends StatelessWidget {
     final app = context.watch<AppState>();
     final auth = context.watch<AuthState>();
     final ride = context.watch<RideState>();
+    final config = context.watch<ConfigState>();
 
     if (!app.bootstrapped || !auth.ready) return const SplashScreen();
     if (auth.user == null) return const WelcomeScreen();
+
+    // Logo depois do primeiro login: cidade e cadastro, uma vez so.
+    if (auth.precisaCadastro) {
+      final semLista = config.carregado && config.cidades.isEmpty;
+      if (auth.user!.cidade == null && auth.cidadeEscolhida == null && !semLista) {
+        return const CityScreen();
+      }
+      return const SignupScreen();
+    }
 
     // Ninguem passa daqui sem aceitar. Fica antes de qualquer outra
     // tela, inclusive corrida em andamento.
@@ -82,6 +95,6 @@ class _Root extends StatelessWidget {
         ligarGps: () => PermissoesNativas.pedir('gps'),
       );
     }
-    return const HomeScreen();
+    return const HomeShell();
   }
 }

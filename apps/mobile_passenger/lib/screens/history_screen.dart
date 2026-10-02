@@ -11,7 +11,10 @@ import '../widgets/ui.dart';
 import 'history_detail_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  const HistoryScreen({super.key, this.embutida = false});
+
+  /// Dentro da aba Atividade (sem seta de voltar).
+  final bool embutida;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -39,7 +42,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Suas corridas'),
+        title: Text(widget.embutida ? 'Atividade' : 'Suas corridas'),
+        automaticallyImplyLeading: !widget.embutida,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: Spacing.lg),

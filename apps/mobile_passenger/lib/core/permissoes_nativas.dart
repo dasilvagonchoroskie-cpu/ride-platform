@@ -39,4 +39,14 @@ class PermissoesNativas {
       return null;
     }
   }
+
+  /// Abre um link (WhatsApp, pagina) no aplicativo do celular.
+  static Future<bool> abrirLink(String url) async {
+    if (!Platform.isAndroid) return false;
+    try {
+      return await _canal.invokeMethod<bool>('abrirLink', {'url': url}) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

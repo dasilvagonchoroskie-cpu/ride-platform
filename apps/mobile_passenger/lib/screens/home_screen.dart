@@ -12,14 +12,13 @@ import '../state/ride_state.dart';
 import '../widgets/painel_ui.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
-import 'account_screen.dart';
+import '../state/config_state.dart';
+import 'avisos_screen.dart';
 import 'confirm_screen.dart';
-import 'history_screen.dart';
 import 'map_pick_screen.dart';
-import 'wallet_screen.dart';
 
-/// Tela principal do passageiro: mapa em tela cheia, carros disponiveis
-/// por perto (de verdade, do servidor) e o "Para onde?" embaixo.
+/// Tela Inicio: mapa em tela cheia, carros disponiveis por perto (de
+/// verdade, do servidor), sino de avisos e o "Buscar destino" embaixo.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -29,6 +28,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Timer? _relogio;
+  bool _configPedida = false;
 
   @override
   void initState() {
@@ -46,6 +46,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void _atualizarCarros() {
     if (!mounted) return;
     context.read<RideState>().refreshNearby(context.read<AppState>().coords);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Avisos novos da Central aparecem no sino sem precisar reabrir o app.
+    if (!_configPedida) {
+      _configPedida = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<ConfigState>().carregar();
+      });
+    }
   }
 
   Future<void> _escolherDestino() async {
@@ -83,8 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final app = context.watch<AppState>();
     final auth = context.watch<AuthState>();
     final ride = context.watch<RideState>();
+    final config = context.watch<ConfigState>();
     final nome = auth.user?.firstName;
-    final recentes = app.destinosRecentes.take(3).toList();
+    final recentes = app.destinosRecentes.take(2).toList();
 
     final markers = <MapMarker>[
       MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
@@ -99,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: RideMap(center: app.coords, markers: markers, span: 0.03, rounded: false),
           ),
 
-          // ---- Topo: logo + menu ----
+          // ---- Topo: marca a esquerda, sino a direita ----
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, 0),
@@ -107,130 +120,113 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Material(
-                    color: AppColors.surface,
+                    color: AppColors.brand,
                     elevation: 3,
                     shadowColor: const Color(0x55000000),
                     borderRadius: BorderRadius.circular(Radii.pill),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(Radii.pill),
-                      onTap: () => _abrir(const AccountScreen()),
-                      child: const Padding(
-                        padding: EdgeInsets.fromLTRB(6, 6, 16, 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            BrandLogo(size: 46),
-                            SizedBox(width: Spacing.md),
-                            Icon(Icons.menu, size: 28, color: AppColors.text),
-                          ],
-                        ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                      child: Text(
+                        'Fortaleza Mov',
+                        style: AppText.heading.copyWith(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
                   const Spacer(),
-                  if (app.isDemo) const AppBadge(text: 'DEMONSTRAÇÃO', tone: AppBadgeTone.info),
+                  if (app.isDemo) ...[
+                    const AppBadge(text: 'DEMONSTRAÇÃO', tone: AppBadgeTone.info),
+                    const SizedBox(width: Spacing.sm),
+                  ],
+                  BotaoRedondo(
+                    icone: Icons.notifications,
+                    marcado: config.temAvisoNovo,
+                    onTap: () => _abrir(const AvisosScreen()),
+                  ),
                 ],
               ),
             ),
           ),
 
-          // ---- Base: atalhos + "Para onde?" ----
+          // ---- Base: saudacao + "Buscar destino" ----
           Align(
             alignment: Alignment.bottomCenter,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, Spacing.lg, Spacing.md),
-                  child: Column(
-                    children: [
-                      BotaoRedondo(icone: Icons.history, onTap: () => _abrir(const HistoryScreen())),
-                      const SizedBox(height: Spacing.sm),
-                      BotaoRedondo(icone: Icons.payments_outlined, onTap: () => _abrir(const WalletScreen())),
-                    ],
-                  ),
-                ),
-                SheetSurface(
-                  padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.xl),
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: AppColors.sheetBorder,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.lg),
-                        Text(
-                          nome == null || nome.isEmpty ? 'Para onde vamos?' : 'Para onde vamos, $nome?',
-                          style: SheetText.title,
-                        ),
-                        const SizedBox(height: Spacing.xs),
-                        Text(
-                          ride.nearbyDrivers.isEmpty
-                              ? 'Buscando carros disponíveis perto de você.'
-                              : '${ride.nearbyDrivers.length} carro(s) disponível(is) perto de você.',
-                          style: SheetText.muted,
-                        ),
-                        const SizedBox(height: Spacing.lg),
-                        InkWell(
-                          borderRadius: BorderRadius.circular(Radii.sm),
-                          onTap: _escolherDestino,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.lg),
-                            decoration: BoxDecoration(
-                              color: AppColors.sheetField,
-                              borderRadius: BorderRadius.circular(Radii.sm),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.search, color: AppColors.brand, size: 24),
-                                const SizedBox(width: Spacing.md),
-                                Text('Para onde?', style: SheetText.heading.copyWith(fontSize: 18)),
-                              ],
-                            ),
-                          ),
-                        ),
-                        for (final r in recentes)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              width: 38,
-                              height: 38,
-                              decoration: const BoxDecoration(color: AppColors.sheetField, shape: BoxShape.circle),
-                              child: const Icon(Icons.schedule, size: 20, color: AppColors.sheetText),
-                            ),
-                            title: Text(
-                              r.address,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: r.detail.isEmpty
-                                ? null
-                                : Text(r.detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: SheetText.muted),
-                            onTap: () => _irPara(r),
-                          ),
-                      ],
+            child: SheetSurface(
+              padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.sheetBorder,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: Spacing.lg),
+                  Text(
+                    nome == null || nome.isEmpty || nome == 'Passageiro' ? saudacao() : '${saudacao()}, $nome',
+                    textAlign: TextAlign.center,
+                    style: SheetText.title.copyWith(fontSize: 24, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: Spacing.lg),
+                  Material(
+                    color: AppColors.sheetField,
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(Radii.pill),
+                      onTap: _escolherDestino,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: Spacing.xl, vertical: 18),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search, color: AppColors.sheetText, size: 28),
+                            const SizedBox(width: Spacing.md),
+                            Text('Buscar destino', style: SheetText.heading.copyWith(fontSize: 20)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  for (final r in recentes)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: const BoxDecoration(color: AppColors.sheetField, shape: BoxShape.circle),
+                        child: const Icon(Icons.schedule, size: 20, color: AppColors.sheetText),
+                      ),
+                      title: Text(
+                        r.address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: r.detail.isEmpty
+                          ? null
+                          : Text(r.detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: SheetText.muted),
+                      onTap: () => _irPara(r),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Bom dia / Boa tarde / Boa noite pela hora do aparelho.
+String saudacao([DateTime? agora]) {
+  final h = (agora ?? DateTime.now()).hour;
+  if (h >= 5 && h < 12) return 'Bom dia';
+  if (h >= 12 && h < 18) return 'Boa tarde';
+  return 'Boa noite';
 }
 
 /// Busca do destino: digita e o servidor procura no OpenStreetMap.

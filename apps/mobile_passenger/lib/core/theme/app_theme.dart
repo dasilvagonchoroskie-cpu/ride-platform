@@ -52,6 +52,14 @@ class AppColors {
   static const Color sheetBorder = Color(0xFFE3E6EA);
   static const Color sheetField = Color(0xFFF4F5F7);
 
+  // ---- Formularios (entrada, cidade, cadastro) ----
+  static const Color campoBorda = Color(0xFFC9CED6);
+  static const Color desativado = Color(0xFFC7C9CC);
+  static const Color desativadoTexto = Color(0xFF7D838C);
+
+  /// Faixa cinza que separa os blocos da tela Conta.
+  static const Color faixa = Color(0xFFF1F2F4);
+
   // ---- Mapa ----
   static const Color mapBackground = Color(0xFFE9E7E2);
   static const Color mapRoad = Color(0xFFFFFFFF);

@@ -89,6 +89,11 @@ class ApiClient {
       throw ApiException('NETWORK_ERROR', 'Sem conexao com o servidor. ($error)');
     }
 
+    // 204 (troca de senha, logout): deu certo e nao ha corpo.
+    if (response.statusCode >= 200 && response.statusCode < 300 && response.body.trim().isEmpty) {
+      return null;
+    }
+
     Map<String, dynamic> decoded;
     try {
       decoded = jsonDecode(response.body) as Map<String, dynamic>;

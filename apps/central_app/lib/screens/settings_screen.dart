@@ -5,6 +5,7 @@ import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
 import '../state/central_state.dart';
+import '../widgets/operacao_passageiros.dart';
 import '../widgets/ui.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -45,6 +46,9 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Conexoes'),
           const _StatusDasConexoes(),
+          const SizedBox(height: Spacing.lg),
+          const SectionTitle(text: 'App do passageiro'),
+          const OperacaoPassageiros(),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Diagnostico'),
           AppCard(

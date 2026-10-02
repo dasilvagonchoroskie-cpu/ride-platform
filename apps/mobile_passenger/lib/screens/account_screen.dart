@@ -3,188 +3,175 @@ import 'package:provider/provider.dart';
 
 import '../core/config/app_config.dart';
 import '../core/theme/app_theme.dart';
-import '../state/app_state.dart';
 import '../state/auth_state.dart';
-import '../widgets/ui.dart';
+import '../state/config_state.dart';
+import '../widgets/painel_ui.dart';
+import 'avisos_screen.dart';
+import 'help_screen.dart';
+import 'my_data_screen.dart';
+import 'wallet_screen.dart';
 
-class AccountScreen extends StatefulWidget {
+/// Aba Conta: foto e nome, como a pessoa paga, menu e sair.
+class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
-  @override
-  State<AccountScreen> createState() => _AccountScreenState();
-}
+  void _abrir(BuildContext context, Widget tela) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => tela));
 
-class _AccountScreenState extends State<AccountScreen> {
-  late final TextEditingController _name;
-  late final TextEditingController _email;
-  bool _saved = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final user = context.read<AuthState>().user;
-    _name = TextEditingController(text: user?.name ?? '');
-    _email = TextEditingController(text: user?.email ?? '');
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _email.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    await context.read<AuthState>().updateProfile(
-          _name.text,
-          _email.text.isEmpty ? null : _email.text,
-        );
-    if (!mounted) return;
-    setState(() => _saved = true);
-    await Future<void>.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _saved = false);
+  Future<void> _sair(BuildContext context) async {
+    final sair = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Sair da conta?', style: AppText.heading),
+        content: Text(
+          'Para voltar, é só entrar de novo com o seu telefone ou e-mail.',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Sair', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (sair == true && context.mounted) await context.read<AuthState>().logout();
   }
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final auth = context.watch<AuthState>();
-    final user = auth.user;
+    final user = context.watch<AuthState>().user;
+    final avisoNovo = context.watch<ConfigState>().temAvisoNovo;
+    const faixa = SizedBox(height: 10, child: ColoredBox(color: AppColors.faixa));
+    const separador = Divider(height: 1, indent: Spacing.xl, endIndent: Spacing.xl, color: AppColors.border);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Conta')),
+      backgroundColor: AppColors.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppCard(
+        child: ListView(
+          children: [
+            InkWell(
+              onTap: () => _abrir(context, const MyDataScreen()),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.xl),
                 child: Row(
                   children: [
-                    AppAvatar(
-                      initials: (user?.firstName ?? 'P').substring(0, 1).toUpperCase(),
-                      size: 60,
+                    SizedBox(
+                      width: 78,
+                      height: 78,
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 72,
+                            height: 72,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
+                            child: Text(
+                              user?.iniciais ?? 'P',
+                              style: AppText.title.copyWith(color: Colors.white, fontSize: 26),
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                shape: BoxShape.circle,
+                                boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4)],
+                              ),
+                              child: const Icon(Icons.edit, size: 17, color: AppColors.text),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: Spacing.lg),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.name ?? 'Passageiro',
-                            style: const TextStyle(
-                              color: AppColors.text,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            user?.phone ?? '-',
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                          ),
-                        ],
+                      child: Text(
+                        user?.name ?? 'Passageiro',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.title.copyWith(fontSize: 24, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: Spacing.lg),
-              const SectionTitle(text: 'Dados pessoais'),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AppField(label: 'Nome', controller: _name, onChanged: (_) => setState(() {})),
-                    const SizedBox(height: Spacing.md),
-                    AppField(
-                      label: 'E-mail',
-                      hint: 'voce@email.com',
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    AppButton(
-                      label: _saved ? 'Salvo' : 'Salvar alteracoes',
-                      variant: AppButtonVariant.secondary,
-                      onPressed: _save,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Spacing.lg),
-              const SectionTitle(text: 'Endereços recentes'),
-              AppCard(
-                child: app.recentPlaces.isEmpty
-                    ? const Text(
-                        'Nenhum endereço usado ainda.',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final place in app.recentPlaces)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
-                              child: Text(
-                                place,
-                                style: const TextStyle(color: AppColors.text, fontSize: 15),
+            ),
+            faixa,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.lg, Spacing.xl, Spacing.lg),
+              child: Material(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(Radii.md),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(Radii.md),
+                  onTap: () => _abrir(context, const WalletScreen()),
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.xl),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Pagamento', style: AppText.body.copyWith(fontSize: 17, color: AppColors.textMuted)),
+                              const SizedBox(height: Spacing.xs),
+                              Text('Direto ao motorista', style: AppText.title.copyWith(fontSize: 25)),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Dinheiro, Pix ou cartão na maquininha',
+                                style: AppText.body.copyWith(color: AppColors.textMuted),
                               ),
-                            ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: Spacing.lg),
-              const SectionTitle(text: 'Aplicativo'),
-              AppCard(
-                child: Column(
-                  children: [
-                    _DiagRow(label: 'Versão do app', value: AppConfig.appVersion),
-                    const AppDivider(),
-                    _DiagRow(
-                      label: 'Localização',
-                      value: app.locationGranted ? 'Liberada' : 'Não liberada',
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right, size: 30, color: AppColors.text),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: Spacing.lg),
-              AppButton(
-                label: 'Sair da conta',
-                variant: AppButtonVariant.danger,
-                onPressed: () async {
-                  await context.read<AuthState>().logout();
-                  if (context.mounted) Navigator.of(context).pop();
-                },
+            ),
+            faixa,
+            MenuLinha(
+              icone: Icons.account_circle,
+              corIcone: AppColors.text,
+              titulo: 'Meus dados',
+              onTap: () => _abrir(context, const MyDataScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.notifications,
+              corIcone: AppColors.text,
+              titulo: 'Avisos',
+              selo: avisoNovo ? 'novo' : null,
+              onTap: () => _abrir(context, const AvisosScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.support,
+              corIcone: AppColors.text,
+              titulo: 'Ajuda',
+              onTap: () => _abrir(context, const HelpScreen()),
+            ),
+            faixa,
+            MenuLinha(titulo: 'Sair da conta', cor: AppColors.danger, onTap: () => _sair(context)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
+              child: Text(
+                'Versão ${AppConfig.appVersion}',
+                style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _DiagRow extends StatelessWidget {
-  const _DiagRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-        ),
-        Text(
-          value,
-          style: const TextStyle(color: AppColors.text, fontSize: 13),
-        ),
-      ],
     );
   }
 }

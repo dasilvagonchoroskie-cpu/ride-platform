@@ -12,7 +12,7 @@ class AppConfig {
   static const String firebaseProjectId =
       String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: '');
 
-  static const String appVersion = '0.1.0';
+  static const String appVersion = '0.2.0';
   static const Duration apiTimeout = Duration(seconds: 60);
 
   /// Intervalo de atualizacao do mapa de monitoramento.

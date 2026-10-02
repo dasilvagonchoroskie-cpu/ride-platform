@@ -8,7 +8,11 @@ import '../core/storage/app_storage.dart';
 import '../core/legal/legal_content.dart';
 import '../data/models/models.dart';
 
-/// Sessao do passageiro: OTP por SMS no modo API, login local no modo demo.
+/// Sessao do passageiro.
+///
+/// Entra pelo codigo do telefone ou pelo e-mail e senha. Logo depois do
+/// primeiro login vem a escolha da cidade e o cadastro (nome, e-mail,
+/// genero, CPF e senha), uma vez so.
 class AuthState extends ChangeNotifier {
   AuthState({ApiClient? client}) : _client = client ?? ApiClient();
 
@@ -20,7 +24,15 @@ class AuthState extends ChangeNotifier {
   bool loading = false;
   String? error;
 
+  /// Cidade escolhida na tela Cidade, antes de o cadastro ser enviado.
+  String? cidadeEscolhida;
+
+  static const Map<String, dynamic> _aparelho = {'deviceId': 'flutter-android', 'platform': 'ANDROID'};
+
   bool get isDemoSession => accessToken == 'demo-token';
+
+  /// Cadastro ainda por fazer (o modo demonstracao nao tem cadastro).
+  bool get precisaCadastro => user != null && !isDemoSession && !user!.cadastroCompleto;
 
   Future<void> restore() async {
     final token = await AppStorage.read(AppStorage.accessToken);
@@ -37,9 +49,30 @@ class AuthState extends ChangeNotifier {
     accessToken = token;
     ready = true;
     notifyListeners();
+
+    // Os dados guardados no aparelho podem estar velhos (cadastro feito em
+    // outro celular, termos aceitos, nome trocado). Confere com o servidor.
+    if (user != null && AppConfig.hasApi && !isDemoSession) await sincronizar();
   }
 
-  Future<String?> requestOtp(String phone) async {
+  /// Busca o retrato atual do usuario no servidor.
+  Future<void> sincronizar() async {
+    try {
+      final data = await _client.request('GET', '/auth/me') as Map<String, dynamic>;
+      await _guardarUsuario(UserProfile.fromJson(data));
+    } on ApiException catch (e) {
+      // Login vencido ou conta removida: volta para a entrada. Sem rede,
+      // segue com o que tem guardado.
+      if (e.statusCode == 401 || e.statusCode == 403 || e.statusCode == 404) await logout();
+    } catch (_) {}
+  }
+
+  Future<String?> requestOtp(String phone) => _pedirCodigo(phone, 'LOGIN');
+
+  /// Codigo para criar uma senha nova ("Esqueci minha senha").
+  Future<String?> pedirCodigoSenha(String phone) => _pedirCodigo(phone, 'PASSWORD_RESET');
+
+  Future<String?> _pedirCodigo(String phone, String finalidade) async {
     loading = true;
     error = null;
     notifyListeners();
@@ -47,7 +80,7 @@ class AuthState extends ChangeNotifier {
     try {
       final data = await _client.request('POST', '/auth/otp/request', body: {
         'phone': phone,
-        'purpose': 'LOGIN',
+        'purpose': finalidade,
       }) as Map<String, dynamic>;
 
       return data['debugCode'] as String?;
@@ -60,31 +93,56 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> verifyOtp(String phone, String code) async {
+  Future<void> verifyOtp(String phone, String code) => _entrar('/auth/otp/verify', {
+        'phone': phone,
+        'code': code,
+        'purpose': 'LOGIN',
+        'role': 'PASSENGER',
+        'device': _aparelho,
+      });
+
+  Future<void> entrarComEmail(String email, String senha) => _entrar('/auth/password/login', {
+        'email': email.trim().toLowerCase(),
+        'password': senha,
+        'device': _aparelho,
+      });
+
+  /// Codigo do telefone + senha nova. Ja deixa a pessoa conectada.
+  Future<void> redefinirSenha(String phone, String code, String novaSenha) => _entrar('/auth/password/reset', {
+        'phone': phone,
+        'code': code,
+        'newPassword': novaSenha,
+        'device': _aparelho,
+      });
+
+  Future<void> _entrar(String caminho, Map<String, dynamic> corpo) async {
     loading = true;
     error = null;
     notifyListeners();
 
     try {
-      final data = await _client.request('POST', '/auth/otp/verify', body: {
-        'phone': phone,
-        'code': code,
-        'purpose': 'LOGIN',
-        'role': 'PASSENGER',
-        'device': {'deviceId': 'flutter-android', 'platform': 'ANDROID'},
-      }) as Map<String, dynamic>;
+      final data = await _client.request('POST', caminho, body: corpo) as Map<String, dynamic>;
+      final profile = UserProfile.fromJson(data['user'] as Map<String, dynamic>);
+
+      // Este aplicativo e so do passageiro. Conta de motorista ou da
+      // Central nao consegue pedir corrida, entao nem entra.
+      if (profile.role != 'PASSENGER') {
+        throw ApiException(
+          'CONTA_ERRADA',
+          profile.role == 'DRIVER'
+              ? 'Este cadastro é de motorista. Para pedir corridas, use outro número.'
+              : 'Esta conta é da Central. Use o aplicativo da Central.',
+        );
+      }
 
       accessToken = data['accessToken'] as String?;
       final refreshToken = data['refreshToken'] as String?;
-      final profile = UserProfile.fromJson(data['user'] as Map<String, dynamic>);
-
       await AppStorage.write(AppStorage.accessToken, accessToken ?? '');
       if (refreshToken != null) {
         await AppStorage.write(AppStorage.refreshToken, refreshToken);
       }
-      await AppStorage.write(AppStorage.user, jsonEncode(profile.toJson()));
-
-      user = profile;
+      cidadeEscolhida = null;
+      await _guardarUsuario(profile);
     } on ApiException catch (exception) {
       error = exception.message;
       rethrow;
@@ -96,7 +154,7 @@ class AuthState extends ChangeNotifier {
 
   /// Login local (modo demonstracao): nenhuma chamada de rede.
   Future<void> demoLogin(String name, String phone) async {
-    final profile = UserProfile(id: 'demo-$phone', name: name, phone: phone);
+    final profile = UserProfile(id: 'demo-$phone', name: name, phone: phone, cadastroCompleto: true);
 
     await AppStorage.write(AppStorage.accessToken, 'demo-token');
     await AppStorage.write(AppStorage.user, jsonEncode(profile.toJson()));
@@ -106,24 +164,48 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateProfile(String name, String? email) async {
-    final current = user;
-    if (current == null) return;
-
-    if (AppConfig.hasApi && !isDemoSession) {
-      try {
-        await _client.request('PATCH', '/users/me', body: {
-          'name': name,
-          if (email != null && email.isNotEmpty) 'email': email,
-        });
-      } catch (_) {
-        // O perfil local segue atualizado mesmo se a API falhar.
-      }
-    }
-
-    user = current.copyWith(name: name, email: email);
-    await AppStorage.write(AppStorage.user, jsonEncode(user!.toJson()));
+  void escolherCidade(String? cidade) {
+    cidadeEscolhida = cidade;
     notifyListeners();
+  }
+
+  /// Envia o cadastro do passageiro (uma vez so).
+  Future<void> concluirCadastro({
+    required String nome,
+    required String email,
+    required String genero,
+    required String cpf,
+    required String senha,
+    String? cidade,
+  }) async {
+    final data = await _client.request('POST', '/auth/cadastro', body: {
+      'name': nome,
+      'email': email.trim().toLowerCase(),
+      'gender': genero,
+      'cpf': cpf,
+      'password': senha,
+      if (cidade != null) 'city': cidade,
+    }) as Map<String, dynamic>;
+    cidadeEscolhida = null;
+    await _guardarUsuario(UserProfile.fromJson(data));
+  }
+
+  /// Meus dados. Manda so o que mudou.
+  Future<void> atualizarPerfil({String? nome, String? email, String? genero, String? cidade, String? cpf}) async {
+    final corpo = <String, dynamic>{
+      if (nome != null) 'name': nome,
+      if (email != null) 'email': email.trim().toLowerCase(),
+      if (genero != null) 'gender': genero,
+      if (cidade != null) 'city': cidade,
+      if (cpf != null) 'cpf': cpf,
+    };
+    if (corpo.isEmpty) return;
+    final data = await _client.request('PATCH', '/auth/perfil', body: corpo) as Map<String, dynamic>;
+    await _guardarUsuario(UserProfile.fromJson(data));
+  }
+
+  Future<void> trocarSenha(String atual, String nova) async {
+    await _client.request('PATCH', '/auth/password', body: {'currentPassword': atual, 'newPassword': nova});
   }
 
   /// Registra o aceite dos Termos/Privacidade.
@@ -145,15 +227,20 @@ class AuthState extends ChangeNotifier {
       }
     }
 
-    user = current.copyWith(termsAccepted: true);
-    await AppStorage.write(AppStorage.user, jsonEncode(user!.toJson()));
-    notifyListeners();
+    await _guardarUsuario(current.copyWith(termsAccepted: true));
   }
 
   Future<void> logout() async {
     await AppStorage.clearSession();
     user = null;
     accessToken = null;
+    cidadeEscolhida = null;
+    notifyListeners();
+  }
+
+  Future<void> _guardarUsuario(UserProfile profile) async {
+    user = profile;
+    await AppStorage.write(AppStorage.user, jsonEncode(profile.toJson()));
     notifyListeners();
   }
 }
