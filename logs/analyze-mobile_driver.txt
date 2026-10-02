@@ -1,7 +1,2 @@
 Analyzing mobile_driver...                                      
-
-  error • The named parameter 'emailConta' is required, but there's no corresponding argument. Try adding the required argument • lib/screens/pending_screen.dart:107:27 • missing_required_argument
-  error • The named parameter 'nome' is required, but there's no corresponding argument. Try adding the required argument • lib/screens/pending_screen.dart:107:27 • missing_required_argument
-   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/screens/phone_screen.dart:35:22 • curly_braces_in_flow_control_structures
-
-3 issues found. (ran in 7.9s)
+No issues found! (ran in 5.1s)
