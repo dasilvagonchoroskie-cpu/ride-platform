@@ -18,5 +18,15 @@ Downloading packages...
 Got dependencies!
 15 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
-Analyzing mobile_passenger...                                   
-No issues found! (ran in 8.6s)
+00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart
+00:00 +0: CPF aceita CPF valido com ou sem pontuacao
+00:00 +1: CPF recusa digito errado, numeros repetidos e tamanho errado
+00:00 +2: CPF mascara enquanto digita
+00:00 +3: senha segue a mesma regra do servidor
+00:00 +4: nome e sobrenome
+00:00 +5: e-mail
+00:00 +6: busca de cidade ignora acento e maiuscula
+00:00 +7: telefone legivel
+00:00 +8: saudacao pela hora
+00:00 +9: perfil antigo guardado no aparelho pede o cadastro
+00:00 +10: All tests passed!
