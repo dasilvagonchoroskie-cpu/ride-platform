@@ -20,6 +20,11 @@ class ConfigState extends ChangeNotifier {
   String? whatsapp;
   List<AvisoCentral> avisos = const [];
 
+  /// Formas de entrar que funcionam agora. Telefone so com SMS (ou em
+  /// teste); e-mail quando o envio esta ligado no servidor.
+  bool loginTelefone = true;
+  bool loginEmail = false;
+
   /// Ja tem uma resposta (do servidor agora ou guardada de antes).
   bool carregado = false;
   bool carregando = false;
@@ -76,6 +81,11 @@ class ConfigState extends ChangeNotifier {
     cidades = [
       for (final c in (data['cidades'] as List<dynamic>? ?? const [])) c.toString(),
     ];
+    final login = data['login'];
+    if (login is Map<String, dynamic>) {
+      loginTelefone = login['telefone'] as bool? ?? true;
+      loginEmail = login['email'] as bool? ?? false;
+    }
     final numero = data['whatsapp'];
     whatsapp = numero is String && numero.isNotEmpty ? numero : null;
     avisos = [

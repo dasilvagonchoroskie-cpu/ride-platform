@@ -58,6 +58,50 @@ class CentralState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// O codigo pelo e-mail funciona (envio de verdade ligado no servidor).
+  bool codigoPorEmail = false;
+
+  Future<void> conferirFormasDeEntrar() async {
+    if (!AppConfig.hasApi) return;
+    codigoPorEmail = await _repository.codigoPorEmailLigado();
+    notifyListeners();
+  }
+
+  /// Manda o codigo para o e-mail. Devolve o erro (ou nulo se foi).
+  Future<String?> pedirCodigo(String email) async {
+    try {
+      await _repository.pedirCodigo(email.trim().toLowerCase());
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+    }
+  }
+
+  Future<void> entrarComCodigo(String email, String codigo) async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      admin = await _repository.entrarComCodigo(email.trim().toLowerCase(), codigo);
+    } on ApiException catch (e) {
+      error = e.message;
+      loading = false;
+      notifyListeners();
+      return;
+    } catch (_) {
+      error = 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+      loading = false;
+      notifyListeners();
+      return;
+    }
+    await AppStorage.write(AppStorage.adminUser, jsonEncode(admin!.toJson()));
+    loading = false;
+    notifyListeners();
+    await loadAll();
+  }
+
   Future<void> login(String email, String password) async {
     loading = true;
     error = null;

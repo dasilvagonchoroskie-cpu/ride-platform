@@ -10,8 +10,9 @@ import '../core/utils/formatters.dart';
 import '../state/auth_state.dart';
 import '../widgets/form_ui.dart';
 
-/// "(64) 99268-6632" a partir de "+5564992686632".
+/// "(64) 99268-6632" a partir de "+5564992686632" (e-mail fica como esta).
 String telefoneLegivel(String numero) {
+  if (numero.contains('@')) return numero;
   final d = onlyDigits(numero);
   return formatPhoneInput(d.startsWith('55') && d.length > 11 ? d.substring(2) : d);
 }
@@ -32,7 +33,7 @@ class AvisoCodigoTeste extends StatelessWidget {
         borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Text(
-        'Ambiente de teste (ainda sem SMS): o código é $codigo',
+        'Ambiente de teste (o código ainda não vai por SMS/e-mail): $codigo',
         style: AppText.body.copyWith(color: AppColors.primaryDark, fontSize: 15),
       ),
     );
@@ -42,6 +43,7 @@ class AvisoCodigoTeste extends StatelessWidget {
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key, required this.phone, this.debugCode});
 
+  /// Telefone (+55...) ou e-mail para onde o codigo foi.
   final String phone;
   final String? debugCode;
 

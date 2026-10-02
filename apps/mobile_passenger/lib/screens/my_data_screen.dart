@@ -42,7 +42,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
       _nome.text = u.name;
       _email.text = u.email ?? '';
       _cpf.text = u.cpf == null ? '' : formatarCpf(u.cpf!);
-      _telefone.text = telefoneLegivel(u.phone);
+      _telefone.text = u.phone.isEmpty ? 'Não informado' : telefoneLegivel(u.phone);
       _genero = u.genero;
       _cidade = u.cidade;
     }
@@ -170,7 +170,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
             titulo: u.temSenha ? 'Alterar senha' : 'Criar senha',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => u.temSenha ? const ChangePasswordScreen() : ResetPasswordScreen(telefone: u.phone),
+                builder: (_) => u.temSenha ? const ChangePasswordScreen() : ResetPasswordScreen(telefone: u.phone, email: u.email),
               ),
             ),
           ),

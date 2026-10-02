@@ -54,8 +54,44 @@ class CentralRepository {
   Future<AdminUser> login(String email, String password) async {
     final data = await _client.request('POST', '/auth/password/login',
         body: {'email': email, 'password': password}) as Map<String, dynamic>;
-    await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
+    return _sessaoDaCentral(data, email);
+  }
+
+  /// Codigo de 6 numeros no e-mail do administrador.
+  Future<void> pedirCodigo(String email) async {
+    await _client.request('POST', '/auth/otp/request', body: {'email': email, 'purpose': 'LOGIN'});
+  }
+
+  Future<AdminUser> entrarComCodigo(String email, String codigo) async {
+    final data = await _client.request('POST', '/auth/otp/verify', body: {
+      'email': email,
+      'code': codigo,
+      'purpose': 'LOGIN',
+      'role': 'PASSENGER',
+      'device': {'deviceId': 'flutter-android-central', 'platform': 'ANDROID'},
+    }) as Map<String, dynamic>;
+    return _sessaoDaCentral(data, email);
+  }
+
+  /// O codigo pelo e-mail funciona para a Central? (So com envio de verdade.)
+  Future<bool> codigoPorEmailLigado() async {
+    try {
+      final data = await _client.request('GET', '/app/config') as Map<String, dynamic>;
+      final l = data['login'] as Map<String, dynamic>? ?? const {};
+      return l['emailReal'] as bool? ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<AdminUser> _sessaoDaCentral(Map<String, dynamic> data, String email) async {
     final u = data['user'] as Map<String, dynamic>? ?? const {};
+    // So a conta da Central entra aqui. Antes, um passageiro com senha
+    // entrava e o painel ficava sem dados (o servidor recusava tudo).
+    if (u['role'] != 'ADMIN') {
+      throw ApiException('CONTA_ERRADA', 'Esta conta não é da Central.', statusCode: 403);
+    }
+    await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
     return AdminUser(
       id: u['id'] as String? ?? '',
       name: u['name'] as String? ?? 'Administrador',

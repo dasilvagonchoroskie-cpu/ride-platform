@@ -118,6 +118,7 @@ class DriverProfile {
 
   DriverProfile copyWith({
     String? name,
+    String? phone,
     String? cpf,
     String? cnhNumber,
     String? cnhCategory,
@@ -132,7 +133,7 @@ class DriverProfile {
       DriverProfile(
         id: id,
         name: name ?? this.name,
-        phone: phone,
+        phone: phone ?? this.phone,
         cpf: cpf ?? this.cpf,
         cnhNumber: cnhNumber ?? this.cnhNumber,
         cnhCategory: cnhCategory ?? this.cnhCategory,

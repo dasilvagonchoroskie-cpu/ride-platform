@@ -42,9 +42,11 @@ export class OtpService {
   }
 
   /** Canais de login que funcionam agora (mostrados pelos aplicativos). */
-  canais(): { telefone: boolean; email: boolean } {
+  canais(): { telefone: boolean; email: boolean; emailReal: boolean } {
     const teste = this.config.otp.debugReturn;
-    return { telefone: teste, email: this.notifications.emailConfigurado || teste };
+    const real = this.notifications.emailConfigurado;
+    // emailReal: o codigo sai mesmo pelo e-mail (a Central so entra por codigo assim).
+    return { telefone: teste, email: real || teste, emailReal: real };
   }
 
   /** Cria e envia um novo codigo. Invalida codigos anteriores do mesmo alvo. */

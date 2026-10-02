@@ -46,6 +46,7 @@ class UserProfile {
     this.genero,
     this.cidade,
     this.temSenha = false,
+    this.telefonePendente = false,
   });
 
   final String id;
@@ -70,6 +71,9 @@ class UserProfile {
   /// Ja tem senha para entrar pelo e-mail (a senha nunca vem do servidor).
   final bool temSenha;
 
+  /// Entrou pelo e-mail e ainda nao informou o telefone (pedido no cadastro).
+  final bool telefonePendente;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -82,6 +86,7 @@ class UserProfile {
         'genero': genero,
         'cidade': cidade,
         'temSenha': temSenha,
+        'telefonePendente': telefonePendente,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -96,6 +101,7 @@ class UserProfile {
         genero: json['genero'] as String?,
         cidade: json['cidade'] as String?,
         temSenha: json['temSenha'] as bool? ?? false,
+        telefonePendente: json['telefonePendente'] as bool? ?? false,
       );
 
   UserProfile copyWith({String? name, String? email, bool? termsAccepted}) => UserProfile(
@@ -110,6 +116,7 @@ class UserProfile {
         genero: genero,
         cidade: cidade,
         temSenha: temSenha,
+        telefonePendente: telefonePendente,
       );
 
   String get firstName => name.split(' ').first;

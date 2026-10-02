@@ -5,10 +5,13 @@ import '../core/api/api_client.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/validadores.dart';
 import '../state/auth_state.dart';
+import '../state/config_state.dart';
 import '../widgets/form_ui.dart';
+import 'otp_screen.dart';
 import 'reset_password_screen.dart';
 
-/// Entrar com o e-mail e a senha criados no cadastro.
+/// Entrar pelo e-mail: com o codigo que chega no e-mail (gratis) ou com a
+/// senha criada no cadastro. Conta nova tambem nasce por aqui.
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
 
@@ -23,6 +26,9 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   String? _erroSenha;
   bool _carregando = false;
 
+  /// Com o envio por e-mail ligado, o codigo e o caminho principal.
+  bool? _comSenha;
+
   @override
   void dispose() {
     _email.dispose();
@@ -30,16 +36,35 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
     super.dispose();
   }
 
-  Future<void> _entrar() async {
-    if (_carregando) return;
-    final emailOk = emailValido(_email.text);
-    final senhaOk = _senha.text.isNotEmpty;
-    setState(() {
-      _erroEmail = emailOk ? null : 'Digite um e-mail válido.';
-      _erroSenha = senhaOk ? null : 'Digite sua senha.';
-    });
-    if (!emailOk || !senhaOk) return;
+  bool _emailOk() {
+    final ok = emailValido(_email.text);
+    setState(() => _erroEmail = ok ? null : 'Digite um e-mail válido.');
+    return ok;
+  }
 
+  Future<void> _receberCodigo() async {
+    if (_carregando || !_emailOk()) return;
+    setState(() => _carregando = true);
+    final email = _email.text.trim().toLowerCase();
+    try {
+      final codigo = await context.read<AuthState>().requestOtp(email);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: email, debugCode: codigo)),
+      );
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erroEmail = e.message);
+    } finally {
+      if (mounted) setState(() => _carregando = false);
+    }
+  }
+
+  Future<void> _entrarComSenha() async {
+    if (_carregando || !_emailOk()) return;
+    if (_senha.text.isEmpty) {
+      setState(() => _erroSenha = 'Digite sua senha.');
+      return;
+    }
     setState(() => _carregando = true);
     try {
       await context.read<AuthState>().entrarComEmail(_email.text, _senha.text);
@@ -56,53 +81,76 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final codigoLigado = context.watch<ConfigState>().loginEmail;
+    final comSenha = _comSenha ?? !codigoLigado;
+
     return TelaFormulario(
       titulo: 'Entrar com e-mail',
       child: ListView(
         padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.xl),
         children: [
+          if (!comSenha) ...[
+            Text(
+              'Você recebe um código de 6 números no e-mail. Se ainda não tem conta, ela é criada agora.',
+              style: AppText.body.copyWith(fontSize: 17, color: AppColors.textMuted, height: 1.4),
+            ),
+            const SizedBox(height: Spacing.xl),
+          ],
           CampoForm(
             rotulo: 'E-mail',
             dica: 'Digite seu e-mail',
             controller: _email,
             teclado: TextInputType.emailAddress,
-            acao: TextInputAction.next,
+            acao: comSenha ? TextInputAction.next : TextInputAction.done,
             preenchimento: const [AutofillHints.email],
             erro: _erroEmail,
             aoMudar: (_) => setState(() => _erroEmail = null),
+            aoEnviar: comSenha ? null : (_) => _receberCodigo(),
           ),
+          if (comSenha) ...[
+            const SizedBox(height: Spacing.xl),
+            CampoForm(
+              rotulo: 'Senha',
+              dica: 'Digite sua senha',
+              controller: _senha,
+              senha: true,
+              acao: TextInputAction.done,
+              preenchimento: const [AutofillHints.password],
+              erro: _erroSenha,
+              aoMudar: (_) => setState(() => _erroSenha = null),
+              aoEnviar: (_) => _entrarComSenha(),
+            ),
+          ],
           const SizedBox(height: Spacing.xl),
-          CampoForm(
-            rotulo: 'Senha',
-            dica: 'Digite sua senha',
-            controller: _senha,
-            senha: true,
-            acao: TextInputAction.done,
-            preenchimento: const [AutofillHints.password],
-            erro: _erroSenha,
-            aoMudar: (_) => setState(() => _erroSenha = null),
-            aoEnviar: (_) => _entrar(),
-          ),
-          const SizedBox(height: Spacing.xl),
-          BotaoPrincipal(texto: 'Entrar', carregando: _carregando, aoTocar: _entrar),
+          if (comSenha)
+            BotaoPrincipal(texto: 'Entrar', carregando: _carregando, aoTocar: _entrarComSenha)
+          else
+            BotaoPrincipal(texto: 'Receber código', carregando: _carregando, aoTocar: _receberCodigo),
           const SizedBox(height: Spacing.md),
-          Center(
-            child: TextButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const ResetPasswordScreen()),
-              ),
-              child: Text(
-                'Esqueci minha senha',
-                style: AppText.bodyStrong.copyWith(fontSize: 17, color: AppColors.brand),
+          if (codigoLigado)
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() => _comSenha = !comSenha),
+                child: Text(
+                  comSenha ? 'Prefiro receber um código no e-mail' : 'Prefiro entrar com a minha senha',
+                  style: AppText.bodyStrong.copyWith(fontSize: 17, color: AppColors.brand),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: Spacing.lg),
-          Text(
-            'Ainda não tem cadastro? Volte e entre com o seu telefone: o cadastro é feito logo depois.',
-            textAlign: TextAlign.center,
-            style: AppText.body.copyWith(color: AppColors.textMuted, fontSize: 15),
-          ),
+          if (comSenha)
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ResetPasswordScreen(email: emailValido(_email.text) ? _email.text.trim() : null),
+                  ),
+                ),
+                child: Text(
+                  'Esqueci minha senha',
+                  style: AppText.bodyStrong.copyWith(fontSize: 17, color: AppColors.brand),
+                ),
+              ),
+            ),
         ],
       ),
     );

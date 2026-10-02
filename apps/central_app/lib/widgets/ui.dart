@@ -192,6 +192,7 @@ class AppField extends StatelessWidget {
     this.prefixIcon,
     this.helper,
     this.enabled = true,
+    this.obscure = false,
   });
 
   final String? label;
@@ -204,6 +205,9 @@ class AppField extends StatelessWidget {
   final IconData? prefixIcon;
   final String? helper;
   final bool enabled;
+
+  /// Campo de senha: os caracteres aparecem como pontos.
+  final bool obscure;
 
   @override
   Widget build(BuildContext context) {
@@ -220,6 +224,9 @@ class AppField extends StatelessWidget {
           onChanged: onChanged,
           maxLength: maxLength,
           enabled: enabled,
+          obscureText: obscure,
+          enableSuggestions: !obscure,
+          autocorrect: !obscure,
           style: AppText.body.copyWith(fontSize: 16),
           decoration: InputDecoration(
             hintText: hint,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../widgets/ui.dart';
+import 'email_screen.dart';
 import 'otp_screen.dart';
 import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
@@ -20,6 +21,28 @@ class _PhoneScreenState extends State<PhoneScreen> {
   DateTime? _ultimoEnvio;
   final TextEditingController _controller = TextEditingController();
   String? _error;
+
+  /// O servidor diz se o codigo pelo telefone funciona (sem SMS contratado,
+  /// so em teste). Enquanto nao responde, mostra as duas formas.
+  bool _telefone = true;
+  bool _email = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (AppConfig.hasApi) {
+      context.read<DriverState>().canaisDeEntrada().then((c) {
+        if (mounted) setState(() {
+          _telefone = c.telefone;
+          _email = c.email;
+        });
+      });
+    }
+  }
+
+  void _porEmail() => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const EmailScreen()),
+      );
 
   @override
   void dispose() {
@@ -73,10 +96,20 @@ class _PhoneScreenState extends State<PhoneScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (!_telefone) ...[
+                Text('Entre com o seu e-mail', style: AppText.title),
+                const SizedBox(height: Spacing.sm),
+                Text(
+                  'Você recebe um código de 6 números no e-mail.',
+                  style: AppText.body.copyWith(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: Spacing.xl),
+                AppButton(label: 'Continuar com e-mail', onPressed: _porEmail),
+              ] else ...[
               Text('Qual o seu telefone?', style: AppText.title),
               const SizedBox(height: Spacing.sm),
               Text(
-                'Enviaremos um codigo de verificacao por SMS.',
+                'Você recebe um código de 6 números.',
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
               const SizedBox(height: Spacing.xl),
@@ -97,6 +130,15 @@ class _PhoneScreenState extends State<PhoneScreen> {
               ),
               const SizedBox(height: Spacing.lg),
               AppButton(label: 'Continuar', enabled: _isValid, onPressed: _continue),
+              if (_email) ...[
+                const SizedBox(height: Spacing.md),
+                AppButton(
+                  label: 'Continuar com e-mail',
+                  variant: AppButtonVariant.ghost,
+                  onPressed: _porEmail,
+                ),
+              ],
+              ],
             ],
           ),
         ),

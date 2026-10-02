@@ -6,6 +6,8 @@ import '../state/app_state.dart';
 import '../state/auth_state.dart';
 import '../widgets/form_ui.dart';
 import '../widgets/painel_ui.dart';
+import '../state/config_state.dart';
+import 'email_login_screen.dart';
 import 'phone_screen.dart';
 
 /// Primeira tela de quem ainda nao entrou: marca e o botao Entrar.
@@ -41,9 +43,16 @@ class WelcomeScreen extends StatelessWidget {
               const Spacer(flex: 3),
               BotaoPrincipal(
                 texto: 'Entrar',
-                aoTocar: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const PhoneScreen()),
-                ),
+                // Sem SMS contratado, o telefone so funciona em teste: ai a
+                // entrada e direto pelo e-mail.
+                aoTocar: () {
+                  final porTelefone = context.read<ConfigState>().loginTelefone;
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => porTelefone ? const PhoneScreen() : const EmailLoginScreen(),
+                    ),
+                  );
+                },
               ),
               if (app.isDemo) ...[
                 const SizedBox(height: Spacing.md),

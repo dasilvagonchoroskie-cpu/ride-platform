@@ -61,7 +61,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final telefone = context.read<AuthState>().user?.phone;
+    final usuario = context.watch<AuthState>().user;
 
     return TelaFormulario(
       titulo: 'Alterar senha',
@@ -101,7 +101,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           Center(
             child: TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => ResetPasswordScreen(telefone: telefone)),
+                MaterialPageRoute<void>(builder: (_) => ResetPasswordScreen(telefone: usuario?.phone, email: usuario?.email)),
               ),
               child: Text(
                 'Esqueci a senha atual',

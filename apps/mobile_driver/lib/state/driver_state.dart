@@ -184,9 +184,32 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     return data['debugCode'] as String?;
   }
 
-  Future<void> verifyOtp(String phone, String code) async {
+  /// Codigo pelo e-mail (gratis; o SMS ainda nao esta contratado).
+  Future<String?> requestOtpEmail(String email) async {
+    final data = await _client.request('POST', '/auth/otp/request', body: {
+      'email': email.trim().toLowerCase(),
+      'purpose': 'LOGIN',
+    }) as Map<String, dynamic>;
+    return data['debugCode'] as String?;
+  }
+
+  /// Formas de entrar que o servidor aceita agora (telefone so com SMS).
+  Future<({bool telefone, bool email})> canaisDeEntrada() async {
+    try {
+      final data = await _client.request('GET', '/app/config') as Map<String, dynamic>;
+      final l = data['login'] as Map<String, dynamic>? ?? const {};
+      return (telefone: l['telefone'] as bool? ?? true, email: l['email'] as bool? ?? false);
+    } catch (_) {
+      return (telefone: true, email: false);
+    }
+  }
+
+  /// E-mail da conta (preenche o cadastro).
+  String? email;
+
+  Future<void> verifyOtp(String phone, String code, {String? emailLogin}) async {
     final data = await _client.request('POST', '/auth/otp/verify', body: {
-      'phone': phone,
+      if (emailLogin != null) 'email': emailLogin.trim().toLowerCase() else 'phone': phone,
       'code': code,
       'purpose': 'LOGIN',
       'role': 'DRIVER',
@@ -198,6 +221,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (refresh != null) await AppStorage.write(AppStorage.refreshToken, refresh);
 
     final u = data['user'] as Map<String, dynamic>;
+    if (u['role'] == 'ADMIN') {
+      await AppStorage.remove(AppStorage.accessToken);
+      throw ApiException('CONTA_ERRADA', 'Esta conta é da Central. Use o aplicativo da Central.');
+    }
+    email = u['email'] as String?;
     profile = DriverProfile(
       id: u['driverId'] as String? ?? u['id'] as String? ?? '',
       name: u['name'] as String? ?? 'Motorista',
@@ -346,6 +374,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> completeOnboarding({
+    required String nome,
+    required String emailConta,
+    String? telefone,
     required String cpf,
     required String cnhNumber,
     required String cnhCategory,
@@ -371,6 +402,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (AppConfig.hasApi) {
       try {
         await _client.request('POST', '/drivers/onboarding', body: {
+          'name': nome,
+          'email': emailConta.trim().toLowerCase(),
+          if (telefone != null) 'phone': telefone,
           'cpf': cpf.replaceAll(RegExp(r'\D'), ''),
           'birthDate': _paraIso(birthDate ?? ''),
           'cnhNumber': cnhNumber.replaceAll(RegExp(r'\D'), ''),
@@ -405,7 +439,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
+    email = emailConta.trim().toLowerCase();
     profile = current.copyWith(
+      name: nome,
+      phone: telefone,
       cpf: cpf,
       cnhNumber: cnhNumber,
       cnhCategory: cnhCategory,

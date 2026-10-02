@@ -8,16 +8,19 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/validadores.dart';
 import '../state/auth_state.dart';
+import '../state/config_state.dart';
 import '../widgets/form_ui.dart';
 import 'otp_screen.dart';
 
-/// Esqueci a senha: o codigo chega no telefone da conta e libera criar
-/// uma senha nova. Depois disso a pessoa ja fica conectada.
+/// Esqueci a senha: o codigo chega no e-mail (ou no telefone, quando o
+/// SMS existir) e libera criar uma senha nova. Depois disso a pessoa ja
+/// fica conectada.
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key, this.telefone});
+  const ResetPasswordScreen({super.key, this.telefone, this.email});
 
-  /// Ja preenchido quando vem de Meus dados (formato +55...).
+  /// Ja preenchidos quando vem de Meus dados ou da tela do e-mail.
   final String? telefone;
+  final String? email;
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -30,6 +33,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final TextEditingController _confirma = TextEditingController();
 
   String? _numero;
+  late bool _porEmail;
   String? _codigoTeste;
   String? _erroTelefone;
   String? _erroCodigo;
@@ -40,7 +44,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.telefone != null) _telefone.text = telefoneLegivel(widget.telefone!);
+    final config = context.read<ConfigState>();
+    _porEmail = config.loginEmail || !config.loginTelefone;
+    if (_porEmail) {
+      _telefone.text = widget.email ?? '';
+    } else if (widget.telefone != null && widget.telefone!.isNotEmpty) {
+      _telefone.text = telefoneLegivel(widget.telefone!);
+    }
   }
 
   @override
@@ -53,16 +63,25 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Future<void> _pedirCodigo() async {
-    final d = onlyDigits(_telefone.text);
-    if (d.length < 10 || d.length > 11) {
-      setState(() => _erroTelefone = 'Informe o telefone com DDD.');
-      return;
+    final String numero;
+    if (_porEmail) {
+      if (!emailValido(_telefone.text)) {
+        setState(() => _erroTelefone = 'Digite um e-mail válido.');
+        return;
+      }
+      numero = _telefone.text.trim().toLowerCase();
+    } else {
+      final d = onlyDigits(_telefone.text);
+      if (d.length < 10 || d.length > 11) {
+        setState(() => _erroTelefone = 'Informe o telefone com DDD.');
+        return;
+      }
+      numero = '+55$d';
     }
     setState(() {
       _erroTelefone = null;
       _carregando = true;
     });
-    final numero = '+55$d';
     try {
       final codigo = await context.read<AuthState>().pedirCodigoSenha(numero);
       if (!mounted) return;
@@ -114,17 +133,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           Text(
             temCodigo
                 ? 'Digite o código enviado para ${telefoneLegivel(_numero!)} e crie a senha nova.'
-                : 'Informe o telefone da sua conta. Vamos enviar um código para criar uma senha nova.',
+                : _porEmail
+                    ? 'Informe o e-mail da sua conta. Vamos enviar um código para criar uma senha nova.'
+                    : 'Informe o telefone da sua conta. Vamos enviar um código para criar uma senha nova.',
             style: AppText.body.copyWith(fontSize: 18, color: AppColors.textMuted),
           ),
           const SizedBox(height: Spacing.xl),
           if (!temCodigo) ...[
             CampoForm(
-              rotulo: 'Telefone',
-              dica: '(64) 99999-9999',
+              rotulo: _porEmail ? 'E-mail' : 'Telefone',
+              dica: _porEmail ? 'Digite seu e-mail' : '(64) 99999-9999',
               controller: _telefone,
-              teclado: TextInputType.phone,
-              formatadores: [mascaraTelefone],
+              teclado: _porEmail ? TextInputType.emailAddress : TextInputType.phone,
+              formatadores: _porEmail ? null : [mascaraTelefone],
               erro: _erroTelefone,
               aoMudar: (_) => setState(() => _erroTelefone = null),
             ),

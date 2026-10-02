@@ -25,7 +25,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _cpf = TextEditingController();
   final TextEditingController _senha = TextEditingController();
   final TextEditingController _confirma = TextEditingController();
+  final TextEditingController _telefone = TextEditingController();
   String? _genero;
+
+  /// Entrou pelo e-mail: o telefone ainda falta.
+  bool _pedeTelefone = false;
   final Map<String, String?> _erros = {};
   String? _erroGeral;
   bool _enviando = false;
@@ -36,7 +40,8 @@ class _SignupScreenState extends State<SignupScreen> {
     final u = context.read<AuthState>().user;
     if (u != null) {
       // O servidor cria a conta como "Passageiro 1234": isso nao e nome.
-      if (!u.name.startsWith('Passageiro ')) _nome.text = u.name;
+      if (!u.name.startsWith('Passageiro') && !u.name.startsWith('Motorista')) _nome.text = u.name;
+      _pedeTelefone = u.telefonePendente || u.phone.isEmpty;
       _email.text = u.email ?? '';
       if (u.cpf != null) _cpf.text = formatarCpf(u.cpf!);
       _genero = u.genero;
@@ -50,6 +55,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _cpf.dispose();
     _senha.dispose();
     _confirma.dispose();
+    _telefone.dispose();
     super.dispose();
   }
 
@@ -75,6 +81,9 @@ class _SignupScreenState extends State<SignupScreen> {
     final erros = <String, String?>{
       'nome': nomeCompleto(_nome.text) ? null : 'Informe nome e sobrenome, igual ao do CPF.',
       'email': emailValido(_email.text) ? null : 'Digite um e-mail válido.',
+      'telefone': !_pedeTelefone || (onlyDigits(_telefone.text).length >= 10 && onlyDigits(_telefone.text).length <= 11)
+          ? null
+          : 'Informe o telefone com DDD.',
       'genero': _genero == null ? 'Selecione uma opção.' : null,
       'cpf': cpfValido(_cpf.text) ? null : 'CPF inválido. Confira os números.',
       'senha': problemaSenha(_senha.text),
@@ -98,6 +107,7 @@ class _SignupScreenState extends State<SignupScreen> {
         cpf: onlyDigits(_cpf.text),
         senha: _senha.text,
         cidade: auth.cidadeEscolhida,
+        telefone: _pedeTelefone ? '+55${onlyDigits(_telefone.text)}' : null,
       );
       // Deu certo: o aplicativo segue sozinho para os Termos.
     } on ApiException catch (e) {
@@ -150,6 +160,20 @@ class _SignupScreenState extends State<SignupScreen> {
             erro: _erros['email'],
             aoMudar: (_) => _limpar('email'),
           ),
+          if (_pedeTelefone) ...[
+            espaco,
+            CampoForm(
+              rotulo: 'Telefone (WhatsApp)',
+              dica: '(64) 99999-9999',
+              ajuda: 'O motorista usa este número para falar com você.',
+              controller: _telefone,
+              teclado: TextInputType.phone,
+              formatadores: [mascaraTelefone],
+              acao: TextInputAction.next,
+              erro: _erros['telefone'],
+              aoMudar: (_) => _limpar('telefone'),
+            ),
+          ],
           espaco,
           CampoSelecao(
             rotulo: 'Gênero',

@@ -8,10 +8,13 @@ import '../core/config/app_config.dart';
 import '../core/api/api_client.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.phone, this.debugCode});
+  const OtpScreen({super.key, required this.phone, this.debugCode, this.email});
 
   final String phone;
   final String? debugCode;
+
+  /// Entrada pelo e-mail: o codigo foi para este endereco.
+  final String? email;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -50,7 +53,7 @@ class _OtpScreenState extends State<OtpScreen> {
     final driver = context.read<DriverState>();
     if (AppConfig.hasApi) {
       try {
-        await driver.verifyOtp(widget.phone, _controller.text);
+        await driver.verifyOtp(widget.phone, _controller.text, emailLogin: widget.email);
       } on ApiException catch (e) {
         if (mounted) {
           setState(() {
@@ -65,7 +68,10 @@ class _OtpScreenState extends State<OtpScreen> {
       await driver.demoLogin('Motorista Demo', widget.phone);
     }
 
-    if (mounted) setState(() => _loading = false);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    // Entrou: as telas de entrada saem e o aplicativo segue o cadastro.
+    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   @override
@@ -82,22 +88,26 @@ class _OtpScreenState extends State<OtpScreen> {
               Text('Digite o codigo', style: AppText.title),
               const SizedBox(height: Spacing.sm),
               Text(
-                'Enviamos um SMS para ${widget.phone}',
+                widget.email != null
+                    ? 'Enviamos um código para ${widget.email}'
+                    : 'Código para o telefone ${widget.phone}',
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
-              const SizedBox(height: Spacing.lg),
-              Container(
-                padding: const EdgeInsets.all(Spacing.md),
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  border: Border.all(color: AppColors.primaryDark),
-                  borderRadius: BorderRadius.circular(Radii.sm),
+              if (widget.debugCode != null) ...[
+                const SizedBox(height: Spacing.lg),
+                Container(
+                  padding: const EdgeInsets.all(Spacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    border: Border.all(color: AppColors.primaryDark),
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Text(
+                    'Ambiente de teste (o código ainda não vai por SMS): ${widget.debugCode}',
+                    style: AppText.caption.copyWith(color: AppColors.primary),
+                  ),
                 ),
-                child: Text(
-                  'Modo demonstracao: use 123456',
-                  style: AppText.caption.copyWith(color: AppColors.primary),
-                ),
-              ),
+              ],
               const SizedBox(height: Spacing.lg),
               AppField(
                 label: 'Codigo',

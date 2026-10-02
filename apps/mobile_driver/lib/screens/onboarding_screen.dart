@@ -19,30 +19,66 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
 
+  final _nome = TextEditingController();
+  final _email = TextEditingController();
+  final _telefone = TextEditingController();
   final _cpf = TextEditingController();
 
   final _nascimento = TextEditingController();
   final _cnh = TextEditingController();
-  final _cnhExpiry = TextEditingController(text: '31/12/2030');
+  final _cnhExpiry = TextEditingController();
   String _cnhCategory = 'B';
 
-  final _brand = TextEditingController(text: 'Toyota');
-  final _model = TextEditingController(text: 'Corolla');
-  final _year = TextEditingController(text: '2022');
-  final _color = TextEditingController(text: 'Prata');
-  final _plate = TextEditingController(text: 'ABC1D23');
+  // Sem exemplos preenchidos: antes vinha "Toyota Corolla ABC1D23" e um
+  // motorista com pressa podia mandar o carro errado para a Central.
+  final _brand = TextEditingController();
+  final _model = TextEditingController();
+  final _year = TextEditingController();
+  final _color = TextEditingController();
+  final _plate = TextEditingController();
 
   String? _error;
 
+  /// Entrou pelo e-mail: ainda falta o telefone.
+  bool _semTelefone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final driver = context.read<DriverState>();
+    _semTelefone = (driver.profile?.phone ?? '').isEmpty;
+    final nome = driver.profile?.name ?? '';
+    // A conta nasce como "Motorista 1234" (ou "Passageiro 1234"): isso nao e nome.
+    if (nome.isNotEmpty && !nome.startsWith('Motorista') && !nome.startsWith('Passageiro')) _nome.text = nome;
+    _email.text = driver.email ?? '';
+  }
+
   @override
   void dispose() {
-    for (final controller in [_cpf, _cnh, _cnhExpiry, _brand, _model, _year, _color, _plate]) {
+    for (final controller in [
+      _nome, _email, _telefone, _cpf, _nascimento, _cnh, _cnhExpiry, _brand, _model, _year, _color, _plate,
+    ]) {
       controller.dispose();
     }
     super.dispose();
   }
 
   Future<void> _submitPersonal() async {
+    if (_nome.text.trim().split(RegExp(r'\s+')).where((p) => p.length >= 2).length < 2) {
+      setState(() => _error = 'Informe o nome completo, igual ao da CNH.');
+      return;
+    }
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$').hasMatch(_email.text.trim())) {
+      setState(() => _error = 'Digite um e-mail válido. Ele serve para entrar no aplicativo.');
+      return;
+    }
+    if (_semTelefone) {
+      final d = onlyDigits(_telefone.text);
+      if (d.length < 10 || d.length > 11) {
+        setState(() => _error = 'Informe o telefone com DDD.');
+        return;
+      }
+    }
     if (onlyDigits(_cpf.text).length != 11) {
       setState(() => _error = 'Informe um CPF com 11 digitos.');
       return;
@@ -67,6 +103,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // LETRAS da placa — "ABC1D23" virava "123" e nunca passava no teste.
     // Agora normalizamos para alfanumerico e validamos os dois padroes:
     // antigo (ABC1234) e Mercosul (ABC1D23).
+    final ano = int.tryParse(_year.text.trim());
+    if (ano == null || ano < 1990 || ano > DateTime.now().year + 1) {
+      setState(() => _error = 'Informe o ano do veiculo com 4 numeros.');
+      return;
+    }
+    if (_color.text.trim().length < 3) {
+      setState(() => _error = 'Informe a cor do veiculo.');
+      return;
+    }
     final plate = normalizePlate(_plate.text);
     if (!isValidPlate(plate)) {
       setState(() => _error = 'Placa invalida. Use ABC1234 ou ABC1D23.');
@@ -93,6 +138,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final driver = context.read<DriverState>();
 
     await driver.completeOnboarding(
+      nome: _nome.text.trim().replaceAll(RegExp(r'\s+'), ' '),
+      emailConta: _email.text.trim(),
+      telefone: _semTelefone ? '+55${onlyDigits(_telefone.text)}' : null,
       birthDate: _nascimento.text,
       cpf: onlyDigits(_cpf.text),
       cnhNumber: onlyDigits(_cnh.text),
@@ -148,6 +196,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: Spacing.xs),
         Text('Seus dados', style: AppText.title),
         const SizedBox(height: Spacing.lg),
+        AppField(
+          label: 'Nome completo',
+          hint: 'Igual ao da CNH',
+          controller: _nome,
+          autoCapitalize: TextCapitalization.words,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: Spacing.md),
+        AppField(
+          label: 'E-mail',
+          hint: 'seuemail@gmail.com',
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          onChanged: (_) => setState(() {}),
+        ),
+        if (_semTelefone) ...[
+          const SizedBox(height: Spacing.md),
+          AppField(
+            label: 'Telefone (WhatsApp)',
+            hint: '(64) 99999-9999',
+            controller: _telefone,
+            keyboardType: TextInputType.phone,
+            onChanged: (value) {
+              final masked = formatPhoneInput(value);
+              _telefone.value = TextEditingValue(
+                text: masked,
+                selection: TextSelection.collapsed(offset: masked.length),
+              );
+              setState(() {});
+            },
+          ),
+        ],
+        const SizedBox(height: Spacing.md),
         AppField(label: 'CPF', hint: '000.000.000-00', controller: _cpf, keyboardType: TextInputType.number, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
         AppField(label: 'Data de nascimento', hint: 'DD/MM/AAAA', controller: _nascimento, keyboardType: TextInputType.datetime, onChanged: (_) => setState(() {})),
@@ -182,7 +263,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         const SizedBox(height: Spacing.md),
-        AppField(label: 'Validade da CNH', hint: 'DD/MM/AAAA', controller: _cnhExpiry, onChanged: (_) => setState(() {})),
+        AppField(label: 'Validade da CNH', hint: 'DD/MM/AAAA', controller: _cnhExpiry, keyboardType: TextInputType.datetime, onChanged: (_) => setState(() {})),
         if (_error != null) ...[
           const SizedBox(height: Spacing.sm),
           Text(_error!, style: AppText.caption.copyWith(color: AppColors.danger)),
@@ -202,15 +283,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Text('Seu veiculo', style: AppText.title),
         const SizedBox(height: Spacing.lg),
         const SizedBox(height: Spacing.sm),
-        AppField(label: 'Marca', controller: _brand, onChanged: (_) => setState(() {})),
+        AppField(label: 'Marca', hint: 'Ex.: Chevrolet', controller: _brand, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
-        AppField(label: 'Modelo', controller: _model, onChanged: (_) => setState(() {})),
+        AppField(label: 'Modelo', hint: 'Ex.: Onix', controller: _model, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
         Row(
           children: [
-            Expanded(child: AppField(label: 'Ano', controller: _year, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}))),
+            Expanded(child: AppField(label: 'Ano', hint: '2020', controller: _year, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}))),
             const SizedBox(width: Spacing.md),
-            Expanded(child: AppField(label: 'Cor', controller: _color, onChanged: (_) => setState(() {}))),
+            Expanded(child: AppField(label: 'Cor', hint: 'Ex.: Branco', controller: _color, onChanged: (_) => setState(() {}))),
           ],
         ),
         const SizedBox(height: Spacing.md),

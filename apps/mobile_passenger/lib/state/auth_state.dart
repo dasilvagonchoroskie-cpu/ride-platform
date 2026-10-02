@@ -67,19 +67,25 @@ class AuthState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<String?> requestOtp(String phone) => _pedirCodigo(phone, 'LOGIN');
+  /// Pede o codigo. [destino] e o telefone (+55...) ou o e-mail.
+  Future<String?> requestOtp(String destino) => _pedirCodigo(destino, 'LOGIN');
 
   /// Codigo para criar uma senha nova ("Esqueci minha senha").
-  Future<String?> pedirCodigoSenha(String phone) => _pedirCodigo(phone, 'PASSWORD_RESET');
+  Future<String?> pedirCodigoSenha(String destino) => _pedirCodigo(destino, 'PASSWORD_RESET');
 
-  Future<String?> _pedirCodigo(String phone, String finalidade) async {
+  static bool _ehEmail(String destino) => destino.contains('@');
+
+  static Map<String, dynamic> _alvo(String destino) =>
+      _ehEmail(destino) ? {'email': destino.trim().toLowerCase()} : {'phone': destino};
+
+  Future<String?> _pedirCodigo(String destino, String finalidade) async {
     loading = true;
     error = null;
     notifyListeners();
 
     try {
       final data = await _client.request('POST', '/auth/otp/request', body: {
-        'phone': phone,
+        ..._alvo(destino),
         'purpose': finalidade,
       }) as Map<String, dynamic>;
 
@@ -93,8 +99,8 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> verifyOtp(String phone, String code) => _entrar('/auth/otp/verify', {
-        'phone': phone,
+  Future<void> verifyOtp(String destino, String code) => _entrar('/auth/otp/verify', {
+        ..._alvo(destino),
         'code': code,
         'purpose': 'LOGIN',
         'role': 'PASSENGER',
@@ -107,9 +113,9 @@ class AuthState extends ChangeNotifier {
         'device': _aparelho,
       });
 
-  /// Codigo do telefone + senha nova. Ja deixa a pessoa conectada.
-  Future<void> redefinirSenha(String phone, String code, String novaSenha) => _entrar('/auth/password/reset', {
-        'phone': phone,
+  /// Codigo (telefone ou e-mail) + senha nova. Ja deixa a pessoa conectada.
+  Future<void> redefinirSenha(String destino, String code, String novaSenha) => _entrar('/auth/password/reset', {
+        ..._alvo(destino),
         'code': code,
         'newPassword': novaSenha,
         'device': _aparelho,
@@ -124,15 +130,10 @@ class AuthState extends ChangeNotifier {
       final data = await _client.request('POST', caminho, body: corpo) as Map<String, dynamic>;
       final profile = UserProfile.fromJson(data['user'] as Map<String, dynamic>);
 
-      // Este aplicativo e so do passageiro. Conta de motorista ou da
-      // Central nao consegue pedir corrida, entao nem entra.
-      if (profile.role != 'PASSENGER') {
-        throw ApiException(
-          'CONTA_ERRADA',
-          profile.role == 'DRIVER'
-              ? 'Este cadastro é de motorista. Para pedir corridas, use outro número.'
-              : 'Esta conta é da Central. Use o aplicativo da Central.',
-        );
+      // Motorista tambem pede corrida (mesma conta). So a conta da Central
+      // fica de fora deste aplicativo.
+      if (profile.role == 'ADMIN') {
+        throw ApiException('CONTA_ERRADA', 'Esta conta é da Central. Use o aplicativo da Central.');
       }
 
       accessToken = data['accessToken'] as String?;
@@ -177,8 +178,10 @@ class AuthState extends ChangeNotifier {
     required String cpf,
     required String senha,
     String? cidade,
+    String? telefone,
   }) async {
     final data = await _client.request('POST', '/auth/cadastro', body: {
+      if (telefone != null) 'phone': telefone,
       'name': nome,
       'email': email.trim().toLowerCase(),
       'gender': genero,

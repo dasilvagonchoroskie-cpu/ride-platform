@@ -97,7 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final ride = context.watch<RideState>();
     final config = context.watch<ConfigState>();
     final nome = auth.user?.firstName;
-    final recentes = app.destinosRecentes.take(2).toList();
 
     final markers = <MapMarker>[
       MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
@@ -191,26 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  for (final r in recentes)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: const BoxDecoration(color: AppColors.sheetField, shape: BoxShape.circle),
-                        child: const Icon(Icons.schedule, size: 20, color: AppColors.sheetText),
-                      ),
-                      title: Text(
-                        r.address,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: r.detail.isEmpty
-                          ? null
-                          : Text(r.detail, maxLines: 1, overflow: TextOverflow.ellipsis, style: SheetText.muted),
-                      onTap: () => _irPara(r),
-                    ),
                 ],
               ),
             ),
