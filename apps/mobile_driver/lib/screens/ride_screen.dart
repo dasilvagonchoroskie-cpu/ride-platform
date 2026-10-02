@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
+import '../core/avisos.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
@@ -13,6 +16,48 @@ import '../widgets/ui.dart';
 /// e concluir.
 class RideScreen extends StatelessWidget {
   const RideScreen({super.key});
+
+  static const List<String> _motivos = [
+    'Passageiro não apareceu',
+    'Problema no carro',
+    'Endereço errado ou longe demais',
+    'Outro motivo',
+  ];
+
+  Future<void> _cancelar(BuildContext context) async {
+    final motivo = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.sheet,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(Spacing.lg),
+              child: Text('Por que vai cancelar?', style: SheetText.title),
+            ),
+            for (final m in _motivos)
+              ListTile(
+                title: Text(m, style: SheetText.body),
+                onTap: () => Navigator.of(ctx).pop(m),
+              ),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Voltar')),
+          ],
+        ),
+      ),
+    );
+    if (motivo == null || !context.mounted) return;
+    await context.read<DriverState>().cancelarCorrida(motivo);
+  }
+
+  Future<void> _ligar(String telefone, {bool whatsapp = false}) async {
+    final so = telefone.replaceAll(RegExp(r'\D'), '');
+    final uri = whatsapp ? Uri.parse('https://wa.me/$so') : Uri.parse('tel:+$so');
+    final abriu = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!abriu) avisar(whatsapp ? 'Não foi possível abrir o WhatsApp.' : 'Não foi possível abrir o telefone.');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +86,7 @@ class RideScreen extends StatelessWidget {
     final (String title, String subtitle) = switch (ride.phase) {
       RidePhase.toPickup => (
           'A caminho do embarque',
-          '${formatDistance(offer.distanceToPickupMeters.toDouble())} de distancia',
+          '${formatDistance(offer.distanceToPickupMeters.toDouble())} de distância',
         ),
       RidePhase.waitingPassenger => (
           'Aguardando o passageiro',
@@ -51,7 +96,7 @@ class RideScreen extends StatelessWidget {
         ),
       RidePhase.inProgress => (
           'Corrida em andamento',
-          '${formatDuration(offer.durationSeconds)} ate o destino',
+          '${formatDuration(offer.durationSeconds)} até o destino',
         ),
       RidePhase.completed => ('Corrida concluída', 'Cobre do passageiro • ${offer.paymentMethod}'),
     };
@@ -176,6 +221,18 @@ class RideScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (driver.telefonePassageiro != null && !isCompleted) ...[
+                        IconButton(
+                          tooltip: 'Ligar para o passageiro',
+                          onPressed: () => _ligar(driver.telefonePassageiro!),
+                          icon: const Icon(Icons.call, color: AppColors.primary),
+                        ),
+                        IconButton(
+                          tooltip: 'WhatsApp do passageiro',
+                          onPressed: () => _ligar(driver.telefonePassageiro!, whatsapp: true),
+                          icon: const Icon(Icons.chat, color: AppColors.primary),
+                        ),
+                      ],
                       if (ride.phase == RidePhase.waitingPassenger)
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -219,12 +276,12 @@ class RideScreen extends StatelessWidget {
                     children: [
                       MetricTile(
                         value: formatDistance(offer.tripDistanceMeters.toDouble()),
-                        label: 'Distancia',
+                        label: 'Distância',
                         onLight: true,
                       ),
                       MetricTile(
                         value: formatDuration(offer.durationSeconds),
-                        label: 'Duracao',
+                        label: 'Duração',
                         onLight: true,
                       ),
                       MetricTile(
@@ -242,11 +299,13 @@ class RideScreen extends StatelessWidget {
                     RidePhase.toPickup => AppButton(
                         label: 'Cheguei ao embarque',
                         variant: AppButtonVariant.primary,
+                        loading: driver.enviandoEtapa,
                         onPressed: () => context.read<DriverState>().markArrived(),
                       ),
                     RidePhase.waitingPassenger => AppButton(
                         label: 'Iniciar corrida',
                         variant: AppButtonVariant.primary,
+                        loading: driver.enviandoEtapa,
                         onPressed: () => context.read<DriverState>().startRide(),
                       ),
                     RidePhase.inProgress => AppButton(
@@ -260,6 +319,11 @@ class RideScreen extends StatelessWidget {
                         onPressed: () => context.read<DriverState>().closeRide(),
                       ),
                   },
+                  if (ride.phase == RidePhase.toPickup || ride.phase == RidePhase.waitingPassenger)
+                    TextButton(
+                      onPressed: driver.enviandoEtapa ? null : () => _cancelar(context),
+                      child: const Text('Cancelar corrida', style: TextStyle(color: AppColors.danger)),
+                    ),
                 ],
               ),
             ),

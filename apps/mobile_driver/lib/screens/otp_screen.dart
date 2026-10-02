@@ -41,7 +41,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   Future<void> _verify() async {
     if (_controller.text.length != 6) {
-      setState(() => _error = 'O codigo tem 6 digitos.');
+      setState(() => _error = 'O código tem 6 dígitos.');
       return;
     }
 
@@ -78,14 +78,14 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Verificacao')),
+      appBar: AppBar(title: const Text('Verificação')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(Spacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Digite o codigo', style: AppText.title),
+              Text('Digite o código', style: AppText.title),
               const SizedBox(height: Spacing.sm),
               Text(
                 widget.email != null
@@ -110,7 +110,7 @@ class _OtpScreenState extends State<OtpScreen> {
               ],
               const SizedBox(height: Spacing.lg),
               AppField(
-                label: 'Codigo',
+                label: 'Código',
                 hint: '000000',
                 controller: _controller,
                 keyboardType: TextInputType.number,

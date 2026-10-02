@@ -232,7 +232,7 @@ enum FareFlag { diurna, noturna }
 
 extension FareFlagLabel on FareFlag {
   String get label => this == FareFlag.noturna ? 'Noturna' : 'Diurna';
-  String get faixa => this == FareFlag.noturna ? '22h as 6h' : '6h as 22h';
+  String get faixa => this == FareFlag.noturna ? '22h às 6h' : '6h às 22h';
 }
 
 /// O preco da viagem.

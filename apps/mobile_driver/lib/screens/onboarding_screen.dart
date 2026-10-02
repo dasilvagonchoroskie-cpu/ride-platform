@@ -80,11 +80,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     }
     if (onlyDigits(_cpf.text).length != 11) {
-      setState(() => _error = 'Informe um CPF com 11 digitos.');
+      setState(() => _error = 'Informe um CPF com 11 dígitos.');
       return;
     }
     if (onlyDigits(_cnh.text).length != 11) {
-      setState(() => _error = 'O numero da CNH tem 11 digitos.');
+      setState(() => _error = 'O número da CNH tem 11 dígitos.');
       return;
     }
 
@@ -96,7 +96,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _submitVehicle() async {
     if (_brand.text.trim().isEmpty || _model.text.trim().isEmpty) {
-      setState(() => _error = 'Informe marca e modelo do veiculo.');
+      setState(() => _error = 'Informe marca e modelo do veículo.');
       return;
     }
     // BUG CORRIGIDO: a validacao anterior usava onlyDigits(), que remove as
@@ -105,16 +105,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // antigo (ABC1234) e Mercosul (ABC1D23).
     final ano = int.tryParse(_year.text.trim());
     if (ano == null || ano < 1990 || ano > DateTime.now().year + 1) {
-      setState(() => _error = 'Informe o ano do veiculo com 4 numeros.');
+      setState(() => _error = 'Informe o ano do veículo com 4 números.');
       return;
     }
     if (_color.text.trim().length < 3) {
-      setState(() => _error = 'Informe a cor do veiculo.');
+      setState(() => _error = 'Informe a cor do veículo.');
       return;
     }
     final plate = normalizePlate(_plate.text);
     if (!isValidPlate(plate)) {
-      setState(() => _error = 'Placa invalida. Use ABC1234 ou ABC1D23.');
+      setState(() => _error = 'Placa inválida. Use ABC1234 ou ABC1D23.');
       return;
     }
 
@@ -233,7 +233,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: Spacing.md),
         AppField(label: 'Data de nascimento', hint: 'DD/MM/AAAA', controller: _nascimento, keyboardType: TextInputType.datetime, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
-        AppField(label: 'Numero da CNH', hint: '00000000000', controller: _cnh, keyboardType: TextInputType.number, onChanged: (_) => setState(() {})),
+        AppField(label: 'Número da CNH', hint: '00000000000', controller: _cnh, keyboardType: TextInputType.number, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
         Text('CATEGORIA DA CNH', style: AppText.label.copyWith(color: AppColors.textMuted)),
         const SizedBox(height: Spacing.sm),
@@ -280,7 +280,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       children: [
         Text('Etapa 2 de 3', style: AppText.label.copyWith(color: AppColors.primary)),
         const SizedBox(height: Spacing.xs),
-        Text('Seu veiculo', style: AppText.title),
+        Text('Seu veículo', style: AppText.title),
         const SizedBox(height: Spacing.lg),
         const SizedBox(height: Spacing.sm),
         AppField(label: 'Marca', hint: 'Ex.: Chevrolet', controller: _brand, onChanged: (_) => setState(() {})),
@@ -367,7 +367,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(width: Spacing.md),
               Expanded(
                 child: Text(
-                  'Na proxima etapa voce envia os documentos obrigatorios.',
+                  'Na próxima etapa você envia os documentos obrigatórios.',
                   style: AppText.caption.copyWith(color: AppColors.textMuted),
                 ),
               ),

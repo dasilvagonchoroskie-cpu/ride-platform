@@ -212,7 +212,7 @@ class OfferScreen extends StatelessWidget {
                       const SizedBox(width: Spacing.md),
                       Expanded(
                         child: Text(
-                          '${formatDistance(offer.distanceToPickupMeters.toDouble())} ate o embarque',
+                          '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
                           style: SheetText.body,
                         ),
                       ),

@@ -56,7 +56,7 @@ class RideState extends ChangeNotifier {
   Future<RideQuote?> estimate(
     Coords origin,
     Coords destination, {
-    String pickupAddress = 'Minha localizacao atual',
+    String pickupAddress = 'Minha localização atual',
     String dropoffAddress = 'Destino escolhido',
   }) async {
     estimating = true;
@@ -70,7 +70,7 @@ class RideState extends ChangeNotifier {
       avisar(e.message);
       return null;
     } catch (_) {
-      avisar('Sem conexao com o servidor. Confira a internet e tente de novo.');
+      avisar('Sem conexão com o servidor. Confira a internet e tente de novo.');
       return null;
     } finally {
       // Antes, qualquer falha deixava a tela girando para sempre.

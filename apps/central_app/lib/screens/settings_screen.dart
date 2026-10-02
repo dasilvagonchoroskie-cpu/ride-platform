@@ -44,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Spacing.lg),
-          const SectionTitle(text: 'Conexoes'),
+          const SectionTitle(text: 'Conexões'),
           const _StatusDasConexoes(),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'App do passageiro'),
@@ -60,7 +60,7 @@ class SettingsScreen extends StatelessWidget {
                 const AppDivider(),
                 _InfoRow(
                   label: 'Fonte de dados',
-                  value: central.isDemo ? 'Demonstracao local' : 'Servidor real (PostgreSQL)',
+                  value: central.isDemo ? 'Demonstração local' : 'Servidor real (PostgreSQL)',
                 ),
                 const AppDivider(),
                 _InfoRow(label: 'Motoristas na fila', value: '${central.pendingCount}'),

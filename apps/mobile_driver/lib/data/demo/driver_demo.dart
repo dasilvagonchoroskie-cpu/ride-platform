@@ -29,7 +29,7 @@ class DriverDemo {
     'Av. Sumare, 300 - Perdizes',
   ];
 
-  static const List<String> _payments = ['Pix', 'Cartao de credito', 'Dinheiro'];
+  static const List<String> _payments = ['Pix', 'Cartão de crédito', 'Dinheiro'];
 
   static double _between(double min, double max) => min + _random.nextDouble() * (max - min);
 
@@ -83,7 +83,7 @@ class DriverDemo {
       entries.add(EarningEntry(
         id: 'ride-$i',
         code: 'RD${4800 + i}',
-        description: 'Corrida concluida',
+        description: 'Corrida concluída',
         amountCents: earning,
         kind: EarningKind.ride,
         createdAt: createdAt,
@@ -91,7 +91,7 @@ class DriverDemo {
       entries.add(EarningEntry(
         id: 'commission-$i',
         code: 'RD${4800 + i}',
-        description: 'Comissao da plataforma (20%)',
+        description: 'Comissão da plataforma (20%)',
         amountCents: -commission,
         kind: EarningKind.commission,
         createdAt: createdAt,

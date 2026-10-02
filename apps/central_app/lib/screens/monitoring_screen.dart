@@ -104,7 +104,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
           child: rides.isEmpty
               ? const EmptyState(
                   title: 'Nenhuma corrida ativa',
-                  description: 'Assim que uma corrida comecar, ela aparece no mapa.',
+                  description: 'Assim que uma corrida começar, ela aparece no mapa.',
                   icon: Icons.map_outlined,
                 )
               : ListView.separated(

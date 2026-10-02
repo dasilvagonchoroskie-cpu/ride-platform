@@ -62,13 +62,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
               AppCard(
                 child: Row(
                   children: [
-                    MetricTile(value: '${completed.length}', label: 'Concluidas'),
+                    MetricTile(value: '${completed.length}', label: 'Concluídas'),
                     MetricTile(value: formatMoney(totalSpent), label: 'Total gasto'),
                     MetricTile(
                       value: completed.isEmpty
                           ? '-'
                           : formatMoney((totalSpent / completed.length).round()),
-                      label: 'Media',
+                      label: 'Média',
                     ),
                   ],
                 ),
@@ -106,7 +106,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                 ),
                                 AppBadge(
-                                  text: item.status == RideStatus.completed ? 'CONCLUIDA' : 'CANCELADA',
+                                  text: item.status == RideStatus.completed ? 'CONCLUÍDA' : 'CANCELADA',
                                   tone: item.status == RideStatus.completed
                                       ? AppBadgeTone.success
                                       : AppBadgeTone.danger,

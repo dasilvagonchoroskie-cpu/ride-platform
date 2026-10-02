@@ -81,12 +81,12 @@ class ApiClient {
           response = await _client.delete(uri, headers: headers, body: payload).timeout(AppConfig.apiTimeout);
           break;
         default:
-          throw ApiException('METHOD_NOT_ALLOWED', 'Metodo $method nao suportado.');
+          throw ApiException('METHOD_NOT_ALLOWED', 'Método $method não suportado.');
       }
     } on TimeoutException {
       throw ApiException('NETWORK_ERROR', 'Tempo esgotado ao falar com o servidor.');
     } catch (error) {
-      throw ApiException('NETWORK_ERROR', 'Sem conexao com o servidor. ($error)');
+      throw ApiException('NETWORK_ERROR', 'Sem conexão com o servidor. ($error)');
     }
 
     // 204 (troca de senha, logout): deu certo e nao ha corpo.
@@ -98,7 +98,7 @@ class ApiClient {
     try {
       decoded = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
-      throw ApiException('INVALID_RESPONSE', 'Resposta invalida do servidor.', statusCode: response.statusCode);
+      throw ApiException('INVALID_RESPONSE', 'Resposta inválida do servidor.', statusCode: response.statusCode);
     }
 
     if (decoded['success'] == true && decoded.containsKey('data')) {

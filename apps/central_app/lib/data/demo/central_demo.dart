@@ -10,14 +10,14 @@ class CentralDemo {
   static final math.Random _random = math.Random();
 
   static const List<List<String>> _applicants = [
-    ['Carlos Mendes', '+5511988880001', 'carlos.mendes@email.com', 'Sao Paulo'],
-    ['Ana Paula Souza', '+5511988880002', 'ana.souza@email.com', 'Sao Paulo'],
+    ['Carlos Mendes', '+5511988880001', 'carlos.mendes@email.com', 'São Paulo'],
+    ['Ana Paula Souza', '+5511988880002', 'ana.souza@email.com', 'São Paulo'],
     ['Roberto Lima', '+5511988880003', 'roberto.lima@email.com', 'Guarulhos'],
     ['Juliana Reis', '+5511988880004', 'juliana.reis@email.com', 'Osasco'],
-    ['Marcos Oliveira', '+5511988880005', 'marcos.oliveira@email.com', 'Sao Paulo'],
+    ['Marcos Oliveira', '+5511988880005', 'marcos.oliveira@email.com', 'São Paulo'],
     ['Patricia Nunes', '+5511988880006', 'patricia.nunes@email.com', 'Diadema'],
     ['Eduardo Santos', '+5511988880007', 'eduardo.santos@email.com', 'Santo Andre'],
-    ['Larissa Gomes', '+5511988880008', 'larissa.gomes@email.com', 'Sao Bernardo'],
+    ['Larissa Gomes', '+5511988880008', 'larissa.gomes@email.com', 'São Bernardo'],
   ];
 
   static const List<List<String>> _vehicles = [

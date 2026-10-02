@@ -28,7 +28,7 @@ class HistoryDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.only(right: Spacing.lg),
             child: Center(
               child: AppBadge(
-                text: ride.status == RideStatus.completed ? 'CONCLUIDA' : 'CANCELADA',
+                text: ride.status == RideStatus.completed ? 'CONCLUÍDA' : 'CANCELADA',
                 tone: ride.status == RideStatus.completed
                     ? AppBadgeTone.success
                     : AppBadgeTone.danger,
@@ -68,10 +68,10 @@ class HistoryDetailScreen extends StatelessWidget {
                     ),
                     const AppDivider(),
                     _DetailRow(
-                      label: 'Distancia',
+                      label: 'Distância',
                       value: formatDistance(ride.distanceMeters.toDouble()),
                     ),
-                    _DetailRow(label: 'Duracao', value: formatDuration(ride.durationSeconds)),
+                    _DetailRow(label: 'Duração', value: formatDuration(ride.durationSeconds)),
                     _DetailRow(label: 'Bandeira', value: ride.fareFlag.label),
                     _DetailRow(label: 'Pagamento', value: ride.paymentMethod),
                     const AppDivider(),

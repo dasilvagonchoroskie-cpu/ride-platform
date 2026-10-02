@@ -48,11 +48,11 @@ class _ShellScreenState extends State<ShellScreen> {
 
     const titles = [
       'Painel financeiro',
-      'Aprovacao de motoristas',
+      'Aprovação de motoristas',
       'Monitoramento em tempo real',
       'Corridas',
       'Carteiras dos motoristas',
-      'Configuracao de tarifas',
+      'Configuração de tarifas',
       'Ajustes',
     ];
 

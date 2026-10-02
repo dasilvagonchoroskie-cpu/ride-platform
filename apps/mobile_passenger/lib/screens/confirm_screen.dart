@@ -359,13 +359,13 @@ class _PriceCard extends StatelessWidget {
           const SizedBox(height: Spacing.md),
 
           _LinhaConta(
-            rotulo: 'Bandeirada (ate 1,5 km inclusos)',
+            rotulo: 'Bandeirada (até 1,5 km inclusos)',
             valor: formatMoney(quote.baseFareCents),
           ),
           if (!quote.somenteBandeirada) ...[
             const SizedBox(height: Spacing.xs),
             _LinhaConta(
-              rotulo: 'Distancia alem da franquia '
+              rotulo: 'Distância alem da franquia '
                   '(${formatDistance(quote.chargedDistanceMeters.toDouble())})',
               valor: formatMoney(quote.distanceCents),
             ),

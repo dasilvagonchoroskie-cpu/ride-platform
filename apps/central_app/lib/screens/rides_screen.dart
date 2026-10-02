@@ -18,7 +18,7 @@ class RidesScreen extends StatelessWidget {
     if (rides.isEmpty) {
       return const EmptyState(
         title: 'Nenhuma corrida registrada',
-        description: 'As corridas aparecem aqui conforme sao solicitadas.',
+        description: 'As corridas aparecem aqui conforme são solicitadas.',
         icon: Icons.receipt_long_outlined,
       );
     }
@@ -95,7 +95,7 @@ class RidesScreen extends StatelessWidget {
                     ),
                     _Line(
                       icon: Icons.schedule,
-                      label: 'Inicio',
+                      label: 'Início',
                       value: formatDateTime(ride.startedAt),
                     ),
                   ],

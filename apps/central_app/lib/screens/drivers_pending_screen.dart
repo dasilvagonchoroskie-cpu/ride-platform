@@ -37,7 +37,7 @@ class _DriversPendingScreenState extends State<DriversPendingScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '${central.pendingCount} aguardando analise',
+                  '${central.pendingCount} aguardando análise',
                   style: AppText.body.copyWith(color: AppColors.textMuted),
                 ),
               ),
@@ -78,7 +78,7 @@ class _DriversPendingScreenState extends State<DriversPendingScreen> {
           child: list.isEmpty
               ? const EmptyState(
                   title: 'Nenhum motorista na fila',
-                  description: 'Todos os cadastros pendentes ja foram analisados.',
+                  description: 'Todos os cadastros pendentes já foram analisados.',
                   icon: Icons.check_circle_outline,
                 )
               : ListView.separated(
@@ -167,7 +167,7 @@ class _ApplicationTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: _Info(
-                    label: 'Veiculo',
+                    label: 'Veículo',
                     value: '${application.vehicle.description} - ${application.vehicle.plate}',
                   ),
                 ),

@@ -75,7 +75,7 @@ class CentralState extends ChangeNotifier {
     } on ApiException catch (e) {
       return e.message;
     } catch (_) {
-      return 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+      return 'Sem conexão com o servidor. Confira a internet e tente de novo.';
     }
   }
 
@@ -91,7 +91,7 @@ class CentralState extends ChangeNotifier {
       notifyListeners();
       return;
     } catch (_) {
-      error = 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+      error = 'Sem conexão com o servidor. Confira a internet e tente de novo.';
       loading = false;
       notifyListeners();
       return;
@@ -119,7 +119,7 @@ class CentralState extends ChangeNotifier {
         notifyListeners();
         return;
       } catch (_) {
-        error = 'Sem conexao com o servidor. Confira a internet e tente de novo.';
+        error = 'Sem conexão com o servidor. Confira a internet e tente de novo.';
         loading = false;
         notifyListeners();
         return;
@@ -184,7 +184,7 @@ class CentralState extends ChangeNotifier {
       parte('corridas', () async {
         rides = await _repository.activeRides();
       }),
-      parte('mapa da operacao', () async {
+      parte('mapa da operação', () async {
         motoristasOnline = await _repository.motoristasOnline();
       }),
       parte('bandeiras', () async {
@@ -200,10 +200,10 @@ class CentralState extends ChangeNotifier {
 
     if (sessaoExpirou) {
       await logout();
-      error = 'Sua sessao expirou. Entre de novo.';
+      error = 'Sua sessão expirou. Entre de novo.';
       notifyListeners();
     } else if (falhas.isNotEmpty) {
-      avisar('Nao foi possivel carregar: ${falhas.join(', ')}. Tente de novo.');
+      avisar('Não foi possível carregar: ${falhas.join(', ')}. Tente de novo.');
     }
   }
 
@@ -221,10 +221,20 @@ class CentralState extends ChangeNotifier {
   /// Atualiza as posicoes no mapa a cada poucos segundos.
   void startMonitoring() {
     _monitorTimer?.cancel();
-    _monitorTimer = Timer.periodic(AppConfig.monitorInterval, (_) {
-      if (rides.isEmpty) return;
-      rides = CentralDemo.refreshPositions(rides);
-      notifyListeners();
+    _monitorTimer = Timer.periodic(AppConfig.monitorInterval, (_) async {
+      if (!AppConfig.hasApi) {
+        if (rides.isEmpty) return;
+        rides = CentralDemo.refreshPositions(rides);
+        notifyListeners();
+        return;
+      }
+      // Posicao de verdade, vinda do servidor (antes os carros eram
+      // mexidos de mentira na tela).
+      try {
+        await refreshRides();
+      } catch (_) {
+        // Sem rede nesta volta: fica a ultima posicao conhecida.
+      }
     });
   }
 
@@ -255,17 +265,25 @@ class CentralState extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final ok = await _repository.reviewDriver(
-      driverId: application.id,
-      decision: DriverApproval.approved,
-      reason: conferencia,
-      presencial: conferencia != null,
-    );
+    bool ok;
+    try {
+      ok = await _repository.reviewDriver(
+        driverId: application.id,
+        decision: DriverApproval.approved,
+        reason: conferencia,
+        presencial: conferencia != null,
+      );
+    } on ApiException catch (e) {
+      loading = false;
+      error = e.message;
+      notifyListeners();
+      return false;
+    }
 
     loading = false;
 
     if (!ok) {
-      error = 'Nao foi possivel aprovar. Tente novamente.';
+      error = 'Sem conexão com o servidor. Não foi aprovado; tente de novo.';
       notifyListeners();
       return false;
     }
@@ -280,7 +298,7 @@ class CentralState extends ChangeNotifier {
   /// Rejeita o motorista com o motivo informado.
   Future<bool> rejectDriver(DriverApplication application, String reason) async {
     if (reason.trim().length < 3) {
-      error = 'Informe o motivo da rejeicao.';
+      error = 'Informe o motivo da rejeição.';
       notifyListeners();
       return false;
     }
@@ -289,16 +307,24 @@ class CentralState extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final ok = await _repository.reviewDriver(
-      driverId: application.id,
-      decision: DriverApproval.rejected,
-      reason: reason.trim(),
-    );
+    bool ok;
+    try {
+      ok = await _repository.reviewDriver(
+        driverId: application.id,
+        decision: DriverApproval.rejected,
+        reason: reason.trim(),
+      );
+    } on ApiException catch (e) {
+      loading = false;
+      error = e.message;
+      notifyListeners();
+      return false;
+    }
 
     loading = false;
 
     if (!ok) {
-      error = 'Nao foi possivel rejeitar. Tente novamente.';
+      error = 'Sem conexão com o servidor. Não foi rejeitado; tente de novo.';
       notifyListeners();
       return false;
     }
@@ -336,11 +362,19 @@ class CentralState extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final ok = await _repository.saveTariffs(novas);
+    bool ok;
+    try {
+      ok = await _repository.saveTariffs(novas);
+    } on ApiException catch (e) {
+      loading = false;
+      error = e.message;
+      notifyListeners();
+      return false;
+    }
     loading = false;
 
     if (!ok) {
-      error = 'Falha ao salvar as bandeiras. Confira se uma termina onde a outra comeca.';
+      error = 'Sem conexão com o servidor. As bandeiras não foram salvas.';
       notifyListeners();
       return false;
     }

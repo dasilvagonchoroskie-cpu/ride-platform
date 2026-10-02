@@ -30,10 +30,10 @@ enum DocumentType {
         DocumentType.profilePhoto => 'Foto de perfil',
         DocumentType.cnhFront => 'CNH (frente)',
         DocumentType.cnhBack => 'CNH (verso)',
-        DocumentType.crlv => 'CRLV do veiculo',
-        DocumentType.vehicleFront => 'Veiculo (frente)',
-        DocumentType.vehicleBack => 'Veiculo (traseira)',
-        DocumentType.vehiclePlate => 'Placa do veiculo',
+        DocumentType.crlv => 'CRLV do veículo',
+        DocumentType.vehicleFront => 'Veículo (frente)',
+        DocumentType.vehicleBack => 'Veículo (traseira)',
+        DocumentType.vehiclePlate => 'Placa do veículo',
       };
 }
 
@@ -71,7 +71,7 @@ extension DriverApplicationAlerts on DriverApplication {
 
     final validade = DateTime.tryParse(cnhExpiresAt);
     if (validade == null) {
-      alertas.add('Validade da CNH em formato invalido.');
+      alertas.add('Validade da CNH em formato inválido.');
     } else {
       final dias = validade.difference(DateTime.now()).inDays;
       if (dias < 0) {
@@ -87,7 +87,7 @@ extension DriverApplicationAlerts on DriverApplication {
 
     final anoAtual = DateTime.now().year;
     if (vehicle.year < 1990 || vehicle.year > anoAtual + 1) {
-      alertas.add('Ano do veiculo (${vehicle.year}) parece errado.');
+      alertas.add('Ano do veículo (${vehicle.year}) parece errado.');
     }
 
     final reprovados = documents.where((d) => d.isRejected).length;
@@ -212,7 +212,7 @@ class VehicleSummary {
 }
 
 /// Corrida ativa no mapa de monitoramento.
-enum RidePhase { toPickup, waitingPassenger, inProgress }
+enum RidePhase { searching, toPickup, waitingPassenger, inProgress }
 
 class ActiveRide {
   const ActiveRide({
@@ -246,6 +246,7 @@ class ActiveRide {
   final List<Coords> polyline;
 
   String get phaseLabel => switch (phase) {
+        RidePhase.searching => 'Procurando motorista',
         RidePhase.toPickup => 'A caminho',
         RidePhase.waitingPassenger => 'Aguardando',
         RidePhase.inProgress => 'Em viagem',

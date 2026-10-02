@@ -26,7 +26,7 @@ class RideRepository {
   Future<EstimateResult> estimate(
     Coords origin,
     Coords destination, {
-    String pickupAddress = 'Minha localizacao atual',
+    String pickupAddress = 'Minha localização atual',
     String dropoffAddress = 'Destino escolhido',
   }) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);

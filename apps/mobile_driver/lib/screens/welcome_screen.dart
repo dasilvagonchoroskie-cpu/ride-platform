@@ -12,7 +12,7 @@ class WelcomeScreen extends StatelessWidget {
   static const List<List<String>> _highlights = [
     ['Ganhe quando quiser', 'Fique online e receba chamadas na sua regiao.'],
     ['Valores transparentes', 'Veja o ganho de cada corrida antes de aceitar.'],
-    ['Saque via Pix', 'Transfira seu saldo quando atingir o valor minimo.'],
+    ['Saque via Pix', 'Transfira seu saldo quando atingir o valor mínimo.'],
   ];
 
   @override
@@ -72,7 +72,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.md),
               AppButton(
-                label: 'Entrar em modo demonstracao',
+                label: 'Entrar em modo demonstração',
                 variant: AppButtonVariant.secondary,
                 onPressed: () => context.read<DriverState>().demoLogin(
                       'Motorista Demo',
@@ -81,7 +81,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.md),
               const Text(
-                'No modo demonstracao o fluxo completo do motorista roda no aparelho, sem servidor.',
+                'No modo demonstração o fluxo completo do motorista roda no aparelho, sem servidor.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppText.family,

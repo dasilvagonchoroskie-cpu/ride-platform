@@ -8,7 +8,7 @@ enum DriverApproval {
   suspended;
 
   String get label => switch (this) {
-        DriverApproval.pending => 'Em analise',
+        DriverApproval.pending => 'Em análise',
         DriverApproval.approved => 'Aprovado',
         DriverApproval.rejected => 'Reprovado',
         DriverApproval.suspended => 'Suspenso',
@@ -30,10 +30,10 @@ enum DocumentType {
         DocumentType.profilePhoto => 'Foto de perfil',
         DocumentType.cnhFront => 'CNH (frente)',
         DocumentType.cnhBack => 'CNH (verso)',
-        DocumentType.crlv => 'CRLV do veiculo',
-        DocumentType.vehicleFront => 'Veiculo (frente)',
-        DocumentType.vehicleBack => 'Veiculo (traseira)',
-        DocumentType.vehiclePlate => 'Placa do veiculo',
+        DocumentType.crlv => 'CRLV do veículo',
+        DocumentType.vehicleFront => 'Veículo (frente)',
+        DocumentType.vehicleBack => 'Veículo (traseira)',
+        DocumentType.vehiclePlate => 'Placa do veículo',
       };
 }
 

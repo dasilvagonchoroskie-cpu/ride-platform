@@ -126,6 +126,9 @@ class CentralRepository {
       final items = data['items'] as List<dynamic>? ?? const [];
       return items.map((item) => _fromApi(item as Map<String, dynamic>)).toList();
     } catch (_) {
+      // Antes devolvia motoristas aprovados DE MENTIRA quando o servidor
+      // falhava. Com servidor configurado, erro aparece como erro.
+      if (AppConfig.hasApi) rethrow;
       return CentralDemo.approved();
     }
   }
@@ -153,6 +156,9 @@ class CentralRepository {
         if (presencial) 'presentialCheck': true,
       });
       return true;
+    } on ApiException {
+      // O motivo do servidor (ex.: falta item da conferencia) sobe para a tela.
+      rethrow;
     } catch (_) {
       return false;
     }
@@ -212,6 +218,8 @@ class CentralRepository {
     try {
       await _client.request('PUT', '/admin/tariffs', body: tariffs.toJson());
       return true;
+    } on ApiException {
+      rethrow;
     } catch (_) {
       return false;
     }
@@ -300,15 +308,28 @@ class CentralRepository {
       (dropoff['longitude'] as num?)?.toDouble() ?? 0,
     );
 
+    // Posicao real do carro (antes a Central desenhava o motorista no
+    // ponto de embarque).
+    final pos = json['driverPosition'] as Map<String, dynamic>?;
+    final carro = pos == null
+        ? pickupCoords
+        : Coords((pos['latitude'] as num?)?.toDouble() ?? 0, (pos['longitude'] as num?)?.toDouble() ?? 0);
+    final fase = switch (json['status'] as String?) {
+      'REQUESTED' || 'SEARCHING' => RidePhase.searching,
+      'DRIVER_WAITING' => RidePhase.waitingPassenger,
+      'IN_PROGRESS' => RidePhase.inProgress,
+      _ => RidePhase.toPickup,
+    };
+
     return ActiveRide(
       id: json['id'] as String? ?? '',
       code: json['code'] as String? ?? '',
-      phase: RidePhase.inProgress,
+      phase: fase,
       passengerName: json['passengerName'] as String? ?? 'Passageiro',
       driverName: json['driverName'] as String? ?? 'Motorista',
       driverPlate: json['driverPlate'] as String? ?? '',
       passengerCoords: pickupCoords,
-      driverCoords: pickupCoords,
+      driverCoords: carro,
       pickupAddress: pickup['address'] as String? ?? '',
       dropoffAddress: dropoff['address'] as String? ?? '',
       fareCents: (json['estimatedFareCents'] as num?)?.toInt() ?? 0,

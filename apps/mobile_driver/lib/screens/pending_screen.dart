@@ -17,7 +17,7 @@ class PendingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Cadastro em analise'),
+        title: const Text('Cadastro em análise'),
         actions: [
           TextButton(
             onPressed: () => context.read<DriverState>().logout(),
@@ -47,8 +47,8 @@ class PendingScreen extends StatelessWidget {
               const SizedBox(height: Spacing.sm),
               Text(
                 rejected
-                    ? 'Corrija os documentos apontados e reenvie para nova analise.'
-                    : 'A analise leva em media 24 horas. Voce sera avisado quando for aprovado.',
+                    ? 'Corrija os documentos apontados e reenvie para nova análise.'
+                    : 'A análise leva em média 24 horas. Você será avisado quando for aprovado.',
                 textAlign: TextAlign.center,
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),

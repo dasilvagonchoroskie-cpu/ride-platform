@@ -155,7 +155,7 @@ class _DriverReviewScreenState extends State<DriverReviewScreen> {
               ),
               _Row(label: 'Validade da CNH', value: application.cnhExpiresAt),
               const AppDivider(),
-              _Row(label: 'Veiculo', value: application.vehicle.description),
+              _Row(label: 'Veículo', value: application.vehicle.description),
               _Row(label: 'Cor', value: application.vehicle.color),
               _Row(label: 'Placa', value: application.vehicle.plate),
             ],
@@ -225,7 +225,7 @@ class _DriverReviewScreenState extends State<DriverReviewScreen> {
                 const SizedBox(width: Spacing.md),
                 Expanded(
                   child: Text(
-                    'Existem documentos pendentes ou rejeitados. A aprovacao sera recusada ate que todos estejam validos.',
+                    'Existem documentos pendentes ou rejeitados. A aprovação será recusada até que todos estejam válidos.',
                     style: AppText.caption.copyWith(color: AppColors.textMuted),
                   ),
                 ),
@@ -263,7 +263,7 @@ class _DriverReviewScreenState extends State<DriverReviewScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Analise do cadastro')),
+      appBar: AppBar(title: const Text('Análise do cadastro')),
       body: SafeArea(
         child: tablet
             ? Row(
@@ -344,7 +344,7 @@ class _RejectDialogState extends State<_RejectDialog> {
     'Documento ilegivel',
     'CNH vencida',
     'Dados divergentes',
-    'Veiculo reprovado',
+    'Veículo reprovado',
   ];
 
   @override
@@ -371,7 +371,7 @@ class _RejectDialogState extends State<_RejectDialog> {
             ),
             const SizedBox(height: Spacing.md),
             AppField(
-              label: 'Motivo da rejeicao',
+              label: 'Motivo da rejeição',
               hint: 'Ex.: CNH vencida',
               controller: _reason,
               maxLength: 300,
@@ -425,7 +425,7 @@ class _RejectDialogState extends State<_RejectDialog> {
             Navigator.of(context).pop(_reason.text.trim());
           },
           style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-          child: const Text('Confirmar rejeicao'),
+          child: const Text('Confirmar rejeição'),
         ),
       ],
     );
@@ -467,8 +467,8 @@ class _ConferenciaPresencialState extends State<_ConferenciaPresencial> {
   void _aprovar() {
     final obs = _obs.text.trim();
     Navigator.of(context).pop(
-      'Conferencia presencial: CNH com EAR, CRLV em dia, certidao negativa '
-      'de antecedentes e vistoria do veiculo.${obs.isEmpty ? '' : ' Obs: $obs'}',
+      'Conferência presencial: CNH com EAR, CRLV em dia, certidão negativa '
+      'de antecedentes e vistoria do veículo.${obs.isEmpty ? '' : ' Obs: $obs'}',
     );
   }
 

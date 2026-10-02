@@ -28,23 +28,23 @@ class DemoEngine {
   ];
 
   static const List<String> _addresses = [
-    'Av. Paulista, 1578 - Bela Vista, Sao Paulo',
-    'Rua Augusta, 902 - Consolacao, Sao Paulo',
+    'Av. Paulista, 1578 - Bela Vista, São Paulo',
+    'Rua Augusta, 902 - Consolacao, São Paulo',
     'Av. Brigadeiro Faria Lima, 2232 - Jardim Paulistano',
-    'Rua Oscar Freire, 585 - Jardins, Sao Paulo',
-    'Av. Ibirapuera, 2033 - Moema, Sao Paulo',
-    'Rua Vergueiro, 1470 - Liberdade, Sao Paulo',
-    'Av. Reboucas, 3970 - Pinheiros, Sao Paulo',
-    'Rua Teodoro Sampaio, 1200 - Pinheiros, Sao Paulo',
-    'Av. Faria Lima, 3477 - Itaim Bibi, Sao Paulo',
-    'Rua da Consolacao, 2416 - Consolacao, Sao Paulo',
-    'Av. Sumare, 300 - Perdizes, Sao Paulo',
-    'Rua Harmonia, 200 - Vila Madalena, Sao Paulo',
+    'Rua Oscar Freire, 585 - Jardins, São Paulo',
+    'Av. Ibirapuera, 2033 - Moema, São Paulo',
+    'Rua Vergueiro, 1470 - Liberdade, São Paulo',
+    'Av. Reboucas, 3970 - Pinheiros, São Paulo',
+    'Rua Teodoro Sampaio, 1200 - Pinheiros, São Paulo',
+    'Av. Faria Lima, 3477 - Itaim Bibi, São Paulo',
+    'Rua da Consolacao, 2416 - Consolacao, São Paulo',
+    'Av. Sumare, 300 - Perdizes, São Paulo',
+    'Rua Harmonia, 200 - Vila Madalena, São Paulo',
   ];
 
   static const List<String> paymentLabels = [
     'Pix',
-    'Cartao de credito - 4291',
+    'Cartão de crédito - 4291',
     'Dinheiro',
     'Carteira Ride',
   ];

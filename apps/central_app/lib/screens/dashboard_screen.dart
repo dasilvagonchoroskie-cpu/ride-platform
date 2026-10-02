@@ -39,7 +39,7 @@ class DashboardScreen extends StatelessWidget {
         highlight: true,
       ),
       MetricCard(
-        label: 'Faturamento do mes',
+        label: 'Faturamento do mês',
         value: formatMoney(summary.monthCents),
         helper: 'Ticket medio ${formatMoney(summary.averageTicketCents)}',
         icon: Icons.calendar_month,
@@ -52,7 +52,7 @@ class DashboardScreen extends StatelessWidget {
         icon: Icons.local_taxi_outlined,
       ),
       MetricCard(
-        label: 'Comissao da plataforma',
+        label: 'Comissão da plataforma',
         value: formatMoney(summary.commissionTodayCents),
         helper: 'hoje',
         icon: Icons.percent,
@@ -92,7 +92,7 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: Spacing.sm),
           // Mapa da operacao na tela principal, com a posicao real de quem
           // esta online. Atualiza sozinho a cada volta do monitoramento.
-          const SectionTitle(text: 'Mapa da operacao'),
+          const SectionTitle(text: 'Mapa da operação'),
           const MapaOperacao(),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Faturamento por hora'),
@@ -103,7 +103,7 @@ class DashboardScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Ultimas 12 horas', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                    Text('Últimas 12 horas', style: AppText.caption.copyWith(color: AppColors.textMuted)),
                     Text(
                       formatMoney(summary.hourlyRevenue.fold<int>(0, (a, b) => a + b)),
                       style: AppText.bodyStrong.copyWith(color: AppColors.primary),
@@ -117,7 +117,7 @@ class DashboardScreen extends StatelessWidget {
           ),
 
           const SizedBox(height: Spacing.lg),
-          const SectionTitle(text: 'Operacao agora'),
+          const SectionTitle(text: 'Operação agora'),
           if (tablet)
             Row(
               children: [
@@ -143,7 +143,7 @@ class DashboardScreen extends StatelessWidget {
                   child: MetricCard(
                     label: 'Aprovacoes pendentes',
                     value: '${central.pendingCount}',
-                    helper: 'aguardando analise',
+                    helper: 'aguardando análise',
                     icon: Icons.pending_actions_outlined,
                   ),
                 ),

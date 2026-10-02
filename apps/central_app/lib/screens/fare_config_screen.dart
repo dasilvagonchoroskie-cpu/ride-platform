@@ -56,7 +56,7 @@ class _FareConfigScreenState extends State<FareConfigScreen> {
 
     _avisar(
       ok
-          ? 'Bandeiras salvas. Ja valem na proxima corrida.'
+          ? 'Bandeiras salvas. Já valem na próxima corrida.'
           : (context.read<CentralState>().error ?? 'Falha ao salvar as bandeiras.'),
       certo: ok,
     );
@@ -93,7 +93,7 @@ class _FareConfigScreenState extends State<FareConfigScreen> {
       children: [
         const SectionTitle(text: 'Bandeiras'),
         Text(
-          'A bandeirada ja inclui a franquia. So o que passa dela e cobrado a mais.',
+          'A bandeirada já inclui a franquia. Só o que passa dela é cobrado a mais.',
           style: AppText.body.copyWith(color: AppColors.textMuted),
         ),
         const SizedBox(height: Spacing.lg),
@@ -115,14 +115,14 @@ class _FareConfigScreenState extends State<FareConfigScreen> {
 
         const SizedBox(height: Spacing.xl),
         AppButton(
-          label: 'Salvar configuracoes',
+          label: 'Salvar configurações',
           loading: central.loading,
           onPressed: () => _salvar(tarifas),
         ),
         const SizedBox(height: Spacing.md),
         Text(
-          'As duas bandeiras sao salvas juntas: uma precisa terminar na hora '
-          'em que a outra comeca, para nao sobrar horario sem tabela.',
+          'As duas bandeiras são salvas juntas: uma precisa terminar na hora '
+          'em que a outra começa, para não sobrar horário sem tabela.',
           style: AppText.body.copyWith(color: AppColors.textMuted),
         ),
       ],
@@ -163,14 +163,14 @@ class _CamposDaBandeira {
   /// A primeira coisa errada que encontrar, ou nulo se estiver tudo certo.
   String? get erro {
     final hi = _inteiro(inicio.text), hf = _inteiro(fim.text);
-    if (hi == null || hi < 0 || hi > 23) return 'Hora de inicio invalida.';
-    if (hf == null || hf < 0 || hf > 23) return 'Hora de termino invalida.';
-    if (hi == hf) return 'A faixa nao pode comecar e terminar na mesma hora.';
-    if (_centavos(bandeirada.text) == null) return 'Bandeirada invalida.';
-    if (_centavos(porKm.text) == null) return 'Valor por km invalido.';
-    if (_centavos(porMinuto.text) == null) return 'Valor por minuto invalido.';
-    if (_decimal(franquiaKm.text) == null) return 'Franquia de distancia invalida.';
-    if (_inteiro(franquiaMin.text) == null) return 'Franquia de tempo invalida.';
+    if (hi == null || hi < 0 || hi > 23) return 'Hora de início inválida.';
+    if (hf == null || hf < 0 || hf > 23) return 'Hora de término inválida.';
+    if (hi == hf) return 'A faixa não pode começar e terminar na mesma hora.';
+    if (_centavos(bandeirada.text) == null) return 'Bandeirada inválida.';
+    if (_centavos(porKm.text) == null) return 'Valor por km inválido.';
+    if (_centavos(porMinuto.text) == null) return 'Valor por minuto inválido.';
+    if (_decimal(franquiaKm.text) == null) return 'Franquia de distância inválida.';
+    if (_inteiro(franquiaMin.text) == null) return 'Franquia de tempo inválida.';
     return null;
   }
 
@@ -267,7 +267,7 @@ class _SecaoDaBandeira extends StatelessWidget {
             label: 'Bandeirada (R\$)',
             controller: campos.bandeirada,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            helper: 'Valor fixo, cobrado assim que a corrida comeca.',
+            helper: 'Valor fixo, cobrado assim que a corrida começa.',
           ),
           const SizedBox(height: Spacing.md),
 
@@ -275,7 +275,7 @@ class _SecaoDaBandeira extends StatelessWidget {
             children: [
               Expanded(
                 child: AppField(
-                  label: 'Franquia de distancia (km)',
+                  label: 'Franquia de distância (km)',
                   controller: campos.franquiaKm,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -292,7 +292,7 @@ class _SecaoDaBandeira extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.xs),
           Text(
-            'Ja inclusos na bandeirada. So o excedente e cobrado.',
+            'Já inclusos na bandeirada. Só o excedente é cobrado.',
             style: AppText.body.copyWith(color: AppColors.textMuted),
           ),
           const SizedBox(height: Spacing.md),
@@ -315,7 +315,7 @@ class _SecaoDaBandeira extends StatelessWidget {
             children: [
               Expanded(
                 child: AppField(
-                  label: 'Minimo da corrida (R\$)',
+                  label: 'Mínimo da corrida (R\$)',
                   controller: campos.minimo,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -333,7 +333,7 @@ class _SecaoDaBandeira extends StatelessWidget {
           const SizedBox(height: Spacing.md),
 
           AppField(
-            label: 'Comissao da plataforma (%)',
+            label: 'Comissão da plataforma (%)',
             controller: campos.comissao,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),

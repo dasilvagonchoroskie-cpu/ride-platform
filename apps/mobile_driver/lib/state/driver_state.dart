@@ -49,6 +49,15 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   int offerSecondsLeft = 0;
   Timer? _offerTimer;
 
+  /// Confere a corrida no servidor a cada 5 s: se o passageiro cancelar,
+  /// o motorista fica sabendo na hora (antes so descobria ao tocar em
+  /// "Cheguei" e receber um erro).
+  Timer? _vigiaCorrida;
+  bool _conferindo = false;
+
+  /// Telefone do passageiro da corrida atual (para ligar/WhatsApp).
+  String? telefonePassageiro;
+
   // ---- Corrida em andamento ----
   DriverRide? activeRide;
 
@@ -121,6 +130,85 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       _startHeartbeat();
       unawaited(_ligarServicoNativo());
     }
+    if (activeRide != null) _vigiarCorrida();
+  }
+
+  void _vigiarCorrida() {
+    _vigiaCorrida?.cancel();
+    if (!AppConfig.hasApi) return;
+    _vigiaCorrida = Timer.periodic(const Duration(seconds: 5), (_) => conferirCorrida());
+    unawaited(conferirCorrida());
+  }
+
+  void _pararVigia() {
+    _vigiaCorrida?.cancel();
+    _vigiaCorrida = null;
+  }
+
+  /// Uma consulta: a corrida continua aberta no servidor? Em que fase?
+  Future<void> conferirCorrida() async {
+    final ride = activeRide;
+    if (ride == null || ride.phase == RidePhase.completed || _conferindo || !AppConfig.hasApi) return;
+    _conferindo = true;
+    try {
+      final r = await _client.request('GET', '/driver/rides/current') as Map<String, dynamic>;
+      if (activeRide?.offer.id != ride.offer.id) return;
+      final corrida = r['ride'] as Map<String, dynamic>?;
+      if (corrida == null || corrida['id'] != ride.offer.id) {
+        // Saiu das corridas abertas sem o motorista encerrar: cancelada.
+        _avisar('A corrida foi cancelada pelo passageiro. Você está livre para outro chamado.');
+        await _soltarCorrida();
+        return;
+      }
+      final passageiro = corrida['passenger'] as Map<String, dynamic>?;
+      telefonePassageiro = passageiro?['phone'] as String?;
+      final fase = switch (corrida['status'] as String?) {
+        'DRIVER_WAITING' => RidePhase.waitingPassenger,
+        'IN_PROGRESS' => RidePhase.inProgress,
+        _ => RidePhase.toPickup,
+      };
+      if (fase != ride.phase) {
+        activeRide = ride.copyWith(phase: fase);
+        await _persistRide();
+      }
+      notifyListeners();
+    } catch (_) {
+      // Sem rede nesta volta: confere de novo na proxima.
+    } finally {
+      _conferindo = false;
+    }
+  }
+
+  Future<void> _soltarCorrida() async {
+    _pararVigia();
+    activeRide = null;
+    valorFinalCents = null;
+    telefonePassageiro = null;
+    routeToPickup = [];
+    tripRoute = [];
+    await AppStorage.remove(AppStorage.activeRide);
+    notifyListeners();
+    unawaited(atualizarPainel());
+  }
+
+  /// Motorista desiste da corrida aceita (antes do embarque).
+  Future<bool> cancelarCorrida(String motivo) async {
+    final ride = activeRide;
+    if (ride == null) return true;
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/driver/rides/${ride.offer.id}/cancel', body: {'reason': motivo});
+      } on ApiException catch (e) {
+        _avisar(e.message);
+        await conferirCorrida();
+        return false;
+      } catch (_) {
+        _avisar('Sem conexão com o servidor. A corrida NÃO foi cancelada.');
+        return false;
+      }
+    }
+    await _soltarCorrida();
+    return true;
   }
 
   // ------------------------------------------------------------------
@@ -268,14 +356,14 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     required String cnh,
     required String validade,
   }) {
-    if (!_cpfValido(cpf)) return 'CPF invalido. Confira os 11 numeros.';
+    if (!_cpfValido(cpf)) return 'CPF inválido. Confira os 11 números.';
     final hoje = DateTime.now();
     final nasc = _lerData(nascimento);
-    if (nasc == null || !nasc.isBefore(hoje)) return 'Data de nascimento invalida. Use DD/MM/AAAA.';
+    if (nasc == null || !nasc.isBefore(hoje)) return 'Data de nascimento inválida. Use DD/MM/AAAA.';
     if (hoje.difference(nasc).inDays < 18 * 365) return 'E preciso ter 18 anos ou mais.';
     if (cnh.replaceAll(RegExp(r'\D'), '').length != 11) return 'O numero da CNH tem 11 digitos.';
     final venc = _lerData(validade);
-    if (venc == null) return 'Validade da CNH invalida. Use DD/MM/AAAA.';
+    if (venc == null) return 'Validade da CNH inválida. Use DD/MM/AAAA.';
     if (!venc.isAfter(hoje)) return 'A CNH esta vencida.';
     return null;
   }
@@ -529,7 +617,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
     await refreshFromServer();
     if ((profile ?? current).approval != DriverApproval.approved) {
-      _avisar('Sua conta ainda nao foi aprovada para ficar online.');
+      _avisar('Sua conta ainda não foi aprovada para ficar online.');
       return;
     }
 
@@ -547,7 +635,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
     if (vehicle == null) await sincronizarCadastro();
     if (vehicle == null) {
-      _avisar('Cadastre um veiculo antes de ficar online.');
+      _avisar('Cadastre um veículo antes de ficar online.');
       return;
     }
 
@@ -813,6 +901,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _clearOffer();
     await _persistRide();
     notifyListeners();
+    _vigiarCorrida();
   }
 
   void declineOffer() {
@@ -827,26 +916,49 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   // ------------------------------------------------------------------
   // Corrida
   // ------------------------------------------------------------------
-  void markArrived() {
+  /// Antes o aplicativo mudava de fase mesmo quando o servidor recusava
+  /// (passageiro tinha cancelado, sem rede...) e as duas pontas ficavam
+  /// em situacoes diferentes. Agora so muda se o servidor confirmar.
+  Future<void> markArrived() async {
     final ride = activeRide;
     if (ride == null) return;
-    if (AppConfig.hasApi) {
-      _client.request('POST', '/driver/rides/${ride.offer.id}/arrived',
-          body: {'latitude': position.latitude, 'longitude': position.longitude}).catchError((_) => null);
-    }
+    if (AppConfig.hasApi && !await _avisarServidor(ride, 'arrived')) return;
     activeRide = ride.copyWith(phase: RidePhase.waitingPassenger);
+    await _persistRide();
     notifyListeners();
   }
 
-  void startRide() {
+  Future<void> startRide() async {
     final ride = activeRide;
     if (ride == null) return;
-    if (AppConfig.hasApi) {
-      _client.request('POST', '/driver/rides/${ride.offer.id}/start',
-          body: {'latitude': position.latitude, 'longitude': position.longitude}).catchError((_) => null);
-    }
+    if (AppConfig.hasApi && !await _avisarServidor(ride, 'start')) return;
     activeRide = ride.copyWith(phase: RidePhase.inProgress);
+    await _persistRide();
     notifyListeners();
+  }
+
+  /// Esperando o servidor confirmar uma etapa (evita toque duplo).
+  bool enviandoEtapa = false;
+
+  Future<bool> _avisarServidor(DriverRide ride, String passo) async {
+    if (enviandoEtapa) return false;
+    enviandoEtapa = true;
+    notifyListeners();
+    try {
+      await _client.request('POST', '/driver/rides/${ride.offer.id}/$passo',
+          body: {'latitude': position.latitude, 'longitude': position.longitude});
+      return true;
+    } on ApiException catch (e) {
+      _avisar(e.message);
+      await conferirCorrida();
+      return false;
+    } catch (_) {
+      _avisar('Sem conexão com o servidor. Tente de novo.');
+      return false;
+    } finally {
+      enviandoEtapa = false;
+      notifyListeners();
+    }
   }
 
   Future<void> finishRide() async {
@@ -864,10 +976,12 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
     }
+    _pararVigia();
     activeRide = ride.copyWith(
       phase: RidePhase.completed,
       finishedAt: DateTime.now().toIso8601String(),
     );
+    await _persistRide();
     notifyListeners();
   }
 
@@ -877,6 +991,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (ride == null) return;
 
 
+    _pararVigia();
+    telefonePassageiro = null;
     activeRide = null;
     valorFinalCents = null;
     routeToPickup = [];
@@ -1018,6 +1134,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _stopHeartbeat();
     _pararGps();
     _statusTimer?.cancel();
+    _pararVigia();
+    telefonePassageiro = null;
     await CorridasNativo.parar();
     await AppStorage.clearDriverSession();
     profile = null;
@@ -1049,6 +1167,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _heartbeat?.cancel();
     _offerTimer?.cancel();
+    _vigiaCorrida?.cancel();
     super.dispose();
   }
 }
