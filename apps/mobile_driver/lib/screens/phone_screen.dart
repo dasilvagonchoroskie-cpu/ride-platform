@@ -32,7 +32,8 @@ class _PhoneScreenState extends State<PhoneScreen> {
     super.initState();
     if (AppConfig.hasApi) {
       context.read<DriverState>().canaisDeEntrada().then((c) {
-        if (mounted) setState(() {
+        if (!mounted) return;
+        setState(() {
           _telefone = c.telefone;
           _email = c.email;
         });

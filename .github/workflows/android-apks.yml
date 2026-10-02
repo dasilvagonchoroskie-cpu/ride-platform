@@ -72,7 +72,10 @@ jobs:
         id: analyze
         continue-on-error: true
         working-directory: apps/${{ matrix.app }}
-        run: flutter analyze 2>&1 | tee "$RUNNER_TEMP/analyze-${{ matrix.app }}.txt"
+        # pipefail: sem ele o "tee" escondia o erro e a analise passava sempre.
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee "$RUNNER_TEMP/analyze-${{ matrix.app }}.txt"
 
       # Regras de cobranca e outras contas com teste automatico: se alguem
       # quebrar a conta, o APK nem chega a ser gerado.

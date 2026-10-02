@@ -100,18 +100,9 @@ class PendingScreen extends StatelessWidget {
               AppButton(
                 label: 'Atualizar status',
                 variant: AppButtonVariant.secondary,
-                onPressed: () {
-                  // Simula a aprovacao do painel administrativo.
-                  final state = context.read<DriverState>();
-                  if (state.documentsComplete) {
-                    state.completeOnboarding(
-                      cpf: state.profile?.cpf ?? '',
-                      cnhNumber: state.profile?.cnhNumber ?? '',
-                      cnhCategory: state.profile?.cnhCategory ?? 'B',
-                      cnhExpiresAt: state.profile?.cnhExpiresAt ?? '',
-                    );
-                  }
-                },
+                // Pergunta na hora ao servidor se a Central ja aprovou
+                // (a tela tambem confere sozinha a cada 20 segundos).
+                onPressed: () => context.read<DriverState>().sincronizarCadastro(),
               ),
             ],
           ),
