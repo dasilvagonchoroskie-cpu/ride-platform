@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 02/10/2026 17:48 UTC
+Teste de ponta a ponta - 02/10/2026 22:58 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -31,23 +31,31 @@ OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 9439 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 2062 vindo do servidor)
+OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
-OK     Bandeira certa pela hora de Brasilia (14h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 2 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 30s
+OK     Bandeira certa pela hora de Brasilia (19h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 3 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 33s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: carteira pre-paga so descontou a comissao (saldo -200 centavos)
 OK     Central: recarga lancada, saldo agora 800 centavos
 OK     Central: contato de recarga carregado
-OK     Motorista: historico de corridas com 1 corrida(s)
+OK     Passageiro: avaliou o motorista com 5 estrelas
+OK     Passageiro: recibo da corrida concluida com a nota
+OK     Motorista: cancelou a corrida aceita
+OK     Passageiro: fica sabendo que o motorista cancelou
+OK     Passageiro: cancelou enquanto procurava, sem taxa
+OK     Passageiro: nenhuma corrida aberta depois de cancelar
+OK     Motorista: historico de corridas com 2 corrida(s)
 OK     Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)
 OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
 OK     Motorista tambem pede corrida como passageiro
+OK     Seguranca: outra conta nao ve a corrida (nem nome e telefone)
 
 Resultado: 0 falha(s).
