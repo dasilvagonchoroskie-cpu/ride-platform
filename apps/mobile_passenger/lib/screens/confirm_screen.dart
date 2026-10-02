@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api/api_client.dart';
+import '../core/avisos.dart';
+
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
@@ -44,16 +47,28 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
   }
 
   Future<void> _confirm() async {
+    if (_submitting) return;
     setState(() => _submitting = true);
 
-    await context.read<RideState>().requestRide(
-          origin: context.read<AppState>().coords,
-          destination: widget.destination,
-          pickupAddress: _embarque ?? 'Local de embarque (GPS)',
-          dropoffAddress: widget.address,
-          paymentMethod: _payment.label,
-          paymentType: _payment.type,
-        );
+    try {
+      await context.read<RideState>().requestRide(
+            origin: context.read<AppState>().coords,
+            destination: widget.destination,
+            pickupAddress: _embarque ?? 'Local de embarque (GPS)',
+            dropoffAddress: widget.address,
+            paymentMethod: _payment.label,
+            paymentType: _payment.type,
+          );
+    } on ApiException {
+      // O motivo ja aparece na tela (aviso do servidor). Antes o botao
+      // ficava girando para sempre.
+      if (mounted) setState(() => _submitting = false);
+      return;
+    } catch (_) {
+      avisar('Sem conexão com o servidor. A corrida não foi pedida.');
+      if (mounted) setState(() => _submitting = false);
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _submitting = false);

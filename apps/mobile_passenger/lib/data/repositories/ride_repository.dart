@@ -74,7 +74,7 @@ class RideRepository {
         'paymentMethodType': paymentType,
       }) as Map<String, dynamic>;
 
-      return Ride.fromJson(data['ride'] as Map<String, dynamic>);
+      return Ride.fromServer(data['ride'] as Map<String, dynamic>);
     } catch (_) {
       // Com servidor configurado, erro aparece como erro — nada de
       // dados de mentira no lugar sem avisar ninguem.
@@ -94,10 +94,10 @@ class RideRepository {
     if (_useDemo) return DemoEngine.history(origin);
 
     try {
-      final data = await _client.request('GET', '/rides/history', query: {'limit': '30'})
+      final data = await _client.request('GET', '/rides/history', query: {'page': '1', 'pageSize': '30'})
           as Map<String, dynamic>;
       final items = data['items'] as List<dynamic>? ?? const [];
-      return items.map((item) => Ride.fromJson(item as Map<String, dynamic>)).toList();
+      return items.map((item) => Ride.fromServer(item as Map<String, dynamic>)).toList();
     } catch (_) {
       // Com servidor configurado, erro aparece como erro — nada de
       // dados de mentira no lugar sem avisar ninguem.
@@ -105,6 +105,30 @@ class RideRepository {
       _useDemo = true;
       return DemoEngine.history(origin);
     }
+  }
+
+  /// Situacao atual da corrida no servidor (o aplicativo pergunta a cada
+  /// poucos segundos enquanto ela esta aberta).
+  Future<Ride> detalhe(String id) async {
+    final data = await _client.request('GET', '/rides/$id') as Map<String, dynamic>;
+    return Ride.fromServer(data['ride'] as Map<String, dynamic>);
+  }
+
+  /// Corrida aberta do passageiro, se houver (ao abrir o aplicativo).
+  Future<Ride?> atual() async {
+    final data = await _client.request('GET', '/rides/current') as Map<String, dynamic>;
+    final r = data['ride'];
+    return r is Map<String, dynamic> ? Ride.fromServer(r) : null;
+  }
+
+  /// Cancela no servidor. Devolve a taxa cobrada (0 enquanto procura).
+  Future<int> cancelar(String id, String motivo) async {
+    final data = await _client.request('POST', '/rides/$id/cancel', body: {'reason': motivo}) as Map<String, dynamic>;
+    return (data['cancellationFeeCents'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<void> avaliar(String id, int nota, List<String> tags) async {
+    await _client.request('POST', '/rides/$id/rate', body: {'score': nota, if (tags.isNotEmpty) 'tags': tags});
   }
 
   /// Carros disponiveis por perto (posicao aproximada, vinda do servidor).

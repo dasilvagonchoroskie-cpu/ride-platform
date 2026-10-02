@@ -78,14 +78,9 @@ class _Root extends StatelessWidget {
 
     final active = ride.activeRide;
     if (active != null) {
-      switch (active.status) {
-        case RideStatus.completed:
-          return const CompleteScreen();
-        case RideStatus.inProgress:
-          return const RideScreen();
-        default:
-          return const SearchingScreen();
-      }
+      if (active.status == RideStatus.completed) return const CompleteScreen();
+      if (active.status == RideStatus.inProgress) return const RideScreen();
+      if (active.status.isActive) return const SearchingScreen();
     }
 
     // O mapa so abre com a posicao real do aparelho.

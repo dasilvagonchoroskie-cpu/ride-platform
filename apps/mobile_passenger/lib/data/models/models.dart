@@ -1,13 +1,17 @@
 import '../../core/utils/geo.dart';
 
-/// Situacao da corrida (espelha o enum RideStatus do backend).
+/// Situacao da corrida (espelha o enum RideStatus do servidor).
 enum RideStatus {
   searching,
   driverAssigned,
   driverArriving,
+  driverWaiting,
   inProgress,
   completed,
-  cancelledByPassenger;
+  cancelledByPassenger,
+  cancelledByDriver,
+  cancelledBySystem,
+  expired;
 
   String get label {
     switch (this) {
@@ -17,12 +21,20 @@ enum RideStatus {
         return 'Motorista encontrado';
       case RideStatus.driverArriving:
         return 'Motorista a caminho';
+      case RideStatus.driverWaiting:
+        return 'Motorista chegou';
       case RideStatus.inProgress:
         return 'Em andamento';
       case RideStatus.completed:
-        return 'Concluida';
+        return 'Concluída';
       case RideStatus.cancelledByPassenger:
-        return 'Cancelada';
+        return 'Cancelada por você';
+      case RideStatus.cancelledByDriver:
+        return 'Cancelada pelo motorista';
+      case RideStatus.cancelledBySystem:
+        return 'Cancelada pela Central';
+      case RideStatus.expired:
+        return 'Sem motorista disponível';
     }
   }
 
@@ -30,7 +42,57 @@ enum RideStatus {
       this == RideStatus.searching ||
       this == RideStatus.driverAssigned ||
       this == RideStatus.driverArriving ||
+      this == RideStatus.driverWaiting ||
       this == RideStatus.inProgress;
+
+  /// Cancelada ou sem motorista: a corrida acabou sem viagem.
+  bool get encerradaSemViagem =>
+      this == RideStatus.cancelledByPassenger ||
+      this == RideStatus.cancelledByDriver ||
+      this == RideStatus.cancelledBySystem ||
+      this == RideStatus.expired;
+
+  /// Nome que o servidor usa (SEARCHING, DRIVER_ASSIGNED...).
+  static RideStatus doServidor(String? nome) {
+    switch (nome) {
+      case 'DRIVER_ASSIGNED':
+        return RideStatus.driverAssigned;
+      case 'DRIVER_ARRIVING':
+        return RideStatus.driverArriving;
+      case 'DRIVER_WAITING':
+        return RideStatus.driverWaiting;
+      case 'IN_PROGRESS':
+        return RideStatus.inProgress;
+      case 'COMPLETED':
+        return RideStatus.completed;
+      case 'CANCELLED_BY_PASSENGER':
+        return RideStatus.cancelledByPassenger;
+      case 'CANCELLED_BY_DRIVER':
+        return RideStatus.cancelledByDriver;
+      case 'CANCELLED_BY_SYSTEM':
+        return RideStatus.cancelledBySystem;
+      case 'EXPIRED':
+        return RideStatus.expired;
+      default:
+        return RideStatus.searching;
+    }
+  }
+}
+
+/// Forma de pagamento como o servidor grava -> texto da tela.
+String rotuloPagamento(String? tipo) {
+  switch (tipo) {
+    case 'CASH':
+      return 'Dinheiro';
+    case 'PIX':
+      return 'Pix';
+    case 'CREDIT_CARD':
+      return 'Cartão de crédito';
+    case 'DEBIT_CARD':
+      return 'Cartão de débito';
+    default:
+      return tipo ?? 'Dinheiro';
+  }
 }
 
 class UserProfile {
@@ -245,6 +307,8 @@ class DriverInfo {
     required this.plate,
     required this.color,
     required this.position,
+    this.telefone,
+    this.posicaoReal = false,
   });
 
   final String id;
@@ -255,6 +319,12 @@ class DriverInfo {
   final String plate;
   final String color;
   final Coords position;
+
+  /// Telefone do motorista (para ligar ou chamar no WhatsApp).
+  final String? telefone;
+
+  /// A posicao veio do GPS do carro (e nao e um palpite).
+  final bool posicaoReal;
 
   String get initials {
     final parts = name.split(' ').where((p) => p.isNotEmpty).take(2);
@@ -346,6 +416,8 @@ class Ride {
                 'plate': driver!.plate,
                 'color': driver!.color,
                 'position': driver!.position.toJson(),
+                'telefone': driver!.telefone,
+                'posicaoReal': driver!.posicaoReal,
               },
         'distanceMeters': distanceMeters,
         'durationSeconds': durationSeconds,
@@ -398,6 +470,8 @@ class Ride {
                 (positionJson?['latitude'] as num?)?.toDouble() ?? fallbackCoords.latitude,
                 (positionJson?['longitude'] as num?)?.toDouble() ?? fallbackCoords.longitude,
               ),
+              telefone: driverJson['telefone'] as String?,
+              posicaoReal: driverJson['posicaoReal'] as bool? ?? false,
             ),
       distanceMeters: (json['distanceMeters'] as num?)?.toInt() ?? 0,
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
@@ -407,6 +481,53 @@ class Ride {
       createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       finishedAt: json['finishedAt'] as String?,
       rating: (json['rating'] as num?)?.toInt(),
+    );
+  }
+
+  /// Corrida como o servidor manda (GET /rides/:id, POST /rides, historico).
+  /// Antes o aplicativo lia isto com o formato local e tudo vinha vazio:
+  /// endereco em branco, valor R$ 0,00 e PIN "0000".
+  factory Ride.fromServer(Map<String, dynamic> j) {
+    double? numero(Object? v) => v == null ? null : double.tryParse(v.toString());
+    final driverJson = j['driver'] as Map<String, dynamic>?;
+    final userJson = driverJson?['user'] as Map<String, dynamic>?;
+    final veiculo = j['vehicle'] as Map<String, dynamic>?;
+    final pos = j['driverPosition'] as Map<String, dynamic>?;
+    final embarque = Coords(numero(j['pickupLat']) ?? 0, numero(j['pickupLng']) ?? 0);
+    final finalCents = (j['finalFareCents'] as num?)?.toInt();
+
+    return Ride(
+      id: j['id'] as String? ?? '',
+      code: j['code'] as String? ?? '',
+      status: RideStatus.doServidor(j['status'] as String?),
+      pickup: RidePlace(address: j['pickupAddress'] as String? ?? '', coords: embarque),
+      dropoff: RidePlace(
+        address: j['dropoffAddress'] as String? ?? '',
+        coords: Coords(numero(j['dropoffLat']) ?? 0, numero(j['dropoffLng']) ?? 0),
+      ),
+      fareFlag: (j['fareFlag'] as String?)?.toUpperCase() == 'NOTURNA' ? FareFlag.noturna : FareFlag.diurna,
+      driver: driverJson == null
+          ? null
+          : DriverInfo(
+              id: driverJson['id'] as String? ?? '',
+              name: userJson?['name'] as String? ?? 'Motorista',
+              rating: numero(driverJson['ratingAvg']) ?? 5,
+              totalRides: (driverJson['totalRides'] as num?)?.toInt() ?? 0,
+              vehicle: [veiculo?['brand'], veiculo?['model']].whereType<String>().join(' '),
+              plate: veiculo?['plate'] as String? ?? '',
+              color: veiculo?['color'] as String? ?? '',
+              position: pos == null ? embarque : Coords(numero(pos['latitude']) ?? 0, numero(pos['longitude']) ?? 0),
+              telefone: userJson?['phone'] as String?,
+              posicaoReal: pos != null,
+            ),
+      distanceMeters: (j['distanceMeters'] as num?)?.toInt() ?? 0,
+      durationSeconds: (j['durationSeconds'] as num?)?.toInt() ?? 0,
+      fareCents: finalCents ?? (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
+      paymentMethod: rotuloPagamento(j['paymentMethodType'] as String?),
+      pin: j['pin'] as String? ?? '',
+      createdAt: j['requestedAt'] as String? ?? j['createdAt'] as String? ?? DateTime.now().toIso8601String(),
+      finishedAt: j['finishedAt'] as String? ?? j['cancelledAt'] as String?,
+      rating: (j['minhaNota'] as num?)?.toInt(),
     );
   }
 

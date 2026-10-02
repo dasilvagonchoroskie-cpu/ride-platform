@@ -5,6 +5,7 @@ import '../core/config/app_config.dart';
 import '../core/theme/app_theme.dart';
 import '../state/auth_state.dart';
 import '../state/config_state.dart';
+import '../state/ride_state.dart';
 import '../widgets/painel_ui.dart';
 import 'avisos_screen.dart';
 import 'help_screen.dart';
@@ -37,7 +38,10 @@ class AccountScreen extends StatelessWidget {
         ],
       ),
     );
-    if (sair == true && context.mounted) await context.read<AuthState>().logout();
+    if (sair != true || !context.mounted) return;
+    final corridas = context.read<RideState>();
+    await context.read<AuthState>().logout();
+    await corridas.limpar();
   }
 
   @override

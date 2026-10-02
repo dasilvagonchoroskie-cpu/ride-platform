@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
 import '../core/theme/app_theme.dart';
+import '../state/ride_state.dart';
 import 'account_screen.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
@@ -15,6 +18,15 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _aba = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Depois do login: se houver corrida aberta no servidor, retoma.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<RideState>().sincronizarComServidor();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
