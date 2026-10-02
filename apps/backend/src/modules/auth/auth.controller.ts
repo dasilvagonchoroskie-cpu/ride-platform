@@ -14,13 +14,57 @@ import {
   deviceInfoSchema,
   DeviceInfoInput,
   UserRole,
+  cpfSchema,
+  emailSchema,
+  nameSchema,
+  passwordSchema,
+  phoneSchema,
 } from '@ride/shared';
+import { z } from 'zod';
 import { Request } from 'express';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { getClientIp, getUserAgent } from '../../common/utils/request.util';
-import { AuthService, AuthResult } from './auth.service';
+import { AuthService, AuthResult, Genero } from './auth.service';
+
+const generoSchema = z.enum(['FEMININO', 'MASCULINO', 'OUTRO', 'NAO_INFORMAR'], {
+  errorMap: () => ({ message: 'Selecione o genero.' }),
+});
+
+/** "Nome e sobrenome", igual ao do CPF: pelo menos duas palavras. */
+const nomeCompletoSchema = nameSchema.refine(
+  (v) => v.split(/\s+/).filter((p) => p.length >= 2).length >= 2,
+  'Informe nome e sobrenome.',
+);
+
+const cidadeSchema = z.string().trim().min(2, 'Escolha a cidade.').max(60);
+
+const cadastroSchema = z.object({
+  name: nomeCompletoSchema,
+  email: emailSchema,
+  gender: generoSchema,
+  cpf: cpfSchema,
+  password: passwordSchema,
+  city: cidadeSchema.optional(),
+});
+
+const perfilSchema = z
+  .object({
+    name: nomeCompletoSchema.optional(),
+    email: emailSchema.optional(),
+    gender: generoSchema.optional(),
+    city: cidadeSchema.optional(),
+    cpf: cpfSchema.optional(),
+  })
+  .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nada para atualizar.' });
+
+const redefinirSchema = z.object({
+  phone: phoneSchema,
+  code: z.string().trim().regex(/^\d{4,8}$/, 'Codigo invalido.'),
+  newPassword: passwordSchema,
+  device: deviceInfoSchema.optional(),
+});
 
 @ApiTags('Autenticacao')
 @Controller('auth')
@@ -94,6 +138,48 @@ export class AuthController {
         ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) }
         : undefined,
     });
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Esqueci a senha: codigo do telefone + senha nova (ja entra na conta)' })
+  resetPassword(
+    @Body(new ZodValidationPipe(redefinirSchema))
+    body: { phone: string; code: string; newPassword: string; device?: DeviceInfoInput },
+    @Req() req: Request,
+  ): Promise<AuthResult> {
+    return this.auth.redefinirSenha({
+      phone: body.phone,
+      code: body.code,
+      newPassword: body.newPassword,
+      device: body.device ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) } : undefined,
+    });
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('cadastro')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cadastro do passageiro: nome, e-mail, genero, CPF, senha e cidade (uma vez)' })
+  cadastro(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(cadastroSchema))
+    body: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string },
+  ) {
+    return this.auth.concluirCadastro(user.id, body);
+  }
+
+  @ApiBearerAuth()
+  @Patch('perfil')
+  @ApiOperation({ summary: 'Meus dados: nome, e-mail, genero e cidade (CPF so se ainda nao tiver)' })
+  perfil(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(perfilSchema))
+    body: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string },
+  ) {
+    return this.auth.atualizarPerfil(user.id, body);
   }
 
   @Public()

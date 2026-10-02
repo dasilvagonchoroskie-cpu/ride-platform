@@ -6,6 +6,32 @@ import { comparePassword, hashPassword } from '../../common/utils/crypto.util';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { TokenService, DeviceContext, IssuedTokens } from './token.service';
 import { OtpService } from './otp.service';
+import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
+
+/** Genero informado no cadastro do passageiro. */
+export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
+
+/** Campos extras do usuario guardados em `users.metadata` (sem mudar o banco). */
+interface MetaUsuario {
+  genero?: Genero;
+  cidade?: string;
+  cadastroCompleto?: boolean;
+  cadastroConcluidoEm?: string;
+  [k: string]: unknown;
+}
+
+function metaDe(user: { metadata?: unknown }): MetaUsuario {
+  const m = user.metadata;
+  return m && typeof m === 'object' && !Array.isArray(m) ? { ...(m as MetaUsuario) } : {};
+}
+
+/** Erro de unicidade do Prisma (dois cadastros ao mesmo tempo com o mesmo CPF/e-mail). */
+function campoDuplicado(e: unknown): string | null {
+  const x = e as { code?: string; meta?: { target?: unknown } } | null;
+  if (x?.code !== 'P2002') return null;
+  const alvo = x.meta?.target;
+  return Array.isArray(alvo) ? alvo.join(',') : String(alvo ?? '');
+}
 
 export interface AuthResult extends IssuedTokens {
   user: {
@@ -22,6 +48,13 @@ export interface AuthResult extends IssuedTokens {
     /** Falso enquanto a pessoa nao tocou em "Aceito os Termos" no app. */
     termsAccepted: boolean;
     termsVersion: string | null;
+    /** Cadastro do passageiro (nome, e-mail, genero, CPF, senha e cidade) ja feito. */
+    cadastroCompleto: boolean;
+    cpf: string | null;
+    genero: Genero | null;
+    cidade: string | null;
+    /** Se ja existe senha (para entrar pelo e-mail). Nunca devolve a senha. */
+    temSenha: boolean;
   };
   isNewUser: boolean;
 }
@@ -60,6 +93,13 @@ export class AuthService {
       where: params.phone ? { phone: params.phone } : { email: params.email },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
     });
+
+    // Enquanto o codigo de teste volta na resposta (sem SMS), o codigo
+    // nao prova que a pessoa e dona do telefone. A conta da Central nunca
+    // entra por codigo: so por e-mail e senha.
+    if (existing?.role === UserRole.ADMIN) {
+      throw BusinessException.forbidden('A conta da Central entra so com e-mail e senha.');
+    }
 
     const user = existing
       ? await this.prisma.user.update({
@@ -269,6 +309,11 @@ export class AuthService {
       isOnline: user.driver?.isOnline ?? null,
       termsAccepted: user.termsAcceptedAt != null,
       termsVersion: user.termsVersion ?? null,
+      cadastroCompleto: metaDe(user).cadastroCompleto === true,
+      cpf: user.cpf ?? null,
+      genero: metaDe(user).genero ?? null,
+      cidade: metaDe(user).cidade ?? null,
+      temSenha: !!user.passwordHash,
     };
   }
 
@@ -292,6 +337,168 @@ export class AuthService {
     const id = await this.tokens.upsertDevice(current.id, device);
     if (!id) throw BusinessException.validation('Dados do dispositivo invalidos.');
     return { deviceId: id };
+  }
+
+  /**
+   * Cadastro do passageiro, depois de confirmar o telefone: nome, e-mail,
+   * genero, CPF, senha e cidade. Feito uma vez so; depois disso cada dado
+   * muda pela tela Meus dados (a senha, pela troca de senha).
+   */
+  async concluirCadastro(
+    userId: string,
+    input: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string },
+  ): Promise<AuthResult['user']> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
+    if (user.role !== UserRole.PASSENGER) {
+      throw BusinessException.forbidden('Este cadastro e so para contas de passageiro.');
+    }
+    const meta = metaDe(user);
+    if (meta.cadastroCompleto === true) {
+      throw BusinessException.conflict('Seu cadastro ja foi concluido. Para mudar algum dado, use Meus dados.');
+    }
+
+    const cidade = await this.validarCidade(input.city);
+    await this.garantirUnicos(userId, input.email, input.cpf);
+
+    try {
+      const salvo = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: input.name.replace(/\s+/g, ' ').trim(),
+          email: input.email,
+          ...(user.email !== input.email ? { emailVerifiedAt: null } : {}),
+          cpf: input.cpf,
+          passwordHash: await hashPassword(input.password),
+          metadata: {
+            ...meta,
+            genero: input.gender,
+            ...(cidade ? { cidade } : {}),
+            cadastroCompleto: true,
+            cadastroConcluidoEm: new Date().toISOString(),
+          } as never,
+        },
+        include: { driver: { select: { id: true, status: true, isOnline: true } } },
+      });
+      return this.paraUsuario(salvo);
+    } catch (e) {
+      throw this.traduzirDuplicado(e);
+    }
+  }
+
+  /** Meus dados: nome, e-mail, genero e cidade. O CPF so entra se ainda estiver vazio. */
+  async atualizarPerfil(
+    userId: string,
+    input: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string },
+  ): Promise<AuthResult['user']> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
+
+    if (input.cpf && user.cpf && input.cpf !== user.cpf) {
+      throw BusinessException.validation('O CPF nao pode ser trocado depois do cadastro. Fale com a Central.');
+    }
+    const cidade = input.city !== undefined ? await this.validarCidade(input.city) : null;
+    await this.garantirUnicos(userId, input.email, input.cpf && !user.cpf ? input.cpf : undefined);
+
+    const meta = metaDe(user);
+    try {
+      const salvo = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(input.name ? { name: input.name.replace(/\s+/g, ' ').trim() } : {}),
+          ...(input.email && input.email !== user.email ? { email: input.email, emailVerifiedAt: null } : {}),
+          ...(input.cpf && !user.cpf ? { cpf: input.cpf } : {}),
+          ...(input.gender || cidade
+            ? {
+                metadata: {
+                  ...meta,
+                  ...(input.gender ? { genero: input.gender } : {}),
+                  ...(cidade ? { cidade } : {}),
+                } as never,
+              }
+            : {}),
+        },
+        include: { driver: { select: { id: true, status: true, isOnline: true } } },
+      });
+      return this.paraUsuario(salvo);
+    } catch (e) {
+      throw this.traduzirDuplicado(e);
+    }
+  }
+
+  /**
+   * Esqueci a senha: o codigo que chega no telefone autoriza criar uma
+   * senha nova. Ja deixa a pessoa conectada e derruba as outras sessoes.
+   */
+  async redefinirSenha(params: {
+    phone: string;
+    code: string;
+    newPassword: string;
+    device?: DeviceContext;
+  }): Promise<AuthResult> {
+    const conta = await this.prisma.user.findUnique({ where: { phone: params.phone } });
+    if (conta?.role === UserRole.ADMIN) {
+      throw BusinessException.forbidden('A senha da Central nao e trocada por codigo.');
+    }
+
+    await this.otp.verify({ phone: params.phone, purpose: OtpPurpose.PASSWORD_RESET, code: params.code });
+
+    if (!conta) throw BusinessException.notFound('Nao ha conta com este telefone.');
+    this.assertUserActive(conta.status);
+
+    await this.prisma.user.update({
+      where: { id: conta.id },
+      data: { passwordHash: await hashPassword(params.newPassword), lastLoginAt: new Date() },
+    });
+    await this.tokens.revokeAllUserTokens(conta.id);
+
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: conta.id },
+      include: { driver: { select: { id: true, status: true, isOnline: true } } },
+    });
+    const issued = await this.tokens.issueTokens(
+      {
+        id: user.id,
+        role: user.role,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        driverId: user.driver?.id ?? null,
+      },
+      params.device,
+    );
+    return { ...issued, isNewUser: false, user: this.paraUsuario(user) };
+  }
+
+  /** Cidade da lista da Central (nome oficial). Sem lista configurada, aceita o que veio. */
+  private async validarCidade(nome?: string): Promise<string | null> {
+    if (!nome || !nome.trim()) return null;
+    const lista = await lerCidades(this.prisma);
+    if (lista.length === 0) return nome.replace(/\s+/g, ' ').trim();
+    const oficial = await cidadeAtendida(this.prisma, nome);
+    if (!oficial) throw BusinessException.validation('Escolha uma das cidades da lista.');
+    return oficial;
+  }
+
+  private async garantirUnicos(userId: string, email?: string, cpf?: string): Promise<void> {
+    if (email) {
+      const dono = await this.prisma.user.findFirst({ where: { email, NOT: { id: userId } }, select: { id: true } });
+      if (dono) throw BusinessException.conflict('Este e-mail ja esta em outra conta.', ERROR_CODES.EMAIL_ALREADY_USED);
+    }
+    if (cpf) {
+      const dono = await this.prisma.user.findFirst({ where: { cpf, NOT: { id: userId } }, select: { id: true } });
+      if (dono) throw BusinessException.conflict('Este CPF ja esta em outra conta.');
+    }
+  }
+
+  private traduzirDuplicado(e: unknown): unknown {
+    const campo = campoDuplicado(e);
+    if (campo === null) return e;
+    if (campo.includes('cpf')) return BusinessException.conflict('Este CPF ja esta em outra conta.');
+    if (campo.includes('email')) {
+      return BusinessException.conflict('Este e-mail ja esta em outra conta.', ERROR_CODES.EMAIL_ALREADY_USED);
+    }
+    return BusinessException.conflict('Dado ja usado em outra conta.');
   }
 
   private assertUserActive(status: UserStatus): void {

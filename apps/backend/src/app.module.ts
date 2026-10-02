@@ -27,6 +27,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { PainelMotoristaModule } from './modules/painel-motorista/painel-motorista.module';
 import { GeoModule } from './modules/geo/geo.module';
+import { OperacaoModule } from './modules/operacao/operacao.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { GeoModule } from './modules/geo/geo.module';
     LegalModule,
     PainelMotoristaModule,
     GeoModule,
+    OperacaoModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis

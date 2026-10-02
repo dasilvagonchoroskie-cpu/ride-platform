@@ -34,6 +34,38 @@ SUF=$(date +%H%M%S)
 TP=$(entrar "+55649${SUF}71" PASSENGER)
 [ -n "$TP" ] && ok "Passageiro: login pelo codigo de teste" || falha "Passageiro: login" "sem token"
 X=$(post /auth/accept-terms '{"version":"1.0.0"}' "$TP"); sucesso "$X" && ok "Passageiro: aceite dos termos gravado" || falha "Passageiro: aceite dos termos" "$X"
+# ---- Cadastro do passageiro (igual ao modelo: cidade, nome, e-mail, genero, CPF, senha) ----
+X=$(get /app/config)
+CID=$(echo "$X" | jq -r '.data.cidades[0] // empty' 2>/dev/null)
+sucesso "$X" && ok "App: configuracao publica ($(echo "$X" | jq -r '.data.cidades | length') cidade(s), WhatsApp $(echo "$X" | jq -r '.data.whatsapp // "nenhum"'))" || falha "App: configuracao publica" "$X"
+X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos carregados" || falha "Central: cidades e avisos" "$X"
+CPFP=$(python3 -c "
+import random
+n=[random.randint(0,9) for _ in range(9)]
+for k in (10,11):
+    s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
+print(''.join(map(str,n)))")
+EMAILP="passageiro.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
+CORPO="{\"name\":\"Passageiro Teste Automatico\",\"email\":\"$EMAILP\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFP\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}"
+X=$(post /auth/cadastro "$CORPO" "$TP")
+[ "$(echo "$X" | jq -r '.data.cadastroCompleto' 2>/dev/null)" = "true" ] && ok "Passageiro: cadastro completo gravado (cidade: ${CID:-sem lista})" || falha "Passageiro: cadastro completo" "$X"
+X=$(post /auth/cadastro "$CORPO" "$TP")
+sucesso "$X" && falha "Passageiro: cadastro repetido deveria ser recusado" "$X" || ok "Passageiro: cadastro repetido recusado"
+X=$(post /auth/password/login "{\"email\":\"$EMAILP\",\"password\":\"Teste1234\"}")
+[ "$(echo "$X" | jq -r '.data.user.role' 2>/dev/null)" = "PASSENGER" ] && ok "Passageiro: entra pelo e-mail e senha" || falha "Passageiro: entrar pelo e-mail" "$X"
+P=$(post /auth/otp/request "{\"phone\":\"+55649${SUF}71\",\"purpose\":\"PASSWORD_RESET\"}")
+C=$(echo "$P" | jq -r '.data.debugCode // empty')
+X=$(post /auth/password/reset "{\"phone\":\"+55649${SUF}71\",\"code\":\"$C\",\"newPassword\":\"Nova12345\"}")
+NT=$(echo "$X" | jq -r '.data.accessToken // empty')
+if [ -n "$NT" ] && sucesso "$(post /auth/password/login "{\"email\":\"$EMAILP\",\"password\":\"Nova12345\"}")"; then
+  ok "Passageiro: esqueci a senha (codigo do telefone + senha nova)"; TP="$NT"
+else falha "Passageiro: esqueci a senha" "$X"; fi
+X=$(patch /auth/perfil '{"gender":"FEMININO"}' "$TP")
+[ "$(echo "$X" | jq -r '.data.genero' 2>/dev/null)" = "FEMININO" ] && ok "Passageiro: Meus dados atualizados" || falha "Passageiro: Meus dados" "$X"
+P=$(post /auth/otp/request '{"phone":"+5511999990000","purpose":"LOGIN"}')
+C=$(echo "$P" | jq -r '.data.debugCode // empty')
+X=$(post /auth/otp/verify "{\"phone\":\"+5511999990000\",\"code\":\"${C:-000000}\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}")
+[ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "Seguranca: conta da Central nao entra por codigo" || falha "Seguranca: conta da Central entrou por codigo" "$(echo "$X" | jq -c '.data.user.role')"
 EMB='{"latitude":-18.0125,"longitude":-49.3547,"address":"Praca da Matriz, Goiatuba"}'
 DES='{"latitude":-18.0050,"longitude":-49.3610,"address":"Rodoviaria de Goiatuba"}'
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP")
