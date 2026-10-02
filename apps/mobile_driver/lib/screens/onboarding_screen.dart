@@ -148,10 +148,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       cnhExpiresAt: _cnhExpiry.text,
     );
 
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const _DocumentsStep()),
-    );
+    // Cadastro enviado: o aplicativo segue sozinho para a tela de
+    // conferencia na Central (antes abria um envio de documentos simulado).
   }
 
   @override
@@ -379,111 +377,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: Spacing.sm),
         AppButton(label: 'Voltar', variant: AppButtonVariant.ghost, onPressed: () => setState(() => _step = 1)),
       ],
-    );
-  }
-}
-
-/// Envio dos documentos obrigatorios.
-class _DocumentsStep extends StatelessWidget {
-  const _DocumentsStep();
-
-  @override
-  Widget build(BuildContext context) {
-    final driver = context.watch<DriverState>();
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Documentos')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Envie seus documentos', style: AppText.title),
-              const SizedBox(height: Spacing.xs),
-              Text(
-                '${driver.documentsApproved} de ${driver.documentsTotal} aprovados',
-                style: AppText.caption.copyWith(color: AppColors.textMuted),
-              ),
-              const SizedBox(height: Spacing.md),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: driver.documentsTotal == 0
-                      ? 0
-                      : driver.documentsApproved / driver.documentsTotal,
-                  minHeight: 6,
-                  backgroundColor: AppColors.border,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-                ),
-              ),
-              const SizedBox(height: Spacing.lg),
-              for (final document in driver.documents)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.sm),
-                  child: AppCard(
-                    child: Row(
-                      children: [
-                        Icon(
-                          document.isApproved
-                              ? Icons.check_circle
-                              : document.isRejected
-                                  ? Icons.cancel
-                                  : Icons.upload_file,
-                          color: document.isApproved
-                              ? AppColors.primary
-                              : document.isRejected
-                                  ? AppColors.danger
-                                  : AppColors.textMuted,
-                          size: 24,
-                        ),
-                        const SizedBox(width: Spacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(document.type.label, style: AppText.bodyStrong),
-                              Text(
-                                document.isApproved
-                                    ? 'Aprovado'
-                                    : document.isRejected
-                                        ? (document.rejectionReason ?? 'Reprovado')
-                                        : 'Pendente de envio',
-                                style: AppText.caption.copyWith(
-                                  color: document.isApproved
-                                      ? AppColors.primary
-                                      : document.isRejected
-                                          ? AppColors.danger
-                                          : AppColors.textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!document.isApproved)
-                          TextButton(
-                            onPressed: () => context.read<DriverState>().uploadDocument(document.type),
-                            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-                            child: const Text('Enviar'),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: Spacing.lg),
-              AppButton(
-                label: 'Concluir cadastro',
-                enabled: driver.documentsComplete,
-                onPressed: () {
-                  context.read<DriverState>().uploadDocument(DocumentType.profilePhoto);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

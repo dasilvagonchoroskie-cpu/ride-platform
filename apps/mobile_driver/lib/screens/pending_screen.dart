@@ -40,59 +40,50 @@ class PendingScreen extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.lg),
               Text(
-                rejected ? 'Cadastro reprovado' : 'Estamos analisando seu cadastro',
+                rejected ? 'Cadastro não aprovado' : 'Falta a conferência na Central',
                 textAlign: TextAlign.center,
                 style: AppText.title,
               ),
               const SizedBox(height: Spacing.sm),
               Text(
                 rejected
-                    ? 'Corrija os documentos apontados e reenvie para nova análise.'
-                    : 'A análise leva em média 24 horas. Você será avisado quando for aprovado.',
+                    ? 'Fale com a Central para saber o que precisa ser corrigido.'
+                    : 'Leve os documentos abaixo à Central. Esta tela muda sozinha quando o cadastro for liberado.',
                 textAlign: TextAlign.center,
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
               const SizedBox(height: Spacing.xl),
+              // A conferencia e PRESENCIAL (Lei 13.640/2018). Antes esta tela
+              // mostrava documentos "APPROVED" que ninguem tinha conferido: o
+              // envio era simulado no aparelho.
               AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('DOCUMENTOS', style: AppText.label.copyWith(color: AppColors.textFaint)),
+                    Text('LEVE À CENTRAL', style: AppText.label.copyWith(color: AppColors.textFaint)),
                     const SizedBox(height: Spacing.md),
-                    for (final document in driver.documents)
+                    for (final item in const [
+                      'CNH com EAR (exerce atividade remunerada)',
+                      'Documento do veículo (CRLV) em dia',
+                      'Certidão negativa de antecedentes criminais',
+                      'O veículo, para a vistoria',
+                    ])
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              document.isApproved
-                                  ? Icons.check_circle
-                                  : document.isRejected
-                                      ? Icons.cancel
-                                      : Icons.schedule,
-                              size: 18,
-                              color: document.isApproved
-                                  ? AppColors.primary
-                                  : document.isRejected
-                                      ? AppColors.danger
-                                      : AppColors.textMuted,
-                            ),
+                            const Icon(Icons.check_box_outline_blank, size: 18, color: AppColors.textMuted),
                             const SizedBox(width: Spacing.md),
-                            Expanded(child: Text(document.type.label, style: AppText.body)),
-                            Text(
-                              document.status.name.toUpperCase(),
-                              style: AppText.label.copyWith(
-                                fontSize: 9,
-                                color: document.isApproved
-                                    ? AppColors.primary
-                                    : document.isRejected
-                                        ? AppColors.danger
-                                        : AppColors.textMuted,
-                              ),
-                            ),
+                            Expanded(child: Text(item, style: AppText.body)),
                           ],
                         ),
                       ),
+                    const SizedBox(height: Spacing.sm),
+                    Text(
+                      'A Central confere tudo pessoalmente e libera o seu cadastro na hora.',
+                      style: AppText.caption.copyWith(color: AppColors.textMuted),
+                    ),
                   ],
                 ),
               ),
