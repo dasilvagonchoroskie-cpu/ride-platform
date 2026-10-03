@@ -365,6 +365,7 @@ class _NovaCorridaState extends State<NovaCorrida> {
           _CampoEndereco(rotulo: 'Destino', perto: _origem?.coords ?? perto, api: api, escolhido: _destino, aoEscolher: (l) => setState(() => _destino = l)),
           const SizedBox(height: Spacing.md),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _categoria,
             decoration: const InputDecoration(labelText: 'Categoria'),
             items: [
@@ -375,6 +376,7 @@ class _NovaCorridaState extends State<NovaCorrida> {
           ),
           const SizedBox(height: Spacing.md),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _pagamento,
             decoration: const InputDecoration(labelText: 'Forma de pagamento'),
             items: const [

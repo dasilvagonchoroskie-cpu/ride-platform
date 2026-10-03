@@ -212,6 +212,7 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                 titulo: 'Categoria do veículo',
                 filhos: [
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _categorias.any((c) => c.codigo == m.categoria) ? m.categoria : null,
                     hint: Text(m.categoria),
                     decoration: const InputDecoration(labelText: 'Recebe chamados de'),
@@ -427,6 +428,7 @@ class _FinanceiroState extends State<_Financeiro> {
       titulo: 'Modelo financeiro',
       filhos: [
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: _modelo,
           decoration: const InputDecoration(labelText: 'Como ele paga a plataforma'),
           items: const [

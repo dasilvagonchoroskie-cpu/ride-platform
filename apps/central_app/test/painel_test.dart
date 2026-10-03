@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:central_app/core/api/api_client.dart';
 import 'package:central_app/core/theme/central_theme.dart';
 import 'package:central_app/data/painel.dart';
+import 'package:central_app/data/repositories/central_repository.dart';
 import 'package:central_app/painel/alertas.dart';
 import 'package:central_app/painel/comuns.dart';
 import 'package:central_app/painel/cupons.dart';
@@ -18,6 +19,8 @@ import 'package:central_app/painel/painel_state.dart';
 import 'package:central_app/painel/passageiros.dart';
 import 'package:central_app/painel/tarifas.dart';
 import 'package:central_app/painel/visao_geral.dart';
+import 'package:central_app/screens/shell_screen.dart';
+import 'package:central_app/state/central_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -398,6 +401,8 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.person_pin_circle));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Abrir no Despacho'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Abrir no Despacho'));
     await tester.pumpAndSettle();
     expect(abriuDespacho, isTrue);
@@ -532,6 +537,52 @@ void main() {
     await tester.tap(find.text('Criar cupom'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Código com 3 a 30'), findsOneWidget);
+  });
+
+  testWidgets('Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<CentralState>(
+            create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+          ),
+          ChangeNotifierProvider<PainelState>.value(value: painel),
+        ],
+        child: MaterialApp(
+          theme: CentralTheme.dark,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const ShellScreen(),
+        ),
+      ),
+    );
+    await _carregar(tester);
+    // O SOS aberto abriu a janela fixa sozinho.
+    expect(find.text('Silenciar'), findsOneWidget);
+    expect(find.text('190 Polícia'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Silenciar'))).pop();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('pediu socorro'), findsOneWidget);
+    expect(find.text('Corridas ativas'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras', 'Configurações']) {
+      expect(find.text(aba), findsWidgets, reason: 'aba $aba no menu');
+    }
+    await tester.tap(find.text('Financeiro').last);
+    await _carregar(tester);
+    expect(find.text('Saques PIX'), findsOneWidget);
+
+    // Fecha a Central: o relogio de 5 s tem de parar.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
   });
 
   test('Leitura dos dados no formato do servidor', () {

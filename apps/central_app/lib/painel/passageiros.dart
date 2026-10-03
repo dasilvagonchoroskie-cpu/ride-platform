@@ -148,6 +148,7 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
   Widget build(BuildContext context) {
     final p = widget.p;
     return SafeArea(
+      child: SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.lg),
         child: Column(
@@ -200,6 +201,7 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -218,6 +218,7 @@ class _Hora extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<int>(
+      isExpanded: true,
       initialValue: valor,
       decoration: InputDecoration(labelText: rotulo),
       items: [for (var h = 0; h < 24; h++) DropdownMenuItem(value: h, child: Text('${h.toString().padLeft(2, '0')}h'))],

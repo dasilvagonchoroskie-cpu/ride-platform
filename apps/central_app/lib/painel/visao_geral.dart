@@ -178,9 +178,11 @@ class _VisaoGeralState extends State<VisaoGeral> {
     final corrida = p.corridas.where((c) => c.motoristaId == m.id).firstOrNull;
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surface,
       builder: (_) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          child: Padding(
           padding: const EdgeInsets.all(Spacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -208,6 +210,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -215,9 +218,11 @@ class _VisaoGeralState extends State<VisaoGeral> {
   void _mostrarCorrida(BuildContext context, CorridaAtiva c) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surface,
       builder: (ctx) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
+          child: Padding(
           padding: const EdgeInsets.all(Spacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -248,6 +253,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
