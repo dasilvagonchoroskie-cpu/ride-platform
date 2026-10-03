@@ -203,6 +203,9 @@ export class CentralService {
           plate: m.vehicles[0]?.plate ?? '',
           category: m.vehicles[0]?.category ?? 'CARRO',
           distanceKm: p ? Math.round(haversineKm({ latitude: lat, longitude: lng }, p) * 10) / 10 : null,
+          latitude: p ? Number(p.latitude) : null,
+          longitude: p ? Number(p.longitude) : null,
+          rating: Number(m.ratingAvg),
         };
       })
       .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));

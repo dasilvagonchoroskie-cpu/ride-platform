@@ -6,6 +6,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.media.AudioAttributes
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -40,6 +46,73 @@ class MainActivity : FlutterActivity() {
                     result.error("FALHA", e.message, null)
                 }
             }
+
+        // Alarme do SOS (toca como despertador, em volta, ate a Central
+        // atender), ligacao e abrir mapa/WhatsApp.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "fortaleza/alarme")
+            .setMethodCallHandler { call, result ->
+                try {
+                    when (call.method) {
+                        "tocar" -> { tocar(); result.success(true) }
+                        "parar" -> { parar(); result.success(true) }
+                        "ligar" -> {
+                            val numero = call.argument<String>("numero") ?: ""
+                            startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$numero")))
+                            result.success(true)
+                        }
+                        "abrir" -> {
+                            val url = call.argument<String>("url") ?: ""
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            result.success(true)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (e: Exception) {
+                    result.error("FALHA", e.message, null)
+                }
+            }
+    }
+
+    private var toque: Ringtone? = null
+
+    private fun vibrador(): Vibrator? =
+        if (Build.VERSION.SDK_INT >= 31) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
+
+    private fun tocar() {
+        if (toque?.isPlaying == true) return
+        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+        toque = RingtoneManager.getRingtone(applicationContext, uri)?.apply {
+            audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            if (Build.VERSION.SDK_INT >= 28) isLooping = true
+            play()
+        }
+        val padrao = longArrayOf(0, 800, 400, 800, 400)
+        if (Build.VERSION.SDK_INT >= 26) {
+            vibrador()?.vibrate(VibrationEffect.createWaveform(padrao, 0))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrador()?.vibrate(padrao, 0)
+        }
+    }
+
+    private fun parar() {
+        toque?.stop()
+        toque = null
+        vibrador()?.cancel()
+    }
+
+    override fun onDestroy() {
+        parar()
+        super.onDestroy()
     }
 
     private fun temLocalizacao(): Boolean =

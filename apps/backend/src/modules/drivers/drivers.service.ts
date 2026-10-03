@@ -229,7 +229,10 @@ export class DriversService {
     const documents = await Promise.all(
       driver.documents.map(async (doc) => ({
         ...doc,
-        fileUrl: await this.storage.createPresignedDownload(doc.fileKey),
+        // Foto guardada no proprio banco (/arquivos/...) ja e o endereco certo.
+        fileUrl: doc.fileUrl?.startsWith('/arquivos/')
+          ? doc.fileUrl
+          : await this.storage.createPresignedDownload(doc.fileKey).catch(() => null),
       })),
     );
 
