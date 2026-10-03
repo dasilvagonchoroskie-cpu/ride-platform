@@ -118,6 +118,10 @@ X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
 N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: ve $N carro(s) disponivel(is) no mapa (dado real)" || falha "Passageiro: carros por perto" "$X"
 
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Porto Alegre - RS\",\"latitude\":-30.0346,\"longitude\":-51.2177}}" "$TP")
+sucesso "$X" && falha "Destino a 1.800 km deveria ser recusado" "$X" || ok "Passageiro: destino fora da regiao recusado (antes saia corrida de R\$ 4.500)"
+X=$(get "/geo/search?q=Porto%20Alegre&lat=-18.0128&lng=-49.3556" "$TP")
+[ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 80)] | length')" = "0" ] && ok "Passageiro: busca de destino so mostra lugares da regiao" || falha "Passageiro: busca fora da regiao" "$X"
 CUP="TESTE$SUF$((RANDOM%100))"
 X=$(post /admin/coupons "{\"code\":\"$CUP\",\"description\":\"Teste automatico\",\"discountType\":\"FIXED\",\"discountValue\":300,\"maxUses\":5}" "$TA")
 sucesso "$X" && ok "Central: cupom $CUP criado (R\$ 3,00)" || falha "Central: criar cupom" "$X"

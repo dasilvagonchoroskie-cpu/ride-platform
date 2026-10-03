@@ -28,6 +28,8 @@ class RideRepository {
     Coords destination, {
     String pickupAddress = 'Minha localização atual',
     String dropoffAddress = 'Destino escolhido',
+    String? couponCode,
+    DateTime? agendadaPara,
   }) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);
 
@@ -37,6 +39,8 @@ class RideRepository {
         // TODO pedido de preco voltava "Dados invalidos".
         'pickup': {'address': pickupAddress, ...origin.toJson()},
         'dropoff': {'address': dropoffAddress, ...destination.toJson()},
+        if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+        if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
       }) as Map<String, dynamic>;
 
       return EstimateResult(quote: RideQuote.fromJson(data));
@@ -56,6 +60,8 @@ class RideRepository {
     required String dropoffAddress,
     required String paymentMethod,
     String paymentType = 'CASH',
+    String? couponCode,
+    DateTime? agendadaPara,
   }) async {
     if (_useDemo) {
       return DemoEngine.createRide(
@@ -72,6 +78,8 @@ class RideRepository {
         'pickup': {'address': pickupAddress, ...origin.toJson()},
         'dropoff': {'address': dropoffAddress, ...destination.toJson()},
         'paymentMethodType': paymentType,
+        if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
+        if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
       }) as Map<String, dynamic>;
 
       return Ride.fromServer(data['ride'] as Map<String, dynamic>);
@@ -129,6 +137,25 @@ class RideRepository {
 
   Future<void> avaliar(String id, int nota, List<String> tags) async {
     await _client.request('POST', '/rides/$id/rate', body: {'score': nota, if (tags.isNotEmpty) 'tags': tags});
+  }
+
+  Future<List<Ride>> agendadas() async {
+    final data = await _client.request('GET', '/rides/scheduled') as Map<String, dynamic>;
+    return [for (final i in (data['items'] as List<dynamic>? ?? const [])) Ride.fromServer(i as Map<String, dynamic>)];
+  }
+
+  Future<List<CupomDisponivel>> cupons() async {
+    final data = await _client.request('GET', '/rides/coupons') as List<dynamic>;
+    return [for (final c in data) CupomDisponivel.fromJson(c as Map<String, dynamic>)];
+  }
+
+  Future<List<MotoristaFavorito>> favoritos() async {
+    final data = await _client.request('GET', '/rides/favoritos') as Map<String, dynamic>;
+    return [for (final f in (data['items'] as List<dynamic>? ?? const [])) MotoristaFavorito.fromJson(f as Map<String, dynamic>)];
+  }
+
+  Future<void> favoritar(String driverId, {required bool sim}) async {
+    await _client.request(sim ? 'POST' : 'DELETE', '/rides/favoritos/$driverId', body: sim ? const {} : null);
   }
 
   /// Carros disponiveis por perto (posicao aproximada, vinda do servidor).

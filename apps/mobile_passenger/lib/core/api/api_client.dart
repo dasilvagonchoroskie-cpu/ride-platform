@@ -77,6 +77,9 @@ class ApiClient {
         case 'PATCH':
           response = await _client.patch(uri, headers: headers, body: payload).timeout(AppConfig.apiTimeout);
           break;
+        case 'PUT':
+          response = await _client.put(uri, headers: headers, body: payload).timeout(AppConfig.apiTimeout);
+          break;
         case 'DELETE':
           response = await _client.delete(uri, headers: headers, body: payload).timeout(AppConfig.apiTimeout);
           break;
@@ -85,6 +88,8 @@ class ApiClient {
       }
     } on TimeoutException {
       throw ApiException('NETWORK_ERROR', 'Tempo esgotado ao falar com o servidor.');
+    } on ApiException {
+      rethrow;
     } catch (error) {
       throw ApiException('NETWORK_ERROR', 'Sem conexão com o servidor. ($error)');
     }

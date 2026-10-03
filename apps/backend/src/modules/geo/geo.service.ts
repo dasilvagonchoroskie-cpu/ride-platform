@@ -36,21 +36,27 @@ export class GeoService {
   private readonly cache = new Map<string, { quando: number; valor: unknown }>();
   private proximaVez = 0;
 
+  /** Ate onde a plataforma leva (em linha reta a partir do passageiro). */
+  static readonly RAIO_ATENDIDO_KM = 80;
+
   async buscar(texto: string, lat: number, lng: number): Promise<Lugar[]> {
     const q = texto.trim().replace(/\s+/g, ' ');
     const chave = `s:${q.toLowerCase()}:${lat.toFixed(2)}:${lng.toFixed(2)}`;
     const guardado = this.lerCache<Lugar[]>(chave);
     if (guardado) return this.comDistancia(guardado, lat, lng);
 
-    // Primeiro so na regiao (uns 35 km em volta); se nada aparecer, abre
-    // para o pais inteiro.
-    const caixa = [lng - 0.32, lat + 0.32, lng + 0.32, lat - 0.32].map((n) => n.toFixed(5)).join(',');
+    // So a regiao atendida: primeiro uns 35 km em volta; se nada aparecer,
+    // uns 80 km. NUNCA o pais inteiro — antes "Porto Alegre" aparecia para
+    // quem estava em Goiatuba e a corrida saia por R$ 4.500.
+    const caixaDe = (g: number) => [lng - g, lat + g, lng + g, lat - g].map((n) => n.toFixed(5)).join(',');
     const base = `q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=br`;
-    let itens = await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixa}&bounded=1`);
+    let itens = await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.32)}&bounded=1`);
     if (!itens || itens.length === 0) {
-      itens = await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixa}&bounded=0`);
+      itens = await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}&bounded=1`);
     }
-    const lugares = (itens ?? []).map((i) => this.paraLugar(i));
+    const lugares = (itens ?? [])
+      .map((i) => this.paraLugar(i))
+      .filter((l) => this.km(lat, lng, l.latitude, l.longitude) <= GeoService.RAIO_ATENDIDO_KM);
     // Sem repetidos (o mesmo nome no mesmo ponto aparece as vezes duas vezes).
     const vistos = new Set<string>();
     const unicos = lugares.filter((l) => {

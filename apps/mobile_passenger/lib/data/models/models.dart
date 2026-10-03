@@ -2,6 +2,7 @@ import '../../core/utils/geo.dart';
 
 /// Situacao da corrida (espelha o enum RideStatus do servidor).
 enum RideStatus {
+  scheduled,
   searching,
   driverAssigned,
   driverArriving,
@@ -15,6 +16,8 @@ enum RideStatus {
 
   String get label {
     switch (this) {
+      case RideStatus.scheduled:
+        return 'Agendada';
       case RideStatus.searching:
         return 'Procurando motorista';
       case RideStatus.driverAssigned:
@@ -55,6 +58,8 @@ enum RideStatus {
   /// Nome que o servidor usa (SEARCHING, DRIVER_ASSIGNED...).
   static RideStatus doServidor(String? nome) {
     switch (nome) {
+      case 'SCHEDULED':
+        return RideStatus.scheduled;
       case 'DRIVER_ASSIGNED':
         return RideStatus.driverAssigned;
       case 'DRIVER_ARRIVING':
@@ -109,6 +114,7 @@ class UserProfile {
     this.cidade,
     this.temSenha = false,
     this.telefonePendente = false,
+    this.avatarUrl,
   });
 
   final String id;
@@ -136,6 +142,9 @@ class UserProfile {
   /// Entrou pelo e-mail e ainda nao informou o telefone (pedido no cadastro).
   final bool telefonePendente;
 
+  /// Foto de perfil no servidor (ex.: /arquivos/123).
+  final String? avatarUrl;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -149,6 +158,7 @@ class UserProfile {
         'cidade': cidade,
         'temSenha': temSenha,
         'telefonePendente': telefonePendente,
+        'avatarUrl': avatarUrl,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -164,6 +174,7 @@ class UserProfile {
         cidade: json['cidade'] as String?,
         temSenha: json['temSenha'] as bool? ?? false,
         telefonePendente: json['telefonePendente'] as bool? ?? false,
+        avatarUrl: json['avatarUrl'] as String?,
       );
 
   UserProfile copyWith({String? name, String? email, bool? termsAccepted}) => UserProfile(
@@ -179,6 +190,7 @@ class UserProfile {
         cidade: cidade,
         temSenha: temSenha,
         telefonePendente: telefonePendente,
+        avatarUrl: avatarUrl,
       );
 
   String get firstName => name.split(' ').first;
@@ -250,10 +262,18 @@ class RideQuote {
     required this.chargedDistanceMeters,
     this.etaMinutes = 3,
     this.minFareApplied = false,
+    this.discountCents = 0,
+    this.couponCode,
   });
 
   final FareFlag flag;
   final int priceCents;
+
+  /// Desconto do cupom aplicado (0 sem cupom).
+  final int discountCents;
+  final String? couponCode;
+
+  int get aPagarCents => (priceCents - discountCents).clamp(0, 1 << 30);
 
   /// Bandeirada: a parte fixa, que ja inclui a franquia.
   final int baseFareCents;
@@ -283,6 +303,8 @@ class RideQuote {
         durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
         chargedDistanceMeters: (json['chargedDistanceMeters'] as num?)?.toInt() ?? 0,
         minFareApplied: json['minFareApplied'] as bool? ?? false,
+        discountCents: (json['discountCents'] as num?)?.toInt() ?? 0,
+        couponCode: json['couponCode'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -356,6 +378,8 @@ class Ride {
     this.driver,
     this.finishedAt,
     this.rating,
+    this.discountCents = 0,
+    this.agendadaPara,
   });
 
   final String id;
@@ -373,6 +397,14 @@ class Ride {
   final String createdAt;
   final String? finishedAt;
   final int? rating;
+
+  /// Desconto do cupom (o passageiro paga [fareCents] menos isto).
+  final int discountCents;
+
+  /// Horario combinado da corrida agendada (ISO).
+  final String? agendadaPara;
+
+  int get aPagarCents => (fareCents - discountCents).clamp(0, 1 << 30);
 
   Ride copyWith({
     RideStatus? status,
@@ -396,6 +428,8 @@ class Ride {
         createdAt: createdAt,
         finishedAt: finishedAt ?? this.finishedAt,
         rating: rating ?? this.rating,
+        discountCents: discountCents,
+        agendadaPara: agendadaPara,
       );
 
   Map<String, dynamic> toJson() => {
@@ -427,6 +461,8 @@ class Ride {
         'createdAt': createdAt,
         'finishedAt': finishedAt,
         'rating': rating,
+        'discountCents': discountCents,
+        'agendadaPara': agendadaPara,
       };
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -481,6 +517,8 @@ class Ride {
       createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       finishedAt: json['finishedAt'] as String?,
       rating: (json['rating'] as num?)?.toInt(),
+      discountCents: (json['discountCents'] as num?)?.toInt() ?? 0,
+      agendadaPara: json['agendadaPara'] as String?,
     );
   }
 
@@ -528,6 +566,8 @@ class Ride {
       createdAt: j['requestedAt'] as String? ?? j['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       finishedAt: j['finishedAt'] as String? ?? j['cancelledAt'] as String?,
       rating: (j['minhaNota'] as num?)?.toInt(),
+      discountCents: (j['discountCents'] as num?)?.toInt() ?? 0,
+      agendadaPara: j['scheduledFor'] as String?,
     );
   }
 
@@ -616,3 +656,66 @@ class EstimateResult {
   int get distanceMeters => quote.distanceMeters;
   int get durationSeconds => quote.durationSeconds;
 }
+
+/// Cupom disponivel para o passageiro (tela Cupons).
+class CupomDisponivel {
+  const CupomDisponivel({
+    required this.code,
+    required this.description,
+    required this.percentual,
+    required this.valor,
+    this.maxDescontoCents,
+    this.minimoCents = 0,
+    this.validoAte,
+  });
+
+  final String code;
+  final String description;
+  final bool percentual;
+  final int valor;
+  final int? maxDescontoCents;
+  final int minimoCents;
+  final String? validoAte;
+
+  factory CupomDisponivel.fromJson(Map<String, dynamic> j) => CupomDisponivel(
+        code: j['code'] as String? ?? '',
+        description: j['description'] as String? ?? '',
+        percentual: j['discountType'] == 'PERCENT',
+        valor: (j['discountValue'] as num?)?.toInt() ?? 0,
+        maxDescontoCents: (j['maxDiscountCents'] as num?)?.toInt(),
+        minimoCents: (j['minFareCents'] as num?)?.toInt() ?? 0,
+        validoAte: j['expiresAt'] as String?,
+      );
+}
+
+/// Motorista favorito (recebe primeiro os chamados do passageiro).
+class MotoristaFavorito {
+  const MotoristaFavorito({
+    required this.driverId,
+    required this.name,
+    required this.rating,
+    required this.vehicle,
+    required this.color,
+    required this.plate,
+    required this.online,
+  });
+
+  final String driverId;
+  final String name;
+  final double rating;
+  final String vehicle;
+  final String color;
+  final String plate;
+  final bool online;
+
+  factory MotoristaFavorito.fromJson(Map<String, dynamic> j) => MotoristaFavorito(
+        driverId: j['driverId'] as String? ?? '',
+        name: j['name'] as String? ?? 'Motorista',
+        rating: double.tryParse('${j['rating']}') ?? 5,
+        vehicle: j['vehicle'] as String? ?? '',
+        color: j['color'] as String? ?? '',
+        plate: j['plate'] as String? ?? '',
+        online: j['online'] as bool? ?? false,
+      );
+}
+

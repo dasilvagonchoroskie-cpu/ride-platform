@@ -9,11 +9,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Textos do Android em portugues (calendario, relogio, botoes padrao).
+  flutter_localizations:
+    sdk: flutter
   provider: ^6.1.2
   http: ^1.2.2
   shared_preferences: ^2.3.3
   geolocator: ^13.0.2
-  intl: ^0.19.0
+  # A versao certa e a que o flutter_localizations exige.
+  intl: any
+  image_picker: ^1.1.2
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   url_launcher: ^6.3.1

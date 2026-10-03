@@ -26,6 +26,7 @@ on:
     branches: [main]
     paths:
       - 'apps/mobile_*/**'
+      - 'apps/central_app/**'
       - '.github/workflows/android-apks.yml'
 
 concurrency:
@@ -63,6 +64,9 @@ jobs:
         run: |
           flutter --version
           dart --version
+
+      - name: Conferir chamadas do aplicativo contra as rotas do servidor
+        run: python3 scripts/conferir-rotas.py
 
       - name: Resolver dependencias
         working-directory: apps/${{ matrix.app }}

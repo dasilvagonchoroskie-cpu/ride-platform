@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/central_theme.dart';
@@ -16,6 +17,16 @@ class CentralApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: const Locale('pt', 'BR'),
+      supportedLocales: const [Locale('pt', 'BR')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // Android 15 desenha o app por baixo da barra de botoes do sistema
+      // (voltar/inicio). Sem isto o botao "Confirmar corrida" ficava atras
+      // dela. A margem de baixo vale para TODAS as telas de uma vez.
+      builder: (context, child) => ColoredBox(
+        color: Colors.black,
+        child: SafeArea(top: false, left: false, right: false, child: child ?? const SizedBox.shrink()),
+      ),
       scaffoldMessengerKey: avisos,
       title: 'Fortaleza Mov Central',
       debugShowCheckedModeBanner: false,
