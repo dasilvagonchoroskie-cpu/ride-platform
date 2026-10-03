@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 03/10/2026 05:06 UTC
+Teste de ponta a ponta - 03/10/2026 13:33 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -23,40 +23,38 @@ OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
 OK     Motorista: cadastro (nome, CPF e CNH) aceito
 OK     Central ve o nome do motorista (nao mais "Passageiro 1234")
-FALHA  Motorista: foto de documento
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Termine o cadastro de motorista antes de enviar documentos."},"timestamp":"2026-10-03T05:06:53.555Z","path":"/api/documents/foto"}
+OK     Motorista: foto da CNH enviada (fica pendente para a Central)
 OK     Motorista: veiculo cadastrado depois do cadastro
-FALHA  Central: lista de pendentes
-       resposta: []
-FALHA  Central: abrir foto
-       resposta: 404 application/json; charset=utf-8
-FALHA  Seguranca: foto de documento aberta
-       resposta: 404
+OK     Central: lista de pendentes com a foto do documento (antes a lista nem abria)
+OK     Central: abre a foto do documento
+OK     Seguranca: passageiro nao abre documento de motorista
 OK     Central: motorista aprovado com conferencia presencial
 OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
-OK     Central: cupom TESTE05061931 criado (R$ 3,00)
+OK     Passageiro: destino fora da regiao recusado (antes saia corrida de R$ 4.500)
+OK     Passageiro: busca de destino so mostra lugares da regiao
+OK     Central: cupom TESTE13335782 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 3091 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 3036 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
-OK     Motorista: corrida finalizada, valor 2000 centavos
-OK     Motorista: sabe quanto cobrar com o cupom (1700 centavos)
-OK     Bandeira certa pela hora de Brasilia (2h, noturna: 2000 centavos)
-OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1600 centavos, online 37s
+OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
+OK     Bandeira certa pela hora de Brasilia (10h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 2 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 38s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
-OK     Motorista: carteira pre-paga so descontou a comissao (saldo -100 centavos)
-OK     Central: recarga lancada, saldo agora 900 centavos
+OK     Motorista: carteira pre-paga so descontou a comissao (saldo 100 centavos)
+OK     Central: recarga lancada, saldo agora 1100 centavos
 OK     Central: contato de recarga carregado
 OK     Passageiro: avaliou o motorista com 5 estrelas
 OK     Passageiro: recibo da corrida concluida com a nota
@@ -76,5 +74,26 @@ OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
 OK     Motorista tambem pede corrida como passageiro
 OK     Seguranca: outra conta nao ve a corrida (nem nome e telefone)
+OK     Central: visao geral (ativas 0, concluidas hoje 2, online 1, faturamento 3000)
+OK     Central: tarifas por categoria (Carro)
+OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
+OK     Central: multiplicador dinamico salvo (1x)
+OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
+OK     Central: categoria do veiculo do motorista
+OK     Central: corrida manual criada (pedido por telefone)
+OK     Central: lista de motoristas livres por distancia
+OK     Central: corrida enviada para motorista especifico
+OK     Motorista: recebeu o chamado enviado pela Central
+OK     Central: cancelou a corrida
+OK     Motorista: pediu saque PIX de R$ 1,00
+OK     Central: ve o pedido de saque com a chave PIX
+OK     Central: confirmou o PIX (descontado da carteira)
+OK     Central: relatorio de receitas (dinheiro 2400, PIX/app 0, comissao 600)
+OK     Passageiro: SOS acionado
+OK     Central: alerta de SOS com a posicao atualizada
+OK     Central: SOS encerrado
+OK     Central: busca de passageiro pelo telefone
+OK     Central: passageiro bloqueado com motivo
+OK     Central: desbloqueado, historico com 2 registros
 
-Resultado: 4 falha(s).
+Resultado: 0 falha(s).
