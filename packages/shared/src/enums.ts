@@ -46,6 +46,7 @@ export const DriverStatus = {
   APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
   SUSPENDED: 'SUSPENDED',
+  BLOCKED: 'BLOCKED',
 } as const;
 export type DriverStatus = (typeof DriverStatus)[keyof typeof DriverStatus];
 

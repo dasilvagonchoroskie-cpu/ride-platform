@@ -14,6 +14,7 @@ CHAVE="${OTP_CHAVE_TESTE:-}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@ride.local}"
 post()  { curl -s -m 90 -X POST "$API$1" -H 'Content-Type: application/json' ${CHAVE:+-H "x-chave-teste: $CHAVE"} ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 patch() { curl -s -m 90 -X PATCH "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
+put()   { curl -s -m 90 -X PUT "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 get()   { curl -s -m 90 "$API$1" ${2:+-H "Authorization: Bearer $2"}; }
 sucesso() { echo "$1" | jq -e '.success == true' >/dev/null 2>&1; }
 entrar() {
@@ -225,6 +226,48 @@ X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TD")
 sucesso "$X" && ok "Motorista tambem pede corrida como passageiro" || falha "Motorista pedir corrida como passageiro" "$X"
 X=$(get "/rides/$RID" "$TE")
 [ "$(echo "$X" | jq -r '.error.code // .code // empty')" != "" ] && [ "$(echo "$X" | jq -r '.data.ride.id // empty')" = "" ] && ok "Seguranca: outra conta nao ve a corrida (nem nome e telefone)" || falha "Seguranca: corrida de outra pessoa aberta" "$(echo "$X" | jq -c '.data.ride.id')"
+
+# ================= Painel da Central =================
+X=$(get /admin/overview "$TA")
+sucesso "$X" && [ "$(echo "$X" | jq -r '.data.driversOnline')" -ge 1 ] 2>/dev/null \
+  && ok "Central: visao geral (ativas $(echo "$X" | jq -r '.data.activeRides'), concluidas hoje $(echo "$X" | jq -r '.data.completedToday'), online $(echo "$X" | jq -r '.data.driversOnline'), faturamento $(echo "$X" | jq -r '.data.revenueTodayCents'))" \
+  || falha "Central: visao geral" "$X"
+X=$(get /admin/tariffs "$TA")
+[ "$(echo "$X" | jq -r '.data.categorias | length')" -ge 1 ] 2>/dev/null && ok "Central: tarifas por categoria ($(echo "$X" | jq -r '[.data.categorias[].nome] | join(", ")'))" || falha "Central: tarifas por categoria" "$X"
+CARRO=$(echo "$X" | jq -c '.data.categorias[] | select(.codigo=="CARRO") | {nome, ativa, diurna: (.diurna | del(.flag, .updatedAt)), noturna: (.noturna | del(.flag, .updatedAt))}')
+MULT=$(echo "$X" | jq -c '.data.multiplicador')
+X=$(put /admin/tariffs/categoria/CARRO "$CARRO" "$TA"); sucesso "$X" && ok "Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')" || falha "Central: salvar categoria" "$X"
+X=$(put /admin/tariffs/multiplicador "$MULT" "$TA"); sucesso "$X" && ok "Central: multiplicador dinamico salvo ($(echo "$MULT" | jq -r '.cidade')x)" || falha "Central: multiplicador" "$X"
+X=$(patch "/admin/drivers/$DID/finance" '{"financeModel":"TAXA_FIXA","fixedFeeCents":200}' "$TA")
+[ "$(echo "$X" | jq -r '.data.financeModel')" = "TAXA_FIXA" ] && ok "Central: modelo financeiro do motorista (taxa fixa R\$ 2,00)" || falha "Central: modelo financeiro" "$X"
+patch "/admin/drivers/$DID/finance" '{"financeModel":"PADRAO"}' "$TA" >/dev/null
+X=$(patch "/admin/drivers/$DID/category" '{"category":"CARRO"}' "$TA"); sucesso "$X" && ok "Central: categoria do veiculo do motorista" || falha "Central: categoria do veiculo" "$X"
+FONE_P=$(get /auth/me "$TP" | jq -r '.data.phone')
+X=$(post /admin/rides "{\"passengerName\":\"Passageiro Teste\",\"passengerPhone\":\"$FONE_P\",\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"CARRO\",\"paymentMethodType\":\"CASH\"}" "$TA")
+RMAN=$(echo "$X" | jq -r '.data.rideId // empty')
+[ -n "$RMAN" ] && ok "Central: corrida manual criada (pedido por telefone)" || falha "Central: corrida manual" "$X"
+X=$(get "/admin/dispatch/drivers?lat=-18.0125&lng=-49.3547" "$TA")
+[ "$(echo "$X" | jq -r --arg d "$DID" '[.data[] | select(.driverId==$d)] | length')" = "1" ] && ok "Central: lista de motoristas livres por distancia" || falha "Central: motoristas livres" "$X"
+X=$(post "/admin/rides/$RMAN/assign" "{\"driverId\":\"$DID\"}" "$TA"); sucesso "$X" && ok "Central: corrida enviada para motorista especifico" || falha "Central: atribuir" "$X"
+X=$(get /driver/rides/offers "$TM")
+[ "$(echo "$X" | jq -r --arg r "$RMAN" '[.data[] | select((.rideId // .ride.id // .id)==$r)] | length')" -ge 1 ] 2>/dev/null && ok "Motorista: recebeu o chamado enviado pela Central" || falha "Motorista: chamado da Central" "$X"
+X=$(post "/admin/rides/$RMAN/cancel" '{"reason":"Teste automatico"}' "$TA")
+[ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_SYSTEM" ] && ok "Central: cancelou a corrida" || falha "Central: cancelar corrida" "$X"
+post "/admin/drivers/$DID/wallet/credit" '{"amountCents":500,"description":"Teste automatico"}' "$TA" >/dev/null
+X=$(post /driver/payouts '{"amountCents":100,"pixKey":"teste@exemplo.com"}' "$TM"); PID_=$(echo "$X" | jq -r '.data.id // empty')
+[ -n "$PID_" ] && ok "Motorista: pediu saque PIX de R\$ 1,00" || falha "Motorista: pedir saque" "$X"
+X=$(get "/admin/payouts?status=REQUESTED" "$TA"); [ "$(echo "$X" | jq -r --arg p "$PID_" '[.data.items[] | select(.id==$p)] | length')" = "1" ] && ok "Central: ve o pedido de saque com a chave PIX" || falha "Central: lista de saques" "$X"
+X=$(patch "/admin/payouts/$PID_" '{"paid":true}' "$TA"); [ "$(echo "$X" | jq -r '.data.status')" = "PAID" ] && ok "Central: confirmou o PIX (descontado da carteira)" || falha "Central: confirmar saque" "$X"
+X=$(get "/admin/reports/finance?days=1" "$TA"); sucesso "$X" && ok "Central: relatorio de receitas (dinheiro $(echo "$X" | jq -r '.data.cashCents'), PIX/app $(echo "$X" | jq -r '.data.pixAndAppCents'), comissao $(echo "$X" | jq -r '.data.commissionCents'))" || falha "Central: relatorio financeiro" "$X"
+X=$(post /safety/sos '{"latitude":-18.0125,"longitude":-49.3547}' "$TP"); SOS=$(echo "$X" | jq -r '.data.id // empty')
+[ -n "$SOS" ] && ok "Passageiro: SOS acionado" || falha "SOS: acionar" "$X"
+post "/safety/sos/$SOS/location" '{"latitude":-18.0130,"longitude":-49.3550}' "$TP" >/dev/null
+X=$(get /admin/safety "$TA"); [ "$(echo "$X" | jq -r --arg s "$SOS" '[.data.items[] | select(.id==$s and .latitude < -18.0128)] | length')" = "1" ] && ok "Central: alerta de SOS com a posicao atualizada" || falha "Central: alerta de SOS" "$X"
+X=$(patch "/admin/safety/$SOS/resolve" '{"note":"Teste automatico"}' "$TA"); sucesso "$X" && ok "Central: SOS encerrado" || falha "Central: encerrar SOS" "$X"
+PIDP=$(get /auth/me "$TP" | jq -r '.data.id')
+X=$(get "/admin/passengers?search=$(echo "$FONE_P" | tr -dc 0-9 | tail -c 8)" "$TA"); [ "$(echo "$X" | jq -r --arg p "$PIDP" '[.data.items[] | select(.id==$p)] | length')" = "1" ] && ok "Central: busca de passageiro pelo telefone" || falha "Central: busca de passageiro" "$X"
+X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":true,"reason":"Teste automatico de bloqueio"}' "$TA"); [ "$(echo "$X" | jq -r '.data.status')" = "BLOCKED" ] && ok "Central: passageiro bloqueado com motivo" || falha "Central: bloquear passageiro" "$X"
+X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":false,"reason":"Fim do teste"}' "$TA"); [ "$(echo "$X" | jq -r '.data.history | length')" -ge 2 ] 2>/dev/null && ok "Central: desbloqueado, historico com $(echo "$X" | jq -r '.data.history | length') registros" || falha "Central: historico de bloqueio" "$X"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null

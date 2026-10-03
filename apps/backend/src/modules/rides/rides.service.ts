@@ -9,6 +9,7 @@ import { FareService } from './fare.service';
 import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
+import { lerCategorias } from './categorias';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -82,6 +83,8 @@ export class RidesService {
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
       ...(input.scheduledFor ? { quando: input.scheduledFor } : {}),
+      category: input.category ?? 'CARRO',
+      pickup: input.pickup,
     });
     let descontoCents = 0;
     let cupom: string | null = null;
@@ -96,6 +99,9 @@ export class RidesService {
       discountCents: descontoCents,
       couponCode: cupom,
       totalToPayCents: orcamento.totalCents - descontoCents,
+      category: orcamento.category,
+      multiplier: orcamento.multiplier,
+      timeCents: orcamento.timeCents,
       baseFareCents: orcamento.baseFareCents,
       distanceCents: orcamento.distanceCents,
       distanceMeters: orcamento.distanceMeters,
@@ -120,6 +126,13 @@ export class RidesService {
       );
     }
 
+    if (input.category) {
+      const categorias = await lerCategorias(this.prisma);
+      if (!categorias.some((c) => c.codigo === input.category && c.ativa)) {
+        throw BusinessException.validation('Esta categoria não está disponível agora.');
+      }
+    }
+
     // Agendada: de 30 minutos a 7 dias a frente, ate 3 por passageiro.
     const agendadaPara = input.scheduledFor ? new Date(input.scheduledFor) : null;
     if (agendadaPara) {
@@ -138,6 +151,8 @@ export class RidesService {
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
       quando: agendadaPara ?? pedidoEm,
+      category: input.category ?? 'CARRO',
+      pickup: input.pickup,
     });
     const cupom = input.couponCode
       ? await validarCupom(this.prisma, passengerId, input.couponCode, orcamento.totalCents)
@@ -153,6 +168,8 @@ export class RidesService {
           passengerId,
           status: agendadaPara ? RideStatus.SCHEDULED : RideStatus.REQUESTED,
           scheduledFor: agendadaPara,
+          category: orcamento.category,
+          multiplier: orcamento.multiplier,
           couponId: cupom?.cupom.id ?? null,
           discountCents: cupom?.descontoCents ?? 0,
           fareFlag: orcamento.flag,
@@ -223,6 +240,7 @@ export class RidesService {
         longitude: corrida.pickupLng,
         radiusMeters: raio,
         limit: 10,
+        category: corrida.category,
       });
       if (proximos.length === 0) continue;
       const favoritosPerto = primeiraRodada ? proximos.filter((m) => favoritos.includes(m.driverId)) : [];
@@ -466,6 +484,12 @@ export class RidesService {
       durationSeconds: duracao,
       waitingSeconds: input.waitingSeconds,
       flag: corrida.fareFlag,
+      category: corrida.category,
+      multiplier: Number(corrida.multiplier),
+      motorista: await this.prisma.driver.findUnique({
+        where: { id: driverId },
+        select: { financeModel: true, customCommissionPercent: true, fixedFeeCents: true },
+      }),
     });
 
     // Cupom: o desconto e recalculado sobre o valor final e a plataforma
@@ -597,7 +621,7 @@ export class RidesService {
     // uma corrida que ninguem aceitou.
     let multaCents = 0;
     if (ehPassageiro && corrida.driverId) {
-      multaCents = await this.fare.taxaDeCancelamento();
+      multaCents = await this.fare.taxaDeCancelamento(new Date(), corrida.category);
     }
 
     await this.prisma.withTransaction(async (tx) => {

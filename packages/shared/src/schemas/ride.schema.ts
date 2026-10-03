@@ -25,6 +25,8 @@ export const estimateRideSchema = z.object({
   dropoff: ridePointSchema,
   /** Para mostrar o preco da bandeira do horario agendado. */
   scheduledFor: z.coerce.date().optional(),
+  /** Categoria do veiculo (CARRO, MOTO...). */
+  category: z.string().trim().toUpperCase().max(20).optional(),
   /** Mostra o desconto do cupom antes de confirmar. */
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
 });
@@ -37,6 +39,8 @@ export const requestRideSchema = z.object({
     .default('CASH'),
   /** Corrida agendada: horario combinado (de 30 min a 7 dias a frente). */
   scheduledFor: z.coerce.date().optional(),
+  /** Categoria do veiculo (CARRO, MOTO...). */
+  category: z.string().trim().toUpperCase().max(20).optional(),
   /** Codigo do cupom de desconto (opcional). */
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
 });

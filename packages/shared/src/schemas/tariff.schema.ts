@@ -17,6 +17,8 @@ export const tariffFlagSchema = z.object({
   baseFareCents: z.number().int().min(0).max(1_000_00),
 
   perKmCents: z.number().int().min(0).max(100_00),
+  /** Valor por minuto de viagem (0 = so distancia). */
+  perMinuteCents: z.number().int().min(0).max(100_00).default(0),
   waitingPerMinuteCents: z.number().int().min(0).max(100_00),
 
   /** Franquia inclusa na bandeirada. */
@@ -43,3 +45,31 @@ export const updateTariffsSchema = z.object({
 
 export type TariffFlagInput = z.infer<typeof tariffFlagSchema>;
 export type UpdateTariffsInput = z.infer<typeof updateTariffsSchema>;
+
+/** Uma categoria (Carro, Moto, Premium...) com as duas bandeiras. */
+export const saveCategorySchema = z.object({
+  nome: z.string().trim().min(2).max(40),
+  ativa: z.boolean().default(true),
+  diurna: tariffFlagSchema,
+  noturna: tariffFlagSchema,
+});
+export type SaveCategoryInput = z.infer<typeof saveCategorySchema>;
+
+/** Multiplicador dinamico: para a cidade toda ou por zona (circulo no mapa). */
+export const multiplierSchema = z.object({
+  cidade: z.number().min(0.5).max(5),
+  zonas: z
+    .array(
+      z.object({
+        nome: z.string().trim().min(1).max(60),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        raioKm: z.number().min(0.1).max(50),
+        multiplicador: z.number().min(0.5).max(5),
+      }),
+    )
+    .max(30)
+    .default([]),
+});
+export type MultiplierInput = z.infer<typeof multiplierSchema>;
+

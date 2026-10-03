@@ -72,8 +72,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     longitude: number;
     radiusMeters: number;
     limit?: number;
+    /** So motoristas com veiculo ativo desta categoria (CARRO, MOTO...). */
+    category?: string;
   }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>> {
     const limit = params.limit ?? 20;
+    const categoria = params.category ?? 'CARRO';
     return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>>`
       SELECT
         dl.driver_id                     AS "driverId",
@@ -86,6 +89,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         AND d.is_online = TRUE
         AND dl.is_available = TRUE
         AND dl.last_seen_at > NOW() - INTERVAL '2 minutes'
+        AND EXISTS (
+          SELECT 1 FROM vehicles v
+          WHERE v.driver_id = d.id AND v.is_active = TRUE AND v.category = ${categoria}
+        )
         AND ST_DWithin(
           dl.location,
           ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography,

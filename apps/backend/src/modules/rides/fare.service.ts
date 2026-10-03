@@ -5,6 +5,14 @@ import { ERROR_CODES, haversineKm } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { percentOf, splitCommission } from '../../common/utils/money.util';
+import { lerMultiplicador, multiplicadorNoPonto } from './categorias';
+
+/** Como o motorista paga a plataforma (definido pela Central). */
+export interface ModeloFinanceiro {
+  financeModel: string;
+  customCommissionPercent: unknown;
+  fixedFeeCents: number | null;
+}
 
 export interface RotaMedida {
   distanceMeters: number;
@@ -25,6 +33,11 @@ export interface OrcamentoDaCorrida {
   chargedWaitingSeconds: number;
   distanceCents: number;
   waitingCents: number;
+  /** Minutos de viagem cobrados (categoria com valor por minuto). */
+  timeCents: number;
+  category: string;
+  /** Multiplicador dinamico aplicado (1 = normal). */
+  multiplier: number;
 
   subtotalCents: number;
   totalCents: number;
@@ -90,10 +103,14 @@ export class FareService {
   }
 
   /** A tabela vigente neste instante. */
-  async tabelaVigente(quando: Date = new Date()) {
-    const tabelas: FareConfig[] = await this.prisma.fareConfig.findMany({
-      where: { isActive: true },
+  async tabelaVigente(quando: Date = new Date(), categoria = 'CARRO') {
+    let tabelas: FareConfig[] = await this.prisma.fareConfig.findMany({
+      where: { isActive: true, category: categoria },
     });
+    // Categoria sem tabela propria usa a do Carro.
+    if (tabelas.length === 0 && categoria !== 'CARRO') {
+      tabelas = await this.prisma.fareConfig.findMany({ where: { isActive: true, category: 'CARRO' } });
+    }
     if (tabelas.length === 0) {
       throw new BusinessException(
         ERROR_CODES.NOT_FOUND,
@@ -132,11 +149,20 @@ export class FareService {
     waitingSeconds?: number;
     quando?: Date;
     flag?: FareFlag;
+    category?: string;
+    /** Ponto de embarque: decide o multiplicador da zona. */
+    pickup?: { latitude: number; longitude: number };
+    /** Multiplicador ja gravado na corrida (no fim, vale o do pedido). */
+    multiplier?: number;
+    /** Modelo financeiro do motorista (no fim da corrida). */
+    motorista?: ModeloFinanceiro | null;
   }): Promise<OrcamentoDaCorrida> {
     const quando = params.quando ?? new Date();
+    const categoria = params.category ?? 'CARRO';
     const tabela = params.flag
-      ? await this.prisma.fareConfig.findUnique({ where: { flag: params.flag } })
-      : await this.tabelaVigente(quando);
+      ? (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: categoria, flag: params.flag } } })) ??
+        (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: 'CARRO', flag: params.flag } } }))
+      : await this.tabelaVigente(quando, categoria);
 
     if (!tabela) {
       throw new BusinessException(ERROR_CODES.NOT_FOUND, 'Tabela de precos nao encontrada.');
@@ -151,15 +177,32 @@ export class FareService {
     const distanceCents = Math.round((metrosCobrados / 1000) * tabela.perKmCents);
     const waitingCents = Math.round((esperaCobrada / 60) * tabela.waitingPerMinuteCents);
 
-    const subtotalCents = tabela.baseFareCents + distanceCents + waitingCents;
+    const timeCents = Math.round((Math.max(0, params.durationSeconds) / 60) * tabela.perMinuteCents);
+    const subtotalCents = tabela.baseFareCents + distanceCents + waitingCents + timeCents;
 
     // Piso da corrida. Com bandeirada de R$ 10 o piso raramente entra,
     // mas fica como rede de seguranca se alguem baixar a bandeirada.
     const minFareApplied = subtotalCents < tabela.minFareCents;
-    const totalCents = minFareApplied ? tabela.minFareCents : subtotalCents;
+    const semMultiplicador = minFareApplied ? tabela.minFareCents : subtotalCents;
+    const multiplier =
+      params.multiplier ?? multiplicadorNoPonto(await lerMultiplicador(this.prisma), params.pickup);
+    const totalCents = Math.round(semMultiplicador * multiplier);
 
-    const commissionPercent = Number(tabela.commissionPercent);
-    const divisao = splitCommission(totalCents, commissionPercent);
+    // Comissao: a da categoria, ou a do modelo que a Central definiu para o motorista.
+    let commissionPercent = Number(tabela.commissionPercent);
+    let divisao = splitCommission(totalCents, commissionPercent);
+    const m = params.motorista;
+    if (m?.financeModel === 'PERCENTUAL' && m.customCommissionPercent != null) {
+      commissionPercent = Number(m.customCommissionPercent);
+      divisao = splitCommission(totalCents, commissionPercent);
+    } else if (m?.financeModel === 'TAXA_FIXA') {
+      const fixo = Math.min(Math.max(m.fixedFeeCents ?? 0, 0), totalCents);
+      commissionPercent = totalCents > 0 ? Math.round((fixo / totalCents) * 10000) / 100 : 0;
+      divisao = { grossCents: totalCents, commissionCents: fixo, driverEarningCents: totalCents - fixo };
+    } else if (m?.financeModel === 'MENSALIDADE') {
+      commissionPercent = 0;
+      divisao = { grossCents: totalCents, commissionCents: 0, driverEarningCents: totalCents };
+    }
 
     return {
       flag: tabela.flag,
@@ -171,6 +214,9 @@ export class FareService {
       chargedWaitingSeconds: esperaCobrada,
       distanceCents,
       waitingCents,
+      timeCents,
+      category: tabela.category,
+      multiplier,
       subtotalCents,
       totalCents,
       minFareApplied,
@@ -181,8 +227,8 @@ export class FareService {
   }
 
   /** Multa de cancelamento tardio, pela bandeira vigente. */
-  async taxaDeCancelamento(quando: Date = new Date()): Promise<number> {
-    const tabela = await this.tabelaVigente(quando);
+  async taxaDeCancelamento(quando: Date = new Date(), categoria = 'CARRO'): Promise<number> {
+    const tabela = await this.tabelaVigente(quando, categoria);
     return tabela.cancellationFeeCents;
   }
 

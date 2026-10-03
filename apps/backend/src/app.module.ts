@@ -29,6 +29,7 @@ import { PainelMotoristaModule } from './modules/painel-motorista/painel-motoris
 import { GeoModule } from './modules/geo/geo.module';
 import { OperacaoModule } from './modules/operacao/operacao.module';
 import { ArquivosModule } from './modules/arquivos/arquivos.module';
+import { CentralModule } from './modules/central/central.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ArquivosModule } from './modules/arquivos/arquivos.module';
     GeoModule,
     OperacaoModule,
     ArquivosModule,
+    CentralModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis

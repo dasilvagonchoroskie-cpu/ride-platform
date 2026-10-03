@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { BusinessException } from '../../common/errors/business.exception';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ArquivosService } from './arquivos.service';
 
@@ -39,8 +38,9 @@ export class ArquivosController {
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(documentoSchema)) body: { type: DocumentType; mime: string; dados: string },
   ) {
-    if (!user.driverId) throw BusinessException.validation('Termine o cadastro de motorista antes de enviar documentos.');
-    return this.arquivos.fotoDeDocumento(user.id, user.driverId, body.type, body.mime, body.dados);
+    // O cadastro de motorista pode ter acabado de ser feito: o login ainda
+    // nao traz o numero do motorista, entao ele e buscado pelo usuario.
+    return this.arquivos.fotoDeDocumento(user.id, body.type, body.mime, body.dados);
   }
 
   @Get('arquivos/:id')

@@ -37,7 +37,7 @@ export const updateDriverLocationSchema = z.object({
 
 export const reviewDriverSchema = z
   .object({
-    status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED']),
+    status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED', 'BLOCKED']),
     reason: z.string().trim().min(3).max(500).optional(),
     /**
      * Aprovacao com conferencia PRESENCIAL dos documentos, enquanto o envio
@@ -52,7 +52,7 @@ export const reviewDriverSchema = z
   });
 
 export const listDriversSchema = z.object({
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED']).optional(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED', 'BLOCKED']).optional(),
   isOnline: z
     .enum(['true', 'false'])
     .optional()

@@ -37,8 +37,8 @@ export class ReportsService {
       orderBy: { requestedAt: 'desc' },
       take: 100,
       include: {
-        passenger: { select: { name: true } },
-        driver: { select: { user: { select: { name: true } } } },
+        passenger: { select: { name: true, phone: true } },
+        driver: { select: { id: true, user: { select: { name: true, phone: true } } } },
         vehicle: { select: { plate: true } },
       },
     });
@@ -57,6 +57,12 @@ export class ReportsService {
         code: c.code,
         status: c.status,
         passengerName: c.passenger.name,
+        passengerPhone: c.passenger.phone,
+        driverId: c.driverId,
+        driverPhone: c.driver?.user.phone ?? null,
+        category: c.category,
+        paymentMethodType: c.paymentMethodType,
+        multiplier: Number(c.multiplier),
         driverName: c.driver?.user.name ?? 'Procurando motorista',
         driverPlate: c.vehicle?.plate ?? '',
         pickup: { latitude: c.pickupLat, longitude: c.pickupLng, address: c.pickupAddress },

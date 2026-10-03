@@ -47,7 +47,7 @@ async function main(): Promise<void> {
 
   for (const bandeira of BANDEIRAS) {
     await prisma.fareConfig.upsert({
-      where: { flag: bandeira.flag },
+      where: { category_flag: { category: 'CARRO', flag: bandeira.flag } },
       create: { ...bandeira, isActive: true },
       update: { ...bandeira, isActive: true },
     });

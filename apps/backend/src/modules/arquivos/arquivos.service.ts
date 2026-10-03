@@ -49,7 +49,10 @@ export class ArquivosService {
   }
 
   /** Foto de documento do motorista: entra como pendente para a Central conferir. */
-  async fotoDeDocumento(userId: string, driverId: string, tipo: DocumentType, mime: string, base64: string) {
+  async fotoDeDocumento(userId: string, tipo: DocumentType, mime: string, base64: string) {
+    const motorista = await this.prisma.driver.findUnique({ where: { userId }, select: { id: true } });
+    if (!motorista) throw BusinessException.validation('Termine o cadastro de motorista antes de enviar documentos.');
+    const driverId = motorista.id;
     const dados = this.decodificar(mime, base64);
     const id = await this.guardar(userId, tipo, mime, dados);
     const fileUrl = `/arquivos/${id}`;
