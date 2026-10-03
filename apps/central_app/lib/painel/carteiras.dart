@@ -564,16 +564,26 @@ class _LinhaExtrato extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Data e tipo podem quebrar linha no celular; o valor fica sempre a direita.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(dataHora(l.quando), style: AppText.caption.copyWith(color: AppColors.textMuted)),
-              const SizedBox(width: Spacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(color: cor.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(Radii.sm)),
-                child: Text(l.credito ? 'Crédito' : 'Débito', style: AppText.caption.copyWith(color: cor)),
+              Expanded(
+                child: Wrap(
+                  spacing: Spacing.sm,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(dataHora(l.quando), style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(color: cor.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(Radii.sm)),
+                      child: Text(l.credito ? 'Crédito' : 'Débito', style: AppText.caption.copyWith(color: cor)),
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: Spacing.sm),
               Text(
                 '${l.credito ? '+' : '-'} ${reais(l.valorCents.abs())}',
                 style: AppText.bodyStrong.copyWith(color: cor),
