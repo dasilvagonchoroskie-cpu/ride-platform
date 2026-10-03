@@ -43,14 +43,42 @@ env:
   JAVA_VERSION: '17'
 
 jobs:
+  # Escolhe quais aplicativos montar: pelo botao (um so ou todos) ou,
+  # no envio de codigo, os tres. Assim um aplicativo em obra nao trava
+  # a entrega de outro que ja esta pronto.
+  preparar:
+    name: Escolher aplicativos
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.escolha.outputs.apps }}
+      builds: ${{ steps.escolha.outputs.builds }}
+    steps:
+      - id: escolha
+        run: |
+          QUAL="${{ github.event.inputs.app }}"
+          [ -z "$QUAL" ] && QUAL=all
+          python3 - "$QUAL" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, sys
+          todos = [
+              {"app": "mobile_passenger", "label": "Passageiro", "artifact": "ride-passenger-apk", "apk_name": "ride-passenger"},
+              {"app": "mobile_driver", "label": "Motorista", "artifact": "ride-driver-apk", "apk_name": "ride-driver"},
+              {"app": "central_app", "label": "Central", "artifact": "fortaleza-central-apk", "apk_name": "fortaleza-central"},
+          ]
+          qual = sys.argv[1]
+          escolhidos = [a for a in todos if qual == "all" or a["app"] == qual]
+          print("apps=" + json.dumps([a["app"] for a in escolhidos]))
+          print("builds=" + json.dumps(escolhidos))
+          PY
+
   validate:
     name: Validar ${{ matrix.app }}
     runs-on: ubuntu-latest
+    needs: preparar
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        app: [mobile_passenger, mobile_driver, central_app]
+        app: ${{ fromJson(needs.preparar.outputs.apps) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -116,24 +144,12 @@ jobs:
   build-apk:
     name: APK ${{ matrix.app }}
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [preparar, validate]
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - app: mobile_passenger
-            label: Passageiro
-            artifact: ride-passenger-apk
-            apk_name: ride-passenger
-          - app: mobile_driver
-            label: Motorista
-            artifact: ride-driver-apk
-            apk_name: ride-driver
-          - app: central_app
-            label: Central
-            artifact: fortaleza-central-apk
-            apk_name: fortaleza-central
+        include: ${{ fromJson(needs.preparar.outputs.builds) }}
     steps:
       - uses: actions/checkout@v4
 
