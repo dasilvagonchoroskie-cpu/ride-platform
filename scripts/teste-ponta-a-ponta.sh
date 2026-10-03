@@ -97,10 +97,19 @@ X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\
 DID=$(echo "$X" | jq -r '.data.id // .data.driver.id // empty')
 sucesso "$X" && ok "Motorista: cadastro (nome, CPF e CNH) aceito" || falha "Motorista: cadastro" "$X"
 X=$(get /auth/me "$TM"); [ "$(echo "$X" | jq -r '.data.name')" = "Motorista Teste Automatico" ] && ok "Central ve o nome do motorista (nao mais \"Passageiro 1234\")" || falha "Motorista: nome no cadastro" "$X"
+FOTO="/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAAIAAgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDDooor6E8k/9k="
+X=$(post /documents/foto "{\"type\":\"CNH_FRONT\",\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TM")
+DOCURL=$(echo "$X" | jq -r '.data.fileUrl // empty')
+[ "$(echo "$X" | jq -r '.data.status')" = "PENDING" ] && ok "Motorista: foto da CNH enviada (fica pendente para a Central)" || falha "Motorista: foto de documento" "$X"
 PLACA="TST$((RANDOM%10))A$(printf '%02d' $((RANDOM%100)))"
 X=$(post /vehicles "{\"plate\":\"$PLACA\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"}" "$TM")
 sucesso "$X" && ok "Motorista: veiculo cadastrado depois do cadastro" || falha "Motorista: veiculo" "$X"
 
+X=$(get "/admin/drivers?status=PENDING&limit=50" "$TA")
+[ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents | type] | first')" = "array" ] && [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents[0].fileUrl] | first')" = "$DOCURL" ] \
+  && ok "Central: lista de pendentes com a foto do documento (antes a lista nem abria)" || falha "Central: lista de pendentes" "$(echo "$X" | jq -c '.data.items[0].documents' 2>/dev/null)"
+C=$(curl -s -o /dev/null -w "%{http_code} %{content_type}" "$API$DOCURL" -H "Authorization: Bearer $TA"); [ "$C" = "200 image/jpeg" ] && ok "Central: abre a foto do documento" || falha "Central: abrir foto" "$C"
+C=$(curl -s -o /dev/null -w "%{http_code}" "$API$DOCURL" -H "Authorization: Bearer $TP"); [ "$C" = "403" ] && ok "Seguranca: passageiro nao abre documento de motorista" || falha "Seguranca: foto de documento aberta" "$C"
 X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
 sucesso "$X" && ok "Central: motorista aprovado com conferencia presencial" || falha "Central: aprovar motorista" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Motorista: ficou disponivel" || falha "Motorista: ficar disponivel" "$X"
@@ -109,7 +118,13 @@ X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
 N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: ve $N carro(s) disponivel(is) no mapa (dado real)" || falha "Passageiro: carros por perto" "$X"
 
-X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP")
+CUP="TESTE$SUF$((RANDOM%100))"
+X=$(post /admin/coupons "{\"code\":\"$CUP\",\"description\":\"Teste automatico\",\"discountType\":\"FIXED\",\"discountValue\":300,\"maxUses\":5}" "$TA")
+sucesso "$X" && ok "Central: cupom $CUP criado (R\$ 3,00)" || falha "Central: criar cupom" "$X"
+X=$(get /rides/coupons "$TP"); [ "$(echo "$X" | jq -r --arg c "$CUP" '[.data[] | select(.code==$c)] | length')" = "1" ] && ok "Passageiro: ve o cupom na tela Cupons" || falha "Passageiro: lista de cupons" "$X"
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"couponCode\":\"$CUP\"}" "$TP")
+[ "$(echo "$X" | jq -r '.data.discountCents')" = "300" ] && ok "Passageiro: estimativa ja mostra o desconto do cupom" || falha "Passageiro: estimativa com cupom" "$X"
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"couponCode\":\"$CUP\"}" "$TP")
 RID=$(echo "$X" | jq -r '.data.ride.id // empty')
 sucesso "$X" && ok "Passageiro: corrida pedida" || falha "Passageiro: pedir corrida" "$X"
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
@@ -127,6 +142,8 @@ for passo in arriving arrived start; do
 done
 X=$(post "/driver/rides/$RID/finish" '{}' "$TM")
 sucesso "$X" && ok "Motorista: corrida finalizada, valor $(echo "$X" | jq -r '.data.finalFareCents // "?"') centavos" || falha "Motorista: finalizar" "$X"
+[ "$(echo "$X" | jq -r '.data.discountCents')" = "300" ] && [ "$(echo "$X" | jq -r '.data.toCollectCents')" = "$(( $(echo "$X" | jq -r '.data.finalFareCents') - 300 ))" ] \
+  && ok "Motorista: sabe quanto cobrar com o cupom ($(echo "$X" | jq -r '.data.toCollectCents') centavos)" || falha "Motorista: valor com cupom" "$X"
 VAL=$(echo "$X" | jq -r '.data.finalFareCents // 0')
 HORA=$((10#$(TZ=America/Sao_Paulo date +%H)))
 TAR=$(get /admin/tariffs "$TA")
@@ -147,6 +164,8 @@ done
 X=$(get /driver/wallet "$TM")
 COM=$(echo "$X" | jq -r '[.data.transactions[] | select(.type=="COMMISSION")] | length' 2>/dev/null)
 GAN=$(echo "$X" | jq -r '[.data.transactions[] | select(.type=="RIDE_EARNING")] | length' 2>/dev/null)
+BON=$(echo "$X" | jq -r '[.data.transactions[] | select(.type=="BONUS" and .amountCents==300)] | length' 2>/dev/null)
+[ "${BON:-0}" -ge 1 ] && ok "Motorista: desconto do cupom creditado na carteira (pago pela plataforma)" || falha "Motorista: credito do cupom" "$X"
 if sucesso "$X" && [ "${COM:-0}" -ge 1 ] && [ "${GAN:-1}" = "0" ]; then
   ok "Motorista: carteira pre-paga so descontou a comissao (saldo $(echo "$X" | jq -r '.data.balanceCents') centavos)"
 else falha "Motorista: carteira pre-paga" "$X"; fi
@@ -156,6 +175,15 @@ X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de 
 X=$(post "/rides/$RID/rate" '{"score":5,"tags":["Carro limpo"]}' "$TP")
 [ "$(echo "$X" | jq -r '.data.score')" = "5" ] && ok "Passageiro: avaliou o motorista com 5 estrelas" || falha "Passageiro: avaliar" "$X"
 X=$(get "/rides/$RID" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "COMPLETED" ] && [ "$(echo "$X" | jq -r '.data.ride.minhaNota')" = "5" ] && ok "Passageiro: recibo da corrida concluida com a nota" || falha "Passageiro: recibo" "$X"
+X=$(post "/rides/favoritos/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && ok "Passageiro: motorista adicionado aos favoritos" || falha "Passageiro: favoritar" "$X"
+X=$(post /auth/foto "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TP"); AV=$(echo "$X" | jq -r '.data.avatarUrl // empty')
+C=$(curl -s -o /dev/null -w "%{http_code}" "$API$AV" -H "Authorization: Bearer $TM"); [ -n "$AV" ] && [ "$C" = "200" ] && ok "Passageiro: foto de perfil (o motorista consegue ver)" || falha "Passageiro: foto de perfil" "$X $C"
+QUANDO=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"PIX\",\"scheduledFor\":\"$QUANDO\"}" "$TP"); RIDA=$(echo "$X" | jq -r '.data.ride.id // empty')
+[ "$(echo "$X" | jq -r '.data.ride.status')" = "SCHEDULED" ] && ok "Passageiro: corrida agendada para daqui a 2 horas" || falha "Passageiro: agendar" "$X"
+X=$(get /rides/scheduled "$TP"); [ "$(echo "$X" | jq -r --arg r "$RIDA" '[.data.items[] | select(.id==$r)] | length')" = "1" ] && ok "Passageiro: ve a agendada em Corridas agendadas" || falha "Passageiro: lista de agendadas" "$X"
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"scheduledFor\":\"$(date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ)\"}" "$TP"); sucesso "$X" && falha "Agendar com menos de 30 min deveria ser recusado" "$X" || ok "Passageiro: agendamento muito em cima da hora recusado"
+X=$(post "/rides/$RIDA/cancel" '{"reason":"Teste"}' "$TP"); [ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_PASSENGER" ] && ok "Passageiro: cancelou a agendada" || falha "Passageiro: cancelar agendada" "$X"
 # Segunda corrida: o motorista cancela depois de aceitar e o passageiro fica sabendo.
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"PIX\"}" "$TP"); RID2=$(echo "$X" | jq -r '.data.ride.id // empty')
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
@@ -197,5 +225,6 @@ X=$(get "/rides/$RID" "$TE")
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
 patch "/admin/drivers/$DID/review" '{"status":"SUSPENDED","reason":"Conta de teste automatico"}' "$TA" >/dev/null
+CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
 echo | tee -a "$REL"; echo "Resultado: $FALHAS falha(s)." | tee -a "$REL"
 exit $FALHAS

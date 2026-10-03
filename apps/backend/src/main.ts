@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -10,7 +11,9 @@ import { AppConfigService } from './config/app-config.service';
 
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false });
+  // Fotos (perfil e documentos) chegam em base64: ate 4 MB por envio.
+  app.useBodyParser('json', { limit: '4mb' });
   const config = app.get(AppConfigService);
 
   app.use(helmet({ crossOriginResourcePolicy: false }));

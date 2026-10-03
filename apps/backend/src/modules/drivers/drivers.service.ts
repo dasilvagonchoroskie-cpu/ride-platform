@@ -197,10 +197,14 @@ export class DriversService {
       search: params.search,
     });
 
+    // documents: a ultima foto de cada documento (lista, como a Central le);
+    // documentProgress: o resumo. Antes "documents" vinha como resumo e a
+    // Central nao conseguia ler a lista de pendentes.
     const drivers = await Promise.all(
       items.map(async (driver) => ({
         ...driver,
-        documents: await this.getDocumentProgress(driver.id),
+        documents: await this.ultimosDocumentos(driver.id),
+        documentProgress: await this.getDocumentProgress(driver.id),
       })),
     );
 
@@ -335,6 +339,16 @@ export class DriversService {
   // ------------------------------ HELPERS ------------------------------
 
   /** Situacao dos documentos obrigatorios do motorista. */
+  async ultimosDocumentos(driverId: string) {
+    const docs = await this.prisma.driverDocument.findMany({
+      where: { driverId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, type: true, status: true, rejectionReason: true, fileUrl: true, uploadedAt: true },
+    });
+    const vistos = new Set<string>();
+    return docs.filter((d) => (vistos.has(d.type) ? false : (vistos.add(d.type), true)));
+  }
+
   async getDocumentProgress(driverId: string) {
     const documents = await this.prisma.driverDocument.findMany({
       where: { driverId },

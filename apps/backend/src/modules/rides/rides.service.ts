@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Interval } from '@nestjs/schedule';
 import { Prisma, RideStatus, OfferStatus, UserRole } from '@prisma/client';
 import type { Ride, RideOffer } from '@prisma/client';
 import { ERROR_CODES, generateNumericCode } from '@ride/shared';
@@ -7,6 +8,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { FareService } from './fare.service';
 import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira } from '../painel-motorista/regras-carteira';
+import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -22,6 +24,7 @@ import type {
  * olhada.
  */
 const TRANSICOES: Record<RideStatus, RideStatus[]> = {
+  SCHEDULED: ['REQUESTED', 'SEARCHING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_SYSTEM', 'EXPIRED'],
   REQUESTED: ['SEARCHING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_SYSTEM', 'EXPIRED'],
   SEARCHING: ['DRIVER_ASSIGNED', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_SYSTEM', 'EXPIRED'],
   DRIVER_ASSIGNED: ['DRIVER_ARRIVING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_SYSTEM'],
@@ -61,15 +64,26 @@ export class RidesService {
   // Orcamento antes de chamar
   // ------------------------------------------------------------------
 
-  async estimar(input: EstimateRideInput) {
+  async estimar(input: EstimateRideInput, passengerId?: string) {
     const rota = this.fare.estimarRota(input.pickup, input.dropoff);
     const orcamento = await this.fare.calcular({
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
+      ...(input.scheduledFor ? { quando: input.scheduledFor } : {}),
     });
+    let descontoCents = 0;
+    let cupom: string | null = null;
+    if (input.couponCode && passengerId) {
+      const v = await validarCupom(this.prisma, passengerId, input.couponCode, orcamento.totalCents);
+      descontoCents = v.descontoCents;
+      cupom = v.cupom.code;
+    }
     return {
       flag: orcamento.flag,
       estimatedFareCents: orcamento.totalCents,
+      discountCents: descontoCents,
+      couponCode: cupom,
+      totalToPayCents: orcamento.totalCents - descontoCents,
       baseFareCents: orcamento.baseFareCents,
       distanceCents: orcamento.distanceCents,
       distanceMeters: orcamento.distanceMeters,
@@ -94,13 +108,27 @@ export class RidesService {
       );
     }
 
+    // Agendada: de 30 minutos a 7 dias a frente, ate 3 por passageiro.
+    const agendadaPara = input.scheduledFor ? new Date(input.scheduledFor) : null;
+    if (agendadaPara) {
+      const minutos = (agendadaPara.getTime() - Date.now()) / 60_000;
+      if (minutos < 30) throw BusinessException.validation('Agende com pelo menos 30 minutos de antecedência.');
+      if (minutos > 7 * 24 * 60) throw BusinessException.validation('Dá para agendar até 7 dias à frente.');
+      const agendadas = await this.prisma.ride.count({ where: { passengerId, status: RideStatus.SCHEDULED } });
+      if (agendadas >= 3) throw BusinessException.validation('Você já tem 3 corridas agendadas.');
+    }
+
     const rota = this.fare.estimarRota(input.pickup, input.dropoff);
     const pedidoEm = new Date();
+    // A bandeira e a do horario da viagem: agendada para as 23h paga noturna.
     const orcamento = await this.fare.calcular({
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
-      quando: pedidoEm,
+      quando: agendadaPara ?? pedidoEm,
     });
+    const cupom = input.couponCode
+      ? await validarCupom(this.prisma, passengerId, input.couponCode, orcamento.totalCents)
+      : null;
 
     const corrida = await this.prisma.withTransaction(async (tx) => {
       const criada = await tx.ride.create({
@@ -110,7 +138,10 @@ export class RidesService {
           // antes de iniciar — garante que entrou a pessoa certa.
           pin: generateNumericCode(4),
           passengerId,
-          status: RideStatus.REQUESTED,
+          status: agendadaPara ? RideStatus.SCHEDULED : RideStatus.REQUESTED,
+          scheduledFor: agendadaPara,
+          couponId: cupom?.cupom.id ?? null,
+          discountCents: cupom?.descontoCents ?? 0,
           fareFlag: orcamento.flag,
           pickupAddress: input.pickup.address,
           pickupLat: input.pickup.latitude,
@@ -130,7 +161,7 @@ export class RidesService {
       await tx.rideStatusHistory.create({
         data: {
           rideId: criada.id,
-          status: RideStatus.REQUESTED,
+          status: agendadaPara ? RideStatus.SCHEDULED : RideStatus.REQUESTED,
           actorId: passengerId,
           actorRole: UserRole.PASSENGER,
           latitude: input.pickup.latitude,
@@ -141,8 +172,9 @@ export class RidesService {
     });
 
     // A procura comeca em seguida, fora da transacao: gravar a corrida
-    // nao pode depender de haver motorista livre neste instante.
-    await this.procurarMotorista(corrida.id);
+    // nao pode depender de haver motorista livre neste instante. A
+    // agendada espera a rotina de minuto (10 min antes do horario).
+    if (!agendadaPara) await this.procurarMotorista(corrida.id);
     return this.detalhe(corrida.id);
   }
 
@@ -166,6 +198,12 @@ export class RidesService {
     // Motorista que pediu corrida como passageiro nao recebe o proprio chamado.
     const proprio = await this.prisma.driver.findUnique({ where: { userId: corrida.passengerId }, select: { id: true } });
 
+    // Motoristas favoritos do passageiro recebem primeiro: na primeira
+    // rodada, se algum favorito estiver livre por perto, so ele e chamado.
+    // Se nao aceitar no prazo, a procura abre para todos.
+    const favoritos = await this.favoritosDe(corrida.passengerId);
+    const primeiraRodada = (await this.prisma.rideOffer.count({ where: { rideId } })) === 0;
+
     for (const raio of RidesService.RAIOS_METROS) {
       const proximos = await this.prisma.findNearbyDrivers({
         latitude: corrida.pickupLat,
@@ -174,10 +212,12 @@ export class RidesService {
         limit: 10,
       });
       if (proximos.length === 0) continue;
+      const favoritosPerto = primeiraRodada ? proximos.filter((m) => favoritos.includes(m.driverId)) : [];
+      const chamar = favoritosPerto.length > 0 ? favoritosPerto : proximos;
 
       const expiraEm = new Date(Date.now() + RidesService.SEGUNDOS_PARA_RESPONDER * 1000);
       let enviados = 0;
-      for (const m of proximos) {
+      for (const m of chamar) {
         // Quem ja recusou esta corrida nao e chamado de novo.
         const jaOfertado = await this.prisma.rideOffer.findUnique({
           where: { rideId_driverId: { rideId, driverId: m.driverId } },
@@ -233,6 +273,10 @@ export class RidesService {
         distanceKm: o.distanceKm,
         etaSeconds: o.etaSeconds,
         expiresAt: o.expiresAt,
+        /** Corrida agendada: horario combinado com o passageiro. */
+        scheduledFor: o.ride.scheduledFor,
+        /** Desconto de cupom (o motorista recebe do passageiro o valor menos isto). */
+        discountCents: o.ride.discountCents,
         // Coordenadas: a tela de oferta desenha embarque e destino no mapa
         // ANTES do motorista aceitar. So o endereco escrito nao basta.
         pickupLat: o.ride.pickupLat,
@@ -411,11 +455,17 @@ export class RidesService {
       flag: corrida.fareFlag,
     });
 
+    // Cupom: o desconto e recalculado sobre o valor final e a plataforma
+    // devolve esse valor ao motorista na carteira.
+    const cupom = corrida.couponId ? await this.prisma.coupon.findUnique({ where: { id: corrida.couponId } }) : null;
+    const descontoCents = cupom ? descontoDoCupom(cupom, orcamento.totalCents) : 0;
+
     return this.prisma.withTransaction(async (tx) => {
       await tx.ride.update({
         where: { id: rideId },
         data: {
           status: RideStatus.COMPLETED,
+          discountCents: descontoCents,
           finishedAt: new Date(),
           distanceMeters: distancia,
           durationSeconds: duracao,
@@ -446,10 +496,25 @@ export class RidesService {
           },
         });
       }
+      let saldoFinal = aposComissao;
+      if (cupom && descontoCents > 0) {
+        saldoFinal = aposComissao + descontoCents;
+        await tx.walletTransaction.create({
+          data: {
+            walletId: carteira.id,
+            type: 'BONUS',
+            amountCents: descontoCents,
+            balanceAfterCents: saldoFinal,
+            description: `Cupom ${cupom.code}: desconto pago pela plataforma`,
+            rideId,
+          },
+        });
+        await tx.coupon.update({ where: { id: cupom.id }, data: { usedCount: { increment: 1 } } });
+      }
       await tx.wallet.update({
         where: { id: carteira.id },
         data: {
-          balanceCents: aposComissao,
+          balanceCents: saldoFinal,
           totalEarnedCents: { increment: orcamento.driverEarningCents },
         },
       });
@@ -471,6 +536,10 @@ export class RidesService {
         chargedDistanceMeters: orcamento.chargedDistanceMeters,
         chargedWaitingSeconds: orcamento.chargedWaitingSeconds,
         finalFareCents: orcamento.totalCents,
+        discountCents: descontoCents,
+        couponCode: cupom?.code ?? null,
+        /** O que o motorista recebe do passageiro (o desconto vem na carteira). */
+        toCollectCents: orcamento.totalCents - descontoCents,
         commissionCents: orcamento.commissionCents,
         driverEarningCents: orcamento.driverEarningCents,
         distanceMeters: distancia,
@@ -564,6 +633,135 @@ export class RidesService {
 
   /** Tempo maximo procurando motorista antes de desistir. */
   private static readonly MINUTOS_PROCURANDO = 4;
+  /** Agendada comeca 10 min antes e procura ate 5 min depois do horario. */
+  private static readonly MINUTOS_PROCURANDO_AGENDADA = 15;
+  private rotinaRodando = false;
+
+  /**
+   * A cada minuto: dispara as agendadas que estao chegando (10 min antes)
+   * e mantem a procura de todas as corridas abertas — mesmo com o
+   * aplicativo do passageiro fechado.
+   */
+  @Interval(60_000)
+  async rotinaDeMinuto(): Promise<void> {
+    if (this.rotinaRodando) return;
+    this.rotinaRodando = true;
+    try {
+      const agora = Date.now();
+      const chegando = await this.prisma.ride.findMany({
+        where: { status: RideStatus.SCHEDULED, scheduledFor: { lte: new Date(agora + 10 * 60_000) } },
+        take: 50,
+      });
+      for (const c of chegando) {
+        // Servidor ficou parado e o horario ja passou ha muito: nao adianta chamar.
+        if (c.scheduledFor && c.scheduledFor.getTime() < agora - 30 * 60_000) {
+          await this.prisma.ride.updateMany({
+            where: { id: c.id, status: RideStatus.SCHEDULED },
+            data: { status: RideStatus.EXPIRED, cancelledAt: new Date(), cancellationReason: 'Horario agendado passou.' },
+          });
+          continue;
+        }
+        const mudou = await this.prisma.ride.updateMany({
+          where: { id: c.id, status: RideStatus.SCHEDULED },
+          data: { status: RideStatus.REQUESTED, requestedAt: new Date() },
+        });
+        if (mudou.count === 0) continue;
+        await this.prisma.rideStatusHistory.create({
+          data: { rideId: c.id, status: RideStatus.REQUESTED, note: 'Agendada: inicio da procura.' },
+        });
+        await this.procurarMotorista(c.id).catch((e) => this.logger.error(`Agendada ${c.id}: ${(e as Error).message}`));
+      }
+
+      const procurando = await this.prisma.ride.findMany({
+        where: { status: { in: [RideStatus.SEARCHING, RideStatus.REQUESTED] } },
+        select: { id: true },
+        take: 100,
+      });
+      for (const c of procurando) {
+        await this.acompanharProcura(c.id).catch((e) => this.logger.error(`Procura ${c.id}: ${(e as Error).message}`));
+      }
+    } catch (e) {
+      this.logger.error(`Rotina de minuto: ${(e as Error).message}`);
+    } finally {
+      this.rotinaRodando = false;
+    }
+  }
+
+  /** Corridas agendadas do passageiro (proximas primeiro). */
+  async agendadas(passengerId: string) {
+    const itens = await this.prisma.ride.findMany({
+      where: { passengerId, status: RideStatus.SCHEDULED },
+      orderBy: { scheduledFor: 'asc' },
+    });
+    return { items: itens };
+  }
+
+  async cupons(passengerId: string) {
+    return cuponsDisponiveis(this.prisma, passengerId);
+  }
+
+  // ---------------- Motoristas favoritos (guardados no usuario) ----------------
+
+  private async favoritosDe(userId: string): Promise<string[]> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    const m = (u?.metadata ?? {}) as { motoristasFavoritos?: unknown };
+    return Array.isArray(m.motoristasFavoritos) ? m.motoristasFavoritos.filter((x): x is string => typeof x === 'string') : [];
+  }
+
+  private async gravarFavoritos(userId: string, lista: string[]): Promise<void> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    const meta = u?.metadata && typeof u.metadata === 'object' && !Array.isArray(u.metadata) ? (u.metadata as object) : {};
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { metadata: { ...meta, motoristasFavoritos: lista.slice(0, 20) } as never },
+    });
+  }
+
+  async favoritos(userId: string) {
+    const ids = await this.favoritosDe(userId);
+    if (ids.length === 0) return { items: [] };
+    const motoristas = await this.prisma.driver.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        ratingAvg: true,
+        totalRides: true,
+        status: true,
+        user: { select: { name: true } },
+        vehicles: { select: { brand: true, model: true, color: true, plate: true }, take: 1 },
+        location: { select: { isOnline: true, isAvailable: true } },
+      },
+    });
+    return {
+      items: motoristas.map((m) => ({
+        driverId: m.id,
+        name: m.user.name,
+        rating: Number(m.ratingAvg),
+        totalRides: m.totalRides,
+        vehicle: m.vehicles[0] ? `${m.vehicles[0].brand} ${m.vehicles[0].model}` : '',
+        color: m.vehicles[0]?.color ?? '',
+        plate: m.vehicles[0]?.plate ?? '',
+        online: !!m.location?.isOnline && m.status === 'APPROVED',
+      })),
+    };
+  }
+
+  /** So da para favoritar quem ja levou este passageiro numa corrida concluida. */
+  async favoritar(userId: string, driverId: string) {
+    const levou = await this.prisma.ride.count({
+      where: { passengerId: userId, driverId, status: RideStatus.COMPLETED },
+    });
+    if (levou === 0) throw BusinessException.validation('Só dá para favoritar um motorista que já te levou.');
+    const atual = await this.favoritosDe(userId);
+    if (!atual.includes(driverId)) await this.gravarFavoritos(userId, [driverId, ...atual]);
+    return this.favoritos(userId);
+  }
+
+  async desfavoritar(userId: string, driverId: string) {
+    const atual = await this.favoritosDe(userId);
+    await this.gravarFavoritos(userId, atual.filter((d) => d !== driverId));
+    return this.favoritos(userId);
+  }
 
   /**
    * Enquanto o passageiro acompanha a tela, a procura continua: chamado
@@ -575,7 +773,8 @@ export class RidesService {
     const corrida = await this.prisma.ride.findUnique({ where: { id: rideId } });
     if (!corrida || (corrida.status !== RideStatus.SEARCHING && corrida.status !== RideStatus.REQUESTED)) return;
 
-    const limite = new Date(corrida.requestedAt.getTime() + RidesService.MINUTOS_PROCURANDO * 60_000);
+    const minutos = corrida.scheduledFor ? RidesService.MINUTOS_PROCURANDO_AGENDADA : RidesService.MINUTOS_PROCURANDO;
+    const limite = new Date(corrida.requestedAt.getTime() + minutos * 60_000);
     if (new Date() > limite) {
       const mudou = await this.prisma.ride.updateMany({
         where: { id: rideId, status: { in: [RideStatus.SEARCHING, RideStatus.REQUESTED] } },

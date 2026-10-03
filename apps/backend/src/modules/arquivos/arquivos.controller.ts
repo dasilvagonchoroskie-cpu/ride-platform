@@ -1,0 +1,58 @@
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { DocumentType } from '@prisma/client';
+import { UserRole } from '@ride/shared';
+import type { Response } from 'express';
+import { z } from 'zod';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { ArquivosService } from './arquivos.service';
+
+const fotoSchema = z.object({
+  mime: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  dados: z.string().min(16).max(3_000_000),
+});
+
+const documentoSchema = fotoSchema.extend({
+  type: z.nativeEnum(DocumentType),
+});
+
+@ApiTags('Fotos')
+@ApiBearerAuth()
+@Controller()
+export class ArquivosController {
+  constructor(private readonly arquivos: ArquivosService) {}
+
+  @Post('auth/foto')
+  @ApiOperation({ summary: 'Troca a foto de perfil (passageiro ou motorista)' })
+  foto(@CurrentUser('id') userId: string, @Body(new ZodValidationPipe(fotoSchema)) body: { mime: string; dados: string }) {
+    return this.arquivos.fotoDePerfil(userId, body.mime, body.dados);
+  }
+
+  @Post('documents/foto')
+  @Roles(UserRole.DRIVER)
+  @ApiOperation({ summary: 'Foto de documento do motorista (fica pendente para a Central conferir)' })
+  documento(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(documentoSchema)) body: { type: DocumentType; mime: string; dados: string },
+  ) {
+    if (!user.driverId) throw BusinessException.validation('Termine o cadastro de motorista antes de enviar documentos.');
+    return this.arquivos.fotoDeDocumento(user.id, user.driverId, body.type, body.mime, body.dados);
+  }
+
+  @Get('arquivos/:id')
+  @ApiOperation({ summary: 'Mostra uma foto' })
+  async ler(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const a = await this.arquivos.ler(id, { id: user.id, role: user.role as never });
+    res.setHeader('Content-Type', a.mime);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    res.send(Buffer.from(a.dados));
+  }
+}

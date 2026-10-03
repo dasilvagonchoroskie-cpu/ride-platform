@@ -81,6 +81,7 @@ export const REQUIRED_DRIVER_DOCUMENTS: DocumentType[] = [
 ];
 
 export const RideStatus = {
+  SCHEDULED: 'SCHEDULED',
   REQUESTED: 'REQUESTED',
   SEARCHING: 'SEARCHING',
   DRIVER_ASSIGNED: 'DRIVER_ASSIGNED',

@@ -3,6 +3,7 @@ import { DriverStatus, RideStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 
 const ATIVAS: RideStatus[] = [
+  RideStatus.SCHEDULED,
   RideStatus.REQUESTED,
   RideStatus.SEARCHING,
   RideStatus.DRIVER_ASSIGNED,
@@ -62,6 +63,8 @@ export class ReportsService {
         dropoff: { latitude: c.dropoffLat, longitude: c.dropoffLng, address: c.dropoffAddress },
         estimatedFareCents: c.estimatedFareCents,
         requestedAt: c.requestedAt.toISOString(),
+        scheduledFor: c.scheduledFor ? c.scheduledFor.toISOString() : null,
+        discountCents: c.discountCents,
         driverPosition: c.driverId ? (ondeEsta.get(c.driverId) ?? null) : null,
       })),
     };

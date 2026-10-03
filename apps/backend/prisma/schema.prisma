@@ -69,6 +69,8 @@ enum DocumentStatus {
 }
 
 enum RideStatus {
+  /// Agendada pelo passageiro: o servidor comeca a procurar 10 min antes.
+  SCHEDULED
   REQUESTED
   SEARCHING
   DRIVER_ASSIGNED
@@ -439,6 +441,8 @@ model Ride {
   cancelledBy        String?            @map("cancelled_by") @db.Uuid
 
   requestedAt        DateTime           @default(now()) @map("requested_at")
+  /// Horario combinado da corrida agendada (nulo nas corridas na hora).
+  scheduledFor       DateTime?          @map("scheduled_for")
   acceptedAt         DateTime?          @map("accepted_at")
   arrivedAt          DateTime?          @map("arrived_at")
   startedAt          DateTime?          @map("started_at")
@@ -789,4 +793,19 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([actorId, createdAt])
   @@map("audit_logs")
+}
+
+/// Fotos guardadas no proprio banco (perfil do passageiro, documentos e
+/// foto do motorista). Pequenas: o aplicativo reduz antes de enviar.
+model Arquivo {
+  id        String   @id @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  tipo      String   @db.VarChar(30)
+  mime      String   @db.VarChar(50)
+  tamanho   Int
+  dados     Bytes
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ownerId, tipo])
+  @@map("arquivos")
 }
