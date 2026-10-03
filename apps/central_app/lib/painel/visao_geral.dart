@@ -91,11 +91,12 @@ class _VisaoGeralState extends State<VisaoGeral> {
             mapController: _mapa,
             options: MapOptions(initialCenter: _ll(p.centro), initialZoom: 14),
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.rideplatform.central_app',
-                maxZoom: 19,
-              ),
+              if (mostrarRuasNoMapa)
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.rideplatform.central_app',
+                  maxZoom: 19,
+                ),
               MarkerLayer(markers: marcadores),
             ],
           ),

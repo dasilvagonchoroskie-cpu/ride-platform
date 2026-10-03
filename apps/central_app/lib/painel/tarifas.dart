@@ -111,9 +111,11 @@ class _TarifasTelaState extends State<TarifasTela> {
           ],
         ),
         const SizedBox(height: Spacing.md),
-        Container(
+        Material(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(Radii.md),
+          child: Padding(
           padding: const EdgeInsets.all(Spacing.md),
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.md)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -195,6 +197,7 @@ class _TarifasTelaState extends State<TarifasTela> {
               if (_nova != null)
                 TextButton(onPressed: () => setState(() => _nova = null), child: const Text('Desistir da nova categoria')),
             ],
+          ),
           ),
         ),
         const SizedBox(height: Spacing.lg),
@@ -319,9 +322,13 @@ class _MultiplicadorState extends State<_Multiplicador> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    // Material (e nao Container colorido): o toque nas linhas da lista
+    // precisa aparecer.
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(Radii.md),
+      child: Padding(
       padding: const EdgeInsets.all(Spacing.md),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.md)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -356,6 +363,7 @@ class _MultiplicadorState extends State<_Multiplicador> {
           const SizedBox(height: Spacing.sm),
           FilledButton(onPressed: _salvando ? null : _salvar, child: Text(_salvando ? 'Salvando...' : 'Salvar multiplicador')),
         ],
+      ),
       ),
     );
   }

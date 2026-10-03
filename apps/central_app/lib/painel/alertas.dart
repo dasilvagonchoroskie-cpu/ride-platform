@@ -136,10 +136,11 @@ class _TelaSosState extends State<TelaSos> {
                     mapController: _mapa,
                     options: MapOptions(initialCenter: pos, initialZoom: 16),
                     children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.rideplatform.central_app',
-                      ),
+                      if (mostrarRuasNoMapa)
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.rideplatform.central_app',
+                        ),
                       MarkerLayer(markers: [
                         Marker(
                           point: pos,

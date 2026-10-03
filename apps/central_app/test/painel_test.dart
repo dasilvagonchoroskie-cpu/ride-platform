@@ -9,6 +9,7 @@ import 'package:central_app/core/api/api_client.dart';
 import 'package:central_app/core/theme/central_theme.dart';
 import 'package:central_app/data/painel.dart';
 import 'package:central_app/painel/alertas.dart';
+import 'package:central_app/painel/comuns.dart';
 import 'package:central_app/painel/cupons.dart';
 import 'package:central_app/painel/despacho.dart';
 import 'package:central_app/painel/financeiro.dart';
@@ -16,6 +17,7 @@ import 'package:central_app/painel/motoristas.dart';
 import 'package:central_app/painel/painel_state.dart';
 import 'package:central_app/painel/passageiros.dart';
 import 'package:central_app/painel/tarifas.dart';
+import 'package:central_app/painel/visao_geral.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -373,6 +375,32 @@ Future<void> _carregar(WidgetTester tester) async {
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste'});
+    mostrarRuasNoMapa = false;
+  });
+
+  testWidgets('Visao Geral: indicadores em cima do mapa e toque no carro', (tester) async {
+    var abriuDespacho = false;
+    await _abrir(tester, VisaoGeral(abrirDespacho: () => abriuDespacho = true));
+    await _carregar(tester);
+    expect(find.text('Corridas ativas'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.text('12 / 4'), findsOneWidget);
+    expect(find.textContaining('1.234,56'), findsOneWidget);
+    expect(find.byIcon(Icons.local_taxi), findsOneWidget);
+    expect(find.byIcon(Icons.sos), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.local_taxi));
+    await tester.pumpAndSettle();
+    expect(find.text('Joao Batista da Silva'), findsOneWidget);
+    expect(find.text('Livre'), findsWidgets);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.person_pin_circle));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abrir no Despacho'));
+    await tester.pumpAndSettle();
+    expect(abriuDespacho, isTrue);
   });
 
   testWidgets('Despacho: fila, em andamento, escolher motorista e corrida manual', (tester) async {
@@ -415,7 +443,9 @@ void main() {
 
     await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
     await _carregar(tester);
+    await tester.scrollUntilVisible(find.text('CNH (frente)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('CNH (frente)'), findsOneWidget);
+    expect(find.text('Rejeitar'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Mensalidade (sem comissão)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Modelo financeiro'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Carteira pré-paga'), 300, scrollable: find.byType(Scrollable).first);

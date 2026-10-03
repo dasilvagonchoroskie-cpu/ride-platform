@@ -9,6 +9,10 @@ import '../core/theme/central_theme.dart';
 
 /// Pecas usadas em varias telas do painel.
 
+/// Desenho das ruas (OpenStreetMap). Os testes automaticos desligam porque
+/// la nao ha internet; os carros e alertas continuam aparecendo.
+bool mostrarRuasNoMapa = true;
+
 String reais(int cents) => NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(cents / 100);
 
 String dataHora(DateTime? d) => d == null ? '-' : DateFormat('dd/MM HH:mm').format(d);
