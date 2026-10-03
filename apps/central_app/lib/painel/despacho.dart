@@ -64,7 +64,7 @@ class _Lista extends StatelessWidget {
   Widget build(BuildContext context) {
     if (corridas.isEmpty) return Aviso(texto: vazio);
     return RefreshIndicator(
-      onRefresh: () => context.read<PainelState>().atualizar(),
+      onRefresh: () => Provider.of<PainelState>(context, listen: false).atualizar(),
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.md, Spacing.md, 96),
         itemCount: corridas.length,
@@ -148,7 +148,7 @@ class _CartaoCorrida extends StatelessWidget {
                     confirmar: 'Cancelar corrida',
                   );
                   if (motivo == null || !context.mounted) return;
-                  final p = context.read<PainelState>();
+                  final p = Provider.of<PainelState>(context, listen: false);
                   final ok = await tentar(context, () => p.api.cancelarCorrida(c.id, motivo), sucesso: 'Corrida cancelada.');
                   if (ok) await p.atualizar();
                 },
@@ -163,7 +163,7 @@ class _CartaoCorrida extends StatelessWidget {
 
 /// Lista os motoristas online do mais perto ao mais longe do embarque.
 Future<void> escolherMotorista(BuildContext context, CorridaAtiva c) async {
-  final p = context.read<PainelState>();
+  final p = Provider.of<PainelState>(context, listen: false);
   final escolhido = await showModalBottomSheet<MotoristaOnline>(
     context: context,
     isScrollControlled: true,
@@ -276,7 +276,7 @@ class _NovaCorridaState extends State<NovaCorrida> {
   @override
   void initState() {
     super.initState();
-    context.read<PainelState>().api.tarifas().then((t) {
+    Provider.of<PainelState>(context, listen: false).api.tarifas().then((t) {
       if (mounted) setState(() => _categorias = t.categorias.where((c) => c.ativa).toList());
     }).catchError((_) {});
   }
@@ -314,7 +314,7 @@ class _NovaCorridaState extends State<NovaCorrida> {
       return;
     }
     setState(() => _enviando = true);
-    final api = context.read<PainelState>().api;
+    final api = Provider.of<PainelState>(context, listen: false).api;
     final ok = await tentar(
       context,
       () => api.criarCorrida({
@@ -336,15 +336,15 @@ class _NovaCorridaState extends State<NovaCorrida> {
     if (!mounted) return;
     setState(() => _enviando = false);
     if (ok) {
-      await context.read<PainelState>().atualizar();
+      await Provider.of<PainelState>(context, listen: false).atualizar();
       if (mounted) Navigator.of(context).pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final api = context.read<PainelState>().api;
-    final perto = context.read<PainelState>().centro;
+    final api = Provider.of<PainelState>(context, listen: false).api;
+    final perto = Provider.of<PainelState>(context, listen: false).centro;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Corrida manual')),

@@ -18,7 +18,7 @@ class CuponsTela extends StatefulWidget {
 class _CuponsTelaState extends State<CuponsTela> {
   late Future<List<Cupom>> _lista;
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {

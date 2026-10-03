@@ -34,7 +34,7 @@ class _Saques extends StatefulWidget {
 class _SaquesState extends State<_Saques> {
   late Future<List<Saque>> _lista;
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {
@@ -149,7 +149,7 @@ class _ReceitasState extends State<_Receitas> {
   int _dias = 1;
   late Future<Receitas> _dados;
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {

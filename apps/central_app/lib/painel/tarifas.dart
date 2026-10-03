@@ -24,7 +24,7 @@ class _TarifasTelaState extends State<TarifasTela> {
   bool _salvando = false;
   Categoria? _nova;
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {
@@ -312,7 +312,7 @@ class _MultiplicadorState extends State<_Multiplicador> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
-      builder: (_) => _NovaZona(api: widget.api, perto: context.read<PainelState>().centro),
+      builder: (_) => _NovaZona(api: widget.api, perto: Provider.of<PainelState>(context, listen: false).centro),
     );
     if (zona != null) setState(() => _zonas.add(zona));
   }
@@ -334,7 +334,7 @@ class _MultiplicadorState extends State<_Multiplicador> {
           const SizedBox(height: Spacing.md),
           Text('Cidade toda: ${_cidade.toStringAsFixed(1).replaceAll('.', ',')}x', style: AppText.bodyStrong),
           Slider(
-            value: _cidade.clamp(0.5, 3.0),
+            value: _cidade.clamp(0.5, 3.0).toDouble(),
             min: 0.5,
             max: 3.0,
             divisions: 25,

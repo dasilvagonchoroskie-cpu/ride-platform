@@ -22,7 +22,7 @@ class _PassageirosState extends State<Passageiros> {
   bool _soBloqueados = false;
   late Future<List<Passageiro>> _lista;
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {

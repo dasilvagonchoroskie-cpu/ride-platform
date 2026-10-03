@@ -23,7 +23,7 @@ class _AlertasState extends State<Alertas> {
   @override
   void initState() {
     super.initState();
-    _resolvidos = context.read<PainelState>().api.alertas(resolvidos: true);
+    _resolvidos = Provider.of<PainelState>(context, listen: false).api.alertas(resolvidos: true);
   }
 
   @override

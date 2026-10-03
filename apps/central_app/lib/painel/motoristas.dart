@@ -19,7 +19,7 @@ class _MotoristasState extends State<Motoristas> {
   String _situacao = 'PENDING';
   late Future<List<MotoristaCadastro>> _lista;
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {
@@ -112,7 +112,7 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
   late Future<MotoristaDetalhe> _dados;
   List<Categoria> _categorias = const [];
 
-  PainelApi get _api => context.read<PainelState>().api;
+  PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   @override
   void initState() {
