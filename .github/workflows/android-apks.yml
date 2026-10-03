@@ -11,11 +11,10 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App a compilar'
+        description: 'App a compilar: all, ou um ou mais separados por virgula (mobile_passenger, mobile_driver, central_app)'
         required: true
         default: 'all'
-        type: choice
-        options: ['all', 'mobile_passenger', 'mobile_driver', 'central_app']
+        type: string
       build_type:
         description: 'Tipo de build'
         required: true
@@ -65,7 +64,8 @@ jobs:
               {"app": "central_app", "label": "Central", "artifact": "fortaleza-central-apk", "apk_name": "fortaleza-central"},
           ]
           qual = sys.argv[1]
-          escolhidos = [a for a in todos if qual == "all" or a["app"] == qual]
+          pedidos = [x.strip() for x in qual.split(",") if x.strip()]
+          escolhidos = [a for a in todos if "all" in pedidos or a["app"] in pedidos]
           print("apps=" + json.dumps([a["app"] for a in escolhidos]))
           print("builds=" + json.dumps(escolhidos))
           PY

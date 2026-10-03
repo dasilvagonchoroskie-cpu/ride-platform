@@ -70,6 +70,10 @@ public class CorridasService extends Service {
 
     private static final String CANAL_FIXO = "motorista_disponivel_v1";
     private static final String CANAL_CHAMADA = "motorista_chamada_v1";
+    private static final String CANAL_CARTEIRA = "motorista_carteira_v1";
+    private static final int ID_CARTEIRA = 5103;
+    // Carteira: confere a cada 5 voltas (cerca de 20 s).
+    private static final int VOLTAS_CARTEIRA = 5;
     private static final int ID_FIXO = 5101;
     private static final int ID_CHAMADA = 5102;
 
@@ -183,12 +187,19 @@ public class CorridasService extends Service {
     // Consulta de chamados
     // ------------------------------------------------------------------
 
+    private int voltas = 0;
+
     private void laco() {
         while (rodando) {
             try {
                 conferirChamados();
             } catch (Exception ignored) {
                 // Rede caiu: tenta de novo na proxima volta.
+            }
+            if (voltas++ % VOLTAS_CARTEIRA == 0) {
+                try {
+                    conferirCarteira();
+                } catch (Exception ignored) { }
             }
             segurarProcessador();
             try {
@@ -214,6 +225,77 @@ public class CorridasService extends Service {
         String embarque = oferta.optString("pickupAddress", "");
         String destino = oferta.optString("dropoffAddress", "");
         principal.post(() -> chamar(embarque, destino));
+    }
+
+    /**
+     * Carteira pre-paga: quando a Central lanca uma recarga (ou o saldo
+     * acaba), o motorista fica sabendo por notificacao mesmo com o
+     * aplicativo fechado, e o aviso fixo mostra o saldo.
+     */
+    private void conferirCarteira() throws Exception {
+        JSONObject corpo = requisitar("GET", "/api/driver/wallet/resumo", null);
+        if (corpo == null || !corpo.optBoolean("success", false)) return;
+        JSONObject d = corpo.optJSONObject("data");
+        if (d == null) return;
+        long saldo = d.optLong("balanceCents", 0);
+        boolean bloqueado = d.optBoolean("blocking", false);
+        JSONObject ultimo = d.optJSONObject("last");
+        String idUltimo = ultimo != null ? ultimo.optString("id", "") : "";
+
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String visto = p.getString("carteira_ultimo", null);
+        boolean estavaBloqueado = p.getBoolean("carteira_bloqueado", false);
+        p.edit().putString("carteira_ultimo", idUltimo).putBoolean("carteira_bloqueado", bloqueado).apply();
+
+        final String textoFixo = bloqueado
+                ? "Sem saldo: recarregue para receber corridas."
+                : "Aguardando chamados. Saldo " + reais(saldo) + ".";
+        principal.post(() -> atualizarFixo(textoFixo));
+
+        // Primeira consulta deste aparelho: so guarda, nao avisa.
+        if (visto == null) return;
+        if (ultimo != null && !idUltimo.isEmpty() && !idUltimo.equals(visto)
+                && "CREDIT".equals(ultimo.optString("kind", ""))) {
+            long valor = ultimo.optLong("amountCents", 0);
+            avisarCarteira("Recarga confirmada: +" + reais(valor),
+                    "Saldo da carteira: " + reais(saldo) + ".");
+        } else if (bloqueado && !estavaBloqueado) {
+            avisarCarteira("Saldo insuficiente",
+                    "Você não recebe corridas até fazer uma recarga com a Central. Saldo: " + reais(saldo) + ".");
+        }
+    }
+
+    private static String reais(long cents) {
+        String sinal = cents < 0 ? "-" : "";
+        long a = Math.abs(cents);
+        return sinal + "R$ " + (a / 100) + "," + String.format(java.util.Locale.ROOT, "%02d", a % 100);
+    }
+
+    private void atualizarFixo(String texto) {
+        try {
+            NotificationManagerCompat.from(this).notify(ID_FIXO, avisoFixo(texto));
+        } catch (SecurityException ignored) { }
+    }
+
+    private void avisarCarteira(String titulo, String texto) {
+        Intent abrir = new Intent(this, MainActivity.class);
+        abrir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent toque = PendingIntent.getActivity(this, 9, abrir,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification aviso = new NotificationCompat.Builder(this, CANAL_CARTEIRA)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(titulo)
+                .setContentText(texto)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(texto))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(toque)
+                .setAutoCancel(true)
+                .build();
+        principal.post(() -> {
+            try {
+                NotificationManagerCompat.from(this).notify(ID_CARTEIRA, aviso);
+            } catch (SecurityException ignored) { }
+        });
     }
 
     private JSONObject requisitar(String metodo, String caminho, JSONObject corpo) throws Exception {
@@ -423,6 +505,12 @@ public class CorridasService extends Service {
             fixo.setSound(null, null);
             fixo.enableVibration(false);
             g.createNotificationChannel(fixo);
+        }
+        if (g.getNotificationChannel(CANAL_CARTEIRA) == null) {
+            NotificationChannel carteira = new NotificationChannel(
+                    CANAL_CARTEIRA, "Carteira e recargas", NotificationManager.IMPORTANCE_DEFAULT);
+            carteira.setDescription("Avisa quando a Central confirma uma recarga ou o saldo acaba.");
+            g.createNotificationChannel(carteira);
         }
         if (g.getNotificationChannel(CANAL_CHAMADA) == null) {
             NotificationChannel chamada = new NotificationChannel(

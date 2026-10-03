@@ -764,6 +764,9 @@ class PainelApi {
 
   final ApiClient _c;
 
+  /// Cliente do servidor (usado tambem pela tela de carteiras).
+  ApiClient get cliente => _c;
+
   List<Map<String, dynamic>> _lista(Object? data) {
     if (data is List) return data.whereType<Map<String, dynamic>>().toList();
     if (data is Map && data['items'] is List) return (data['items'] as List).whereType<Map<String, dynamic>>().toList();

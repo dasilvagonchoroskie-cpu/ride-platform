@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
 import '../painel/alertas.dart';
+import '../painel/carteiras.dart';
 import '../painel/cupons.dart';
 import '../painel/despacho.dart';
 import '../painel/financeiro.dart';
@@ -15,7 +16,6 @@ import '../state/central_state.dart';
 import '../widgets/responsive.dart';
 import '../widgets/ui.dart';
 import 'settings_screen.dart';
-import 'wallets_screen.dart';
 
 /// Casca da Central: menu lateral com uma aba para cada assunto. A tela
 /// inicial e o mapa em tela cheia (Visao Geral).
@@ -46,7 +46,7 @@ class _ShellScreenState extends State<ShellScreen> {
     'Financeiro',
     'Alertas e Segurança',
     'Cupons',
-    'Carteiras',
+    'Carteiras / Recargas',
     'Configurações',
   ];
 
@@ -102,7 +102,7 @@ class _ShellScreenState extends State<ShellScreen> {
       case 7:
         return const CuponsTela();
       case 8:
-        return const WalletsScreen();
+        return const CarteirasTela();
       default:
         return const SettingsScreen();
     }
@@ -127,7 +127,7 @@ class _ShellScreenState extends State<ShellScreen> {
       const ShellDestination(icon: Icons.payments_outlined, label: 'Financeiro'),
       ShellDestination(icon: Icons.sos_outlined, label: 'Alertas', badge: p.alertas.isEmpty ? null : p.alertas.length),
       const ShellDestination(icon: Icons.local_offer_outlined, label: 'Cupons'),
-      const ShellDestination(icon: Icons.account_balance_wallet_outlined, label: 'Carteiras'),
+      const ShellDestination(icon: Icons.account_balance_wallet_outlined, label: 'Carteiras / Recargas'),
       const ShellDestination(icon: Icons.settings_outlined, label: 'Configurações'),
     ];
 

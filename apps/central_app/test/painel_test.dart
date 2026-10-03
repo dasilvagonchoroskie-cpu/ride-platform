@@ -10,6 +10,7 @@ import 'package:central_app/core/theme/central_theme.dart';
 import 'package:central_app/data/painel.dart';
 import 'package:central_app/data/repositories/central_repository.dart';
 import 'package:central_app/painel/alertas.dart';
+import 'package:central_app/painel/carteiras.dart';
 import 'package:central_app/painel/comuns.dart';
 import 'package:central_app/painel/cupons.dart';
 import 'package:central_app/painel/despacho.dart';
@@ -324,6 +325,42 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
     };
   }
   if (caminho == '/api/geo/search') return [];
+  if (caminho == '/api/admin/wallets') {
+    return {
+      'minimumCents': 0,
+      'blockEnabled': true,
+      'items': [
+        {'driverId': _motoristaId, 'name': 'Joao Batista da Silva Pereira Junior', 'phone': '+5564988887777', 'status': 'APPROVED', 'isOnline': true, 'balanceCents': 4850, 'blocking': false},
+        {'driverId': '55555555-5555-4555-8555-555555555555', 'name': 'Carlos Sem Saldo', 'phone': '+5564966665555', 'status': 'APPROVED', 'isOnline': false, 'balanceCents': -320, 'blocking': true},
+      ],
+    };
+  }
+  if (caminho == '/api/admin/settings/central') {
+    return {
+      'central': {'whatsapp': '5564999998888', 'pixKey': 'pix@fortalezamov.com.br', 'pixHolder': 'Evandro'},
+      'minimumCents': 0,
+      'blockWhenInsufficient': true,
+    };
+  }
+  if (caminho == '/api/admin/drivers/$_motoristaId/wallet') {
+    final recarga = metodo == 'POST';
+    return {
+      'balanceCents': recarga ? 9850 : 4850,
+      'minimumCents': 0,
+      'blocking': false,
+      'blockEnabled': true,
+      'status': 'ok',
+      'transactions': [
+        if (recarga)
+          {'id': 't0', 'type': 'ADJUSTMENT', 'kind': 'CREDIT', 'amountCents': 5000, 'balanceAfterCents': 9850, 'description': 'Recarga PIX comprovante #1234', 'rideCode': null, 'createdAt': '2026-10-03T15:00:00.000Z'},
+        {'id': 't1', 'type': 'COMMISSION', 'kind': 'DEBIT', 'amountCents': -150, 'balanceAfterCents': 4850, 'description': 'Comissão da corrida', 'rideCode': 'AB12CD', 'createdAt': '2026-10-03T14:00:00.000Z'},
+        {'id': 't2', 'type': 'ADJUSTMENT', 'kind': 'CREDIT', 'amountCents': 5000, 'balanceAfterCents': 5000, 'description': 'Recarga via Pix', 'rideCode': null, 'createdAt': '2026-10-03T13:00:00.000Z'},
+      ],
+    };
+  }
+  if (caminho == '/api/admin/drivers/$_motoristaId/wallet/credit') {
+    return _resposta('POST', '/api/admin/drivers/$_motoristaId/wallet', q);
+  }
   return null;
 }
 
@@ -573,7 +610,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras', 'Configurações']) {
+    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Configurações']) {
       expect(find.text(aba), findsWidgets, reason: 'aba $aba no menu');
     }
     await tester.tap(find.text('Financeiro').last);
@@ -583,6 +620,41 @@ void main() {
     // Fecha a Central: o relogio de 5 s tem de parar.
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('Carteiras / Recargas: lista, recarga com confirmacao e extrato', (tester) async {
+    await _abrir(tester, const CarteirasTela());
+    await _carregar(tester);
+    expect(find.text('Regras da carteira pré-paga'), findsOneWidget);
+    expect(find.text('Carlos Sem Saldo'), findsOneWidget);
+    expect(find.textContaining('Sem saldo: não recebe corridas'), findsOneWidget);
+    expect(find.textContaining('48,50'), findsOneWidget);
+
+    await tester.tap(find.text('Regras da carteira pré-paga'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bloquear quem estiver sem saldo'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Joao Batista da Silva Pereira Junior'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
+    await _carregar(tester);
+    expect(find.text('Saldo atual'), findsOneWidget);
+    expect(find.text('Adicionar saldo (+)'), findsOneWidget);
+    expect(find.text('Remover saldo (-)'), findsOneWidget);
+    expect(find.text('Confirmar Recarga'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('corrida AB12CD'), 300, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Débito'), findsOneWidget);
+    expect(find.textContaining('Saldo restante'), findsWidgets);
+
+    await tester.scrollUntilVisible(find.text('Confirmar Recarga'), -300, scrollable: find.byType(Scrollable).first);
+    await tester.enterText(find.widgetWithText(TextField, 'Valor (R\$)'), '50,00');
+    await tester.enterText(find.widgetWithText(TextField, 'Observação'), 'Recarga PIX comprovante #1234');
+    await tester.tap(find.text('Confirmar Recarga'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Saldo depois: R\$'), findsOneWidget);
+    await tester.tap(find.text('Confirmar'));
+    await _carregar(tester);
+    expect(find.textContaining('Recarga confirmada'), findsOneWidget);
+    expect(find.textContaining('98,50'), findsWidgets);
   });
 
   test('Leitura dos dados no formato do servidor', () {

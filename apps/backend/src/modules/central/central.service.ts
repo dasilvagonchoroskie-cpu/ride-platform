@@ -5,6 +5,7 @@ import { haversineKm } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { RidesService } from '../rides/rides.service';
+import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 
 const HORA = 3_600_000;
 const DIA = 24 * HORA;
@@ -124,6 +125,14 @@ export class CentralService {
     });
     if (!motorista || motorista.status !== DriverStatus.APPROVED) throw BusinessException.validation('Motorista nao aprovado.');
     if (!motorista.isOnline) throw BusinessException.validation(`${motorista.user.name} esta desconectado.`);
+
+    const regras = await regrasDaCarteira(this.prisma);
+    if (regras.bloquear) {
+      const w = await this.prisma.wallet.findUnique({ where: { driverId } });
+      if (semSaldo(w?.balanceCents ?? 0, regras.minimoCents)) {
+        throw BusinessException.validation(`${motorista.user.name} está sem saldo na carteira. Faça a recarga antes de enviar corridas.`);
+      }
+    }
 
     const ocupado = await this.prisma.ride.count({ where: { driverId, status: { in: EM_ANDAMENTO } } });
     if (ocupado > 0) throw BusinessException.validation(`${motorista.user.name} esta em outra corrida.`);

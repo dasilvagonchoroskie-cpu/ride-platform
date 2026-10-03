@@ -1,4 +1,5 @@
 import { abrirJornada, fecharJornada } from '../painel-motorista/jornada';
+import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { Injectable, Logger } from '@nestjs/common';
 import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
@@ -145,6 +146,20 @@ export class DriversService {
 
       if (driver.cnhExpiresAt < new Date()) {
         throw BusinessException.validation('Sua CNH esta vencida. Atualize o documento.');
+      }
+
+      // Carteira pre-paga: com saldo igual ou abaixo do minimo nao adianta
+      // ficar disponivel (nenhum chamado chegaria).
+      const regras = await regrasDaCarteira(this.prisma);
+      if (regras.bloquear) {
+        const w = await this.prisma.wallet.findUnique({ where: { driverId: driver.id } });
+        const saldo = w?.balanceCents ?? 0;
+        if (semSaldo(saldo, regras.minimoCents)) {
+          const r = (c: number) => `R$ ${(c / 100).toFixed(2).replace('.', ',')}`;
+          throw BusinessException.validation(
+            `Saldo insuficiente na carteira (${r(saldo)}). O mínimo para receber corridas é acima de ${r(regras.minimoCents)}. Faça uma recarga com a Central.`,
+          );
+        }
       }
     }
 

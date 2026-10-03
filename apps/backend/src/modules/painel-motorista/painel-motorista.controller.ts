@@ -14,6 +14,8 @@ const atividadeSchema = z.object({
 
 const creditoSchema = z.object({
   amountCents: z.number().int().min(-1_000_000).max(1_000_000).refine((v) => v !== 0, 'Valor nao pode ser zero.'),
+  /** Adicionar saldo (+) ou remover saldo (-). */
+  operation: z.enum(['CREDIT', 'DEBIT']).default('CREDIT'),
   description: z.string().max(200).optional(),
 });
 
@@ -47,6 +49,12 @@ export class PainelMotoristaController {
     return this.painel.carteira(await this.painel.motoristaDo(user));
   }
 
+  @Get('wallet/resumo')
+  @ApiOperation({ summary: 'Saldo, bloqueio e ultimo lancamento (o app pergunta a cada 20 s)' })
+  async resumo(@CurrentUser() user: AuthenticatedUser) {
+    return this.painel.resumoCarteira(await this.painel.motoristaDo(user));
+  }
+
   @Get('central')
   @ApiOperation({ summary: 'WhatsApp e chave Pix da Central' })
   central() {
@@ -72,9 +80,16 @@ export class AdminCarteiraController {
   creditar(
     @Param('id') driverId: string,
     @CurrentUser('id') adminId: string,
-    @Body(new ZodValidationPipe(creditoSchema)) body: { amountCents: number; description?: string },
+    @Body(new ZodValidationPipe(creditoSchema))
+    body: { amountCents: number; operation: 'CREDIT' | 'DEBIT'; description?: string },
   ) {
-    return this.painel.lancarCredito(driverId, body.amountCents, body.description, adminId);
+    return this.painel.lancarCredito(driverId, body.amountCents, body.description, adminId, body.operation);
+  }
+
+  @Get('wallets')
+  @ApiOperation({ summary: 'Todos os motoristas com o saldo da carteira' })
+  carteiras() {
+    return this.painel.carteiras();
   }
 
   @Get('settings/central')

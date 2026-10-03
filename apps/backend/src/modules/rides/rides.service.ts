@@ -7,7 +7,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { FareService } from './fare.service';
 import { tocarJornada } from '../painel-motorista/jornada';
-import { regrasDaCarteira } from '../painel-motorista/regras-carteira';
+import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
 import { lerCategorias } from './categorias';
 import type {
@@ -257,7 +257,7 @@ export class RidesService {
         if (proprio && m.driverId === proprio.id) continue;
         if (carteira.bloquear) {
           const w = await this.prisma.wallet.findUnique({ where: { driverId: m.driverId } });
-          if ((w?.balanceCents ?? 0) < carteira.minimoCents) continue;
+          if (semSaldo(w?.balanceCents ?? 0, carteira.minimoCents)) continue;
         }
         await this.prisma.rideOffer.create({
           data: {

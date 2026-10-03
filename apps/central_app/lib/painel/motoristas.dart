@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
+import 'carteiras.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 
@@ -480,28 +481,16 @@ class _Carteira extends StatelessWidget {
     return _Bloco(
       titulo: 'Carteira pré-paga',
       filhos: [
-        Text(reais(d.saldoCents), style: AppText.metric.copyWith(color: d.saldoCents < 0 ? AppColors.danger : AppColors.text)),
+        Text(reais(d.saldoCents), style: AppText.metric.copyWith(color: d.saldoCents <= 0 ? AppColors.danger : AppColors.text)),
         const SizedBox(height: Spacing.sm),
-        OutlinedButton.icon(
-          icon: const Icon(Icons.add),
-          label: const Text('Lançar crédito (venda de créditos)'),
+        FilledButton.tonalIcon(
+          icon: const Icon(Icons.account_balance_wallet_outlined),
+          label: const Text('Recarga e extrato'),
           onPressed: () async {
-            final texto = await pedirTexto(
-              context,
-              titulo: 'Crédito para ${d.base.nome}',
-              rotulo: 'Valor em reais (ex.: 50,00)',
-              explicacao: 'Use quando o motorista comprar créditos com a Central.',
-              confirmar: 'Lançar',
-              obrigatorio: false,
-            );
-            if (texto == null || !context.mounted) return;
-            final c = centavos(texto);
-            if (c == null || c <= 0) {
-              avisar(context, 'Valor inválido.', erro: true);
-              return;
-            }
-            final ok = await tentar(context, () => api.creditarCarteira(d.base.id, c, 'Compra de créditos na Central'), sucesso: 'Crédito lançado.');
-            if (ok) depois();
+            await Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => CarteiraMotoristaTela(driverId: d.base.id, nome: d.base.nome),
+            ));
+            depois();
           },
         ),
       ],

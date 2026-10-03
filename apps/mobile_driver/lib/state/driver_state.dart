@@ -10,6 +10,7 @@ import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
 import '../core/native/corridas_nativo.dart';
 import '../core/storage/app_storage.dart';
+import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/driver_demo.dart';
 import '../data/models/driver_models.dart';
@@ -428,8 +429,49 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _statusTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (profile != null && profile!.approval != DriverApproval.approved) {
         refreshFromServer();
+      } else if (profile != null) {
+        conferirCarteira();
       }
     });
+  }
+
+  /// Ultimo lancamento visto e se ja estava bloqueado (para avisar so do novo).
+  String? _ultimoLancamento;
+  bool? _estavaBloqueado;
+
+  /// Pergunta ao servidor o saldo (leve). Quando a Central lanca uma recarga,
+  /// o motorista fica sabendo em ate 20 s: aviso na tela e saldo novo.
+  Future<void> conferirCarteira() async {
+    if (!AppConfig.hasApi) return;
+    try {
+      final r = await _client.request('GET', '/driver/wallet/resumo') as Map<String, dynamic>;
+      final saldo = (r['balanceCents'] as num?)?.toInt() ?? 0;
+      final bloqueado = r['blocking'] == true;
+      final ultimo = r['last'] is Map ? r['last'] as Map : null;
+      final idUltimo = ultimo?['id'] as String?;
+      final mudou = idUltimo != null && _ultimoLancamento != null && idUltimo != _ultimoLancamento;
+      final primeiraVez = _ultimoLancamento == null && _estavaBloqueado == null;
+
+      if (mudou && ultimo?['kind'] == 'CREDIT') {
+        final valor = (ultimo?['amountCents'] as num?)?.toInt() ?? 0;
+        avisar('Recarga confirmada: +${formatMoney(valor)}. Saldo: ${formatMoney(saldo)}.');
+      } else if (mudou && ultimo?['kind'] == 'DEBIT' && (ultimo?['description'] as String? ?? '').isNotEmpty) {
+        final valor = (ultimo?['amountCents'] as num?)?.toInt() ?? 0;
+        final desc = ultimo?['description'] as String? ?? '';
+        if (!desc.toLowerCase().contains('comiss')) {
+          avisar('Saldo removido pela Central: -${formatMoney(valor.abs())} ($desc). Saldo: ${formatMoney(saldo)}.');
+        }
+      }
+      if (!primeiraVez && bloqueado && _estavaBloqueado == false) {
+        _avisar('Saldo insuficiente: você não recebe corridas até fazer uma recarga com a Central.');
+      }
+      final precisaRecarregar = mudou || _estavaBloqueado != bloqueado || carteira == null || carteira!.balanceCents != saldo;
+      _ultimoLancamento = idUltimo ?? _ultimoLancamento;
+      _estavaBloqueado = bloqueado;
+      if (precisaRecarregar) await carregarCarteira();
+    } catch (_) {
+      // Sem rede agora: tenta de novo na proxima volta.
+    }
   }
 
   Future<void> demoLogin(String name, String phone) async {
@@ -640,15 +682,24 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     error = null;
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('PATCH', '/drivers/me/online', body: {'isOnline': true});
+      } on ApiException catch (e) {
+        // O servidor recusou (ex.: saldo insuficiente na carteira): fica
+        // desconectado e mostra o motivo. Antes o erro era engolido e o
+        // motorista achava que estava disponivel sem receber nada.
+        if (!e.isNetworkError) {
+          _avisar(e.message);
+          unawaited(carregarCarteira());
+          return;
+        }
+      } catch (_) {}
+    }
     profile = current.copyWith(isOnline: true);
     await _persistProfile();
     notifyListeners();
 
-    if (AppConfig.hasApi) {
-      try {
-        await _client.request('PATCH', '/drivers/me/online', body: {'isOnline': true});
-      } catch (_) {}
-    }
     await _iniciarGps();
     _startHeartbeat();
     await _ligarServicoNativo();

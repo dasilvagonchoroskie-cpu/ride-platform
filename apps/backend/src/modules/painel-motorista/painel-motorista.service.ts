@@ -3,7 +3,7 @@ import { OfferStatus, RideStatus, UserRole } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { segundosOnline } from './jornada';
-import { CHAVE_BLOQUEAR, CHAVE_MINIMO, regrasDaCarteira } from './regras-carteira';
+import { CHAVE_BLOQUEAR, CHAVE_MINIMO, regrasDaCarteira, semSaldo } from './regras-carteira';
 
 /** Brasilia (UTC-3, sem horario de verao desde 2019). */
 const FUSO_MS = 3 * 60 * 60 * 1000;
@@ -168,14 +168,16 @@ export class PainelMotoristaService {
       balanceCents: saldo,
       minimumCents: minimo,
       // Com o bloqueio ligado na Central, abaixo do minimo nao chega chamado.
-      blocking: bloquear && saldo < minimo,
+      blocking: bloquear && semSaldo(saldo, minimo),
       blockEnabled: bloquear,
       // ok: tranquilo | low: se esgotando | insufficient: abaixo do minimo
-      status: saldo < minimo ? 'insufficient' : saldo < minimo * 3 ? 'low' : 'ok',
+      status: semSaldo(saldo, minimo) ? 'insufficient' : saldo < minimo * 3 ? 'low' : 'ok',
       central: await this.contato(),
       transactions: lancamentos.map((t) => ({
         id: t.id,
         type: t.type,
+        /** Credito (entrou dinheiro) ou Debito (saiu: comissao, mensalidade, ajuste). */
+        kind: t.amountCents >= 0 ? 'CREDIT' : 'DEBIT',
         amountCents: t.amountCents,
         balanceAfterCents: t.balanceAfterCents,
         description: t.description,
@@ -185,21 +187,34 @@ export class PainelMotoristaService {
     };
   }
 
-  /** Central lanca a recarga que o motorista pagou por Pix (ou um ajuste). */
-  async lancarCredito(driverId: string, valorCents: number, descricao: string | undefined, adminId: string) {
+  /**
+   * Central lanca a recarga (CREDITO) que o motorista pagou por Pix, ou
+   * remove saldo (DEBITO) num ajuste. Valor sempre positivo; a operacao diz
+   * o sinal. Grava o extrato e a auditoria na mesma transacao.
+   */
+  async lancarCredito(
+    driverId: string,
+    valorCents: number,
+    descricao: string | undefined,
+    adminId: string,
+    operacao: 'CREDIT' | 'DEBIT' = 'CREDIT',
+  ) {
     const motorista = await this.prisma.driver.findUnique({ where: { id: driverId } });
     if (!motorista) throw BusinessException.notFound('Motorista nao encontrado.');
+    // Compatibilidade: quem ainda manda valor negativo sem dizer a operacao.
+    const debito = operacao === 'DEBIT' || valorCents < 0;
+    const movimento = debito ? -Math.abs(valorCents) : Math.abs(valorCents);
 
     await this.prisma.withTransaction(async (tx) => {
       const carteira = await tx.wallet.upsert({ where: { driverId }, update: {}, create: { driverId } });
-      const saldo = carteira.balanceCents + valorCents;
+      const saldo = carteira.balanceCents + movimento;
       await tx.walletTransaction.create({
         data: {
           walletId: carteira.id,
           type: 'ADJUSTMENT',
-          amountCents: valorCents,
+          amountCents: movimento,
           balanceAfterCents: saldo,
-          description: (descricao?.trim() || (valorCents > 0 ? 'Recarga via Pix' : 'Ajuste da Central')).slice(0, 200),
+          description: (descricao?.trim() || (debito ? 'Saldo removido pela Central' : 'Recarga via Pix')).slice(0, 200),
         },
       });
       await tx.wallet.update({ where: { id: carteira.id }, data: { balanceCents: saldo } });
@@ -207,15 +222,79 @@ export class PainelMotoristaService {
         data: {
           actorId: adminId,
           actorRole: UserRole.ADMIN,
-          action: 'WALLET_CREDIT',
+          action: debito ? 'WALLET_DEBIT' : 'WALLET_CREDIT',
           entity: 'driver',
           entityId: driverId,
-          after: { valorCents, descricao: descricao ?? null, saldoCents: saldo },
+          after: { valorCents: movimento, descricao: descricao ?? null, saldoCents: saldo },
         },
       });
     });
 
     return this.carteira(driverId);
+  }
+
+  /**
+   * Resumo leve que o aplicativo do motorista pergunta a cada 20 s (com o
+   * aplicativo aberto ou disponivel em segundo plano): saldo, bloqueio e o
+   * ultimo lancamento — e assim que ele fica sabendo da recarga.
+   */
+  async resumoCarteira(driverId: string | null | undefined) {
+    const id = this.exigirMotorista(driverId);
+    const carteira = await this.prisma.wallet.upsert({ where: { driverId: id }, update: {}, create: { driverId: id } });
+    const ultimo = await this.prisma.walletTransaction.findFirst({
+      where: { walletId: carteira.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    const { minimoCents, bloquear } = await regrasDaCarteira(this.prisma);
+    return {
+      balanceCents: carteira.balanceCents,
+      minimumCents: minimoCents,
+      blockEnabled: bloquear,
+      blocking: bloquear && semSaldo(carteira.balanceCents, minimoCents),
+      last: ultimo
+        ? {
+            id: ultimo.id,
+            kind: ultimo.amountCents >= 0 ? 'CREDIT' : 'DEBIT',
+            amountCents: ultimo.amountCents,
+            description: ultimo.description,
+            createdAt: ultimo.createdAt.toISOString(),
+          }
+        : null,
+    };
+  }
+
+  /** Lista de todos os motoristas com o saldo (aba Carteiras / Recargas). */
+  async carteiras() {
+    const motoristas = await this.prisma.driver.findMany({
+      where: { status: { in: ['APPROVED', 'SUSPENDED', 'PENDING'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+      select: {
+        id: true,
+        status: true,
+        isOnline: true,
+        user: { select: { name: true, phone: true } },
+        wallet: { select: { balanceCents: true, updatedAt: true } },
+      },
+    });
+    const { minimoCents, bloquear } = await regrasDaCarteira(this.prisma);
+    return {
+      minimumCents: minimoCents,
+      blockEnabled: bloquear,
+      items: motoristas.map((m) => {
+        const saldo = m.wallet?.balanceCents ?? 0;
+        return {
+          driverId: m.id,
+          name: m.user.name,
+          phone: m.user.phone,
+          status: m.status,
+          isOnline: m.isOnline,
+          balanceCents: saldo,
+          blocking: bloquear && semSaldo(saldo, minimoCents),
+          updatedAt: m.wallet?.updatedAt ?? null,
+        };
+      }),
+    };
   }
 
   async contato(): Promise<ContatoCentral> {
