@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 03/10/2026 13:33 UTC
+Teste de ponta a ponta - 03/10/2026 13:53 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -26,6 +26,7 @@ OK     Central ve o nome do motorista (nao mais "Passageiro 1234")
 OK     Motorista: foto da CNH enviada (fica pendente para a Central)
 OK     Motorista: veiculo cadastrado depois do cadastro
 OK     Central: lista de pendentes com a foto do documento (antes a lista nem abria)
+OK     Central: detalhe do motorista com a foto do documento
 OK     Central: abre a foto do documento
 OK     Seguranca: passageiro nao abre documento de motorista
 OK     Central: motorista aprovado com conferencia presencial
@@ -34,13 +35,13 @@ OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: destino fora da regiao recusado (antes saia corrida de R$ 4.500)
 OK     Passageiro: busca de destino so mostra lugares da regiao
-OK     Central: cupom TESTE13335782 criado (R$ 3,00)
+OK     Central: cupom TESTE13531242 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 3036 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 2888 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Motorista: arriving
 OK     Motorista: arrived
@@ -48,8 +49,8 @@ OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (10h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 2 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 38s
+OK     Central: resumo de hoje com 3 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 800 centavos, online 39s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -74,21 +75,21 @@ OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
 OK     Motorista tambem pede corrida como passageiro
 OK     Seguranca: outra conta nao ve a corrida (nem nome e telefone)
-OK     Central: visao geral (ativas 0, concluidas hoje 2, online 1, faturamento 3000)
+OK     Central: visao geral (ativas 0, concluidas hoje 3, online 1, faturamento 4000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
 OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
 OK     Central: categoria do veiculo do motorista
 OK     Central: corrida manual criada (pedido por telefone)
-OK     Central: lista de motoristas livres por distancia
+OK     Central: motoristas livres por distancia, com posicao no mapa
 OK     Central: corrida enviada para motorista especifico
 OK     Motorista: recebeu o chamado enviado pela Central
 OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 2400, PIX/app 0, comissao 600)
+OK     Central: relatorio de receitas (dinheiro 3100, PIX/app 0, comissao 800)
 OK     Passageiro: SOS acionado
 OK     Central: alerta de SOS com a posicao atualizada
 OK     Central: SOS encerrado
