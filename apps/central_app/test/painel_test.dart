@@ -378,10 +378,11 @@ void main() {
   testWidgets('Despacho: fila, em andamento, escolher motorista e corrida manual', (tester) async {
     await _abrir(tester, const Despacho());
     expect(find.textContaining('Na fila (2)'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('Agendada para'), 300, scrollable: find.byType(Scrollable).at(1));
     expect(find.textContaining('Agendada para'), findsOneWidget);
     expect(find.text('Enviar para motorista'), findsWidgets);
 
-    await tester.tap(find.text('Enviar para motorista').first);
+    await tester.tap(find.text('Enviar para motorista').hitTestable().first);
     await _carregar(tester);
     expect(find.text('Enviar para qual motorista?'), findsOneWidget);
     expect(find.text('Joao Batista da Silva'), findsOneWidget);
@@ -415,8 +416,9 @@ void main() {
     await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
     await _carregar(tester);
     expect(find.text('CNH (frente)'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Mensalidade (sem comissão)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Modelo financeiro'), findsOneWidget);
-    expect(find.text('Mensalidade (sem comissão)'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Carteira pré-paga'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.textContaining('R\$'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Bloquear'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Aprovar'), findsWidgets);
@@ -440,7 +442,6 @@ void main() {
     await _carregar(tester);
     expect(find.text('Carro'), findsWidgets);
     expect(find.text('Moto (desligada)'), findsOneWidget);
-    expect(find.text('Multiplicador dinâmico'), findsOneWidget);
 
     await tester.tap(find.text('Noturna'));
     await tester.pumpAndSettle();
@@ -452,6 +453,7 @@ void main() {
 
     await tester.scrollUntilVisible(find.text('Rodoviaria · 1.5x'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Rodoviaria · 1.5x'), findsOneWidget);
+    expect(find.text('Multiplicador dinâmico'), findsOneWidget);
   });
 
   testWidgets('Financeiro: saques e receitas', (tester) async {

@@ -323,7 +323,7 @@ class _Documento extends StatelessWidget {
                 Text(rotulo, style: AppText.caption.copyWith(color: cor)),
                 if (doc.motivo != null) Text(doc.motivo!, style: AppText.caption.copyWith(color: AppColors.textMuted)),
                 if (doc.status == 'PENDING')
-                  Row(
+                  Wrap(
                     children: [
                       TextButton(
                         onPressed: () async {

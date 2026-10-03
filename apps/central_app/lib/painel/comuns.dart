@@ -230,7 +230,8 @@ class FotoDoServidor extends StatelessWidget {
   }
 }
 
-/// Linha "rotulo: valor".
+/// Linha "rotulo: valor". Em tela estreita o rotulo fica em cima do valor
+/// (antes o valor ficava espremido em uma coluna fina no celular).
 class Linha extends StatelessWidget {
   const Linha(this.rotulo, this.valor, {super.key, this.destaque = false});
 
@@ -240,14 +241,17 @@ class Linha extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final r = Text(rotulo, style: AppText.caption.copyWith(color: AppColors.textMuted));
+    final v = Text(valor, style: destaque ? AppText.bodyStrong : AppText.body);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 130, child: Text(rotulo, style: AppText.caption.copyWith(color: AppColors.textMuted))),
-          Expanded(child: Text(valor, style: destaque ? AppText.bodyStrong : AppText.body)),
-        ],
+      child: LayoutBuilder(
+        builder: (context, c) => c.maxWidth < 330
+            ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [r, v])
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [SizedBox(width: 130, child: r), Expanded(child: v)],
+              ),
       ),
     );
   }
