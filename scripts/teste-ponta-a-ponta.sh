@@ -109,6 +109,7 @@ sucesso "$X" && ok "Motorista: veiculo cadastrado depois do cadastro" || falha "
 X=$(get "/admin/drivers?status=PENDING&limit=50" "$TA")
 [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents | type] | first')" = "array" ] && [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents[0].fileUrl] | first')" = "$DOCURL" ] \
   && ok "Central: lista de pendentes com a foto do documento (antes a lista nem abria)" || falha "Central: lista de pendentes" "$(echo "$X" | jq -c '.data.items[0].documents' 2>/dev/null)"
+X=$(get "/admin/drivers/$DID" "$TA"); [ "$(echo "$X" | jq -r '.data.documents[0].fileUrl')" = "$DOCURL" ] && ok "Central: detalhe do motorista com a foto do documento" || falha "Central: detalhe do motorista" "$(echo "$X" | jq -c '.data.documents' 2>/dev/null)"
 C=$(curl -s -o /dev/null -w "%{http_code} %{content_type}" "$API$DOCURL" -H "Authorization: Bearer $TA"); [ "$C" = "200 image/jpeg" ] && ok "Central: abre a foto do documento" || falha "Central: abrir foto" "$C"
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$DOCURL" -H "Authorization: Bearer $TP"); [ "$C" = "403" ] && ok "Seguranca: passageiro nao abre documento de motorista" || falha "Seguranca: foto de documento aberta" "$C"
 X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
@@ -247,7 +248,7 @@ X=$(post /admin/rides "{\"passengerName\":\"Passageiro Teste\",\"passengerPhone\
 RMAN=$(echo "$X" | jq -r '.data.rideId // empty')
 [ -n "$RMAN" ] && ok "Central: corrida manual criada (pedido por telefone)" || falha "Central: corrida manual" "$X"
 X=$(get "/admin/dispatch/drivers?lat=-18.0125&lng=-49.3547" "$TA")
-[ "$(echo "$X" | jq -r --arg d "$DID" '[.data[] | select(.driverId==$d)] | length')" = "1" ] && ok "Central: lista de motoristas livres por distancia" || falha "Central: motoristas livres" "$X"
+[ "$(echo "$X" | jq -r --arg d "$DID" '[.data[] | select(.driverId==$d and .latitude != null)] | length')" = "1" ] && ok "Central: motoristas livres por distancia, com posicao no mapa" || falha "Central: motoristas livres" "$X"
 X=$(post "/admin/rides/$RMAN/assign" "{\"driverId\":\"$DID\"}" "$TA"); sucesso "$X" && ok "Central: corrida enviada para motorista especifico" || falha "Central: atribuir" "$X"
 X=$(get /driver/rides/offers "$TM")
 [ "$(echo "$X" | jq -r --arg r "$RMAN" '[.data[] | select((.rideId // .ride.id // .id)==$r)] | length')" -ge 1 ] 2>/dev/null && ok "Motorista: recebeu o chamado enviado pela Central" || falha "Motorista: chamado da Central" "$X"
