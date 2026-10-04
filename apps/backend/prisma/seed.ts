@@ -25,7 +25,7 @@ const BANDEIRAS = [
     freeWaitingSeconds: 180,
     minFareCents: 1000,
     cancellationFeeCents: 500,
-    commissionPercent: 20,
+    commissionPercent: 8,
   },
   {
     flag: FareFlag.NOTURNA,
@@ -38,7 +38,7 @@ const BANDEIRAS = [
     freeWaitingSeconds: 180,
     minFareCents: 2000,
     cancellationFeeCents: 500,
-    commissionPercent: 20,
+    commissionPercent: 8,
   },
 ];
 
@@ -49,7 +49,9 @@ async function main(): Promise<void> {
     await prisma.fareConfig.upsert({
       where: { category_flag: { category: 'CARRO', flag: bandeira.flag } },
       create: { ...bandeira, isActive: true },
-      update: { ...bandeira, isActive: true },
+      // Tarifa ja existente e da Central: a semente nunca sobrescreve
+      // (em 04/10/2026 ela voltou a taxa de 8% para 20%).
+      update: {},
     });
     const reais = (bandeira.baseFareCents / 100).toFixed(2).replace('.', ',');
     console.log(`  bandeira ${bandeira.flag}: R$ ${reais} das ${bandeira.startHour}h as ${bandeira.endHour}h`);
@@ -70,7 +72,7 @@ async function main(): Promise<void> {
     },
     update: { role: UserRole.ADMIN, status: UserStatus.ACTIVE },
   });
-  console.log(`  admin ok: ${admin.email} (senha: ${adminPassword})`);
+  console.log(`  admin ok: ${admin.email} (senha existente mantida)`);
 
   // A tabela `settings` (chave/valor generico) existe no esquema como
   // ponto de extensao, mas nada no backend le dela ainda — por isso nao
