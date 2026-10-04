@@ -1,76 +1,13 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
 00:00 +0: Visao Geral: indicadores em cima do mapa e toque no carro
-00:01 +1: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:02 +2: Motoristas: lista, detalhe com documento, financeiro e carteira
-══╡ EXCEPTION CAUGHT BY GESTURE ╞═══════════════════════════════════════════════════════════════════
-The following assertion was thrown while handling a gesture:
-setState() callback argument returned a Future.
-The setState() method on _MotoristasState#63888 was called with a closure or method that returned a
-Future. Maybe it is marked as "async".
-Instead of performing asynchronous work inside a call to setState(), first execute the work (without
-updating the widget state), and then synchronously update the state inside a call to setState().
-
-When the exception was thrown, this was the stack:
-#0      State.setState.<anonymous closure> (package:flutter/src/widgets/framework.dart:1204:9)
-#1      State.setState (package:flutter/src/widgets/framework.dart:1220:6)
-#2      _MotoristasState._recarregar (package:central_app/painel/motoristas.dart:31:25)
-#3      _MotoristasState.build.<anonymous closure> (package:central_app/painel/motoristas.dart:50:23)
-#4      _RawChipState._handleTap (package:flutter/src/material/chip.dart:1128:24)
-#5      _InkResponseState.handleTap (package:flutter/src/material/ink_well.dart:1224:21)
-#6      GestureRecognizer.invokeCallback (package:flutter/src/gestures/recognizer.dart:362:24)
-#7      TapGestureRecognizer.handleTapUp (package:flutter/src/gestures/tap.dart:758:11)
-#8      BaseTapGestureRecognizer._checkUp (package:flutter/src/gestures/tap.dart:383:5)
-#9      BaseTapGestureRecognizer.acceptGesture (package:flutter/src/gestures/tap.dart:353:7)
-#10     GestureArenaManager.sweep (package:flutter/src/gestures/arena.dart:173:27)
-#11     GestureBinding.handleEvent (package:flutter/src/gestures/binding.dart:542:20)
-#12     GestureBinding.dispatchEvent (package:flutter/src/gestures/binding.dart:508:22)
-#13     RendererBinding.dispatchEvent (package:flutter/src/rendering/binding.dart:473:11)
-#14     GestureBinding._handlePointerEventImmediately (package:flutter/src/gestures/binding.dart:447:7)
-#15     GestureBinding.handlePointerEvent (package:flutter/src/gestures/binding.dart:404:5)
-#16     TestWidgetsFlutterBinding.handlePointerEventForSource.<anonymous closure> (package:flutter_test/src/binding.dart:1571:42)
-#17     TestWidgetsFlutterBinding.withPointerEventSource (package:flutter_test/src/binding.dart:1581:11)
-#18     TestWidgetsFlutterBinding.handlePointerEventForSource (package:flutter_test/src/binding.dart:1571:5)
-#19     WidgetTester.sendEventToBinding.<anonymous closure> (package:flutter_test/src/widget_tester.dart:869:15)
-#22     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
-#23     WidgetTester.sendEventToBinding (package:flutter_test/src/widget_tester.dart:868:27)
-#24     TestGesture.up.<anonymous closure> (package:flutter_test/src/test_pointer.dart:587:26)
-#27     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
-#28     TestGesture.up (package:flutter_test/src/test_pointer.dart:580:27)
-#29     WidgetController.tapAt.<anonymous closure> (package:flutter_test/src/controller.dart:1155:21)
-<asynchronous suspension>
-#30     TestAsyncUtils.guard.<anonymous closure> (package:flutter_test/src/test_async_utils.dart:130:27)
-<asynchronous suspension>
-#31     main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart:484:5)
-<asynchronous suspension>
-#32     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#33     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided 5 frames from dart:async and package:stack_trace)
-
-Handler: "onTap"
-Recognizer:
-  TapGestureRecognizer#53e06
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:03 +2 -1: Motoristas: lista, detalhe com documento, financeiro e carteira [E]
-  Test failed. See exception logs above.
-  The test description was: Motoristas: lista, detalhe com documento, financeiro e carteira
-  
-Warning: At least one test in this suite creates an HttpClient. When running a test suite that uses
-TestWidgetsFlutterBinding, all HTTP requests will return status code 400, and no network request
-will actually be made. Any test expecting a real network connection and status code will fail.
-To test code that needs an HttpClient, provide your own HttpClient implementation to the code under
-test, so that your test can consistently provide a testable response to the code under test.
-00:03 +2 -1: Passageiros: busca, bloqueado e historico
-00:03 +3 -1: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:04 +4 -1: Financeiro: saques e receitas
-00:04 +5 -1: Alertas: SOS aberto, janela fixa e encerrados
-00:05 +6 -1: Cupons: lista e novo cupom
-00:05 +7 -1: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:05 +8 -1: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:06 +9 -1: Leitura dos dados no formato do servidor
-00:06 +10 -1: Some tests failed.
-
-Failing tests:
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:00 +1: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:01 +2: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:01 +3: Passageiros: busca, bloqueado e historico
+00:02 +4: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:02 +5: Financeiro: saques e receitas
+00:03 +6: Alertas: SOS aberto, janela fixa e encerrados
+00:03 +7: Cupons: lista e novo cupom
+00:03 +8: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+00:04 +9: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:04 +10: Leitura dos dados no formato do servidor
+00:04 +11: All tests passed!
