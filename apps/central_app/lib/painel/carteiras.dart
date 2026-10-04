@@ -163,12 +163,14 @@ class _CarteirasTelaState extends State<CarteirasTela> {
         if (s.hasError) return Aviso(texto: 'Não foi possível carregar: ${s.error}', tentarDeNovo: _recarregar);
         if (!s.hasData) return const Center(child: CircularProgressIndicator());
         final (todos, minimo, ligado) = s.data!;
+        // Sem saldo = igual ou menor que o minimo: nao consegue ficar online.
+        bool semSaldo(SaldoMotorista m) => m.saldoCents <= minimo;
         final termo = _busca.trim().toLowerCase();
         final lista = todos
-            .where((m) => !_soBloqueados || m.bloqueado)
+            .where((m) => !_soBloqueados || semSaldo(m))
             .where((m) => termo.isEmpty || m.nome.toLowerCase().contains(termo) || (m.telefone ?? '').contains(termo))
             .toList();
-        final semSaldo = todos.where((m) => m.bloqueado).length;
+        final quantosSemSaldo = todos.where(semSaldo).length;
         return RefreshIndicator(
           onRefresh: () async => _recarregar(),
           child: ListView(
@@ -184,7 +186,7 @@ class _CarteirasTelaState extends State<CarteirasTela> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _soBloqueados,
-                title: Text('Só quem está sem saldo ($semSaldo)', style: AppText.body),
+                title: Text('Só quem está sem saldo ($quantosSemSaldo)', style: AppText.body),
                 onChanged: (v) => setState(() => _soBloqueados = v),
               ),
               if (lista.isEmpty) const Aviso(texto: 'Nenhum motorista encontrado.'),
@@ -196,13 +198,13 @@ class _CarteirasTelaState extends State<CarteirasTela> {
                     borderRadius: BorderRadius.circular(Radii.md),
                     child: ListTile(
                       leading: Icon(
-                        m.bloqueado ? Icons.money_off : Icons.account_balance_wallet_outlined,
-                        color: m.bloqueado ? AppColors.danger : AppColors.success,
+                        semSaldo(m) ? Icons.money_off : Icons.account_balance_wallet_outlined,
+                        color: semSaldo(m) ? AppColors.danger : AppColors.success,
                       ),
                       title: Text(m.nome, style: AppText.bodyStrong),
                       subtitle: Text(
-                        '${telefoneBonito(m.telefone)}${m.bloqueado ? '\nSem saldo: não recebe corridas' : ''}',
-                        style: AppText.caption.copyWith(color: m.bloqueado ? AppColors.danger : AppColors.textMuted),
+                        '${telefoneBonito(m.telefone)}${semSaldo(m) ? '\nSem saldo: não consegue ficar online' : ''}',
+                        style: AppText.caption.copyWith(color: semSaldo(m) ? AppColors.danger : AppColors.textMuted),
                       ),
                       trailing: Text(
                         reais(m.saldoCents),
@@ -314,23 +316,22 @@ class _RegrasState extends State<_Regras> {
               ),
             ),
             Text(
-              _ligado
-                  ? 'Ligado: motorista com saldo igual ou menor que ${reais(widget.minimoCents)} não recebe corridas até recarregar.'
-                  : 'Desligado: motorista recebe corridas mesmo sem saldo.',
+              'Para ficar online o motorista precisa de saldo acima de ${reais(widget.minimoCents)}. '
+              '${_ligado ? 'Se o saldo acabar no meio do turno, ele também deixa de receber corridas.' : 'Se o saldo acabar no meio do turno, ele continua recebendo e o débito fica registrado.'}',
               style: AppText.caption.copyWith(color: _ligado ? AppColors.warning : AppColors.textMuted),
             ),
             if (_aberto) ...[
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _ligado,
-                title: const Text('Bloquear quem estiver sem saldo', style: AppText.body),
+                title: const Text('Cortar chamados de quem ficar sem saldo no meio do turno', style: AppText.body),
                 onChanged: (v) => setState(() => _ligado = v),
               ),
               TextField(
                 controller: _minimo,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 style: AppText.body,
-                decoration: const InputDecoration(labelText: 'Saldo mínimo (R\$) — com este valor ou menos, bloqueia'),
+                decoration: const InputDecoration(labelText: 'Saldo mínimo (R\$) — para ficar online precisa ter mais que isto'),
               ),
               TextField(controller: _pix, style: AppText.body, decoration: const InputDecoration(labelText: 'Chave PIX da Central (para recargas)')),
               TextField(controller: _titular, style: AppText.body, decoration: const InputDecoration(labelText: 'Nome do titular do PIX')),
@@ -472,12 +473,12 @@ class _CarteiraMotoristaTelaState extends State<CarteiraMotoristaTela> {
                               ),
                               const SizedBox(height: Spacing.xs),
                               Text(
-                                c.bloqueado
-                                    ? 'Bloqueado por saldo: não recebe corridas até recarregar.'
-                                    : c.bloqueioLigado
-                                        ? 'Recebendo corridas. Bloqueia com ${reais(c.minimoCents)} ou menos.'
-                                        : 'Bloqueio por saldo desligado.',
-                                style: AppText.caption.copyWith(color: c.bloqueado ? AppColors.danger : AppColors.textMuted),
+                                c.saldoCents <= c.minimoCents
+                                    ? 'Sem saldo: não consegue ficar online até a recarga.'
+                                    : 'Pode ficar online. Com ${reais(c.minimoCents)} ou menos, precisa de recarga.',
+                                style: AppText.caption.copyWith(
+                                  color: c.saldoCents <= c.minimoCents ? AppColors.danger : AppColors.textMuted,
+                                ),
                               ),
                             ],
                           ),

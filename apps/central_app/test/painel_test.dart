@@ -627,12 +627,12 @@ void main() {
     await _carregar(tester);
     expect(find.text('Regras da carteira pré-paga'), findsOneWidget);
     expect(find.text('Carlos Sem Saldo'), findsOneWidget);
-    expect(find.textContaining('Sem saldo: não recebe corridas'), findsOneWidget);
+    expect(find.textContaining('Sem saldo: não consegue ficar online'), findsOneWidget);
     expect(find.textContaining('48,50'), findsOneWidget);
 
     await tester.tap(find.text('Regras da carteira pré-paga'));
     await tester.pumpAndSettle();
-    expect(find.text('Bloquear quem estiver sem saldo'), findsOneWidget);
+    expect(find.text('Cortar chamados de quem ficar sem saldo no meio do turno'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('Joao Batista da Silva Pereira Junior'), 300, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
