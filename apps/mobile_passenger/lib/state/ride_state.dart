@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
@@ -53,21 +54,37 @@ class RideState extends ChangeNotifier {
 
   Future<PlaceSuggestion?> addressOf(Coords point) => _repository.addressOf(point);
 
+  /// Cupom escolhido para a proxima corrida (tela de cupons ou confirmacao).
+  String? cupomCodigo;
+
+  /// Ultimo pedido de preco, para refazer quando o cupom muda.
+  (Coords, Coords, String, String)? _ultimaCotacao;
+
+  /// Login do passageiro para a tela de conversa (chat).
+  ApiClient get api => _repository.api;
+
   Future<RideQuote?> estimate(
     Coords origin,
     Coords destination, {
     String pickupAddress = 'Minha localização atual',
     String dropoffAddress = 'Destino escolhido',
   }) async {
+    _ultimaCotacao = (origin, destination, pickupAddress, dropoffAddress);
     estimating = true;
     notifyListeners();
     try {
       final result = await _repository.estimate(origin, destination,
-          pickupAddress: pickupAddress, dropoffAddress: dropoffAddress);
+          pickupAddress: pickupAddress, dropoffAddress: dropoffAddress, couponCode: cupomCodigo);
       quote = result.quote;
       return result.quote;
     } on ApiException catch (e) {
       avisar(e.message);
+      if (cupomCodigo != null) {
+        // Cupom recusado (vencido, valor minimo...): tira e mostra o preco normal.
+        cupomCodigo = null;
+        estimating = false;
+        return estimate(origin, destination, pickupAddress: pickupAddress, dropoffAddress: dropoffAddress);
+      }
       return null;
     } catch (_) {
       avisar('Sem conexão com o servidor. Confira a internet e tente de novo.');
@@ -94,8 +111,10 @@ class RideState extends ChangeNotifier {
       dropoffAddress: dropoffAddress,
       paymentMethod: paymentMethod,
       paymentType: paymentType,
+      couponCode: cupomCodigo,
     );
 
+    cupomCodigo = null;
     activeRide = ride;
     driverRoute = [];
     tripRoute = [];
@@ -104,6 +123,69 @@ class RideState extends ChangeNotifier {
     _acompanhar();
 
     return ride;
+  }
+
+  /// Escolhe (ou tira, com null) o cupom. Na tela de confirmacao o preco
+  /// e refeito na hora ([refazerPreco]); na tela de cupons fica guardado
+  /// para a proxima corrida.
+  Future<void> aplicarCupom(String? codigo, {bool refazerPreco = false}) async {
+    final c = codigo?.trim().toUpperCase();
+    cupomCodigo = (c == null || c.isEmpty) ? null : c;
+    notifyListeners();
+    final u = _ultimaCotacao;
+    if (refazerPreco && u != null) await estimate(u.$1, u.$2, pickupAddress: u.$3, dropoffAddress: u.$4);
+  }
+
+  /// Cupons que o passageiro ainda pode usar.
+  Future<List<CupomDisponivel>> cupons() => _repository.cupons();
+
+  Future<List<MotoristaFavorito>> favoritos() => _repository.favoritos();
+  Future<List<MotoristaBloqueado>> bloqueados() => _repository.bloqueados();
+  Future<void> favoritarPorId(String driverId, {required bool sim}) => _repository.favoritar(driverId, sim: sim);
+  Future<void> bloquearPorId(String driverId, {required bool sim}) => _repository.bloquear(driverId, sim: sim);
+
+  /// Favorita (ou tira) o motorista da corrida atual.
+  Future<void> favoritarMotorista({required bool sim}) async {
+    final r = activeRide;
+    final d = r?.driver;
+    if (r == null || d == null) return;
+    try {
+      await _repository.favoritar(d.id, sim: sim);
+      activeRide = r.copyWith(favorito: sim, bloqueado: sim ? false : r.bloqueado);
+      notifyListeners();
+      avisar(sim ? '${d.name.split(' ').first} está nos seus favoritos: ele recebe suas corridas primeiro.' : 'Motorista tirado dos favoritos.');
+    } on ApiException catch (e) {
+      avisar(e.message);
+    } catch (_) {
+      avisar('Sem conexão. Tente de novo.');
+    }
+  }
+
+  /// Bloqueia o motorista da corrida atual: ele nao recebe mais suas corridas.
+  Future<void> bloquearMotorista({required bool sim}) async {
+    final r = activeRide;
+    final d = r?.driver;
+    if (r == null || d == null) return;
+    try {
+      await _repository.bloquear(d.id, sim: sim);
+      activeRide = r.copyWith(bloqueado: sim, favorito: sim ? false : r.favorito);
+      notifyListeners();
+      avisar(sim
+          ? 'Motorista bloqueado: ele não recebe mais suas corridas. Esta corrida continua; se quiser, cancele.'
+          : 'Motorista desbloqueado.');
+    } on ApiException catch (e) {
+      avisar(e.message);
+    } catch (_) {
+      avisar('Sem conexão. Tente de novo.');
+    }
+  }
+
+  /// Abriu a conversa: as mensagens ficam lidas.
+  void mensagensLidas() {
+    final r = activeRide;
+    if (r == null || r.mensagensNaoLidas == 0) return;
+    activeRide = r.copyWith(mensagensNaoLidas: 0);
+    notifyListeners();
   }
 
   // ------------------------------------------------------------------
@@ -141,6 +223,10 @@ class RideState extends ChangeNotifier {
       if (nova.status.encerradaSemViagem) {
         await _encerrarSemViagem(nova);
         return;
+      }
+      if (nova.mensagensNaoLidas > atual.mensagensNaoLidas) {
+        unawaited(HapticFeedback.heavyImpact());
+        avisar('Nova mensagem do motorista. Toque em "chat" para ler.');
       }
       activeRide = nova;
       final carro = nova.driver;

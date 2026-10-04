@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:geolocator/geolocator.dart';
@@ -169,6 +170,13 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       }
       final passageiro = corrida['passenger'] as Map<String, dynamic>?;
       telefonePassageiro = passageiro?['phone'] as String?;
+      // Chat: mensagem nova do passageiro avisa com vibracao e aviso na tela.
+      final naoLidas = (corrida['mensagensNaoLidas'] as num?)?.toInt() ?? 0;
+      if (naoLidas > mensagensNaoLidas) {
+        unawaited(HapticFeedback.heavyImpact());
+        avisar(naoLidas == 1 ? 'Nova mensagem do passageiro.' : '$naoLidas mensagens novas do passageiro.');
+      }
+      mensagensNaoLidas = naoLidas;
       final fase = switch (corrida['status'] as String?) {
         'DRIVER_WAITING' => RidePhase.waitingPassenger,
         'IN_PROGRESS' => RidePhase.inProgress,
@@ -186,8 +194,18 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Mensagens do passageiro que o motorista ainda nao abriu.
+  int mensagensNaoLidas = 0;
+
+  /// Abriu o chat: as mensagens ficam lidas no servidor.
+  void mensagensLidas() {
+    mensagensNaoLidas = 0;
+    notifyListeners();
+  }
+
   Future<void> _soltarCorrida() async {
     _pararVigia();
+    mensagensNaoLidas = 0;
     activeRide = null;
     valorFinalCents = null;
     telefonePassageiro = null;
@@ -346,8 +364,6 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  /// "25/09/1990" vira "1990-09-25", o formato que o servidor aceita.
-  /// Se ja vier no formato ISO, passa direto.
   /// Mostra o motivo na tela e guarda em [error].
   void _avisar(String mensagem) {
     error = mensagem;

@@ -154,6 +154,21 @@ class RideRepository {
     return [for (final f in (data['items'] as List<dynamic>? ?? const [])) MotoristaFavorito.fromJson(f as Map<String, dynamic>)];
   }
 
+  /// Para a tela de conversa (chat) usar o mesmo login.
+  ApiClient get api => _client;
+
+  Future<List<MotoristaBloqueado>> bloqueados() async {
+    final data = await _client.request('GET', '/rides/bloqueados') as Map<String, dynamic>;
+    return [
+      for (final m in (data['items'] as List? ?? const []))
+        MotoristaBloqueado.fromJson(m as Map<String, dynamic>),
+    ];
+  }
+
+  Future<void> bloquear(String driverId, {required bool sim}) async {
+    await _client.request(sim ? 'POST' : 'DELETE', '/rides/bloqueados/$driverId', body: sim ? const {} : null);
+  }
+
   Future<void> favoritar(String driverId, {required bool sim}) async {
     await _client.request(sim ? 'POST' : 'DELETE', '/rides/favoritos/$driverId', body: sim ? const {} : null);
   }

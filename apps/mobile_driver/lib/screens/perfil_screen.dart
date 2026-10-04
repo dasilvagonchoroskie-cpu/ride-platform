@@ -8,12 +8,14 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../state/driver_state.dart';
 
-/// Os quatro documentos que a Central confere (as fotos ficam guardadas no
-/// servidor e aparecem na Central para aprovar ou rejeitar).
+/// Os documentos que a Central confere (as fotos ficam guardadas no
+/// servidor e aparecem na Central para aprovar ou rejeitar). A foto do carro
+/// tambem aparece para o passageiro na tela "motorista a caminho".
 const documentosDoMotorista = [
   ('CNH_FRONT', 'CNH', Icons.badge_outlined),
   ('CRLV', 'CRLV do veículo', Icons.description_outlined),
   ('PROFILE_PHOTO', 'Foto de perfil', Icons.face_outlined),
+  ('VEHICLE_FRONT', 'Foto do carro (de frente, com a placa)', Icons.directions_car_outlined),
   ('CRIMINAL_RECORD', 'Antecedentes criminais', Icons.gavel_outlined),
 ];
 

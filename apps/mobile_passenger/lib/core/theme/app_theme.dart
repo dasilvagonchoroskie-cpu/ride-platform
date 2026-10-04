@@ -36,6 +36,7 @@ class AppColors {
   static const Color accent = brand;
   static const Color accentSoft = brandSoft;
 
+  static const Color success = Color(0xFF1E9E5A);
   static const Color danger = Color(0xFFD93A3A);
   static const Color dangerSoft = Color(0x1AD93A3A);
   static const Color warning = Color(0xFFE8710A);

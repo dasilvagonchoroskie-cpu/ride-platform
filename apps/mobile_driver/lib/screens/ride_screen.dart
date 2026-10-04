@@ -13,6 +13,7 @@ import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 import '../widgets/deslizar.dart';
 import '../widgets/ride_map.dart';
+import 'chat_screen.dart';
 import 'sos_screen.dart';
 
 /// Execucao da corrida em 3 etapas:
@@ -165,6 +166,33 @@ class _Passageiro extends StatelessWidget {
                 style: AppText.caption.copyWith(color: AppColors.textMuted),
               ),
             ],
+          ),
+        ),
+        IconButton.filledTonal(
+          tooltip: 'Mensagens',
+          onPressed: () {
+            d.mensagensLidas();
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ChatScreen(
+                  api: d.api,
+                  caminho: '/driver/rides/${offer.id}/messages',
+                  titulo: 'Conversa com ${offer.passengerName.split(' ').first}',
+                  atalhos: const [
+                    'Estou a caminho',
+                    'Cheguei, estou te aguardando',
+                    'Pode descer, por favor?',
+                    'Trânsito lento, chego em alguns minutos',
+                    'Não estou te encontrando',
+                  ],
+                ),
+              ),
+            );
+          },
+          icon: Badge(
+            isLabelVisible: d.mensagensNaoLidas > 0,
+            label: Text('${d.mensagensNaoLidas}'),
+            child: const Icon(Icons.forum_outlined),
           ),
         ),
         if (tel != null && tel.isNotEmpty) ...[

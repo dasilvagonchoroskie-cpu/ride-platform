@@ -7,6 +7,7 @@ import '../core/utils/formatters.dart';
 import '../state/config_state.dart';
 import '../state/ride_state.dart';
 import '../widgets/corrida_ui.dart';
+import '../widgets/motorista_ui.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -42,7 +43,21 @@ class RideScreen extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: SheetSurface(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.sm),
+                  child: Row(
+                    children: [
+                      Expanded(child: FaixaTempoAteVoce(corrida: corrida)),
+                      const SizedBox(width: Spacing.sm),
+                      BotaoChat(corrida: corrida),
+                    ],
+                  ),
+                ),
+                SheetSurface(
               padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.lg),
               child: SafeArea(
                 top: false,
@@ -60,12 +75,12 @@ class RideScreen extends StatelessWidget {
                       style: AppText.body.copyWith(color: AppColors.textMuted),
                     ),
                     if (motorista != null) ...[
-                      const SizedBox(height: Spacing.lg),
-                      CartaoMotorista(motorista: motorista),
+                      const SizedBox(height: Spacing.md),
+                      PainelMotorista(corrida: corrida),
                     ],
                     const SizedBox(height: Spacing.md),
                     const Divider(height: 1, color: AppColors.border),
-                    LinhaValor(rotulo: 'Valor estimado', valor: formatMoney(corrida.fareCents)),
+                    LinhaValor(rotulo: 'Valor estimado', valor: formatMoney(corrida.aPagarCents)),
                     LinhaValor(rotulo: 'Pagamento', valor: '${corrida.paymentMethod}, direto ao motorista'),
                     const SizedBox(height: Spacing.sm),
                     if (estado.modoDemo)
@@ -88,6 +103,8 @@ class RideScreen extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+              ],
             ),
           ),
         ],

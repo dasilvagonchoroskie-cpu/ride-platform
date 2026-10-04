@@ -14,6 +14,8 @@ import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 import '../state/config_state.dart';
 import 'avisos_screen.dart';
+import 'cupons_screen.dart';
+import '../core/avisos.dart';
 import 'confirm_screen.dart';
 import 'map_pick_screen.dart';
 
@@ -28,6 +30,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Timer? _relogio;
+  int _recentrar = 0;
+
+  Future<void> _minhaLocalizacao() async {
+    final app = context.read<AppState>();
+    await app.atualizarLocalizacao();
+    if (!mounted) return;
+    if (!app.locationGranted) {
+      avisar('Ative a localização do celular para o mapa mostrar onde você está.');
+    }
+    setState(() => _recentrar++);
+    _atualizarCarros();
+  }
   bool _configPedida = false;
 
   @override
@@ -108,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: RideMap(center: app.coords, markers: markers, span: 0.03, rounded: false),
+            child: RideMap(center: app.coords, markers: markers, span: 0.03, rounded: false, recentrar: _recentrar),
           ),
 
           // ---- Topo: marca a esquerda, sino a direita ----
@@ -118,7 +132,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Material(
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Material(
                     color: AppColors.brand,
                     elevation: 3,
                     shadowColor: const Color(0x55000000),
@@ -131,11 +150,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  const Spacer(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: Spacing.sm),
                   if (app.isDemo) ...[
                     const AppBadge(text: 'DEMONSTRAÇÃO', tone: AppBadgeTone.info),
                     const SizedBox(width: Spacing.sm),
                   ],
+                  BotaoRedondo(
+                    icone: Icons.confirmation_number,
+                    onTap: () => _abrir(const CuponsScreen()),
+                  ),
+                  const SizedBox(width: Spacing.sm),
                   BotaoRedondo(
                     icone: Icons.notifications,
                     marcado: config.temAvisoNovo,
@@ -146,10 +173,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // ---- Base: saudacao + "Buscar destino" ----
+          // ---- Base: "minha localizacao" + saudacao + "Buscar destino" ----
           Align(
             alignment: Alignment.bottomCenter,
-            child: SheetSurface(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, Spacing.lg, Spacing.md),
+                    child: Material(
+                      color: AppColors.surface,
+                      shape: const CircleBorder(),
+                      elevation: 3,
+                      child: IconButton(
+                        tooltip: 'Minha localização',
+                        iconSize: 28,
+                        padding: const EdgeInsets.all(14),
+                        onPressed: _minhaLocalizacao,
+                        icon: const Icon(Icons.my_location, color: AppColors.text),
+                      ),
+                    ),
+                  ),
+                ),
+                SheetSurface(
               padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -192,6 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
+            ),
+              ],
             ),
           ),
         ],

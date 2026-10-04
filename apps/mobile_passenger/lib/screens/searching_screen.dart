@@ -5,7 +5,9 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../data/models/models.dart';
 import '../state/ride_state.dart';
+import '../core/utils/geo.dart';
 import '../widgets/corrida_ui.dart';
+import '../widgets/motorista_ui.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -48,6 +50,9 @@ class _SearchingScreenState extends State<SearchingScreen> {
 
     final centro = motorista != null && motorista.posicaoReal ? motorista.position : corrida.pickup.coords;
 
+    // Motorista ja aceitou: tela no modelo Pop Move.
+    if (motorista != null) return _motoristaACaminho(context, estado, corrida, centro);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -59,10 +64,7 @@ class _SearchingScreenState extends State<SearchingScreen> {
               markers: [
                 MapMarker(id: 'pickup', coords: corrida.pickup.coords, kind: MarkerKind.pickup),
                 MapMarker(id: 'dropoff', coords: corrida.dropoff.coords, kind: MarkerKind.dropoff),
-                if (motorista != null && motorista.posicaoReal)
-                  MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
               ],
-              driverRoute: estado.driverRoute,
             ),
           ),
           Align(
@@ -79,45 +81,15 @@ class _SearchingScreenState extends State<SearchingScreen> {
                     Text(titulo, style: AppText.title.copyWith(fontSize: 22, color: AppColors.text)),
                     const SizedBox(height: Spacing.xs),
                     Text(subtitulo, style: AppText.body.copyWith(color: AppColors.textMuted)),
-                    if (motorista == null) ...[
-                      const SizedBox(height: Spacing.md),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: const LinearProgressIndicator(
-                          minHeight: 6,
-                          color: AppColors.brand,
-                          backgroundColor: AppColors.brandSoft,
-                        ),
+                    const SizedBox(height: Spacing.md),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: const LinearProgressIndicator(
+                        minHeight: 6,
+                        color: AppColors.brand,
+                        backgroundColor: AppColors.brandSoft,
                       ),
-                    ] else ...[
-                      const SizedBox(height: Spacing.lg),
-                      CartaoMotorista(motorista: motorista),
-                      if (corrida.pin.isNotEmpty) ...[
-                        const SizedBox(height: Spacing.lg),
-                        Container(
-                          padding: const EdgeInsets.all(Spacing.md),
-                          decoration: BoxDecoration(
-                            color: AppColors.brandSoft,
-                            borderRadius: BorderRadius.circular(Radii.md),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Ao entrar no carro, diga este código ao motorista:',
-                                  style: AppText.body.copyWith(color: AppColors.text),
-                                ),
-                              ),
-                              const SizedBox(width: Spacing.md),
-                              Text(
-                                corrida.pin,
-                                style: AppText.title.copyWith(color: AppColors.brand, letterSpacing: 6),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                     const SizedBox(height: Spacing.md),
                     const Divider(height: 1, color: AppColors.border),
                     const SizedBox(height: Spacing.sm),
@@ -128,7 +100,7 @@ class _SearchingScreenState extends State<SearchingScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: AppText.bodyStrong.copyWith(color: AppColors.text),
                     ),
-                    LinhaValor(rotulo: 'Valor estimado (${corrida.paymentMethod})', valor: formatMoney(corrida.fareCents)),
+                    LinhaValor(rotulo: 'Valor estimado (${corrida.paymentMethod})', valor: formatMoney(corrida.aPagarCents)),
                     const SizedBox(height: Spacing.sm),
                     if (estado.modoDemo)
                       Padding(
@@ -152,6 +124,109 @@ class _SearchingScreenState extends State<SearchingScreen> {
                   ],
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Motorista a caminho / esperando (modelo Pop Move).
+  Widget _motoristaACaminho(BuildContext context, RideState estado, Ride corrida, Coords centro) {
+    final motorista = corrida.driver!;
+    final altura = MediaQuery.sizeOf(context).height;
+    return Scaffold(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: RideMap(
+              center: centro,
+              span: 0.02,
+              rounded: false,
+              markers: [
+                MapMarker(id: 'pickup', coords: corrida.pickup.coords, kind: MarkerKind.pickup),
+                if (motorista.posicaoReal) MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
+              ],
+              driverRoute: estado.driverRoute,
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.sm),
+                  child: Row(
+                    children: [
+                      Expanded(child: FaixaTempoAteVoce(corrida: corrida)),
+                      const SizedBox(width: Spacing.sm),
+                      BotaoChat(corrida: corrida),
+                    ],
+                  ),
+                ),
+                SheetSurface(
+                  padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.md),
+                  child: SafeArea(
+                    top: false,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: altura * 0.62),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const AlcaFolha(),
+                            PainelMotorista(corrida: corrida),
+                            if (corrida.pin.isNotEmpty) ...[
+                              const SizedBox(height: Spacing.md),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+                                decoration: BoxDecoration(
+                                  color: AppColors.brandSoft,
+                                  borderRadius: BorderRadius.circular(Radii.md),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Ao entrar no carro, diga este código ao motorista:',
+                                        style: AppText.body.copyWith(color: AppColors.text),
+                                      ),
+                                    ),
+                                    const SizedBox(width: Spacing.md),
+                                    Text(
+                                      corrida.pin,
+                                      style: AppText.title.copyWith(color: AppColors.brand, letterSpacing: 6),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: Spacing.sm),
+                            LinhaValor(
+                              rotulo: 'Valor estimado (${corrida.paymentMethod})',
+                              valor: formatMoney(corrida.aPagarCents),
+                            ),
+                            if (estado.modoDemo)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: Spacing.sm),
+                                child: AppButton(
+                                  label: 'Avançar (demonstração)',
+                                  variant: AppButtonVariant.secondary,
+                                  onPressed: () => context.read<RideState>().advanceRide(),
+                                ),
+                              ),
+                            const SizedBox(height: Spacing.sm),
+                            BotaoCancelarPilula(carregando: _cancelando, aoTocar: () => _cancelar(corrida)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

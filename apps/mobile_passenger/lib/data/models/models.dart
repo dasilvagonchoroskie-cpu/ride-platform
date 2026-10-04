@@ -331,7 +331,15 @@ class DriverInfo {
     required this.position,
     this.telefone,
     this.posicaoReal = false,
+    this.fotoUrl,
+    this.fotoCarroUrl,
   });
+
+  /// Foto do rosto do motorista (/arquivos/...), se ele mandou.
+  final String? fotoUrl;
+
+  /// Foto do carro de frente (/arquivos/...), se ele mandou.
+  final String? fotoCarroUrl;
 
   final String id;
   final String name;
@@ -380,7 +388,17 @@ class Ride {
     this.rating,
     this.discountCents = 0,
     this.agendadaPara,
+    this.favorito = false,
+    this.bloqueado = false,
+    this.mensagensNaoLidas = 0,
   });
+
+  /// O motorista desta corrida esta nos favoritos / bloqueados do passageiro.
+  final bool favorito;
+  final bool bloqueado;
+
+  /// Mensagens do motorista que o passageiro ainda nao abriu (chat).
+  final int mensagensNaoLidas;
 
   final String id;
   final String code;
@@ -411,6 +429,9 @@ class Ride {
     DriverInfo? driver,
     String? finishedAt,
     int? rating,
+    bool? favorito,
+    bool? bloqueado,
+    int? mensagensNaoLidas,
   }) =>
       Ride(
         id: id,
@@ -430,6 +451,9 @@ class Ride {
         rating: rating ?? this.rating,
         discountCents: discountCents,
         agendadaPara: agendadaPara,
+        favorito: favorito ?? this.favorito,
+        bloqueado: bloqueado ?? this.bloqueado,
+        mensagensNaoLidas: mensagensNaoLidas ?? this.mensagensNaoLidas,
       );
 
   Map<String, dynamic> toJson() => {
@@ -452,6 +476,8 @@ class Ride {
                 'position': driver!.position.toJson(),
                 'telefone': driver!.telefone,
                 'posicaoReal': driver!.posicaoReal,
+                'fotoUrl': driver!.fotoUrl,
+                'fotoCarroUrl': driver!.fotoCarroUrl,
               },
         'distanceMeters': distanceMeters,
         'durationSeconds': durationSeconds,
@@ -508,6 +534,8 @@ class Ride {
               ),
               telefone: driverJson['telefone'] as String?,
               posicaoReal: driverJson['posicaoReal'] as bool? ?? false,
+              fotoUrl: driverJson['fotoUrl'] as String?,
+              fotoCarroUrl: driverJson['fotoCarroUrl'] as String?,
             ),
       distanceMeters: (json['distanceMeters'] as num?)?.toInt() ?? 0,
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
@@ -557,6 +585,8 @@ class Ride {
               position: pos == null ? embarque : Coords(numero(pos['latitude']) ?? 0, numero(pos['longitude']) ?? 0),
               telefone: userJson?['phone'] as String?,
               posicaoReal: pos != null,
+              fotoUrl: userJson?['avatarUrl'] as String?,
+              fotoCarroUrl: driverJson['fotoCarroUrl'] as String?,
             ),
       distanceMeters: (j['distanceMeters'] as num?)?.toInt() ?? 0,
       durationSeconds: (j['durationSeconds'] as num?)?.toInt() ?? 0,
@@ -568,6 +598,9 @@ class Ride {
       rating: (j['minhaNota'] as num?)?.toInt(),
       discountCents: (j['discountCents'] as num?)?.toInt() ?? 0,
       agendadaPara: j['scheduledFor'] as String?,
+      favorito: j['favorito'] == true,
+      bloqueado: j['bloqueado'] == true,
+      mensagensNaoLidas: (j['mensagensNaoLidas'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -719,3 +752,21 @@ class MotoristaFavorito {
       );
 }
 
+
+
+/// Motorista que o passageiro bloqueou (nao recebe mais as corridas dele).
+class MotoristaBloqueado {
+  const MotoristaBloqueado({required this.driverId, required this.name, required this.vehicle, required this.plate});
+
+  final String driverId;
+  final String name;
+  final String vehicle;
+  final String plate;
+
+  factory MotoristaBloqueado.fromJson(Map<String, dynamic> j) => MotoristaBloqueado(
+        driverId: j['driverId'] as String? ?? '',
+        name: j['name'] as String? ?? 'Motorista',
+        vehicle: j['vehicle'] as String? ?? '',
+        plate: j['plate'] as String? ?? '',
+      );
+}

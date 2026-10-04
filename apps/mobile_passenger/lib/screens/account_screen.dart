@@ -8,6 +8,8 @@ import '../state/config_state.dart';
 import '../state/ride_state.dart';
 import '../widgets/painel_ui.dart';
 import 'avisos_screen.dart';
+import 'cupons_screen.dart';
+import 'motoristas_salvos_screen.dart';
 import 'help_screen.dart';
 import 'my_data_screen.dart';
 import 'wallet_screen.dart';
@@ -148,6 +150,20 @@ class AccountScreen extends StatelessWidget {
               corIcone: AppColors.text,
               titulo: 'Meus dados',
               onTap: () => _abrir(context, const MyDataScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.confirmation_number,
+              corIcone: AppColors.text,
+              titulo: 'Cupons',
+              onTap: () => _abrir(context, const CuponsScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.favorite,
+              corIcone: AppColors.text,
+              titulo: 'Motoristas favoritos e bloqueados',
+              onTap: () => _abrir(context, const MotoristasSalvosScreen()),
             ),
             separador,
             MenuLinha(

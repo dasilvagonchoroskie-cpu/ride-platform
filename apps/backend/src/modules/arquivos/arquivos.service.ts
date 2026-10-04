@@ -14,7 +14,8 @@ const TIPOS_DE_IMAGEM: Record<string, (b: Buffer) => boolean> = {
 const MAX_BYTES = 2 * 1024 * 1024;
 
 /** Fotos que qualquer pessoa logada pode ver (o rosto de quem vai na corrida). */
-const PUBLICAS = new Set(['AVATAR', 'PROFILE_PHOTO']);
+// Rosto do motorista e foto do carro aparecem para o passageiro da corrida.
+const PUBLICAS = new Set(['AVATAR', 'PROFILE_PHOTO', 'VEHICLE_FRONT']);
 
 @Injectable()
 export class ArquivosService {

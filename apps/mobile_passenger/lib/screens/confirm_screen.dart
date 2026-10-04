@@ -10,6 +10,7 @@ import '../core/utils/geo.dart';
 import '../data/models/models.dart';
 import '../state/app_state.dart';
 import '../state/ride_state.dart';
+import 'cupons_screen.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -202,7 +203,19 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                           : _PriceCard(quote: quote),
                     ),
                   ),
-                  const SizedBox(height: Spacing.md),
+                  const SizedBox(height: Spacing.sm),
+
+                  // Cupom: escolhido na tela Cupons ou aqui mesmo.
+                  _LinhaCupom(
+                    codigo: ride.cupomCodigo,
+                    descontoCents: quote?.discountCents ?? 0,
+                    aPagarCents: quote?.aPagarCents,
+                    aoTocar: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const CuponsScreen(naConfirmacao: true)),
+                    ),
+                    aoTirar: () => context.read<RideState>().aplicarCupom(null, refazerPreco: true),
+                  ),
+                  const SizedBox(height: Spacing.sm),
 
                   // Forma de pagamento
                   GestureDetector(
@@ -398,4 +411,65 @@ class _LinhaConta extends StatelessWidget {
           Text(valor, style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
         ],
       );
+}
+
+
+/// "Adicionar cupom" ou "Cupom X  -R$ 3,00  (voce paga R$ 12,00)".
+class _LinhaCupom extends StatelessWidget {
+  const _LinhaCupom({
+    required this.codigo,
+    required this.descontoCents,
+    required this.aPagarCents,
+    required this.aoTocar,
+    required this.aoTirar,
+  });
+
+  final String? codigo;
+  final int descontoCents;
+  final int? aPagarCents;
+  final VoidCallback aoTocar;
+  final VoidCallback aoTirar;
+
+  @override
+  Widget build(BuildContext context) {
+    final temCupom = codigo != null;
+    return Material(
+      color: AppColors.sheetField,
+      borderRadius: BorderRadius.circular(Radii.sm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.sm),
+        onTap: aoTocar,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+          child: Row(
+            children: [
+              const Icon(Icons.confirmation_number, size: 20, color: AppColors.sheetText),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: temCupom
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            descontoCents > 0 ? 'Cupom $codigo: -${formatMoney(descontoCents)}' : 'Cupom $codigo',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          if (aPagarCents != null && descontoCents > 0)
+                            Text('Você paga ${formatMoney(aPagarCents!)}', style: SheetText.muted),
+                        ],
+                      )
+                    : Text('Adicionar cupom', style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
+              ),
+              if (temCupom)
+                TextButton(onPressed: aoTirar, child: const Text('Tirar'))
+              else
+                const Icon(Icons.keyboard_arrow_right, color: AppColors.sheetMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -16,6 +16,9 @@ class MapMarker {
   final String? label;
 }
 
+/// Desenho das ruas. Os testes automaticos desligam (la nao ha internet).
+bool mostrarRuasNoMapa = true;
+
 /// Mapa do app, baseado em **OpenStreetMap** via `flutter_map`.
 ///
 /// Usa o servidor padrao tile.openstreetmap.org: nao exige chave de API
@@ -34,7 +37,11 @@ class RideMap extends StatefulWidget {
     this.span = 0.05,
     this.rounded = true,
     this.interactive = true,
+    this.recentrar = 0,
   });
+
+  /// Mude o numero para o mapa voltar a [center] (botao "minha localizacao").
+  final int recentrar;
 
   final Coords center;
   final List<MapMarker> markers;
@@ -53,6 +60,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   final Map<String, Coords> _animated = {};
   final Map<String, Coords> _targets = {};
+  final MapController _mapa = MapController();
 
   @override
   void initState() {
@@ -65,6 +73,13 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant RideMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.recentrar != oldWidget.recentrar) {
+      try {
+        _mapa.move(_latLng(widget.center), _zoom);
+      } catch (_) {
+        // Mapa ainda nao desenhado: o centro inicial ja e este.
+      }
+    }
     _syncTargets();
   }
 
@@ -132,6 +147,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
       fit: StackFit.expand,
       children: [
         FlutterMap(
+          mapController: _mapa,
           options: MapOptions(
             initialCenter: _latLng(widget.center),
             initialZoom: _zoom,
@@ -145,7 +161,8 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             // de API. O CARTO Dark Matter (tema escuro) exigia chave e
             // travava o mapa com "API KEY REQUIRED"; a troca perde o tema
             // escuro do mapa, mas garante que ele sempre carrega.
-            TileLayer(
+            if (mostrarRuasNoMapa)
+              TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.rideplatform.mobile_passenger',
               maxZoom: 19,
