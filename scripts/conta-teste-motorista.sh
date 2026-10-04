@@ -48,12 +48,13 @@ else
 fi
 
 X=$(get /vehicles/me "$TM")
-if [ "$(echo "$X" | jq -r '[.data[]?, .data.items[]?] | length')" = "0" ]; then
+LISTA='(.data | if type=="array" then . else (.items // []) end)'
+if [ "$(echo "$X" | jq -r "$LISTA | length")" = "0" ]; then
   X=$(post /vehicles '{"plate":"FMV0T01","brand":"Chevrolet","model":"Spin","year":2020,"color":"Prata"}' "$TM")
   echo "$X" | jq -e '.success == true' >/dev/null || erro "cadastro do veiculo" "$X"
   diz "OK    veiculo criado (Chevrolet Spin 2020 prata, placa FMV0T01)"
 else
-  diz "OK    veiculo ja existia: $(echo "$X" | jq -r '[.data[]?, .data.items[]?][0] | "\(.brand) \(.model) \(.plate)"')"
+  diz "OK    veiculo ja existia: $(echo "$X" | jq -r "$LISTA | .[0] | \"\\(.brand) \\(.model) \\(.plate)\"")"
 fi
 
 X=$(get "/admin/drivers/$DID" "$TA")
