@@ -58,9 +58,12 @@ class RideScreen extends StatelessWidget {
                   ),
                 ),
                 SheetSurface(
-              padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.lg),
+              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.md),
               child: SafeArea(
                 top: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+                  child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -101,6 +104,8 @@ class RideScreen extends StatelessWidget {
                       label: Text('Preciso de ajuda', style: AppText.bodyStrong.copyWith(color: AppColors.brand)),
                     ),
                   ],
+                ),
+                  ),
                 ),
               ),
             ),

@@ -131,13 +131,18 @@ class LinhaValor extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: Text(rotulo, style: AppText.body.copyWith(color: AppColors.textMuted))),
-          Text(
-            valor,
-            style: destaque
-                ? AppText.price.copyWith(color: AppColors.brand, fontSize: 20)
-                : AppText.bodyStrong.copyWith(color: AppColors.text),
+          const SizedBox(width: Spacing.sm),
+          Flexible(
+            child: Text(
+              valor,
+              textAlign: TextAlign.right,
+              style: destaque
+                  ? AppText.price.copyWith(color: AppColors.brand, fontSize: 20)
+                  : AppText.bodyStrong.copyWith(color: AppColors.text),
+            ),
           ),
         ],
       ),

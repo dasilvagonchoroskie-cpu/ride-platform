@@ -181,7 +181,10 @@ void main() {
     await tester.scrollUntilVisible(find.text('Antecedentes criminais'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('CRLV do veículo'), findsOneWidget);
     expect(find.textContaining('Foto tremida'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Alterar senha'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Foto do carro (de frente, com a placa)', skipOffstage: false), findsOneWidget);
+    await tester.fling(find.byType(ListView).first, const Offset(0, -2500), 3000);
+    await tester.pumpAndSettle();
+    expect(find.text('Alterar senha'), findsOneWidget);
     expect(find.text('Sair'), findsOneWidget);
   });
 

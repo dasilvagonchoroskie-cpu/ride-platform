@@ -19,7 +19,7 @@ class ChatScreen extends StatefulWidget {
 
   final ApiClient api;
 
-  /// Ex.: "/rides/<id>/messages" ou "/driver/rides/<id>/messages".
+  /// Ex.: `/rides/ID/messages` ou `/driver/rides/ID/messages`.
   final String caminho;
   final String titulo;
 
