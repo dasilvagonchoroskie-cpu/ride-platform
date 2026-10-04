@@ -233,16 +233,19 @@ export class RidesService {
     // rodada, se algum favorito estiver livre por perto, so ele e chamado.
     // Se nao aceitar no prazo, a procura abre para todos.
     const favoritos = await this.favoritosDe(corrida.passengerId);
+    // Motorista bloqueado pelo passageiro nunca recebe as corridas dele.
+    const bloqueados = await this.bloqueadosDe(corrida.passengerId);
     const primeiraRodada = (await this.prisma.rideOffer.count({ where: { rideId } })) === 0;
 
     for (const raio of RidesService.RAIOS_METROS) {
-      const proximos = await this.prisma.findNearbyDrivers({
+      const achados = await this.prisma.findNearbyDrivers({
         latitude: corrida.pickupLat,
         longitude: corrida.pickupLng,
         radiusMeters: raio,
         limit: 10,
         category: corrida.category,
       });
+      const proximos = achados.filter((m) => !bloqueados.includes(m.driverId));
       if (proximos.length === 0) continue;
       const favoritosPerto = primeiraRodada ? proximos.filter((m) => favoritos.includes(m.driverId)) : [];
       const chamar = favoritosPerto.length > 0 ? favoritosPerto : proximos;
@@ -812,15 +815,152 @@ export class RidesService {
     };
   }
 
-  /** So da para favoritar quem ja levou este passageiro numa corrida concluida. */
-  async favoritar(userId: string, driverId: string) {
-    const levou = await this.prisma.ride.count({
-      where: { passengerId: userId, driverId, status: RideStatus.COMPLETED },
+  /** Corridas em que este motorista ja foi (ou esta sendo) o motorista do passageiro. */
+  private async jaFoiMotoristaDe(userId: string, driverId: string): Promise<boolean> {
+    const n = await this.prisma.ride.count({
+      where: {
+        passengerId: userId,
+        driverId,
+        status: {
+          in: [
+            RideStatus.DRIVER_ASSIGNED,
+            RideStatus.DRIVER_ARRIVING,
+            RideStatus.DRIVER_WAITING,
+            RideStatus.IN_PROGRESS,
+            RideStatus.COMPLETED,
+          ],
+        },
+      },
     });
-    if (levou === 0) throw BusinessException.validation('Só dá para favoritar um motorista que já te levou.');
+    return n > 0;
+  }
+
+  /** Da para favoritar o motorista que ja levou ou que esta vindo buscar. */
+  async favoritar(userId: string, driverId: string) {
+    if (!(await this.jaFoiMotoristaDe(userId, driverId))) {
+      throw BusinessException.validation('Só dá para favoritar um motorista que já aceitou uma corrida sua.');
+    }
     const atual = await this.favoritosDe(userId);
     if (!atual.includes(driverId)) await this.gravarFavoritos(userId, [driverId, ...atual]);
+    const bloq = await this.bloqueadosDe(userId);
+    if (bloq.includes(driverId)) await this.gravarBloqueados(userId, bloq.filter((d) => d !== driverId));
     return this.favoritos(userId);
+  }
+
+  // ---------------- Motoristas bloqueados pelo passageiro ----------------
+
+  private async bloqueadosDe(userId: string): Promise<string[]> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    const m = (u?.metadata ?? {}) as { motoristasBloqueados?: unknown };
+    return Array.isArray(m.motoristasBloqueados) ? m.motoristasBloqueados.filter((x): x is string => typeof x === 'string') : [];
+  }
+
+  private async gravarBloqueados(userId: string, lista: string[]): Promise<void> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    const meta = u?.metadata && typeof u.metadata === 'object' && !Array.isArray(u.metadata) ? (u.metadata as object) : {};
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { metadata: { ...meta, motoristasBloqueados: lista.slice(0, 50) } as never },
+    });
+  }
+
+  async bloqueados(userId: string) {
+    const ids = await this.bloqueadosDe(userId);
+    if (ids.length === 0) return { items: [] };
+    const motoristas = await this.prisma.driver.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        user: { select: { name: true } },
+        vehicles: { select: { brand: true, model: true, plate: true }, take: 1 },
+      },
+    });
+    return {
+      items: motoristas.map((m) => ({
+        driverId: m.id,
+        name: m.user.name,
+        vehicle: m.vehicles[0] ? `${m.vehicles[0].brand} ${m.vehicles[0].model}` : '',
+        plate: m.vehicles[0]?.plate ?? '',
+      })),
+    };
+  }
+
+  /** O motorista nao recebe mais corridas deste passageiro. A corrida atual continua (cancelar e outro botao). */
+  async bloquear(userId: string, driverId: string) {
+    if (!(await this.jaFoiMotoristaDe(userId, driverId))) {
+      throw BusinessException.validation('Só dá para bloquear um motorista que já aceitou uma corrida sua.');
+    }
+    const atual = await this.bloqueadosDe(userId);
+    if (!atual.includes(driverId)) await this.gravarBloqueados(userId, [driverId, ...atual]);
+    const fav = await this.favoritosDe(userId);
+    if (fav.includes(driverId)) await this.gravarFavoritos(userId, fav.filter((d) => d !== driverId));
+    return this.bloqueados(userId);
+  }
+
+  async desbloquear(userId: string, driverId: string) {
+    const atual = await this.bloqueadosDe(userId);
+    await this.gravarBloqueados(userId, atual.filter((d) => d !== driverId));
+    return this.bloqueados(userId);
+  }
+
+  // ---------------- Conversa (chat) da corrida ----------------
+
+  private static readonly COM_CONVERSA: RideStatus[] = [
+    RideStatus.DRIVER_ASSIGNED,
+    RideStatus.DRIVER_ARRIVING,
+    RideStatus.DRIVER_WAITING,
+    RideStatus.IN_PROGRESS,
+  ];
+
+  private async participante(rideId: string, quem: { userId: string; driverId?: string | null }) {
+    const corrida = await this.prisma.ride.findUnique({
+      where: { id: rideId },
+      select: { id: true, passengerId: true, driverId: true, status: true },
+    });
+    if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
+    const ehPassageiro = corrida.passengerId === quem.userId;
+    const ehMotorista = !!quem.driverId && corrida.driverId === quem.driverId;
+    if (!ehPassageiro && !ehMotorista) throw BusinessException.forbidden('Esta corrida nao e sua.');
+    return { corrida, papel: ehPassageiro ? 'PASSENGER' : 'DRIVER' };
+  }
+
+  /** Mensagens da corrida. Ao ler, as mensagens do outro lado ficam como lidas. */
+  async mensagens(rideId: string, quem: { userId: string; driverId?: string | null }, depois?: string) {
+    const { corrida } = await this.participante(rideId, quem);
+    const desde = depois ? new Date(depois) : null;
+    const itens = await this.prisma.rideMessage.findMany({
+      where: { rideId, ...(desde && !Number.isNaN(desde.getTime()) ? { createdAt: { gt: desde } } : {}) },
+      orderBy: { createdAt: 'asc' },
+      take: 200,
+    });
+    await this.prisma.rideMessage.updateMany({
+      where: { rideId, authorId: { not: quem.userId }, readAt: null },
+      data: { readAt: new Date() },
+    });
+    return {
+      podeEscrever: RidesService.COM_CONVERSA.includes(corrida.status),
+      items: itens.map((m) => ({
+        id: m.id,
+        minha: m.authorId === quem.userId,
+        autor: m.authorRole,
+        texto: m.text,
+        criadaEm: m.createdAt.toISOString(),
+        lida: !!m.readAt,
+      })),
+    };
+  }
+
+  async enviarMensagem(rideId: string, quem: { userId: string; driverId?: string | null }, texto: string) {
+    const { corrida, papel } = await this.participante(rideId, quem);
+    if (!RidesService.COM_CONVERSA.includes(corrida.status)) {
+      throw BusinessException.validation('A conversa fica aberta só enquanto a corrida está em andamento.');
+    }
+    const limpo = texto.trim().slice(0, 500);
+    if (!limpo) throw BusinessException.validation('Escreva a mensagem.');
+    const m = await this.prisma.rideMessage.create({
+      data: { rideId, authorId: quem.userId, authorRole: papel, text: limpo },
+    });
+    return { id: m.id, minha: true, autor: papel, texto: m.text, criadaEm: m.createdAt.toISOString(), lida: false };
   }
 
   async desfavoritar(userId: string, driverId: string) {
@@ -923,12 +1063,13 @@ export class RidesService {
   }
 
   /** A corrida aberta do motorista, se houver. */
-  async atualDoMotorista(driverId: string) {
+  async atualDoMotorista(driverId: string, userId?: string) {
     const corrida = await this.prisma.ride.findFirst({
       where: { driverId, status: { in: EM_ABERTO } },
       orderBy: { acceptedAt: 'desc' },
     });
-    return corrida ? this.detalhe(corrida.id) : { ride: null };
+    if (!corrida) return { ride: null };
+    return userId ? this.detalhe(corrida.id, { userId, papel: UserRole.DRIVER, driverId }) : this.detalhe(corrida.id);
   }
 
   /**
@@ -946,7 +1087,13 @@ export class RidesService {
             id: true,
             ratingAvg: true,
             totalRides: true,
-            user: { select: { name: true, phone: true } },
+            user: { select: { name: true, phone: true, avatarUrl: true } },
+            documents: {
+              where: { type: 'VEHICLE_FRONT' },
+              orderBy: { uploadedAt: 'desc' },
+              take: 1,
+              select: { fileUrl: true },
+            },
           },
         },
         vehicle: { select: { plate: true, brand: true, model: true, color: true } },
@@ -971,7 +1118,23 @@ export class RidesService {
       corrida.driverId && comCarro.includes(corrida.status) ? await this.posicaoDoMotorista(corrida.driverId) : null;
     const minhaNota = quem ? (corrida.ratings.find((r) => r.authorId === quem.userId)?.score ?? null) : null;
     const { ratings: _notas, ...semNotas } = corrida;
-    return { ride: { ...semNotas, driverPosition, minhaNota } };
+    // Foto do carro (de frente) que o motorista mandou nos documentos.
+    const driver = corrida.driver
+      ? (() => {
+          const { documents, ...resto } = corrida.driver;
+          return { ...resto, fotoCarroUrl: documents[0]?.fileUrl ?? null };
+        })()
+      : null;
+    const mensagensNaoLidas = quem
+      ? await this.prisma.rideMessage.count({ where: { rideId, authorId: { not: quem.userId }, readAt: null } })
+      : 0;
+    let favorito = false;
+    let bloqueado = false;
+    if (quem && corrida.driverId && corrida.passengerId === quem.userId) {
+      favorito = (await this.favoritosDe(quem.userId)).includes(corrida.driverId);
+      bloqueado = (await this.bloqueadosDe(quem.userId)).includes(corrida.driverId);
+    }
+    return { ride: { ...semNotas, driver, driverPosition, minhaNota, mensagensNaoLidas, favorito, bloqueado } };
   }
 
   async posicaoDoMotorista(driverId: string): Promise<{ latitude: number; longitude: number; updatedAt: string } | null> {

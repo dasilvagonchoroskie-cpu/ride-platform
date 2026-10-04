@@ -145,6 +145,15 @@ sucesso "$X" && [ ${#PIN} -eq 4 ] && ok "Motorista: accept (PIN de embarque $PIN
 X=$(get "/rides/$RID" "$TP")
 [ "$(echo "$X" | jq -r '.data.ride.status')" = "DRIVER_ASSIGNED" ] && [ "$(echo "$X" | jq -r '.data.ride.driver.user.name')" = "Motorista Teste Automatico" ] && [ "$(echo "$X" | jq -r '.data.ride.pin')" = "$PIN" ] && [ "$(echo "$X" | jq -r '.data.ride.driverPosition.latitude // empty')" != "" ] \
   && ok "Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)" || falha "Passageiro: acompanhar a corrida" "$X"
+# Chat da corrida (modelo Pop Move): passageiro e motorista conversam enquanto o carro vem.
+X=$(post "/rides/$RID/messages" '{"texto":"Estou no portao azul"}' "$TP"); [ "$(echo "$X" | jq -r '.data.minha')" = "true" ] && ok "Chat: passageiro manda mensagem ao motorista" || falha "Chat: passageiro manda mensagem" "$X"
+X=$(get /driver/rides/current "$TM"); [ "$(echo "$X" | jq -r '.data.ride.mensagensNaoLidas')" = "1" ] && ok "Chat: o app do motorista sabe que chegou 1 mensagem" || falha "Chat: aviso de mensagem ao motorista" "$X"
+X=$(get "/driver/rides/$RID/messages" "$TM"); [ "$(echo "$X" | jq -r '.data.items[0].texto')" = "Estou no portao azul" ] && [ "$(echo "$X" | jq -r '.data.items[0].minha')" = "false" ] && [ "$(echo "$X" | jq -r '.data.podeEscrever')" = "true" ] && ok "Chat: motorista le a mensagem" || falha "Chat: motorista le" "$X"
+X=$(post "/driver/rides/$RID/messages" '{"texto":"Chego em 2 minutos"}' "$TM"); [ "$(echo "$X" | jq -r '.data.autor')" = "DRIVER" ] && ok "Chat: motorista responde" || falha "Chat: motorista responde" "$X"
+X=$(get "/rides/$RID" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.mensagensNaoLidas')" = "1" ] && [ "$(echo "$X" | jq -r '.data.ride.driver | has("fotoCarroUrl")')" = "true" ] && [ "$(echo "$X" | jq -r '.data.ride.driver.user | has("avatarUrl")')" = "true" ] && [ "$(echo "$X" | jq -r '.data.ride.favorito')" = "false" ] \
+  && ok "Passageiro: tela do motorista a caminho com foto, foto do carro, favorito e mensagem nova" || falha "Passageiro: dados do motorista a caminho" "$(echo "$X" | jq -c '{n:.data.ride.mensagensNaoLidas,f:.data.ride.favorito,d:.data.ride.driver}' 2>/dev/null)"
+X=$(get "/rides/$RID/messages" "$TP"); [ "$(echo "$X" | jq -r '.data.items | length')" = "2" ] && [ "$(echo "$X" | jq -r '.data.items[0].lida')" = "true" ] && ok "Chat: passageiro ve a conversa e que o motorista leu" || falha "Chat: conversa do passageiro" "$X"
+X=$(post "/rides/favoritos/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && ok "Passageiro: favoritou o motorista que esta vindo buscar" || falha "Passageiro: favoritar durante a corrida" "$X"
 for passo in arriving arrived start; do
   X=$(post "/driver/rides/$RID/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM")
   sucesso "$X" && ok "Motorista: $passo" || falha "Motorista: $passo" "$X"
@@ -184,11 +193,16 @@ X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de 
 X=$(post "/rides/$RID/rate" '{"score":5,"tags":["Carro limpo"]}' "$TP")
 [ "$(echo "$X" | jq -r '.data.score')" = "5" ] && ok "Passageiro: avaliou o motorista com 5 estrelas" || falha "Passageiro: avaliar" "$X"
 X=$(get "/rides/$RID" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "COMPLETED" ] && [ "$(echo "$X" | jq -r '.data.ride.minhaNota')" = "5" ] && ok "Passageiro: recibo da corrida concluida com a nota" || falha "Passageiro: recibo" "$X"
+X=$(post "/rides/$RID/messages" '{"texto":"oi"}' "$TP"); sucesso "$X" && falha "Chat deveria fechar depois da corrida" "$X" || ok "Chat: fecha quando a corrida termina"
 X=$(post "/driver/rides/$RID/rate" '{"score":4}' "$TM"); [ "$(echo "$X" | jq -r '.data.score')" = "4" ] && ok "Motorista: avaliou o passageiro com 4 estrelas" || falha "Motorista: avaliar passageiro" "$X"
 X=$(get "/driver/rides/history?period=day" "$TM")
 [ "$(echo "$X" | jq -r '.data.summary.rides')" -ge 1 ] 2>/dev/null && [ "$(echo "$X" | jq -r '.data.performance.acceptanceRate')" != "null" ] \
   && ok "Motorista: historico de hoje com totais e desempenho (aceitacao $(echo "$X" | jq -r '.data.performance.acceptanceRate')%, taxa $(echo "$X" | jq -r '.data.summary.commissionCents'))" || falha "Motorista: historico com periodo" "$X"
 X=$(post "/rides/favoritos/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && ok "Passageiro: motorista adicionado aos favoritos" || falha "Passageiro: favoritar" "$X"
+X=$(post "/rides/bloqueados/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && [ "$(get /rides/favoritos "$TP" | jq -r --arg d "$DID" '[.data.items[] | select(.driverId==$d)] | length')" = "0" ] \
+  && ok "Passageiro: bloqueou o motorista (sai dos favoritos)" || falha "Passageiro: bloquear motorista" "$X"
+X=$(curl -s -m 90 -X DELETE "$API/rides/bloqueados/$DID" -H "Authorization: Bearer $TP"); [ "$(echo "$X" | jq -r '.data.items | length')" = "0" ] && ok "Passageiro: desbloqueou o motorista" || falha "Passageiro: desbloquear" "$X"
+post "/rides/favoritos/$DID" '{}' "$TP" >/dev/null
 X=$(post /auth/foto "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TP"); AV=$(echo "$X" | jq -r '.data.avatarUrl // empty')
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$AV" -H "Authorization: Bearer $TM"); [ -n "$AV" ] && [ "$C" = "200" ] && ok "Passageiro: foto de perfil (o motorista consegue ver)" || falha "Passageiro: foto de perfil" "$X $C"
 QUANDO=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)

@@ -76,3 +76,7 @@ SELECT
 FROM rides r
 WHERE r.status = 'COMPLETED' AND r.finished_at IS NOT NULL
 GROUP BY DATE(r.finished_at);
+
+
+-- Conversa da corrida: so o servidor le e grava (o app passa pela API).
+ALTER TABLE IF EXISTS ride_messages ENABLE ROW LEVEL SECURITY;

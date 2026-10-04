@@ -30,6 +30,8 @@ const pertoSchema = z.object({
   lng: z.coerce.number().min(-180).max(180),
 });
 
+const mensagemSchema = z.object({ texto: z.string().trim().min(1, 'Escreva a mensagem.').max(500, 'Mensagem muito longa.') });
+
 @ApiTags('Corridas - Passageiro')
 @ApiBearerAuth()
 // Motorista tambem pode pedir corrida como passageiro (mesma conta).
@@ -74,6 +76,24 @@ export class RidesController {
     return this.rides.desfavoritar(userId, driverId);
   }
 
+  @Get('bloqueados')
+  @ApiOperation({ summary: 'Motoristas que o passageiro bloqueou' })
+  bloqueados(@CurrentUser('id') userId: string) {
+    return this.rides.bloqueados(userId);
+  }
+
+  @Post('bloqueados/:driverId')
+  @ApiOperation({ summary: 'Bloqueia o motorista: ele nao recebe mais as corridas deste passageiro' })
+  bloquear(@CurrentUser('id') userId: string, @Param('driverId', new ParseUUIDPipe()) driverId: string) {
+    return this.rides.bloquear(userId, driverId);
+  }
+
+  @Delete('bloqueados/:driverId')
+  @ApiOperation({ summary: 'Desbloqueia o motorista' })
+  desbloquear(@CurrentUser('id') userId: string, @Param('driverId', new ParseUUIDPipe()) driverId: string) {
+    return this.rides.desbloquear(userId, driverId);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Chama a corrida e comeca a procurar motorista' })
   request(@CurrentUser('id') userId: string, @Body(new ZodValidationPipe(requestRideSchema)) body: never) {
@@ -112,6 +132,26 @@ export class RidesController {
     @Body(new ZodValidationPipe(cancelRideSchema)) body: never,
   ) {
     return this.rides.cancelar(userId, UserRole.PASSENGER, rideId, body);
+  }
+
+  @Get(':id/messages')
+  @ApiOperation({ summary: 'Conversa da corrida (chat com o motorista)' })
+  mensagens(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Query('depois') depois?: string,
+  ) {
+    return this.rides.mensagens(rideId, { userId: user.id, driverId: user.driverId }, depois);
+  }
+
+  @Post(':id/messages')
+  @ApiOperation({ summary: 'Manda mensagem ao motorista' })
+  enviar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Body(new ZodValidationPipe(mensagemSchema)) body: { texto: string },
+  ) {
+    return this.rides.enviarMensagem(rideId, { userId: user.id, driverId: user.driverId }, body.texto);
   }
 
   @Post(':id/rate')
@@ -203,8 +243,28 @@ export class DriverRidesController {
 
   @Get('current')
   @ApiOperation({ summary: 'A corrida em andamento do motorista' })
-  current(@CurrentUser('driverId') driverId: string) {
-    return this.rides.atualDoMotorista(driverId);
+  current(@CurrentUser() user: AuthenticatedUser) {
+    return this.rides.atualDoMotorista(user.driverId ?? '', user.id);
+  }
+
+  @Get(':id/messages')
+  @ApiOperation({ summary: 'Conversa da corrida (chat com o passageiro)' })
+  mensagens(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Query('depois') depois?: string,
+  ) {
+    return this.rides.mensagens(rideId, { userId: user.id, driverId: user.driverId }, depois);
+  }
+
+  @Post(':id/messages')
+  @ApiOperation({ summary: 'Manda mensagem ao passageiro' })
+  enviar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Body(new ZodValidationPipe(mensagemSchema)) body: { texto: string },
+  ) {
+    return this.rides.enviarMensagem(rideId, { userId: user.id, driverId: user.driverId }, body.texto);
   }
 
   @Post(':id/rate')

@@ -482,6 +482,7 @@ model Ride {
   @@index([status, createdAt])
   @@index([requestedAt])
   @@map("rides")
+  messages      RideMessage[]
 }
 
 model RideStop {
@@ -827,4 +828,21 @@ model Arquivo {
 
   @@index([ownerId, tipo])
   @@map("arquivos")
+}
+
+
+/// Conversa entre passageiro e motorista durante a corrida (chat).
+model RideMessage {
+  id         String    @id @default(uuid()) @db.Uuid
+  rideId     String    @map("ride_id") @db.Uuid
+  authorId   String    @map("author_id") @db.Uuid
+  authorRole String    @map("author_role") @db.VarChar(12)
+  text       String    @db.VarChar(500)
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@index([rideId, createdAt])
+  @@map("ride_messages")
 }
