@@ -15,9 +15,12 @@ import 'package:mobile_passenger/data/models/models.dart';
 import 'package:mobile_passenger/data/repositories/ride_repository.dart';
 import 'package:mobile_passenger/screens/chat_screen.dart';
 import 'package:mobile_passenger/screens/cupons_screen.dart';
+import 'package:mobile_passenger/screens/home_screen.dart';
 import 'package:mobile_passenger/screens/motoristas_salvos_screen.dart';
 import 'package:mobile_passenger/screens/ride_screen.dart';
 import 'package:mobile_passenger/screens/searching_screen.dart';
+import 'package:mobile_passenger/state/app_state.dart';
+import 'package:mobile_passenger/state/auth_state.dart';
 import 'package:mobile_passenger/state/config_state.dart';
 import 'package:mobile_passenger/state/ride_state.dart';
 import 'package:mobile_passenger/widgets/ride_map.dart';
@@ -245,5 +248,34 @@ void main() {
     await tester.tap(find.text('Desbloquear'));
     await tester.pumpAndSettle();
     expect(pedidos, contains('DELETE /api/rides/bloqueados/d3'));
+  });
+
+  // Defeito visto no celular do Evandro (05/10/2026): a pilula "Fortaleza
+  // Mov" foi parar no meio do mapa.
+  testWidgets('Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino', (tester) async {
+    tester.view.physicalSize = const Size(360, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final api = ApiClient(client: _servidor());
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppState>(create: (_) => AppState(client: api)),
+          ChangeNotifierProvider<AuthState>(create: (_) => AuthState(client: api)),
+          ChangeNotifierProvider<RideState>(create: (_) => RideState(repository: RideRepository(client: api))),
+          ChangeNotifierProvider<ConfigState>(create: (_) => ConfigState(client: api)),
+        ],
+        child: MaterialApp(scaffoldMessengerKey: avisos, home: const HomeScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.getTopLeft(find.text('Fortaleza Mov')).dy, lessThan(120));
+    expect(find.byIcon(Icons.confirmation_number), findsOneWidget);
+    expect(find.byIcon(Icons.notifications), findsOneWidget);
+    expect(find.byTooltip('Minha localização'), findsOneWidget);
+    expect(find.text('Buscar destino'), findsOneWidget);
+    expect(tester.getTopLeft(find.byTooltip('Minha localização')).dy, greaterThan(400));
+    await tester.pumpWidget(const SizedBox());
   });
 }

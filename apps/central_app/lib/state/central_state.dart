@@ -16,7 +16,14 @@ import '../data/models/motorista_no_mapa.dart';
 /// e metricas financeiras.
 class CentralState extends ChangeNotifier {
   CentralState({CentralRepository? repository})
-      : _repository = repository ?? CentralRepository();
+      : _repository = repository ?? CentralRepository() {
+    // Login vencido de vez (refresh tambem venceu): volta para a tela de entrar.
+    ApiClient.aoSessaoExpirar = () {
+      if (admin == null) return;
+      avisar('Sua sessão expirou. Entre de novo.');
+      unawaited(logout());
+    };
+  }
 
   final CentralRepository _repository;
 
@@ -145,6 +152,7 @@ class CentralState extends ChangeNotifier {
     _monitorTimer?.cancel();
     await AppStorage.remove(AppStorage.adminUser);
     await AppStorage.remove(AppStorage.accessToken);
+    await AppStorage.remove(AppStorage.refreshToken);
     admin = null;
     pending = [];
     approved = [];

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../storage/app_storage.dart';
@@ -29,6 +30,60 @@ class ApiClient {
 
   final http.Client _client;
 
+  // ------------------------------------------------------------------
+  // Renovacao do login. O acesso vale 7 dias; depois disso o servidor
+  // responde 401 ("Token de acesso ausente ou invalido") e antes o app
+  // ficava travado ate a pessoa sair e entrar de novo (o Evandro nao
+  // conseguia concluir o cadastro de motorista em 05/10/2026). Agora, no
+  // primeiro 401, o app troca o refresh token (vale 30 dias) por um acesso
+  // novo e repete o pedido, sem a pessoa perceber.
+  // ------------------------------------------------------------------
+
+  /// Chamado quando o login venceu de vez (precisa entrar de novo).
+  static void Function()? aoSessaoExpirar;
+
+  /// Chamado com o acesso novo depois de renovar.
+  static void Function(String token)? aoRenovarToken;
+
+  static Future<bool>? _renovacao;
+
+  /// Pedidos que nao usam o login (ou que sao o proprio login).
+  static bool _semRenovar(String caminho) =>
+      caminho.startsWith('/auth/otp') ||
+      caminho.startsWith('/auth/refresh') ||
+      caminho.startsWith('/auth/password') ||
+      caminho.startsWith('/auth/login');
+
+  /// Uma renovacao por vez: varios pedidos com 401 ao mesmo tempo esperam a mesma.
+  Future<bool> _renovarLogin() => _renovacao ??= _fazerRenovacao().whenComplete(() => _renovacao = null);
+
+  Future<bool> _fazerRenovacao() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final refresh = prefs.getString(AppStorage.refreshToken);
+    if (refresh == null || refresh.isEmpty) return false;
+    try {
+      final r = await _client
+          .post(
+            Uri.parse('${AppConfig.apiUrl}/api/auth/refresh'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refreshToken': refresh}),
+          )
+          .timeout(AppConfig.apiTimeout);
+      final d = jsonDecode(r.body) as Map<String, dynamic>;
+      final dados = d['data'] as Map<String, dynamic>?;
+      final acesso = dados?['accessToken'] as String?;
+      if (d['success'] != true || acesso == null || acesso.isEmpty) return false;
+      await AppStorage.write(AppStorage.accessToken, acesso);
+      final novoRefresh = dados?['refreshToken'] as String?;
+      if (novoRefresh != null && novoRefresh.isNotEmpty) await AppStorage.write(AppStorage.refreshToken, novoRefresh);
+      aoRenovarToken?.call(acesso);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<dynamic> request(
     String method,
     String path, {
@@ -38,6 +93,14 @@ class ApiClient {
     try {
       return await _enviar(method, path, body: body, query: query);
     } on ApiException catch (e) {
+      if (e.statusCode == 401 && !_semRenovar(path)) {
+        if (await _renovarLogin()) {
+          final repetido = await _enviar(method, path, body: body, query: query, ultimaVez: true);
+          return repetido;
+        }
+        aoSessaoExpirar?.call();
+        throw ApiException('SESSION_EXPIRED', 'Sua sessão expirou. Entre de novo na sua conta.', statusCode: 401);
+      }
       // Uma queda de rede pode ser passageira — um pico de sinal, um
       // roaming entre torres. Antes de desistir e cair para o modo
       // demonstracao, tenta mais uma vez apos uma pausa curta. Erro de
@@ -54,6 +117,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? query,
+    bool ultimaVez = false,
   }) async {
     final base = Uri.parse('${AppConfig.apiUrl}/api$path');
     final uri = query == null ? base : base.replace(queryParameters: query);
@@ -125,7 +189,9 @@ class ApiClient {
     // Consulta em segundo plano nao, para nao encher a tela de avisos.
     final metodo = response.request?.method ?? 'GET';
     final caminho = response.request?.url.path ?? '';
-    if (metodo != 'GET' && response.statusCode != 409 && !caminho.contains('/location')) {
+    // 401: antes de avisar, o app tenta renovar o login sozinho.
+    final renovavel = response.statusCode == 401 && !ultimaVez && !_semRenovar(path);
+    if (metodo != 'GET' && response.statusCode != 409 && !caminho.contains('/location') && !renovavel) {
       avisar(falha.message);
     }
     throw falha;

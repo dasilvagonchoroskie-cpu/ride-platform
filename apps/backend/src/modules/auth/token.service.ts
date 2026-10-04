@@ -120,7 +120,7 @@ export class TokenService {
   }
 
   /** Rotaciona o refresh token (uso unico) e emite um novo par. */
-  async rotateRefreshToken(refreshToken: string, device?: DeviceContext): Promise<IssuedTokens> {
+  async rotateRefreshToken(refreshToken: string, device?: DeviceContext): Promise<IssuedTokens & { userId: string }> {
     const tokenHash = hashToken(refreshToken, this.refreshPepper);
 
     const stored = await this.prisma.refreshToken.findUnique({
@@ -154,7 +154,7 @@ export class TokenService {
       data: { revokedAt: new Date(), replacedBy: newHash },
     });
 
-    return issued;
+    return { ...issued, userId: stored.user.id };
   }
 
   async revokeRefreshToken(refreshToken: string): Promise<void> {

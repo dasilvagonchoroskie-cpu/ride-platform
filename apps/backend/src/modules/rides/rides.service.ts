@@ -66,20 +66,11 @@ export class RidesService {
   // Orcamento antes de chamar
   // ------------------------------------------------------------------
 
-  /** Corrida maior que isto e destino fora da regiao (erro de busca). */
-  private static readonly DISTANCIA_MAXIMA_METROS = 100_000;
-
-  private exigirDentroDaArea(distanciaMetros: number) {
-    if (distanciaMetros > RidesService.DISTANCIA_MAXIMA_METROS) {
-      throw BusinessException.validation(
-        'Destino fora da área atendida. Escolha um destino na região (até 100 km).',
-      );
-    }
-  }
+  // Sem limite de distancia (decisao do Evandro em 05/10/2026): o passageiro
+  // pode ver quanto da uma corrida para qualquer lugar, mesmo fora da regiao.
 
   async estimar(input: EstimateRideInput, passengerId?: string) {
     const rota = this.fare.estimarRota(input.pickup, input.dropoff);
-    this.exigirDentroDaArea(rota.distanceMeters);
     const orcamento = await this.fare.calcular({
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
@@ -145,7 +136,6 @@ export class RidesService {
     }
 
     const rota = this.fare.estimarRota(input.pickup, input.dropoff);
-    this.exigirDentroDaArea(rota.distanceMeters);
     const pedidoEm = new Date();
     // A bandeira e a do horario da viagem: agendada para as 23h paga noturna.
     const orcamento = await this.fare.calcular({

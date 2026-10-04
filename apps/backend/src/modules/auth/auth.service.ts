@@ -290,8 +290,10 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string, device?: DeviceContext): Promise<AuthResult> {
-    const issued = await this.tokens.rotateRefreshToken(refreshToken, device);
-    const me = await this.me(issued.accessToken);
+    // Antes buscava o usuario pelo proprio token de acesso (nunca achava):
+    // a renovacao do login falhava sempre e o app travava em 7 dias.
+    const { userId, ...issued } = await this.tokens.rotateRefreshToken(refreshToken, device);
+    const me = await this.me(userId);
 
     return { ...issued, isNewUser: false, user: me };
   }

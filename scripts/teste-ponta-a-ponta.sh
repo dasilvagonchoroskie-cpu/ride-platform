@@ -124,9 +124,20 @@ N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: ve $N carro(s) disponivel(is) no mapa (dado real)" || falha "Passageiro: carros por perto" "$X"
 
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Porto Alegre - RS\",\"latitude\":-30.0346,\"longitude\":-51.2177}}" "$TP")
-sucesso "$X" && falha "Destino a 1.800 km deveria ser recusado" "$X" || ok "Passageiro: destino fora da regiao recusado (antes saia corrida de R\$ 4.500)"
+[ "$(echo "$X" | jq -r '.data.distanceMeters')" -gt 1000000 ] 2>/dev/null && ok "Passageiro: ve o preco para fora da regiao (Porto Alegre, $(echo "$X" | jq -r '.data.distanceMeters/1000|floor') km)" || falha "Passageiro: preco para longe" "$X"
 X=$(get "/geo/search?q=Porto%20Alegre&lat=-18.0128&lng=-49.3556" "$TP")
-[ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 80)] | length')" = "0" ] && ok "Passageiro: busca de destino so mostra lugares da regiao" || falha "Passageiro: busca fora da regiao" "$X"
+[ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)] | length')" -ge 1 ] 2>/dev/null && ok "Passageiro: busca acha destino fora da regiao (Porto Alegre)" || falha "Passageiro: busca fora da regiao" "$X"
+X=$(get "/geo/search?q=Rua%20Sao%20Paulo&lat=-18.0128&lng=-49.3556" "$TP")
+[ "$(echo "$X" | jq -r '.data[0].distanceKm < 80')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
+# Renovacao do login (refresh): sem ela o app travava com "Token de acesso
+# ausente ou invalido" quando o acesso vencia (Evandro, 05/10/2026).
+P=$(post /auth/otp/request "{\"phone\":\"+55649${SUF}79\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+V=$(post /auth/otp/verify "{\"phone\":\"+55649${SUF}79\",\"code\":\"$C\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\",\"device\":{\"deviceId\":\"teste-refresh\",\"platform\":\"ANDROID\"}}")
+RT=$(echo "$V" | jq -r '.data.refreshToken // empty'); UID_=$(echo "$V" | jq -r '.data.user.id // empty')
+X=$(post /auth/refresh "{\"refreshToken\":\"$RT\"}"); NOVO=$(echo "$X" | jq -r '.data.accessToken // empty')
+[ -n "$NOVO" ] && [ "$(echo "$X" | jq -r '.data.user.id')" = "$UID_" ] && [ "$(echo "$X" | jq -r '.data.refreshToken')" != "$RT" ] && ok "Login: acesso vencido e renovado sozinho (refresh)" || falha "Login: renovar o acesso" "$X"
+X=$(get /auth/me "$NOVO"); [ "$(echo "$X" | jq -r '.data.id')" = "$UID_" ] && ok "Login: o acesso renovado funciona" || falha "Login: acesso renovado" "$X"
+X=$(post /auth/refresh "{\"refreshToken\":\"$RT\"}"); sucesso "$X" && falha "Refresh usado nao deveria valer de novo" "$X" || ok "Seguranca: refresh ja usado nao vale de novo"
 CUP="TESTE$SUF$((RANDOM%100))"
 X=$(post /admin/coupons "{\"code\":\"$CUP\",\"description\":\"Teste automatico\",\"discountType\":\"FIXED\",\"discountValue\":300,\"maxUses\":5}" "$TA")
 sucesso "$X" && ok "Central: cupom $CUP criado (R\$ 3,00)" || falha "Central: criar cupom" "$X"

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
+import '../core/avisos.dart';
 import '../core/config/app_config.dart';
 import '../core/storage/app_storage.dart';
 import '../core/legal/legal_content.dart';
@@ -14,7 +16,14 @@ import '../data/models/models.dart';
 /// primeiro login vem a escolha da cidade e o cadastro (nome, e-mail,
 /// genero, CPF e senha), uma vez so.
 class AuthState extends ChangeNotifier {
-  AuthState({ApiClient? client}) : _client = client ?? ApiClient();
+  AuthState({ApiClient? client}) : _client = client ?? ApiClient() {
+    // Login vencido de vez (refresh tambem venceu): volta para a tela de entrar.
+    ApiClient.aoSessaoExpirar = () {
+      if (user == null) return;
+      avisar('Sua sessão expirou. Entre de novo.');
+      unawaited(logout());
+    };
+  }
 
   final ApiClient _client;
 

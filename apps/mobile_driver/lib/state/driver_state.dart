@@ -21,7 +21,19 @@ import '../core/avisos.dart';
 /// corrida em andamento e carteira.
 class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// [client] so e passado nos testes automaticos (servidor de mentira).
-  DriverState({ApiClient? client}) : _client = client ?? ApiClient();
+  DriverState({ApiClient? client}) : _client = client ?? ApiClient() {
+    // Login renovado: o vigia de chamados em segundo plano passa a usar o
+    // acesso novo (com o velho ele parava de procurar chamados).
+    ApiClient.aoRenovarToken = (token) {
+      if (isOnline && AppConfig.hasApi) unawaited(CorridasNativo.iniciar(AppConfig.apiUrl, token));
+    };
+    // Login vencido de vez (refresh tambem venceu): volta para a tela de entrar.
+    ApiClient.aoSessaoExpirar = () {
+      if (profile == null && dadosCadastro == null) return;
+      avisar('Sua sessão expirou. Entre de novo com seu telefone.');
+      unawaited(logout());
+    };
+  }
 
   final ApiClient _client;
 

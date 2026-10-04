@@ -133,8 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
+                    // heightFactor 1: sem ele o Align ocupava a tela toda e a
+                    // pilula "Fortaleza Mov" ia parar no meio do mapa (05/10).
                     child: Align(
                       alignment: Alignment.centerLeft,
+                      heightFactor: 1,
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Material(

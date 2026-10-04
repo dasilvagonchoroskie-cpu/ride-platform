@@ -92,6 +92,10 @@ class CentralRepository {
       throw ApiException('CONTA_ERRADA', 'Esta conta não é da Central.', statusCode: 403);
     }
     await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
+    // Guarda tambem o refresh: com ele o login e renovado sozinho (antes, em
+    // 7 dias a Central parava com "Token de acesso ausente ou invalido").
+    final refresh = data['refreshToken'] as String?;
+    if (refresh != null && refresh.isNotEmpty) await AppStorage.write(AppStorage.refreshToken, refresh);
     return AdminUser(
       id: u['id'] as String? ?? '',
       name: u['name'] as String? ?? 'Administrador',
