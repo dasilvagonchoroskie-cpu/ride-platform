@@ -1,0 +1,29 @@
+name: Conta de teste do motorista
+
+# Cria ou repoe a conta de teste (cadastro, veiculo, aprovacao e saldo).
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar a conta de teste no servidor real
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+          REL: /tmp/conta-teste.txt
+        run: bash scripts/conta-teste-motorista.sh
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs && cp /tmp/conta-teste.txt logs/conta-teste.txt || exit 0
+          git add logs/conta-teste.txt
+          git commit -m "relatorio: conta de teste do motorista" || exit 0
+          for t in 1 2 3; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done

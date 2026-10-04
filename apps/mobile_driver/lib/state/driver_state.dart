@@ -367,25 +367,15 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final hoje = DateTime.now();
     final nasc = _lerData(nascimento);
     if (nasc == null || !nasc.isBefore(hoje)) return 'Data de nascimento inválida. Use DD/MM/AAAA.';
-    if (hoje.difference(nasc).inDays < 18 * 365) return 'E preciso ter 18 anos ou mais.';
-    if (cnh.replaceAll(RegExp(r'\D'), '').length != 11) return 'O numero da CNH tem 11 digitos.';
+    if (hoje.difference(nasc).inDays < 18 * 365) return 'É preciso ter 18 anos ou mais.';
+    if (cnh.replaceAll(RegExp(r'\D'), '').length != 11) return 'O número da CNH tem 11 dígitos.';
     final venc = _lerData(validade);
     if (venc == null) return 'Validade da CNH inválida. Use DD/MM/AAAA.';
-    if (!venc.isAfter(hoje)) return 'A CNH esta vencida.';
+    if (!venc.isAfter(hoje)) return 'A CNH está vencida (validade ${dataCurta(venc)}). Confira a data no documento.';
     return null;
   }
 
-  static DateTime? _lerData(String s) {
-    final m = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(s.trim());
-    if (m == null) return DateTime.tryParse(s.trim());
-    final dia = int.parse(m.group(1)!);
-    final mes = int.parse(m.group(2)!);
-    final ano = int.parse(m.group(3)!);
-    final data = DateTime(ano, mes, dia);
-    // 31/02 "vira" marco no DateTime; aqui isso e data invalida.
-    if (data.year != ano || data.month != mes || data.day != dia) return null;
-    return data;
-  }
+  static DateTime? _lerData(String s) => lerDataBr(s);
 
   static bool _cpfValido(String entrada) {
     final c = entrada.replaceAll(RegExp(r'\D'), '');
@@ -402,13 +392,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     return digito(9) == int.parse(c[9]) && digito(10) == int.parse(c[10]);
   }
 
-  static String _paraIso(String data) {
-    final p = data.trim().split('/');
-    if (p.length == 3) {
-      return '${p[2].padLeft(4, '0')}-${p[1].padLeft(2, '0')}-${p[0].padLeft(2, '0')}';
-    }
-    return data.trim();
-  }
+  static String _paraIso(String data) => dataBrParaIso(data);
 
   /// Consulta o servidor para saber se o cadastro ja foi aprovado pela
   /// Central. Sem isto o motorista ficaria preso na tela "em analise"

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/theme/app_theme.dart';
 
@@ -164,8 +165,10 @@ class AppField extends StatelessWidget {
     this.prefixIcon,
     this.autofocus = false,
     this.onLight = false,
+    this.inputFormatters,
   });
 
+  final List<TextInputFormatter>? inputFormatters;
   final String? label;
   final String? hint;
   final String? error;
@@ -198,6 +201,7 @@ class AppField extends StatelessWidget {
           onChanged: onChanged,
           maxLength: maxLength,
           autofocus: autofocus,
+          inputFormatters: inputFormatters,
           textCapitalization: autoCapitalize ?? TextCapitalization.none,
           style: AppText.body.copyWith(color: textColor, fontSize: 16),
           decoration: InputDecoration(
