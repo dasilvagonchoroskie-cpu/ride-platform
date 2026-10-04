@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 04/10/2026 12:43 UTC
+Teste de ponta a ponta - 04/10/2026 17:05 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -18,7 +18,7 @@ OK     Passageiro: esqueci a senha (codigo do telefone + senha nova)
 OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
-OK     Passageiro: busca de destino real (1 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
+OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
 OK     Motorista: cadastro (nome, CPF e CNH) aceito
@@ -35,15 +35,19 @@ OK     Central: recarga de R$ 50,00 (credito no extrato)
 OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
-OK     Passageiro: destino fora da regiao recusado (antes saia corrida de R$ 4.500)
-OK     Passageiro: busca de destino so mostra lugares da regiao
-OK     Central: cupom TESTE12435832 criado (R$ 3,00)
+OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1822 km)
+OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
+OK     Passageiro: rua com nome comum acha primeiro a da cidade
+OK     Login: acesso vencido e renovado sozinho (refresh)
+OK     Login: o acesso renovado funciona
+OK     Seguranca: refresh ja usado nao vale de novo
+OK     Central: cupom TESTE17060179 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 1106 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 3652 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -57,9 +61,9 @@ OK     Motorista: arrived
 OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (9h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 56s
+OK     Bandeira certa pela hora de Brasilia (14h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 2 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 62s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -98,7 +102,7 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 1, online 1, faturamento 1000)
+OK     Central: visao geral (ativas 0, concluidas hoje 2, online 1, faturamento 2000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -112,7 +116,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 700, PIX/app 0, comissao 80)
+OK     Central: relatorio de receitas (dinheiro 1400, PIX/app 0, comissao 160)
 OK     Passageiro: SOS acionado
 OK     Central: alerta de SOS com a posicao atualizada
 OK     Central: SOS encerrado
