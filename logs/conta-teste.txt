@@ -1,8 +1,8 @@
-Conta de teste do motorista - 04/10/2026 11:56 UTC
+Conta de teste do motorista - 04/10/2026 11:58 UTC
 OK    login do telefone (64) 90000-0001
-OK    cadastro criado (CPF 529.982.247-25, CNH 12345678900 categoria B, validade 31/12/2035)
-OK    veiculo ja existia: 
-OK    aprovado pela Central
+OK    cadastro ja existia
+OK    veiculo criado (Chevrolet Spin 2020 prata, placa FMV0T01)
+OK    ja estava aprovado
 OK    carteira com R$ 100,00
 
 Pronto. No app do motorista: telefone (64) 90000-0001, o codigo aparece na tela.
