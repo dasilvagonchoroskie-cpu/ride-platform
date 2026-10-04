@@ -184,6 +184,10 @@ X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de 
 X=$(post "/rides/$RID/rate" '{"score":5,"tags":["Carro limpo"]}' "$TP")
 [ "$(echo "$X" | jq -r '.data.score')" = "5" ] && ok "Passageiro: avaliou o motorista com 5 estrelas" || falha "Passageiro: avaliar" "$X"
 X=$(get "/rides/$RID" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "COMPLETED" ] && [ "$(echo "$X" | jq -r '.data.ride.minhaNota')" = "5" ] && ok "Passageiro: recibo da corrida concluida com a nota" || falha "Passageiro: recibo" "$X"
+X=$(post "/driver/rides/$RID/rate" '{"score":4}' "$TM"); [ "$(echo "$X" | jq -r '.data.score')" = "4" ] && ok "Motorista: avaliou o passageiro com 4 estrelas" || falha "Motorista: avaliar passageiro" "$X"
+X=$(get "/driver/rides/history?period=day" "$TM")
+[ "$(echo "$X" | jq -r '.data.summary.rides')" -ge 1 ] 2>/dev/null && [ "$(echo "$X" | jq -r '.data.performance.acceptanceRate')" != "null" ] \
+  && ok "Motorista: historico de hoje com totais e desempenho (aceitacao $(echo "$X" | jq -r '.data.performance.acceptanceRate')%, taxa $(echo "$X" | jq -r '.data.summary.commissionCents'))" || falha "Motorista: historico com periodo" "$X"
 X=$(post "/rides/favoritos/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && ok "Passageiro: motorista adicionado aos favoritos" || falha "Passageiro: favoritar" "$X"
 X=$(post /auth/foto "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TP"); AV=$(echo "$X" | jq -r '.data.avatarUrl // empty')
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$AV" -H "Authorization: Bearer $TM"); [ -n "$AV" ] && [ "$C" = "200" ] && ok "Passageiro: foto de perfil (o motorista consegue ver)" || falha "Passageiro: foto de perfil" "$X $C"
@@ -240,14 +244,19 @@ X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":100,"operation":"DE
   && ok "Central: remover saldo (-R\$ 1,00) com extrato e saldo restante" || falha "Central: remover saldo" "$X"
 X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.last.kind')" = "DEBIT" ] && [ "$(echo "$X" | jq -r '.data.blocking')" = "false" ] && ok "Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento" || falha "Motorista: resumo da carteira" "$X"
 X=$(post "/admin/drivers/$DID/wallet/credit" "{\"amountCents\":$((SALDO - 100)),\"operation\":\"DEBIT\",\"description\":\"Zerar para teste\"}" "$TA")
-X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.balanceCents')" = "0" ] && [ "$(echo "$X" | jq -r '.data.blocking')" = "true" ] && ok "Carteira: saldo zerado bloqueia o motorista" || falha "Carteira: bloqueio sem saldo" "$X"
+X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.balanceCents')" = "0" ] && [ "$(echo "$X" | jq -r '.data.blocking')" = "false" ] && ok "Carteira: saldo zerado avisa mas nao corta o turno" || falha "Carteira: saldo zerado" "$X"
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP"); RSS=$(echo "$X" | jq -r '.data.ride.id // empty')
 X=$(get /driver/rides/offers "$TM")
-[ -n "$RSS" ] && [ "$(echo "$X" | jq -r --arg r "$RSS" '[.data[] | select(.rideId==$r)] | length')" = "0" ] && ok "Carteira: motorista sem saldo nao recebe chamado" || falha "Carteira: chamado para motorista sem saldo" "$X"
-X=$(post "/admin/rides/$RSS/assign" "{\"driverId\":\"$DID\"}" "$TA"); sucesso "$X" && falha "Central nao deveria enviar corrida para quem esta sem saldo" "$X" || ok "Central: nao envia corrida para motorista sem saldo"
+[ -n "$RSS" ] && [ "$(echo "$X" | jq -r --arg r "$RSS" '[.data[] | select(.rideId==$r)] | length')" = "1" ] && ok "Carteira: motorista ja online e sem saldo continua recebendo chamado" || falha "Carteira: chamado sem saldo" "$X"
+O=$(echo "$X" | jq -c --arg r "$RSS" '[.data[] | select(.rideId==$r)][0]')
+[ "$(echo "$O" | jq -r '.driverNetCents')" -gt 0 ] 2>/dev/null && [ "$(echo "$O" | jq -r '.passengerRating')" != "null" ] && [ "$(echo "$O" | jq -r '.commissionPercent')" = "8" ] \
+  && ok "Motorista: chamado mostra valor liquido ($(echo "$O" | jq -r '.driverNetCents')), taxa 8% e nota do passageiro ($(echo "$O" | jq -r '.passengerRating'))" || falha "Motorista: dados do chamado" "$O"
 post "/rides/$RSS/cancel" '{"reason":"Teste"}' "$TP" >/dev/null
+patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
+X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Sem saldo nao deveria ficar online de novo" "$X" || ok "Carteira: sem saldo nao consegue ficar online de novo"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX comprovante teste"}' "$TA")
-X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.blocking')" = "false" ] && [ "$(echo "$X" | jq -r '.data.last.kind')" = "CREDIT" ] && [ "$(echo "$X" | jq -r '.data.last.amountCents')" = "5000" ] && ok "Carteira: recarga desbloqueia e o aplicativo fica sabendo (+R\$ 50,00)" || falha "Carteira: desbloqueio pela recarga" "$X"
+X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.last.kind')" = "CREDIT" ] && [ "$(echo "$X" | jq -r '.data.last.amountCents')" = "5000" ] && ok "Carteira: o aplicativo fica sabendo da recarga (+R\$ 50,00)" || falha "Carteira: recarga no aplicativo" "$X"
+X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Carteira: com a recarga, ficou online de novo" || falha "Carteira: online depois da recarga" "$X"
 
 # ================= Painel da Central =================
 X=$(get /admin/overview "$TA")

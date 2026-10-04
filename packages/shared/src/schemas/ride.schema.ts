@@ -64,6 +64,8 @@ export const rideLocationSchema = coordinatesSchema;
 
 export const listRidesSchema = z.object({
   status: z.string().optional(),
+  /** Historico do motorista: so concluidas de hoje, da semana ou do mes. */
+  period: z.enum(['day', 'week', 'month']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });

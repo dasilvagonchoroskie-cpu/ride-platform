@@ -191,8 +191,10 @@ export class DocumentsService {
     }
   }
 
-  private async withSignedUrl<T extends { fileKey: string }>(document: T) {
-    return { ...document, fileUrl: await this.storage.createPresignedDownload(document.fileKey) };
+  private async withSignedUrl<T extends { fileKey: string; fileUrl?: string | null }>(document: T) {
+    // Foto guardada no proprio banco: o endereco ja e o certo.
+    if (document.fileUrl?.startsWith('/arquivos/')) return document;
+    return { ...document, fileUrl: await this.storage.createPresignedDownload(document.fileKey).catch(() => null) };
   }
 
   private toPublic(document: {

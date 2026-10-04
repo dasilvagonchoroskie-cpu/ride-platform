@@ -50,7 +50,8 @@ export class RidesService {
 
   // Quanto tempo o motorista tem para responder ao chamado antes de
   // passar para o proximo.
-  private static readonly SEGUNDOS_PARA_RESPONDER = 30;
+  /** Tempo do motorista responder ao chamado (especificacao: 15 a 20 s). */
+  private static readonly SEGUNDOS_PARA_RESPONDER = 20;
 
   // Raio de busca. Comeca perto e vai abrindo: assim o mais proximo tem
   // preferencia, em vez de sortear qualquer um da cidade.
@@ -292,8 +293,33 @@ export class RidesService {
       include: { ride: { include: { passenger: { select: { name: true } } } } },
       orderBy: { createdAt: 'asc' },
     });
-    return ofertas
-      .filter((o) => o.ride.status === RideStatus.SEARCHING)
+    const abertas = ofertas.filter((o) => o.ride.status === RideStatus.SEARCHING);
+    if (abertas.length === 0) return [];
+    // Valor liquido do motorista: depende do modelo financeiro dele.
+    const motorista = await this.prisma.driver.findUnique({
+      where: { id: driverId },
+      select: { financeModel: true, customCommissionPercent: true, fixedFeeCents: true },
+    });
+    const liquido = (valor: number, percentual: number) => {
+      if (motorista?.financeModel === 'PERCENTUAL' && motorista.customCommissionPercent != null) {
+        return Math.round(valor * (1 - Number(motorista.customCommissionPercent) / 100));
+      }
+      if (motorista?.financeModel === 'TAXA_FIXA') return Math.max(valor - (motorista.fixedFeeCents ?? 0), 0);
+      if (motorista?.financeModel === 'MENSALIDADE') return valor;
+      return Math.round(valor * (1 - percentual / 100));
+    };
+    // Nota do passageiro: media das avaliacoes que os motoristas deram a ele.
+    const notas = await this.prisma.rating.groupBy({
+      by: ['targetId'],
+      where: { targetId: { in: abertas.map((o) => o.ride.passengerId) }, targetDriverId: null },
+      _avg: { score: true },
+      _count: { _all: true },
+    });
+    const notaDe = (id: string) => {
+      const n = notas.find((x) => x.targetId === id);
+      return n?._avg.score ? Math.round(n._avg.score * 10) / 10 : 5;
+    };
+    return abertas
       .map((o) => ({
         offerId: o.id,
         rideId: o.rideId,
@@ -317,7 +343,10 @@ export class RidesService {
         tripDistanceMeters: o.ride.distanceMeters,
         tripDurationSeconds: o.ride.durationSeconds,
         commissionPercent: Number(o.ride.commissionPercent),
+        /** O que sobra para o motorista depois da taxa da Central. */
+        driverNetCents: liquido(o.ride.estimatedFareCents, Number(o.ride.commissionPercent)),
         passengerName: o.ride.passenger?.name ?? 'Passageiro',
+        passengerRating: notaDe(o.ride.passengerId),
         // O motorista precisa saber antes de aceitar como vai receber.
         paymentMethodType: o.ride.paymentMethodType,
       }));
@@ -842,6 +871,20 @@ export class RidesService {
   }
 
   /** Passageiro avalia o motorista depois da corrida concluida (uma vez). */
+  /** O motorista avalia o passageiro (1 a 5 estrelas) depois de finalizar. */
+  async avaliarPassageiro(driverId: string, userId: string, rideId: string, input: { score: number; tags?: string[] }) {
+    const corrida = await this.prisma.ride.findUnique({ where: { id: rideId } });
+    if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
+    if (corrida.driverId !== driverId) throw BusinessException.forbidden('Esta corrida nao e sua.');
+    if (corrida.status !== RideStatus.COMPLETED) throw BusinessException.validation('So da para avaliar depois de finalizar.');
+    const ja = await this.prisma.rating.findUnique({ where: { rideId_authorId: { rideId, authorId: userId } } });
+    if (ja) return { score: ja.score };
+    const r = await this.prisma.rating.create({
+      data: { rideId, authorId: userId, targetId: corrida.passengerId, score: input.score, tags: input.tags ?? [] },
+    });
+    return { score: r.score };
+  }
+
   async avaliar(passengerId: string, rideId: string, input: { score: number; comment?: string; tags?: string[] }) {
     const corrida = await this.prisma.ride.findUnique({
       where: { id: rideId },
@@ -943,8 +986,17 @@ export class RidesService {
     const onde: Prisma.RideWhereInput =
       papel === UserRole.DRIVER ? { driverId: userId } : { passengerId: userId };
     if (filtro.status) onde.status = filtro.status as RideStatus;
+    if (filtro.period) {
+      // Dia, semana (desde segunda) e mes pela hora de Brasilia.
+      const b = new Date(Date.now() - 3 * 3_600_000);
+      let inicio = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate(), 3));
+      if (filtro.period === 'week') inicio = new Date(inicio.getTime() - ((b.getUTCDay() + 6) % 7) * 86_400_000);
+      if (filtro.period === 'month') inicio = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), 1, 3));
+      onde.status = RideStatus.COMPLETED;
+      onde.finishedAt = { gte: inicio };
+    }
 
-    const [total, itens] = await Promise.all([
+    const [total, itens, soma] = await Promise.all([
       this.prisma.ride.count({ where: onde }),
       this.prisma.ride.findMany({
         where: onde,
@@ -952,8 +1004,51 @@ export class RidesService {
         skip: (filtro.page - 1) * filtro.pageSize,
         take: filtro.pageSize,
       }),
+      this.prisma.ride.aggregate({
+        where: { ...onde, status: RideStatus.COMPLETED },
+        _sum: { finalFareCents: true, commissionCents: true, discountCents: true },
+        _count: { _all: true },
+      }),
     ]);
-    return { total, page: filtro.page, pageSize: filtro.pageSize, items: itens };
+    let desempenho: Record<string, number> | undefined;
+    if (papel === UserRole.DRIVER && filtro.period) {
+      const desde = (onde.finishedAt as { gte: Date }).gte;
+      const [ofertas, canceladas, motorista] = await Promise.all([
+        this.prisma.rideOffer.groupBy({
+          by: ['status'],
+          where: { driverId: userId, createdAt: { gte: desde }, status: { not: OfferStatus.PENDING } },
+          _count: { _all: true },
+        }),
+        this.prisma.ride.count({
+          where: { driverId: userId, status: RideStatus.CANCELLED_BY_DRIVER, cancelledAt: { gte: desde } },
+        }),
+        this.prisma.driver.findUnique({ where: { id: userId }, select: { ratingAvg: true } }),
+      ]);
+      const conta = (s: OfferStatus) => ofertas.find((o) => o.status === s)?._count._all ?? 0;
+      const respondidas = conta(OfferStatus.ACCEPTED) + conta(OfferStatus.DECLINED) + conta(OfferStatus.EXPIRED);
+      desempenho = {
+        offers: respondidas,
+        accepted: conta(OfferStatus.ACCEPTED),
+        acceptanceRate: respondidas ? Math.round((conta(OfferStatus.ACCEPTED) / respondidas) * 100) : 100,
+        cancellations: canceladas,
+        ratingAvg: Number(motorista?.ratingAvg ?? 5),
+      };
+    }
+    return {
+      total,
+      page: filtro.page,
+      pageSize: filtro.pageSize,
+      items: itens,
+      /** Taxa de aceitacao, cancelamentos e nota (so com periodo, para o motorista). */
+      performance: desempenho ?? null,
+      /** Totais das concluidas no filtro: valor, taxa da Central e liquido. */
+      summary: {
+        rides: soma._count._all,
+        totalCents: soma._sum.finalFareCents ?? 0,
+        commissionCents: soma._sum.commissionCents ?? 0,
+        netCents: (soma._sum.finalFareCents ?? 0) - (soma._sum.commissionCents ?? 0),
+      },
+    };
   }
 
   // ------------------------------------------------------------------

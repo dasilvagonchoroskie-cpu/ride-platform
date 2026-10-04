@@ -148,10 +148,13 @@ export class DriversService {
         throw BusinessException.validation('Sua CNH esta vencida. Atualize o documento.');
       }
 
-      // Carteira pre-paga: com saldo igual ou abaixo do minimo nao adianta
-      // ficar disponivel (nenhum chamado chegaria).
+      // Carteira pre-paga: para FICAR ONLINE o saldo precisa estar acima do
+      // minimo (padrao R$ 0,00) — vale sempre. Ja online, uma corrida que
+      // deixe o saldo negativo nao derruba o motorista: o debito fica
+      // registrado e ele e avisado (so a Central, ligando o bloqueio, corta
+      // os chamados no meio do turno).
       const regras = await regrasDaCarteira(this.prisma);
-      if (regras.bloquear) {
+      {
         const w = await this.prisma.wallet.findUnique({ where: { driverId: driver.id } });
         const saldo = w?.balanceCents ?? 0;
         if (semSaldo(saldo, regras.minimoCents)) {

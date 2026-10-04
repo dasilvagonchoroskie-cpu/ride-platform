@@ -207,6 +207,17 @@ export class DriverRidesController {
     return this.rides.atualDoMotorista(driverId);
   }
 
+  @Post(':id/rate')
+  @ApiOperation({ summary: 'Motorista avalia o passageiro (1 a 5 estrelas)' })
+  ratePassenger(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(z.object({ score: z.number().int().min(1).max(5), tags: z.array(z.string().max(40)).max(10).optional() })))
+    body: { score: number; tags?: string[] },
+  ) {
+    return this.rides.avaliarPassageiro(user.driverId ?? '', user.id, id, body);
+  }
+
   @Get('history')
   @ApiOperation({ summary: 'Corridas anteriores do motorista' })
   history(@CurrentUser('driverId') driverId: string, @Query(new ZodValidationPipe(listRidesSchema)) query: never) {
