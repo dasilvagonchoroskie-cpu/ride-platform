@@ -59,9 +59,10 @@ class RideScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(Spacing.lg),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Etapa(fase: fase),
-                        const Spacer(),
+                        Expanded(child: Align(alignment: Alignment.centerLeft, child: _Etapa(fase: fase))),
+                        const SizedBox(width: Spacing.sm),
                         if (fase != RidePhase.completed)
                           FloatingActionButton(
                             heroTag: 'sos-corrida',
@@ -120,7 +121,7 @@ class _Etapa extends StatelessWidget {
         borderRadius: BorderRadius.circular(Radii.pill),
         boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8)],
       ),
-      child: Text('Etapa $n de 3 · $texto', style: AppText.bodyStrong),
+      child: Text('Etapa $n de 3 · $texto', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.bodyStrong),
     );
   }
 }

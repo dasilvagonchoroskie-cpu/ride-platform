@@ -17,16 +17,16 @@ String pixCopiaECola({required String chave, required String nome, String cidade
   String campo(String id, String valor) => '$id${valor.length.toString().padLeft(2, '0')}$valor';
 
   final conta = campo('00', 'br.gov.bcb.pix') + campo('01', chave.trim());
-  final semCrc = campo('00', '01') +
-      campo('26', conta) +
-      campo('52', '0000') +
-      campo('53', '986') +
-      campo('58', 'BR') +
-      campo('59', limpar(nome.isEmpty ? 'FORTALEZA MOV' : nome, 25)) +
-      campo('60', limpar(cidade, 15)) +
-      campo('62', campo('05', '***')) +
+  final semCrc = '${campo('00', '01')}'
+      '${campo('26', conta)}'
+      '${campo('52', '0000')}'
+      '${campo('53', '986')}'
+      '${campo('58', 'BR')}'
+      '${campo('59', limpar(nome.isEmpty ? 'FORTALEZA MOV' : nome, 25))}'
+      '${campo('60', limpar(cidade, 15))}'
+      '${campo('62', campo('05', '***'))}'
       '6304';
-  return semCrc + _crc16(semCrc);
+  return '$semCrc${_crc16(semCrc)}';
 }
 
 /// CRC16-CCITT (polinomio 0x1021, inicio 0xFFFF), como o Banco Central pede.
