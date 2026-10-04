@@ -1,2 +1,5 @@
 Analyzing mobile_driver...                                      
-No issues found! (ran in 8.7s)
+
+   info • Use interpolation to compose strings and values. Try using string interpolation to build the composite string • lib/core/pix.dart:27:7 • prefer_interpolation_to_compose_strings
+
+1 issue found. (ran in 9.8s)

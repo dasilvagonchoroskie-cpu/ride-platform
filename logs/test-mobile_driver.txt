@@ -1,1 +1,160 @@
-Sem testes neste app.
+00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart
+00:00 +0: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 118 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/lib/screens/ride_screen.dart:61:28
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#7b5ad relayoutBoundary=up5 OVERFLOWING:
+  creator: Row ← Padding ← MediaQuery ← Padding ← SafeArea ← Stack ← Expanded ← Column ←
+    KeyedSubtree-[GlobalKey#f636d] ← _BodyBuilder ← MediaQuery ← LayoutId-[<_ScaffoldSlot.body>] ← ⋯
+  parentData: offset=Offset(16.0, 16.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=328.0, 0.0<=h<=312.0)
+  size: Size(328.0, 56.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -1: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local [E]
+  Test failed. See exception logs above.
+  The test description was: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+  
+00:01 +0 -1: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 149 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/lib/screens/ride_screen.dart:61:28
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#4902d relayoutBoundary=up5 OVERFLOWING:
+  creator: Row ← Padding ← MediaQuery ← Padding ← SafeArea ← Stack ← Expanded ← Column ←
+    KeyedSubtree-[GlobalKey#61eaf] ← _BodyBuilder ← MediaQuery ← LayoutId-[<_ScaffoldSlot.body>] ← ⋯
+  parentData: offset=Offset(16.0, 16.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=328.0, 0.0<=h<=264.4)
+  size: Size(328.0, 56.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -2: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM [E]
+  Test failed. See exception logs above.
+  The test description was: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+  
+00:01 +0 -2: Corrida etapa 2: viagem com FINALIZAR VIAGEM
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 118 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/lib/screens/ride_screen.dart:61:28
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#db941 relayoutBoundary=up5 OVERFLOWING:
+  creator: Row ← Padding ← MediaQuery ← Padding ← SafeArea ← Stack ← Expanded ← Column ←
+    KeyedSubtree-[GlobalKey#b75fd] ← _BodyBuilder ← MediaQuery ← LayoutId-[<_ScaffoldSlot.body>] ← ⋯
+  parentData: offset=Offset(16.0, 16.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=328.0, 0.0<=h<=352.0)
+  size: Size(328.0, 56.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -3: Corrida etapa 2: viagem com FINALIZAR VIAGEM [E]
+  Test failed. See exception logs above.
+  The test description was: Corrida etapa 2: viagem com FINALIZAR VIAGEM
+  
+00:01 +0 -3: Corrida etapa 3: resumo financeiro, nota e Concluir
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 77 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/lib/screens/ride_screen.dart:61:28
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#0580c relayoutBoundary=up5 OVERFLOWING:
+  creator: Row ← Padding ← MediaQuery ← Padding ← SafeArea ← Stack ← Expanded ← Column ←
+    KeyedSubtree-[GlobalKey#d738a] ← _BodyBuilder ← MediaQuery ← LayoutId-[<_ScaffoldSlot.body>] ← ⋯
+  parentData: offset=Offset(16.0, 16.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=328.0, 0.0<=h<=264.4)
+  size: Size(328.0, 37.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -4: Corrida etapa 3: resumo financeiro, nota e Concluir [E]
+  Test failed. See exception logs above.
+  The test description was: Corrida etapa 3: resumo financeiro, nota e Concluir
+  
+00:01 +0 -4: Historico: filtros, totais, desempenho e taxa por corrida
+00:01 +1 -4: Perfil e documentos: situacao, motivo, documentos e senha
+00:02 +2 -4: SOS: botao de panico e 190/192
+00:02 +3 -4: PIX Copia e Cola no padrao do Banco Central
+00:02 +4 -4: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
