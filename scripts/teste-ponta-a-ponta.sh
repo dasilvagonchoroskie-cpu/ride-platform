@@ -245,6 +245,7 @@ X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":100,"operation":"DE
 X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.last.kind')" = "DEBIT" ] && [ "$(echo "$X" | jq -r '.data.blocking')" = "false" ] && ok "Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento" || falha "Motorista: resumo da carteira" "$X"
 X=$(post "/admin/drivers/$DID/wallet/credit" "{\"amountCents\":$((SALDO - 100)),\"operation\":\"DEBIT\",\"description\":\"Zerar para teste\"}" "$TA")
 X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.balanceCents')" = "0" ] && [ "$(echo "$X" | jq -r '.data.blocking')" = "false" ] && ok "Carteira: saldo zerado avisa mas nao corta o turno" || falha "Carteira: saldo zerado" "$X"
+post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP"); RSS=$(echo "$X" | jq -r '.data.ride.id // empty')
 X=$(get /driver/rides/offers "$TM")
 [ -n "$RSS" ] && [ "$(echo "$X" | jq -r --arg r "$RSS" '[.data[] | select(.rideId==$r)] | length')" = "1" ] && ok "Carteira: motorista ja online e sem saldo continua recebendo chamado" || falha "Carteira: chamado sem saldo" "$X"
