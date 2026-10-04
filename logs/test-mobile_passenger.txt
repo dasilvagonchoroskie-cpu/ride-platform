@@ -10,104 +10,12 @@
 00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: saudacao pela hora
 00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: perfil antigo guardado no aparelho pede o cadastro
 00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista a caminho: tempo, chat, fotos, nota, viagens, carro, placa e Cancelar
-00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
-00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
+00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
+00:01 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
 00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista chegou: faixa verde
 00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
 00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
 00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
-00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
-00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 60 pixels on the right.
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#0326e DISPOSED OVERFLOWING:
-  creator: MultiChildRenderObjectElement#0aa59(DEFUNCT) ←
-    SingleChildRenderObjectElement#45fa8(DEFUNCT) ← SingleChildRenderObjectElement#e4514(DEFUNCT) ←
-    StatefulElement#b7033(DEFUNCT) ← StatelessElement#470a3(DEFUNCT) ←
-    SingleChildRenderObjectElement#c2ed4(DEFUNCT) ← InheritedElement#907f3(DEFUNCT) ←
-    StatelessElement#b4255(DEFUNCT) ← SingleChildRenderObjectElement#5a870(DEFUNCT) ←
-    SingleChildRenderObjectElement#03d8c(DEFUNCT) ←
-    _InheritedNotifierElement<FocusNode>#a19b8(DEFUNCT) ← StatefulElement#6dffb(DEFUNCT) ← ⋯
-  parentData: offset=Offset(24.0, 18.0) (can use size)
-  constraints: BoxConstraints(w=264.0, 0.0<=h<=Infinity)
-  size: Size(264.0, 29.0)
-  direction: horizontal
-  mainAxisAlignment: start
-  mainAxisSize: max
-  crossAxisAlignment: center
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:03 +18 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino [E]
-  Test failed. See exception logs above.
-  The test description was: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
-  
-══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
-The following assertion was thrown:
-Looking up a deactivated widget's ancestor is unsafe.
-At this point the state of the widget's element tree is no longer stable.
-To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
-calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
-
-When the exception was thrown, this was the stack:
-#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:5062:9)
-#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:5076:6)
-#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5187:12)
-#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4342:13)
-#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4261:12)
-#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4240:21)
-#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1300:31)
-#7      DiagnosticableNode.getProperties (package:flutter/src/foundation/diagnostics.dart:2943:68)
-#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1270:63)
-#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
-#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1030:13)
-#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
-#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:1714:28)
-<asynchronous suspension>
-(elided 8 frames from dart:async and package:stack_trace)
-
-This exception was caught while trying to describe the user-relevant code of another error.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
-The following assertion was thrown:
-Looking up a deactivated widget's ancestor is unsafe.
-At this point the state of the widget's element tree is no longer stable.
-To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
-calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
-
-When the exception was thrown, this was the stack:
-#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:5062:9)
-#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:5076:6)
-#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5187:12)
-#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4342:13)
-#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4261:12)
-#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4240:21)
-#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1300:31)
-#7      DiagnosticableNode.emptyBodyDescription (package:flutter/src/foundation/diagnostics.dart:2939:45)
-#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1307:14)
-#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
-#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1030:13)
-#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
-#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:1714:28)
-<asynchronous suspension>
-(elided 8 frames from dart:async and package:stack_trace)
-
-This exception was caught while trying to describe the user-relevant code of another error.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:03 +18 -1: Some tests failed.
-
-Failing tests:
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
+00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
+00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
+00:02 +19: All tests passed!
