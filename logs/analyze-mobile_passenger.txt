@@ -1,2 +1,6 @@
 Analyzing mobile_passenger...                                   
-No issues found! (ran in 6.4s)
+
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/screens/chat_screen.dart:22:20 • unintended_html_in_doc_comment
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/screens/chat_screen.dart:22:53 • unintended_html_in_doc_comment
+
+2 issues found. (ran in 9.6s)

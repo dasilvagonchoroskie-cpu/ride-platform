@@ -1,12 +1,96 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart
-00:00 +0: CPF aceita CPF valido com ou sem pontuacao
-00:00 +1: CPF recusa digito errado, numeros repetidos e tamanho errado
-00:00 +2: CPF mascara enquanto digita
-00:00 +3: senha segue a mesma regra do servidor
-00:00 +4: nome e sobrenome
-00:00 +5: e-mail
-00:00 +6: busca de cidade ignora acento e maiuscula
-00:00 +7: telefone legivel
-00:00 +8: saudacao pela hora
-00:00 +9: perfil antigo guardado no aparelho pede o cadastro
-00:00 +10: All tests passed!
+00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF aceita CPF valido com ou sem pontuacao
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF recusa digito errado, numeros repetidos e tamanho errado
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF mascara enquanto digita
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: senha segue a mesma regra do servidor
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: nome e sobrenome
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: e-mail
+00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: busca de cidade ignora acento e maiuscula
+00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: telefone legivel
+00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: saudacao pela hora
+00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: perfil antigo guardado no aparelho pede o cadastro
+00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista a caminho: tempo, chat, fotos, nota, viagens, carro, placa e Cancelar
+00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
+00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
+00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista chegou: faixa verde
+00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 130 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/lib/widgets/corrida_ui.dart:133:14
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#05c43 relayoutBoundary=up10 OVERFLOWING:
+  creator: Row ← Padding ← LinhaValor ← Column ← MediaQuery ← Padding ← SafeArea ← Padding ←
+    DecoratedBox ← ConstrainedBox ← Container ← SheetSurface ← ⋯
+  parentData: offset=Offset(0.0, 6.0) (can use size)
+  constraints: BoxConstraints(w=312.0, 0.0<=h<=Infinity)
+  size: Size(312.0, 189.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 85 pixels on the bottom.
+
+The relevant error-causing widget was:
+  Column
+  Column:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/lib/screens/ride_screen.dart:46:20
+
+The overflowing RenderFlex has an orientation of Axis.vertical.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#f4970 relayoutBoundary=up3 OVERFLOWING:
+  creator: Column ← Align ← Stack ← KeyedSubtree-[GlobalKey#9ea4d] ← _BodyBuilder ← MediaQuery ←
+    LayoutId-[<_ScaffoldSlot.body>] ← CustomMultiChildLayout ← _ActionsScope ← Actions ← Builder ←
+    DefaultTextStyle ← ⋯
+  parentData: offset=Offset(0.0, 0.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=360.0, 0.0<=h<=780.0)
+  size: Size(360.0, 780.0)
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: min
+  crossAxisAlignment: stretch
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (2) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam [E]
+  Test failed. See exception logs above.
+  The test description was: Em viagem: painel do motorista e chat continuam
+  
+00:02 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
+00:03 +15 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
+00:03 +16 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
+00:03 +17 -1: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
