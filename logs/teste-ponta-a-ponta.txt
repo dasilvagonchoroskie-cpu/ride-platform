@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 03/10/2026 19:33 UTC
+Teste de ponta a ponta - 04/10/2026 00:30 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -37,22 +37,22 @@ OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: destino fora da regiao recusado (antes saia corrida de R$ 4.500)
 OK     Passageiro: busca de destino so mostra lugares da regiao
-OK     Central: cupom TESTE19334164 criado (R$ 3,00)
+OK     Central: cupom TESTE00304340 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 2975 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 4784 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (16h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 4 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 37s
+OK     Bandeira certa pela hora de Brasilia (21h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 5 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 39s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -61,6 +61,8 @@ OK     Central: recarga lancada, saldo agora 6220 centavos
 OK     Central: contato de recarga carregado
 OK     Passageiro: avaliou o motorista com 5 estrelas
 OK     Passageiro: recibo da corrida concluida com a nota
+OK     Motorista: avaliou o passageiro com 4 estrelas
+OK     Motorista: historico de hoje com totais e desempenho (aceitacao 100%, taxa 80)
 OK     Passageiro: motorista adicionado aos favoritos
 OK     Passageiro: foto de perfil (o motorista consegue ver)
 OK     Passageiro: corrida agendada para daqui a 2 horas
@@ -80,11 +82,15 @@ OK     Seguranca: outra conta nao ve a corrida (nem nome e telefone)
 OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
-OK     Carteira: saldo zerado bloqueia o motorista
-OK     Carteira: motorista sem saldo nao recebe chamado
-OK     Central: nao envia corrida para motorista sem saldo
-OK     Carteira: recarga desbloqueia e o aplicativo fica sabendo (+R$ 50,00)
-OK     Central: visao geral (ativas 0, concluidas hoje 4, online 1, faturamento 5000)
+OK     Carteira: saldo zerado avisa mas nao corta o turno
+FALHA  Carteira: chamado sem saldo
+       resposta: {"success":true,"data":[],"timestamp":"2026-10-04T00:33:46.822Z"}
+FALHA  Motorista: dados do chamado
+       resposta: null
+OK     Carteira: sem saldo nao consegue ficar online de novo
+OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
+OK     Carteira: com a recarga, ficou online de novo
+OK     Central: visao geral (ativas 0, concluidas hoje 5, online 1, faturamento 6000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -98,7 +104,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 3800, PIX/app 0, comissao 880)
+OK     Central: relatorio de receitas (dinheiro 4500, PIX/app 0, comissao 960)
 OK     Passageiro: SOS acionado
 OK     Central: alerta de SOS com a posicao atualizada
 OK     Central: SOS encerrado
@@ -106,4 +112,4 @@ OK     Central: busca de passageiro pelo telefone
 OK     Central: passageiro bloqueado com motivo
 OK     Central: desbloqueado, historico com 2 registros
 
-Resultado: 0 falha(s).
+Resultado: 2 falha(s).
