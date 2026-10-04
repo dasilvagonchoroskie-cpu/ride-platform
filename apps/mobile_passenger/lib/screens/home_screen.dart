@@ -236,7 +236,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             const Icon(Icons.search, color: AppColors.sheetText, size: 28),
                             const SizedBox(width: Spacing.md),
-                            Text('Buscar destino', style: SheetText.heading.copyWith(fontSize: 20)),
+                            Flexible(
+                              child: Text(
+                                'Buscar destino',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: SheetText.heading.copyWith(fontSize: 20),
+                              ),
+                            ),
                           ],
                         ),
                       ),
