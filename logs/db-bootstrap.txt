@@ -1,10 +1,10 @@
 Prisma schema loaded from prisma/schema.prisma
 Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-0-sa-east-1.pooler.supabase.com:5432"
 
-The database is already in sync with the Prisma schema.
+🚀  Your database is now in sync with your Prisma schema. Done in 9.46s
 
 ┌─────────────────────────────────────────────────────────┐
-│  Update available 5.22.0 -> 8.0.0-rc.17                 │
+│  Update available 5.22.0 -> 8.0.0-rc.19                 │
 │                                                         │
 │  This is a major update - please follow the guide at    │
 │  https://pris.ly/d/major-version-upgrade                │
@@ -17,7 +17,7 @@ Script executed successfully.
 Semeando banco...
   bandeira DIURNA: R$ 10,00 das 6h as 22h
   bandeira NOTURNA: R$ 20,00 das 22h as 6h
-  admin ok: admin@ride.local (senha: Admin@123)
+  admin ok: fortalezadigitalsecurity@gmail.com (senha: Admin@123)
   cupom ok: PRIMEIRACORRIDA
 Seed concluido.
 
