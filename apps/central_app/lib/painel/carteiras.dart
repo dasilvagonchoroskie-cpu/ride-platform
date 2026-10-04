@@ -153,7 +153,7 @@ class _CarteirasTelaState extends State<CarteirasTela> {
     _lista = _api(context).todas();
   }
 
-  void _recarregar() => setState(() => _lista = _api(context).todas());
+  void _recarregar() => setState(() { _lista = _api(context).todas(); });
 
   @override
   Widget build(BuildContext context) {

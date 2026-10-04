@@ -42,7 +42,7 @@ class _SaquesState extends State<_Saques> {
     _lista = _api.saques();
   }
 
-  void _recarregar() => setState(() => _lista = _api.saques());
+  void _recarregar() => setState(() { _lista = _api.saques(); });
 
   @override
   Widget build(BuildContext context) {

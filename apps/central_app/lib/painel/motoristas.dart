@@ -28,7 +28,7 @@ class _MotoristasState extends State<Motoristas> {
     _lista = _api.motoristas(_situacao);
   }
 
-  void _recarregar() => setState(() => _lista = _api.motoristas(_situacao));
+  void _recarregar() => setState(() { _lista = _api.motoristas(_situacao); });
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +124,7 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
     }).catchError((_) {});
   }
 
-  void _recarregar() => setState(() => _dados = _api.motorista(widget.id));
+  void _recarregar() => setState(() { _dados = _api.motorista(widget.id); });
 
   Future<void> _mudarStatus(MotoristaDetalhe d, String status, String titulo, String explicacao) async {
     final motivo = await pedirTexto(

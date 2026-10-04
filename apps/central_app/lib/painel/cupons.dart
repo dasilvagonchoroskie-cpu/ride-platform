@@ -26,7 +26,7 @@ class _CuponsTelaState extends State<CuponsTela> {
     _lista = _api.cupons();
   }
 
-  void _recarregar() => setState(() => _lista = _api.cupons());
+  void _recarregar() => setState(() { _lista = _api.cupons(); });
 
   @override
   Widget build(BuildContext context) {

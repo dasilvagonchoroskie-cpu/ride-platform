@@ -217,7 +217,7 @@ class _EscolherMotoristaState extends State<_EscolherMotorista> {
                   if (s.hasError) {
                     return Aviso(
                       texto: 'Não foi possível carregar: ${s.error}',
-                      tentarDeNovo: () => setState(() => _lista = widget.api.motoristasOnline(widget.perto)),
+                      tentarDeNovo: () => setState(() { _lista = widget.api.motoristasOnline(widget.perto); }),
                     );
                   }
                   if (!s.hasData) return const Center(child: CircularProgressIndicator());

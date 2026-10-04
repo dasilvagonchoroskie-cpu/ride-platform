@@ -37,7 +37,7 @@ class _PassageirosState extends State<Passageiros> {
     super.dispose();
   }
 
-  void _recarregar() => setState(() => _lista = _api.passageiros(_busca.text, soBloqueados: _soBloqueados));
+  void _recarregar() => setState(() { _lista = _api.passageiros(_busca.text, soBloqueados: _soBloqueados); });
 
   @override
   Widget build(BuildContext context) {
