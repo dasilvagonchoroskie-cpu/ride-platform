@@ -5,6 +5,9 @@ import 'package:latlong2/latlong.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/geo.dart';
 
+/// Desenho das ruas. Os testes automaticos desligam (la nao ha internet).
+bool mostrarRuasNoMapa = true;
+
 enum MarkerKind { pickup, dropoff, driver, car }
 
 class MapMarker {
@@ -145,15 +148,16 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             // de API. O CARTO Dark Matter (tema escuro) exigia chave e
             // travava o mapa com "API KEY REQUIRED"; a troca perde o tema
             // escuro do mapa, mas garante que ele sempre carrega.
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.rideplatform.mobile_driver',
-              maxZoom: 19,
-              tileProvider: NetworkTileProvider(),
-              errorTileCallback: (tile, error, stackTrace) {
-                // Tiles indisponiveis ficam no fundo escuro, sem quebrar o mapa.
-              },
-            ),
+            if (mostrarRuasNoMapa)
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.rideplatform.mobile_driver',
+                maxZoom: 19,
+                tileProvider: NetworkTileProvider(),
+                errorTileCallback: (tile, error, stackTrace) {
+                  // Tiles indisponiveis ficam no fundo escuro, sem quebrar o mapa.
+                },
+              ),
 
             // Rota ate o passageiro (azul)
             if (widget.driverRoute.length > 1)

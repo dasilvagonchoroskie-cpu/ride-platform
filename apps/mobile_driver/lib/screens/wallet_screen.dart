@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../core/avisos.dart';
 import '../core/central.dart';
+import '../core/pix.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../data/models/driver_models.dart';
@@ -95,7 +96,7 @@ class _Saldo extends StatelessWidget {
     final alerta = c.isInsufficient || c.isLow;
     final cor = c.isInsufficient ? AppColors.danger : (c.isLow ? AppColors.warning : AppColors.text);
     final rotulo = c.isInsufficient
-        ? 'Saldo insuficiente'
+        ? 'Saldo insuficiente — solicite recarga'
         : c.isLow
             ? 'Saldo se esgotando'
             : 'Saldo disponível';
@@ -139,32 +140,19 @@ class _Saldo extends StatelessWidget {
           const SizedBox(height: Spacing.sm),
           Text(
             c.blocking
-                ? 'Você não está recebendo corridas. Adicione créditos para voltar.'
+                ? 'Você não está recebendo corridas. Solicite recarga à Central.'
                 : alerta
-                ? 'Adicione créditos ou você deixará de receber corridas.'
-                : 'A comissão de cada corrida é descontada deste saldo.',
+                ? 'Saldo insuficiente — solicite recarga à Central. Sem saldo você não consegue ficar online.'
+                : 'A taxa de cada corrida é descontada deste saldo.',
             style: AppText.body.copyWith(color: AppColors.textMuted, fontSize: 16),
           ),
           const SizedBox(height: Spacing.xl),
-          InkWell(
-            borderRadius: BorderRadius.circular(Radii.sm),
-            onTap: () => _mostrarRecarga(context, c.central),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.text, width: 1.6),
-                    borderRadius: BorderRadius.circular(Radii.sm),
-                  ),
-                  child: const Icon(Icons.add, size: 38, color: AppColors.text),
-                ),
-                const SizedBox(height: Spacing.sm),
-                Text('Adicionar', style: AppText.bodyStrong.copyWith(fontSize: 17)),
-              ],
-            ),
+          // Sem botao de recarga: quem recarrega e a Central. Aqui so as
+          // instrucoes (chave PIX e PIX Copia e Cola da Central).
+          OutlinedButton.icon(
+            onPressed: () => _mostrarRecarga(context, c.central),
+            icon: const Icon(Icons.info_outline),
+            label: const Text('Como pedir recarga à Central'),
           ),
         ],
       ),
@@ -177,10 +165,11 @@ class _Saldo extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Saldo mínimo'),
         content: Text(
-          'O passageiro paga a corrida direto para você. A comissão da '
-          'plataforma é descontada desta carteira.\n\n'
-          'Com saldo abaixo de ${formatMoney(minimo)} você deixa de receber '
-          'novas corridas até recarregar.',
+          'O passageiro paga a corrida direto para você. A taxa da Central '
+          'é descontada desta carteira a cada corrida finalizada.\n\n'
+          'Para ficar online, o saldo precisa estar acima de ${formatMoney(minimo)}. '
+          'Se o saldo acabar durante o turno, você continua recebendo corridas '
+          'e a taxa fica registrada como débito. Recargas são feitas só pela Central.',
         ),
         actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Entendi'))],
       ),
@@ -242,6 +231,19 @@ class _Saldo extends StatelessWidget {
                         label: const Text('Copiar'),
                       ),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 40, top: Spacing.sm),
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(
+                        text: pixCopiaECola(chave: central.pixKey!, nome: central.pixHolder ?? 'Fortaleza Mov'),
+                      ));
+                      avisar('PIX Copia e Cola copiado. Cole no aplicativo do seu banco e digite o valor.');
+                    },
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('Copiar PIX Copia e Cola'),
                   ),
                 ),
               ] else

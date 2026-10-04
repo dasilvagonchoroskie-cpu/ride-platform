@@ -12,7 +12,8 @@ class AppConfig {
   static const Duration apiTimeout = Duration(seconds: 60);
 
   /// Intervalo de envio da posicao do motorista (heartbeat).
-  static const Duration locationInterval = Duration(seconds: 5);
+  /// Posicao para o servidor a cada 4 s (especificacao: 3 a 5 s), online ou em corrida.
+  static const Duration locationInterval = Duration(seconds: 4);
 
   static bool get hasApi => apiUrl.isNotEmpty && !forceDemo;
 }

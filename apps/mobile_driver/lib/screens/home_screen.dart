@@ -13,6 +13,7 @@ import 'activity_screen.dart';
 import 'avisos_screen.dart';
 import 'menu_screen.dart';
 import 'rides_history_screen.dart';
+import 'sos_screen.dart';
 import 'wallet_screen.dart';
 
 /// Tela principal do motorista.
@@ -129,6 +130,24 @@ class _HomeScreenState extends State<HomeScreen> {
                         marcado: avisos.isNotEmpty,
                         onTap: () => _abrir(const AvisosScreen()),
                       ),
+                      const SizedBox(height: Spacing.md),
+                      // Botao de panico sempre a mao.
+                      Material(
+                        color: AppColors.danger,
+                        shape: const CircleBorder(),
+                        elevation: 3,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _abrir(const SosScreen()),
+                          child: const SizedBox(
+                            width: 52,
+                            height: 52,
+                            child: Center(
+                              child: Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -154,6 +173,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 _PainelInferior(
+                  corridasHoje: driver.hoje?.rides ?? 0,
+                  ganhosHoje: dinheiro(driver.ganhosHojeCents, oculto: driver.ocultarValores),
+                  saldo: carteira == null ? '-' : dinheiro(carteira.balanceCents, oculto: driver.ocultarValores),
+                  saldoNegativo: (carteira?.balanceCents ?? 1) <= 0,
+                  onCarteira: () => _abrir(const WalletScreen()),
                   online: driver.isOnline,
                   ocupado: _ocupado,
                   onAlternar: _alternar,
@@ -280,6 +304,11 @@ class _AvisoSaldo extends StatelessWidget {
 
 class _PainelInferior extends StatelessWidget {
   const _PainelInferior({
+    required this.corridasHoje,
+    required this.ganhosHoje,
+    required this.saldo,
+    required this.saldoNegativo,
+    required this.onCarteira,
     required this.online,
     required this.ocupado,
     required this.onAlternar,
@@ -287,6 +316,11 @@ class _PainelInferior extends StatelessWidget {
     this.onSimular,
   });
 
+  final int corridasHoje;
+  final String ganhosHoje;
+  final String saldo;
+  final bool saldoNegativo;
+  final VoidCallback onCarteira;
   final bool online;
   final bool ocupado;
   final VoidCallback onAlternar;
@@ -319,20 +353,34 @@ class _PainelInferior extends StatelessWidget {
                   const _Aba(icone: Icons.location_on, rotulo: 'Mapa', ativa: true),
                   Expanded(
                     child: Text(
-                      online ? 'Conectado' : 'Desconectado',
+                      online ? '🟢 Online' : '🔴 Offline',
                       textAlign: TextAlign.center,
                       style: AppText.title.copyWith(
                         fontSize: 26,
-                        color: online ? AppColors.primary : AppColors.textMuted,
+                        color: online ? AppColors.primary : AppColors.danger,
                       ),
                     ),
                   ),
                   _Aba(icone: Icons.directions_car, rotulo: 'Corridas', onTap: onCorridas),
                 ],
               ),
-              const SizedBox(height: Spacing.xl),
+              const SizedBox(height: Spacing.md),
+              // Resumo rapido do dia.
+              Row(
+                children: [
+                  _Resumo(rotulo: 'Corridas hoje', valor: '$corridasHoje'),
+                  _Resumo(rotulo: 'Ganhos hoje', valor: ganhosHoje),
+                  _Resumo(
+                    rotulo: 'Saldo carteira',
+                    valor: saldo,
+                    cor: saldoNegativo ? AppColors.danger : AppColors.text,
+                    onTap: onCarteira,
+                  ),
+                ],
+              ),
+              const SizedBox(height: Spacing.lg),
               SizedBox(
-                width: 250,
+                width: 280,
                 height: 60,
                 child: FilledButton(
                   onPressed: ocupado ? null : onAlternar,
@@ -350,7 +398,7 @@ class _PainelInferior extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
                         )
                       : Text(
-                          online ? 'Desconectar' : 'Conectar',
+                          online ? 'FICAR OFFLINE' : 'FICAR ONLINE',
                           style: AppText.title.copyWith(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
                         ),
                 ),
@@ -396,6 +444,35 @@ class _Aba extends StatelessWidget {
               Icon(icone, color: cor, size: 30),
               const SizedBox(height: 2),
               Text(rotulo, style: AppText.body.copyWith(color: cor, fontSize: 17)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Numero pequeno do resumo do dia (corridas, ganhos, saldo).
+class _Resumo extends StatelessWidget {
+  const _Resumo({required this.rotulo, required this.valor, this.cor = AppColors.text, this.onTap});
+
+  final String rotulo;
+  final String valor;
+  final Color cor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
+          child: Column(
+            children: [
+              FittedBox(fit: BoxFit.scaleDown, child: Text(valor, style: AppText.heading.copyWith(color: cor))),
+              Text(rotulo, textAlign: TextAlign.center, style: AppText.caption.copyWith(color: AppColors.textMuted)),
             ],
           ),
         ),

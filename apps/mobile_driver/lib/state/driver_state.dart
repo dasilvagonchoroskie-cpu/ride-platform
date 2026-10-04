@@ -19,7 +19,13 @@ import '../core/avisos.dart';
 /// Estado do motorista: cadastro, documentos, status online, ofertas,
 /// corrida em andamento e carteira.
 class DriverState extends ChangeNotifier with WidgetsBindingObserver {
-  final ApiClient _client = ApiClient();
+  /// [client] so e passado nos testes automaticos (servidor de mentira).
+  DriverState({ApiClient? client}) : _client = client ?? ApiClient();
+
+  final ApiClient _client;
+
+  /// Cliente do servidor (telas de perfil, documentos e historico).
+  ApiClient get api => _client;
 
   DriverProfile? profile;
   VehicleInfo? vehicle;
@@ -862,16 +868,17 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       if (lista.isEmpty || offer != null || activeRide != null) return;
       final o = lista.first as Map<String, dynamic>;
       final expira = DateTime.tryParse(o['expiresAt'] as String? ?? '');
-      final restam = expira == null ? 30 : expira.difference(DateTime.now()).inSeconds;
+      final restam = expira == null ? 20 : expira.difference(DateTime.now()).inSeconds;
       if (restam <= 1) return;
 
       final tarifa = (o['estimatedFareCents'] as num?)?.toInt() ?? 0;
-      final comissao = (o['commissionPercent'] as num?)?.toDouble() ?? 20;
+      final comissao = (o['commissionPercent'] as num?)?.toDouble() ?? 8;
+      final liquido = (o['driverNetCents'] as num?)?.toInt();
       offer = RideOffer(
         id: o['rideId'] as String,
         code: o['code'] as String? ?? '',
         passengerName: o['passengerName'] as String? ?? 'Passageiro',
-        passengerRating: 5,
+        passengerRating: (o['passengerRating'] as num?)?.toDouble() ?? 5,
         pickupAddress: o['pickupAddress'] as String? ?? '',
         pickupCoords: Coords((o['pickupLat'] as num).toDouble(), (o['pickupLng'] as num).toDouble()),
         dropoffAddress: o['dropoffAddress'] as String? ?? '',
@@ -880,7 +887,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         tripDistanceMeters: (o['tripDistanceMeters'] as num?)?.toInt() ?? 0,
         durationSeconds: (o['tripDurationSeconds'] as num?)?.toInt() ?? 0,
         fareCents: tarifa,
-        earningCents: (tarifa * (100 - comissao) / 100).round(),
+        earningCents: liquido ?? (tarifa * (100 - comissao) / 100).round(),
         paymentMethod: switch (o['paymentMethodType'] as String?) {
           'PIX' => 'Pix',
           'CREDIT_CARD' || 'DEBIT_CARD' => 'Cartão (maquininha)',
@@ -974,6 +981,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final ride = activeRide;
     if (ride == null) return;
     if (AppConfig.hasApi && !await _avisarServidor(ride, 'arrived')) return;
+    chegouEm = DateTime.now();
     activeRide = ride.copyWith(phase: RidePhase.waitingPassenger);
     await _persistRide();
     notifyListeners();
@@ -990,6 +998,92 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Esperando o servidor confirmar uma etapa (evita toque duplo).
   bool enviandoEtapa = false;
+
+  /// Hora em que chegou ao embarque (cronometro de espera).
+  DateTime? chegouEm;
+
+  /// Resumo do fim da corrida que o servidor calculou: valor total, desconto
+  /// de cupom, quanto cobrar do passageiro, taxa da Central e liquido.
+  Map<String, dynamic>? resumoFinal;
+
+  /// Nota que o motorista deu ao passageiro nesta corrida.
+  int? notaPassageiro;
+
+  Future<bool> avaliarPassageiro(int nota) async {
+    final ride = activeRide;
+    if (ride == null) return false;
+    if (!AppConfig.hasApi) {
+      notaPassageiro = nota;
+      notifyListeners();
+      return true;
+    }
+    try {
+      await _client.request('POST', '/driver/rides/${ride.offer.id}/rate', body: {'score': nota});
+      notaPassageiro = nota;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _avisar(e.message);
+      return false;
+    } catch (_) {
+      _avisar('Sem conexão com o servidor. Tente de novo.');
+      return false;
+    }
+  }
+
+  // ---------------- SOS ----------------
+
+  /// Alerta de SOS aberto (id no servidor) e o relogio que manda a posicao.
+  String? sosId;
+  Timer? _sosTimer;
+
+  /// Envia o SOS com a posicao atual e continua mandando a posicao a cada
+  /// 10 s ate a Central encerrar o alerta.
+  Future<bool> acionarSos() async {
+    if (!AppConfig.hasApi) return false;
+    try {
+      final r = await _client.request('POST', '/safety/sos', body: {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        if (activeRide != null) 'rideId': activeRide!.offer.id,
+      }) as Map<String, dynamic>;
+      sosId = r['id'] as String?;
+      _sosTimer?.cancel();
+      _sosTimer = Timer.periodic(const Duration(seconds: 10), (_) => _posicaoSos());
+      notifyListeners();
+      return sosId != null;
+    } on ApiException catch (e) {
+      _avisar(e.message);
+      return false;
+    } catch (_) {
+      _avisar('Sem conexão: ligue 190 se precisar.');
+      return false;
+    }
+  }
+
+  Future<void> _posicaoSos() async {
+    final id = sosId;
+    if (id == null) return;
+    try {
+      final r = await _client.request('POST', '/safety/sos/$id/location', body: {
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+      }) as Map<String, dynamic>;
+      if (r['resolved'] == true) {
+        pararSos();
+        avisar('A Central encerrou o alerta de SOS.');
+      }
+    } catch (_) {
+      // Sem rede agora: manda na proxima volta.
+    }
+  }
+
+  void pararSos() {
+    _sosTimer?.cancel();
+    _sosTimer = null;
+    sosId = null;
+    notifyListeners();
+  }
 
   Future<bool> _avisarServidor(DriverRide ride, String passo) async {
     if (enviandoEtapa) return false;
@@ -1021,7 +1115,12 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         // Sem medicao propria, o servidor usa a estimativa do pedido e
         // calcula o valor pela bandeira gravada na corrida.
         final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {});
-        if (r is Map<String, dynamic>) valorFinalCents = (r['finalFareCents'] as num?)?.toInt();
+        if (r is Map<String, dynamic>) {
+          valorFinalCents = (r['finalFareCents'] as num?)?.toInt();
+          resumoFinal = r;
+        }
+        // A taxa da Central acabou de sair da carteira: busca o saldo novo.
+        unawaited(carregarCarteira());
       } on ApiException catch (e) {
         _avisar(e.message);
         return;
@@ -1046,6 +1145,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     telefonePassageiro = null;
     activeRide = null;
     valorFinalCents = null;
+    resumoFinal = null;
+    notaPassageiro = null;
+    chegouEm = null;
     routeToPickup = [];
     tripRoute = [];
     await AppStorage.remove(AppStorage.activeRide);

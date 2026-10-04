@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api/api_client.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
-import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 
-/// Corridas do motorista (todas as situacoes), da mais nova para a mais antiga.
+int _int(Object? v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
+
+/// Historico de corridas e desempenho: concluidas de hoje, da semana ou do
+/// mes, com origem, destino, valor, data e taxa descontada; e as metricas
+/// de aceitacao, cancelamentos e nota.
 class RidesHistoryScreen extends StatefulWidget {
   const RidesHistoryScreen({super.key});
 
@@ -15,94 +19,97 @@ class RidesHistoryScreen extends StatefulWidget {
 }
 
 class _RidesHistoryScreenState extends State<RidesHistoryScreen> {
-  final List<RideHistoryItem> _itens = [];
-  int _pagina = 1;
-  bool _carregando = true;
-  bool _falhou = false;
-  bool _temMais = true;
+  String _periodo = 'day';
+  Map<String, dynamic>? _dados;
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _carregar(reiniciar: true));
+    _carregar();
   }
 
-  Future<void> _carregar({bool reiniciar = false}) async {
-    if (reiniciar) {
-      _pagina = 1;
-      _temMais = true;
+  Future<void> _carregar() async {
+    setState(() {
+      _dados = null;
+      _erro = null;
+    });
+    try {
+      final r = await context.read<DriverState>().api.request(
+        'GET',
+        '/driver/rides/history',
+        query: {'period': _periodo, 'pageSize': '100'},
+      ) as Map<String, dynamic>;
+      if (mounted) setState(() => _dados = r);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _erro = 'Sem conexão com o servidor.');
     }
-    setState(() {
-      _carregando = true;
-      _falhou = false;
-    });
-    final r = await context.read<DriverState>().carregarHistorico(pagina: _pagina);
-    if (!mounted) return;
-    setState(() {
-      _carregando = false;
-      if (r == null) {
-        _falhou = true;
-        return;
-      }
-      if (reiniciar) _itens.clear();
-      _itens.addAll(r);
-      _temMais = r.length >= 30;
-      _pagina += 1;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final oculto = context.watch<DriverState>().ocultarValores;
-
+    final r = _dados;
+    final soma = (r?['summary'] as Map?) ?? const {};
+    final des = (r?['performance'] as Map?) ?? const {};
+    final itens = ((r?['items'] as List?) ?? const []).whereType<Map<String, dynamic>>().toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Corridas')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text('Histórico de corridas')),
       body: RefreshIndicator(
-        onRefresh: () => _carregar(reiniciar: true),
+        onRefresh: _carregar,
         child: ListView(
           padding: const EdgeInsets.all(Spacing.lg),
           children: [
-            if (_itens.isEmpty && _carregando)
-              const Padding(
-                padding: EdgeInsets.only(top: 120),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_itens.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 100),
-                child: Column(
-                  children: [
-                    const Icon(Icons.directions_car_outlined, size: 56, color: AppColors.textFaint),
-                    const SizedBox(height: Spacing.md),
-                    Text(
-                      _falhou ? 'Sem conexão com o servidor' : 'Nenhuma corrida ainda',
-                      style: AppText.heading,
-                    ),
-                    const SizedBox(height: Spacing.xs),
-                    Text(
-                      _falhou
-                          ? 'Puxe para baixo para tentar de novo.'
-                          : 'Suas corridas aparecem aqui assim que você atender a primeira.',
-                      textAlign: TextAlign.center,
-                      style: AppText.body.copyWith(color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              )
-            else ...[
-              for (final c in _itens) ...[
-                _Item(corrida: c, oculto: oculto),
-                const SizedBox(height: Spacing.sm),
+            SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 'day', label: Text('Hoje')),
+                ButtonSegment(value: 'week', label: Text('Esta semana')),
+                ButtonSegment(value: 'month', label: Text('Este mês')),
               ],
-              if (_temMais)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-                  child: Center(
-                    child: _carregando
-                        ? const CircularProgressIndicator()
-                        : TextButton(onPressed: () => _carregar(), child: const Text('Carregar mais')),
-                  ),
-                ),
+              selected: {_periodo},
+              onSelectionChanged: (s) {
+                _periodo = s.first;
+                _carregar();
+              },
+            ),
+            const SizedBox(height: Spacing.md),
+            if (_erro != null)
+              Text(_erro!, style: AppText.body.copyWith(color: AppColors.danger))
+            else if (r == null)
+              const Padding(padding: EdgeInsets.all(Spacing.xl), child: Center(child: CircularProgressIndicator()))
+            else ...[
+              Row(
+                children: [
+                  _Numero(rotulo: 'Corridas', valor: '${_int(soma['rides'])}'),
+                  const SizedBox(width: Spacing.sm),
+                  _Numero(rotulo: 'Valor total', valor: formatMoney(_int(soma['totalCents']))),
+                ],
+              ),
+              const SizedBox(height: Spacing.sm),
+              Row(
+                children: [
+                  _Numero(rotulo: 'Taxa descontada', valor: formatMoney(_int(soma['commissionCents'])), cor: AppColors.danger),
+                  const SizedBox(width: Spacing.sm),
+                  _Numero(rotulo: 'Seu líquido', valor: formatMoney(_int(soma['netCents'])), cor: AppColors.primary),
+                ],
+              ),
+              const SizedBox(height: Spacing.sm),
+              Row(
+                children: [
+                  _Numero(rotulo: 'Aceitação de chamadas', valor: '${_int(des['acceptanceRate'])}%'),
+                  const SizedBox(width: Spacing.sm),
+                  _Numero(rotulo: 'Cancelamentos', valor: '${_int(des['cancellations'])}'),
+                  const SizedBox(width: Spacing.sm),
+                  _Numero(rotulo: 'Sua nota', valor: '★ ${(des['ratingAvg'] as num? ?? 5).toStringAsFixed(1)}'),
+                ],
+              ),
+              const SizedBox(height: Spacing.lg),
+              if (itens.isEmpty)
+                Text('Nenhuma corrida concluída neste período.', style: AppText.body.copyWith(color: AppColors.textMuted)),
+              for (final c in itens) _Corrida(c: c),
             ],
           ],
         ),
@@ -111,24 +118,45 @@ class _RidesHistoryScreenState extends State<RidesHistoryScreen> {
   }
 }
 
-class _Item extends StatelessWidget {
-  const _Item({required this.corrida, required this.oculto});
+class _Numero extends StatelessWidget {
+  const _Numero({required this.rotulo, required this.valor, this.cor = AppColors.text});
 
-  final RideHistoryItem corrida;
-  final bool oculto;
+  final String rotulo;
+  final String valor;
+  final Color cor;
 
   @override
   Widget build(BuildContext context) {
-    final c = corrida;
-    final corSituacao = c.isCompleted
-        ? AppColors.primary
-        : c.isCancelled
-            ? AppColors.danger
-            : AppColors.brand;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(Spacing.md),
+        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.md)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(rotulo, maxLines: 2, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+            FittedBox(fit: BoxFit.scaleDown, child: Text(valor, style: AppText.heading.copyWith(color: cor))),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
+class _Corrida extends StatelessWidget {
+  const _Corrida({required this.c});
+
+  final Map<String, dynamic> c;
+
+  @override
+  Widget build(BuildContext context) {
+    final valor = _int(c['finalFareCents'] ?? c['estimatedFareCents']);
+    final taxa = _int(c['commissionCents']);
+    final quando = c['finishedAt'] ?? c['requestedAt'];
     return Container(
-      padding: const EdgeInsets.all(Spacing.lg),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.sm)),
+      margin: const EdgeInsets.only(bottom: Spacing.sm),
+      padding: const EdgeInsets.all(Spacing.md),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.md)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -136,59 +164,20 @@ class _Item extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  diaMesHora(c.finishedAt ?? c.requestedAt),
-                  style: AppText.body.copyWith(color: AppColors.textMuted),
+                  '${quando == null ? '' : formatDateTime('$quando')} · ${c['code'] ?? ''}',
+                  style: AppText.caption.copyWith(color: AppColors.textMuted),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: corSituacao.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(Radii.pill),
-                ),
-                child: Text(
-                  c.statusLabel,
-                  style: AppText.caption.copyWith(color: corSituacao, fontWeight: FontWeight.w600),
-                ),
-              ),
+              Text(formatMoney(valor), style: AppText.bodyStrong),
             ],
           ),
           const SizedBox(height: Spacing.xs),
-          Row(
-            children: [
-              Expanded(child: Text('Corrida ${c.code}', style: AppText.bodyStrong.copyWith(fontSize: 16))),
-              if (c.isCompleted)
-                Text(dinheiro(c.earningCents, oculto: oculto), style: AppText.heading.copyWith(fontSize: 18)),
-            ],
-          ),
-          const SizedBox(height: Spacing.sm),
-          _Ponto(cor: AppColors.primary, texto: c.pickupAddress),
-          const SizedBox(height: 4),
-          _Ponto(cor: AppColors.danger, texto: c.dropoffAddress),
+          Text('De: ${c['pickupAddress'] ?? '-'}', style: AppText.body),
+          Text('Para: ${c['dropoffAddress'] ?? '-'}', style: AppText.body),
+          Text('Taxa descontada: ${formatMoney(taxa)} · Líquido: ${formatMoney(valor - taxa)}',
+              style: AppText.caption.copyWith(color: AppColors.textMuted)),
         ],
       ),
-    );
-  }
-}
-
-class _Ponto extends StatelessWidget {
-  const _Ponto({required this.cor, required this.texto});
-
-  final Color cor;
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Container(width: 8, height: 8, decoration: BoxDecoration(color: cor, shape: BoxShape.circle)),
-        ),
-        const SizedBox(width: Spacing.sm),
-        Expanded(child: Text(texto.isEmpty ? '—' : texto, style: AppText.body)),
-      ],
     );
   }
 }

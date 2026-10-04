@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 import '../widgets/ui.dart';
+import 'perfil_screen.dart';
 
 class PendingScreen extends StatelessWidget {
   const PendingScreen({super.key});
@@ -48,11 +49,14 @@ class PendingScreen extends StatelessWidget {
               Text(
                 rejected
                     ? 'Fale com a Central para saber o que precisa ser corrigido.'
-                    : 'Leve os documentos abaixo à Central. Esta tela muda sozinha quando o cadastro for liberado.',
+                    : 'Envie as fotos dos documentos aqui. A Central confere e libera o seu cadastro; esta tela muda sozinha.',
                 textAlign: TextAlign.center,
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
               const SizedBox(height: Spacing.xl),
+              // Cadastro -> envio dos documentos -> aprovacao da Central.
+              const DocumentosDoMotorista(),
+              const SizedBox(height: Spacing.lg),
               // A conferencia e PRESENCIAL (Lei 13.640/2018). Antes esta tela
               // mostrava documentos "APPROVED" que ninguem tinha conferido: o
               // envio era simulado no aparelho.
@@ -60,7 +64,7 @@ class PendingScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('LEVE À CENTRAL', style: AppText.label.copyWith(color: AppColors.textFaint)),
+                    Text('A CENTRAL TAMBÉM CONFERE PESSOALMENTE', style: AppText.label.copyWith(color: AppColors.textFaint)),
                     const SizedBox(height: Spacing.md),
                     for (final item in const [
                       'CNH com EAR (exerce atividade remunerada)',

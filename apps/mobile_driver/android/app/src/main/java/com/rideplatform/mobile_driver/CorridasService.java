@@ -78,8 +78,8 @@ public class CorridasService extends Service {
     private static final int ID_CHAMADA = 5102;
 
     private static final long INTERVALO_MS = 4000;
-    // Um chamado dura 30 s no servidor; o alarme nao toca alem disso.
-    private static final long ALARME_MAX_MS = 32000;
+    // Um chamado dura 20 s no servidor; o alarme nao toca alem disso.
+    private static final long ALARME_MAX_MS = 22000;
     private static final long POSICAO_MIN_MS = 10000;
 
     private static final String PREFS = "fortaleza_corridas";

@@ -11,7 +11,9 @@ import 'activity_screen.dart';
 import 'legal_screen.dart';
 import 'permissions_screen.dart';
 import 'registration_screen.dart';
+import 'perfil_screen.dart';
 import 'rides_history_screen.dart';
+import 'sos_screen.dart';
 import 'vehicles_screen.dart';
 import 'wallet_screen.dart';
 
@@ -77,6 +79,7 @@ class MenuScreen extends StatelessWidget {
             ),
           ),
           const Divider(height: Spacing.xl),
+          MenuLinha(titulo: 'Perfil e documentos', onTap: () => _ir(context, const PerfilScreen())),
           MenuLinha(titulo: 'Cadastro', onTap: () => _ir(context, const RegistrationScreen())),
           MenuLinha(titulo: 'Meus veículos', onTap: () => _ir(context, const VehiclesScreen())),
           const Divider(height: Spacing.lg),
@@ -87,6 +90,7 @@ class MenuScreen extends StatelessWidget {
             onTap: () => _ir(context, const WalletScreen()),
           ),
           MenuLinha(titulo: 'Histórico de corridas', onTap: () => _ir(context, const RidesHistoryScreen())),
+          MenuLinha(titulo: 'Segurança / SOS', cor: AppColors.danger, onTap: () => _ir(context, const SosScreen())),
           const Divider(height: Spacing.lg),
           MenuLinha(
             titulo: 'Configurações',
