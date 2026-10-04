@@ -1,13 +1,13 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
 00:00 +0: Visao Geral: indicadores em cima do mapa e toque no carro
-00:00 +1: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:01 +2: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:01 +1: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:02 +2: Motoristas: lista, detalhe com documento, financeiro e carteira
 00:02 +3: Passageiros: busca, bloqueado e historico
-00:02 +4: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:03 +5: Financeiro: saques e receitas
-00:03 +6: Alertas: SOS aberto, janela fixa e encerrados
+00:03 +4: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:04 +5: Financeiro: saques e receitas
+00:04 +6: Alertas: SOS aberto, janela fixa e encerrados
 00:04 +7: Cupons: lista e novo cupom
-00:04 +8: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+00:05 +8: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
 00:05 +9: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:05 +10: Leitura dos dados no formato do servidor
-00:05 +11: All tests passed!
+00:06 +10: Leitura dos dados no formato do servidor
+00:06 +11: All tests passed!
