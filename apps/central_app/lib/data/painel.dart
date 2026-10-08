@@ -831,6 +831,12 @@ class PainelApi {
   Future<void> categoriaDoVeiculo(String id, String categoria) =>
       _c.request('PATCH', '/admin/drivers/$id/category', body: {'category': categoria});
 
+  /// Cadastro de motorista pela Central (ja com carro; aprovado se pedido).
+  Future<({String id, bool contaExistente})> cadastrarMotorista(Map<String, dynamic> dados) async {
+    final r = await _c.request('POST', '/admin/drivers', body: dados) as Map<String, dynamic>;
+    return (id: r['id'] as String? ?? '', contaExistente: r['contaExistente'] == true);
+  }
+
   Future<void> creditarCarteira(String id, int cents, String descricao) =>
       _c.request('POST', '/admin/drivers/$id/wallet/credit', body: {'amountCents': cents, 'description': descricao});
 

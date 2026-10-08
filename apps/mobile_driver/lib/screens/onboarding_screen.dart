@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api/api_client.dart';
+import '../core/avisos.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
@@ -51,6 +53,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // A conta nasce como "Motorista 1234" (ou "Passageiro 1234"): isso nao e nome.
     if (nome.isNotEmpty && !nome.startsWith('Motorista') && !nome.startsWith('Passageiro')) _nome.text = nome;
     _email.text = driver.email ?? '';
+    // Conta de passageiro ja tem CPF: vem preenchido (os mesmos dados).
+    final cpfConta = driver.cpfConta;
+    if (cpfConta != null && cpfConta.length == 11) {
+      _cpf.text = '${cpfConta.substring(0, 3)}.${cpfConta.substring(3, 6)}.${cpfConta.substring(6, 9)}-${cpfConta.substring(9)}';
+    }
   }
 
   @override
@@ -156,7 +163,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finish() async {
     final driver = context.read<DriverState>();
 
-    await driver.completeOnboarding(
+    final resultado = await driver.completeOnboarding(
       nome: _nome.text.trim().replaceAll(RegExp(r'\s+'), ' '),
       emailConta: _email.text.trim(),
       telefone: _semTelefone ? '+55${onlyDigits(_telefone.text)}' : null,
@@ -169,6 +176,89 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     // Cadastro enviado: o aplicativo segue sozinho para a tela de
     // conferencia na Central (antes abria um envio de documentos simulado).
+    if (resultado == ResultadoCadastro.contaExistente && mounted) {
+      if (await _usarContaExistente(driver.error ?? '') && mounted) await _finish();
+    }
+  }
+
+  /// "Voce ja tem conta": manda o codigo para essa conta e entra nela.
+  /// Devolve true se entrou (o cadastro e reenviado na conta certa).
+  Future<bool> _usarContaExistente(String motivo) async {
+    final driver = context.read<DriverState>();
+    final querUsar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Você já tem conta'),
+        content: Text(
+          '$motivo\n\nÉ a mesma pessoa: pode usar os mesmos dados do app do passageiro. '
+          'Vamos mandar um código para essa conta e o cadastro de motorista continua nela.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Agora não')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Mandar código')),
+        ],
+      ),
+    );
+    if (querUsar != true || !mounted) return false;
+
+    final ({String destino, String? codigoDeTeste}) envio;
+    try {
+      envio = await driver.pedirCodigoVinculo();
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return false;
+    } catch (_) {
+      avisar('Sem conexão com o servidor. Tente de novo.');
+      return false;
+    }
+    if (!mounted) return false;
+
+    final campo = TextEditingController(text: envio.codigoDeTeste ?? '');
+    final codigo = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Digite o código'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Enviamos um código para o ${envio.destino}.'),
+            if (envio.codigoDeTeste != null)
+              Padding(
+                padding: const EdgeInsets.only(top: Spacing.sm),
+                child: Text(
+                  'Ambiente de teste (o código ainda não vai por SMS): ${envio.codigoDeTeste}',
+                  style: AppText.caption.copyWith(color: AppColors.textMuted),
+                ),
+              ),
+            const SizedBox(height: Spacing.md),
+            TextField(
+              controller: campo,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Código', counterText: ''),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(campo.text), child: const Text('Confirmar')),
+        ],
+      ),
+    );
+    if (codigo == null || codigo.trim().isEmpty || !mounted) return false;
+    try {
+      await driver.entrarNaContaVinculada(codigo);
+      avisar('Pronto: você está na sua conta. Continuando o cadastro de motorista...');
+      return true;
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return false;
+    } catch (_) {
+      avisar('Sem conexão com o servidor. Tente de novo.');
+      return false;
+    }
   }
 
   @override

@@ -81,7 +81,7 @@ void main() {
 
   test('Cadastro aceito: manda o veiculo depois do motorista', () async {
     final d = await _enviar(_servidor(status: 200));
-    expect(pedidos, ['POST /api/drivers/onboarding', 'POST /api/vehicles']);
+    expect(pedidos.where((p) => p.startsWith('POST')).toList(), ['POST /api/drivers/onboarding', 'POST /api/vehicles']);
     expect(d.profile!.name, 'Evandro da Silva');
   });
 
@@ -108,5 +108,84 @@ void main() {
     expect(d.profile, isNull);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('ride.refreshToken'), isNull);
+  });
+
+  // Pedido do Evandro (08/10/2026): quem ja e passageiro usa os MESMOS dados
+  // no app do motorista. O servidor reconhece a conta, o app manda o codigo
+  // para ela, entra nela e o cadastro continua — sem impedir.
+  test('Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro', () async {
+    var contaVinculada = false;
+    final servidor = MockClient((r) async {
+      pedidos.add('${r.method} ${r.url.path}');
+      Map<String, dynamic> corpo = const {};
+      int status = 200;
+      Object? dados = <String, dynamic>{};
+      if (r.url.path == '/api/drivers/onboarding' && !contaVinculada) {
+        status = 409;
+        corpo = {
+          'success': false,
+          'error': {
+            'code': 'CONTA_EXISTENTE',
+            'message': 'Voce ja tem conta na Fortaleza Mov com estes dados (telefone terminado em 6632).',
+            'details': {'destino': 'telefone terminado em 6632'},
+          },
+        };
+      } else if (r.url.path == '/api/auth/vincular-conta/codigo') {
+        dados = {'destino': 'telefone terminado em 6632', 'debugCode': '123456', 'expiresIn': 300};
+      } else if (r.url.path == '/api/auth/vincular-conta/entrar') {
+        contaVinculada = true;
+        final b = jsonDecode(r.body) as Map<String, dynamic>;
+        expect(b['code'], '123456');
+        expect(b['cpf'], '52998224725');
+        dados = {
+          'accessToken': 'acesso-da-conta-de-passageiro',
+          'refreshToken': 'refresh-da-conta-de-passageiro',
+          'user': {
+            'id': 'conta-passageiro',
+            'name': 'Evandro da Silva',
+            'phone': '+5564992686632',
+            'email': 'evandro@exemplo.com',
+            'cpf': '52998224725',
+            'termsAccepted': true,
+            'driverId': null,
+          },
+        };
+      }
+      return http.Response(
+        jsonEncode(status == 200 ? {'success': true, 'data': dados} : corpo),
+        status,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+    final d = DriverState(client: ApiClient(client: servidor));
+    d.profile = const DriverProfile(id: 'u2', name: 'Motorista 2794', phone: '+5564996472794', termsAccepted: true);
+    d.vehicle = const VehicleInfo(brand: 'Chevrolet', model: 'Spin', year: 2013, color: 'cinza', plate: 'FBP8H67');
+    Future<ResultadoCadastro> enviar() => d.completeOnboarding(
+          nome: 'Evandro da Silva',
+          emailConta: 'evandro@exemplo.com',
+          cpf: '52998224725',
+          cnhNumber: '05494287230',
+          cnhCategory: 'E',
+          cnhExpiresAt: '18/06/2031',
+          birthDate: '10/05/1990',
+        );
+
+    expect(await enviar(), ResultadoCadastro.contaExistente);
+    expect(pedidos, isNot(contains('POST /api/vehicles')));
+
+    final envio = await d.pedirCodigoVinculo();
+    expect(envio.destino, 'telefone terminado em 6632');
+    expect(envio.codigoDeTeste, '123456');
+
+    await d.entrarNaContaVinculada('123456');
+    expect(d.profile!.phone, '+5564992686632');
+    expect(d.cpfConta, '52998224725');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('ride.accessToken'), 'acesso-da-conta-de-passageiro');
+
+    expect(await enviar(), ResultadoCadastro.enviado);
+    expect(pedidos.where((p) => p == 'POST /api/drivers/onboarding').length, 2);
+    expect(pedidos, contains('POST /api/vehicles'));
+    expect(d.isOnboarded, isTrue);
   });
 }

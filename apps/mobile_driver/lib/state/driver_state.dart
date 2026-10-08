@@ -350,18 +350,66 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       await AppStorage.remove(AppStorage.accessToken);
       throw ApiException('CONTA_ERRADA', 'Esta conta é da Central. Use o aplicativo da Central.');
     }
+    await _usarConta(u, phone);
+  }
+
+  /// CPF da conta (ex.: a de passageiro): ja vem preenchido no cadastro.
+  String? cpfConta;
+
+  /// Guarda a conta que acabou de entrar. Se ela ja e motorista (cadastrado
+  /// antes, ou pela Central), traz o cadastro do servidor na hora: o app
+  /// vai direto para a tela inicial, sem pedir os dados de novo.
+  Future<void> _usarConta(Map<String, dynamic> u, String telefone) async {
     email = u['email'] as String?;
+    cpfConta = u['cpf'] as String?;
     profile = DriverProfile(
       id: u['driverId'] as String? ?? u['id'] as String? ?? '',
       name: u['name'] as String? ?? 'Motorista',
-      phone: u['phone'] as String? ?? phone,
+      phone: u['phone'] as String? ?? telefone,
     ).copyWith(
       approval: _aprovacao(u['driverStatus'] as String?),
       termsAccepted: u['termsAccepted'] as bool? ?? false,
     );
+    if (u['driverId'] != null) await sincronizarCadastro();
     await _persistProfile();
     notifyListeners();
     _vigiarAprovacao();
+  }
+
+  // ------------------------------------------------------------------
+  // Mesma pessoa nos dois apps (Evandro, 08/10/2026): se o e-mail, o CPF
+  // ou a CNH do cadastro sao de uma conta que ja existe (ex.: a de
+  // passageiro), o servidor responde CONTA_EXISTENTE. O app manda um codigo
+  // para ESSA conta e, com ele, entra nela e continua o cadastro.
+  // ------------------------------------------------------------------
+
+  /// Dados que identificam a pessoa no ultimo cadastro enviado.
+  Map<String, String> _dadosDoCadastro = const {};
+
+  Future<({String destino, String? codigoDeTeste})> pedirCodigoVinculo() async {
+    final r = await _client.request('POST', '/auth/vincular-conta/codigo', body: _dadosDoCadastro) as Map<String, dynamic>;
+    return (destino: r['destino'] as String? ?? 'a sua conta', codigoDeTeste: r['debugCode'] as String?);
+  }
+
+  /// Confere o codigo e passa a usar a conta que ja existe.
+  Future<void> entrarNaContaVinculada(String codigo) async {
+    final data = await _client.request('POST', '/auth/vincular-conta/entrar', body: {
+      ..._dadosDoCadastro,
+      'code': codigo.trim(),
+    }) as Map<String, dynamic>;
+    await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
+    final refresh = data['refreshToken'] as String?;
+    if (refresh != null) await AppStorage.write(AppStorage.refreshToken, refresh);
+    final u = data['user'] as Map<String, dynamic>;
+    // A conta existente pode ainda nao ter aceitado os termos do motorista;
+    // quem esta aqui ja aceitou nesta mesma tela de cadastro.
+    if (u['termsAccepted'] != true) {
+      try {
+        await _client.request('POST', '/auth/accept-terms', body: {'version': kTermsVersion});
+      } catch (_) {}
+      u['termsAccepted'] = true;
+    }
+    await _usarConta(u, u['phone'] as String? ?? '');
   }
 
   static DriverApproval _aprovacao(String? s) {
@@ -521,7 +569,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  Future<void> completeOnboarding({
+  /// Resultado do envio: [ResultadoCadastro.contaExistente] = a tela oferece
+  /// usar a conta que ja existe (com o codigo).
+  Future<ResultadoCadastro> completeOnboarding({
     required String nome,
     required String emailConta,
     String? telefone,
@@ -532,7 +582,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     String? birthDate,
   }) async {
     final current = profile;
-    if (current == null) return;
+    if (current == null) return ResultadoCadastro.erro;
 
     if (AppConfig.hasApi) {
       final problema = _validarCadastro(
@@ -543,11 +593,17 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       );
       if (problema != null) {
         _avisar(problema);
-        return;
+        return ResultadoCadastro.erro;
       }
     }
 
     if (AppConfig.hasApi) {
+      _dadosDoCadastro = {
+        if (emailConta.trim().isNotEmpty) 'email': emailConta.trim().toLowerCase(),
+        'cpf': cpf.replaceAll(RegExp(r'\D'), ''),
+        'cnhNumber': cnhNumber.replaceAll(RegExp(r'\D'), ''),
+        if (telefone != null) 'phone': telefone,
+      };
       try {
         await _client.request('POST', '/drivers/onboarding', body: {
           'name': nome,
@@ -564,9 +620,16 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         // QUALQUER recusa 409 era tratada assim — "e-mail ja esta em outra
         // conta", "CPF ja esta em outra conta" — e o motivo sumia: a tela
         // mostrava "Cadastro de motorista nao encontrado" (Evandro, 08/10).
+        if (e.code == 'CONTA_EXISTENTE') {
+          // A mesma pessoa ja tem conta (ex.: de passageiro): a tela oferece
+          // usar essa conta com o codigo. Nao e erro.
+          error = e.message;
+          notifyListeners();
+          return ResultadoCadastro.contaExistente;
+        }
         if (e.code != 'DRIVER_ALREADY_EXISTS') {
           _avisar(e.message);
-          return;
+          return ResultadoCadastro.erro;
         }
       }
       // O veiculo so pode ir DEPOIS que o motorista existe no servidor.
@@ -585,7 +648,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           // O servidor ja aceita de novo o mesmo carro do mesmo motorista;
           // qualquer recusa aqui e de verdade (ex.: placa de outro motorista).
           _avisar(e.message);
-          return;
+          return ResultadoCadastro.erro;
         }
       }
     }
@@ -601,6 +664,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     );
     await _persistProfile();
     notifyListeners();
+    if (AppConfig.hasApi) unawaited(sincronizarCadastro());
+    return ResultadoCadastro.enviado;
   }
 
   Future<void> registerVehicle(VehicleInfo info) async {
@@ -1338,3 +1403,6 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     super.dispose();
   }
 }
+
+/// Resultado do envio do cadastro do motorista.
+enum ResultadoCadastro { enviado, contaExistente, erro }

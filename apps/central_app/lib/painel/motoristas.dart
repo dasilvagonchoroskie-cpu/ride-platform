@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
+import 'cadastrar_motorista.dart';
 import 'carteiras.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
@@ -52,6 +53,23 @@ class _MotoristasState extends State<Motoristas> {
                   ),
                 ),
             ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.sm),
+          child: FilledButton.icon(
+            onPressed: () async {
+              final criou = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(builder: (_) => const CadastrarMotoristaTela()),
+              );
+              if (criou == true) {
+                // Aprovado na hora: mostra na aba Ativos.
+                _situacao = 'APPROVED';
+                _recarregar();
+              }
+            },
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('Cadastrar motorista'),
           ),
         ),
         Expanded(
