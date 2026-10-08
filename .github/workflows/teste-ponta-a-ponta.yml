@@ -8,6 +8,12 @@ on:
 permissions:
   contents: write
 
+# Os dois entram como a Central pelo codigo do e-mail: rodando juntos, um
+# invalidava o codigo do outro (08/10/2026). Ficam em fila.
+concurrency:
+  group: servidor-real
+  cancel-in-progress: false
+
 jobs:
   testar:
     runs-on: ubuntu-latest
