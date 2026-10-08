@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: 6ccefdd (Servidor: a mesma pessoa usa os mesmos dados nos dois apps (cadastro de motorist)
 No ar agora: e68e888
 OK: servidor em dia.
-Teste de ponta a ponta - 08/10/2026 12:59 UTC
+Teste de ponta a ponta - 08/10/2026 13:05 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -24,28 +24,19 @@ OK     Passageiro: preco da corrida calculado
 OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
-FALHA  Motorista: reconhecer a conta de passageiro
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:28.064Z","path":"/api/drivers/onboarding"}
-FALHA  Motorista: codigo para a conta existente
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:28.239Z","path":"/api/auth/vincular-conta/codigo"}
+OK     Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (telefone terminado em 0175)
+OK     Motorista: codigo enviado para a conta de passageiro
 OK     Seguranca: codigo errado nao entra na conta de outra pessoa
 OK     Motorista: entrou na MESMA conta do passageiro com o codigo
-FALHA  Motorista: cadastro na conta existente
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:28.859Z","path":"/api/drivers/onboarding"}
-FALHA  Conta dupla: app do passageiro
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:29.106Z","path":"/api/rides/current"}
-FALHA  Central: aprovar sem fotos
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot PATCH /api/admin/drivers//review"},"timestamp":"2026-10-08T13:00:29.263Z","path":"/api/admin/drivers//review"}
-OK     Central: cadastrou motorista novo ja aprovado (placa TST4426)
+OK     Motorista: cadastro feito na conta de passageiro, com os mesmos dados
+OK     A mesma conta continua pedindo corrida no app do passageiro
+OK     Central: aprovou sem fotos (conferencia presencial)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST0132)
 OK     Central: nao cadastra o mesmo motorista duas vezes
-FALHA  Motorista da Central: entrar
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:35.440Z","path":"/api/drivers/me"}
-FALHA  Motorista da Central: carro
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:35.626Z","path":"/api/vehicles/me"}
-FALHA  Motorista da Central: dados no login
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:00:35.768Z","path":"/api/auth/me"}
-FALHA  Central: motorista na conta de passageiro
-       resposta: {"success":true,"data":{"id":"9a656294-9fc6-4706-8259-72ec4e6abb1c","userId":"f056cd79-5a20-4642-9436-264d6b538a65","status":"APPROVED","cpf":"06686264962","birthDate":"1990-01-02T00:00:00.000Z","cnhNumber":"57935520652","cnhCategory":"AB","cnhExpiresAt":"2030-01-01T00:00:00.000Z","pixKey":null,"financeModel":"PADRAO","customCommissionPercent":null,"fixedFeeCents":null,"monthlyFeeCents":null,"mont
+OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
+OK     Motorista da Central: carro ja cadastrado
+OK     Motorista da Central: nome e aprovacao no login
+OK     Central: motorista com o telefone de um passageiro usa a mesma conta
 OK     Motorista: cadastro (nome, CPF e CNH) aceito
 OK     Central ve o nome do motorista (nao mais "Passageiro 1234")
 OK     Motorista: foto da CNH enviada (fica pendente para a Central)
@@ -63,18 +54,16 @@ OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1822 km)
 OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
-FALHA  Login: renovar o acesso
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Dados invalidos na requisicao.","details":[{"path":"refreshToken","message":"Refresh token invalido.","code":"too_small"}]},"timestamp":"2026-10-08T13:01:07.742Z","path":"/api/auth/refresh"}
-FALHA  Login: acesso renovado
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T13:01:07.916Z","path":"/api/auth/me"}
+OK     Login: acesso vencido e renovado sozinho (refresh)
+OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE12595596 criado (R$ 3,00)
+OK     Central: cupom TESTE13060144 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 2989 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 9230 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -89,8 +78,8 @@ OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (10h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 4 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 57s
+OK     Central: resumo de hoje com 5 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 60s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -129,7 +118,7 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 4, online 1, faturamento 4000)
+OK     Central: visao geral (ativas 0, concluidas hoje 5, online 1, faturamento 5000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -143,7 +132,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 2800, PIX/app 0, comissao 320)
+OK     Central: relatorio de receitas (dinheiro 3500, PIX/app 0, comissao 400)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -155,4 +144,4 @@ OK     Central: busca de passageiro pelo telefone
 OK     Central: passageiro bloqueado com motivo
 OK     Central: desbloqueado, historico com 2 registros
 
-Resultado: 11 falha(s).
+Resultado: 0 falha(s).
