@@ -213,7 +213,13 @@ jobs:
             BUILD_TYPE=release
           fi
 
-          flutter build apk --$BUILD_TYPE --build-number=${{ github.run_number }} \
+          # Um APK por tipo de processador (08/10/2026): o APK unico, com os
+          # tres tipos dentro, passava de 55 MB e nao cabia mais como anexo no
+          # chat (limite de 30 MB). O de 64 bits (celulares de 2017 para ca)
+          # fica com uns 21 MB; o de 32 bits vai junto para celular antigo.
+          # Obs.: o Flutter soma 2000 (64 bits) ou 1000 (32 bits) ao numero da
+          # versao, entao ele instala por cima do APK unico antigo.
+          flutter build apk --$BUILD_TYPE --split-per-abi --build-number=${{ github.run_number }} \
             2>&1 | tee "$RUNNER_TEMP/build-${{ matrix.app }}.txt"
 
       # O token normal nao consegue ler o log de uma tarefa pela API.
@@ -244,7 +250,8 @@ jobs:
         run: |
           set -euo pipefail
           SRC="$GITHUB_WORKSPACE/apps/${{ matrix.app }}/build/app/outputs/flutter-apk"
-          APK_PATH="$(find "$SRC" -name '*.apk' -print -quit)"
+          APK_PATH="$(find "$SRC" -name '*arm64-v8a*.apk' -print -quit)"
+          APK_32="$(find "$SRC" -name '*armeabi-v7a*.apk' -print -quit)"
           if [ -z "$APK_PATH" ]; then
             echo "::error::Nenhum APK em $SRC"
             find "$GITHUB_WORKSPACE/apps/${{ matrix.app }}/build" -name '*.apk' | head -n 20 || true
@@ -255,6 +262,12 @@ jobs:
           mkdir -p "$OUT_DIR"
           FINAL="$OUT_DIR/${{ matrix.apk_name }}-${{ github.run_number }}.apk"
           cp "$APK_PATH" "$FINAL"
+          FINAL_32=""
+          if [ -n "$APK_32" ]; then
+            FINAL_32="$OUT_DIR/${{ matrix.apk_name }}-${{ github.run_number }}-32bits.apk"
+            cp "$APK_32" "$FINAL_32"
+          fi
+          echo "path32=$FINAL_32" >> "$GITHUB_OUTPUT"
 
           echo "path=$FINAL" >> "$GITHUB_OUTPUT"
           echo "size=$(du -h "$FINAL" | cut -f1)" >> "$GITHUB_OUTPUT"
@@ -264,7 +277,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ steps.apk.outputs.path }}
+          path: |
+            ${{ steps.apk.outputs.path }}
+            ${{ steps.apk.outputs.path32 }}
           if-no-files-found: error
           retention-days: 30
 
@@ -283,6 +298,12 @@ jobs:
               --title "${{ matrix.label }} - APK mais recente" \
               --notes "Gerado automaticamente pelo GitHub Actions. Sempre o build mais recente da branch main." \
               --latest=false
+          fi
+          # Primeiro o de 32 bits, depois o principal (64 bits): assim o
+          # ultimo enviado e sempre o principal.
+          if [ -n "${{ steps.apk.outputs.path32 }}" ]; then
+            gh release upload "$TAG" "${{ steps.apk.outputs.path32 }}" \
+              --repo "${{ github.repository }}" --clobber
           fi
           gh release upload "$TAG" "${{ steps.apk.outputs.path }}" \
             --repo "${{ github.repository }}" --clobber
