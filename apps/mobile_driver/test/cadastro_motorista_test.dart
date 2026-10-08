@@ -55,6 +55,7 @@ Future<DriverState> _enviar(MockClient servidor) async {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() {
     SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste', 'ride.refreshToken': 'refresh-de-teste'});
     pedidos.clear();

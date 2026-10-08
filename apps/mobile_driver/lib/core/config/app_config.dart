@@ -8,7 +8,7 @@ class AppConfig {
   static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://fortaleza-mov-backend.onrender.com');
   static const bool forceDemo = bool.fromEnvironment('FORCE_DEMO', defaultValue: false);
 
-  /// Versao montada pela esteira: 1.0.<numero da montagem> (a mesma do
+  /// Versao montada pela esteira: 1.0.N, onde N e o numero da montagem (o mesmo do
   /// nome do APK). Sobe sozinha a cada montagem — ninguem precisa lembrar.
   static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
   static const Duration apiTimeout = Duration(seconds: 60);
