@@ -71,6 +71,14 @@ const redefinirSchema = z
   })
   .refine((d) => Boolean(d.phone) !== Boolean(d.email), { message: 'Informe o telefone ou o e-mail.', path: ['phone'] });
 
+/** Os mesmos dados que o app mandou no cadastro de motorista. */
+const vinculoSchema = z.object({
+  email: z.string().trim().toLowerCase().email().optional(),
+  cpf: z.string().regex(/^\d{11}$/).optional(),
+  cnhNumber: z.string().regex(/^\d{9,11}$/).optional(),
+  phone: z.string().regex(/^\+55\d{10,11}$/).optional(),
+});
+
 @ApiTags('Autenticacao')
 @Controller('auth')
 export class AuthController {
@@ -203,6 +211,41 @@ export class AuthController {
   @ApiOperation({ summary: 'Renova o par de tokens (rotacao de refresh token)' })
   refresh(@Body(new ZodValidationPipe(refreshTokenSchema)) body: { refreshToken: string }): Promise<AuthResult> {
     return this.auth.refresh(body.refreshToken);
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('vincular-conta/codigo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Manda o codigo para a conta que ja tem os mesmos dados (usar a mesma conta no app do motorista)' })
+  pedirCodigoVinculo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(vinculoSchema)) body: { email?: string; cpf?: string; cnhNumber?: string; phone?: string },
+    @Req() req: Request,
+    @Headers('x-chave-teste') chaveTeste?: string,
+  ) {
+    return this.auth.pedirCodigoVinculo(user.id, body, getClientIp(req), chaveTeste);
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('vincular-conta/entrar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confere o codigo e entra na conta que ja existe' })
+  entrarNaContaVinculada(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(vinculoSchema.extend({ code: z.string().regex(/^\d{4,8}$/, 'Codigo invalido.') })))
+    body: { email?: string; cpf?: string; cnhNumber?: string; phone?: string; code: string },
+    @Req() req: Request,
+    @Headers('x-chave-teste') chaveTeste?: string,
+  ): Promise<AuthResult> {
+    return this.auth.entrarNaContaVinculada(
+      user.id,
+      body,
+      body.code,
+      { deviceId: 'vinculo-de-conta', platform: 'ANDROID' as never, ip: getClientIp(req), userAgent: getUserAgent(req) },
+      chaveTeste,
+    );
   }
 
   @ApiBearerAuth()

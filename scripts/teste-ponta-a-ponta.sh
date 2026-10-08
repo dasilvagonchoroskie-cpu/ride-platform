@@ -94,11 +94,53 @@ for k in (10,11):
     s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
 print(''.join(map(str,n)))")
 CNH=$(python3 -c "import random;print(''.join(str(random.randint(0,9)) for _ in range(11)))")
-# Cadastro com o e-mail de OUTRA conta (caso do Evandro em 08/10): tem que
-# recusar com o motivo e a dica, e nao pode criar o motorista pela metade.
-X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"email\":\"$EMAILP\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
-[ "$(echo "$X" | jq -r '.error.code')" = "EMAIL_ALREADY_USED" ] && echo "$X" | jq -r '.error.message' | grep -q "MESMO telefone" && [ "$(get /drivers/me "$TM" | jq -r '.success')" = "false" ] \
-  && ok "Motorista: e-mail de outra conta recusado com o motivo e a dica (sem cadastro pela metade)" || falha "Motorista: e-mail de outra conta" "$X"
+# ---- Mesma pessoa nos dois apps (Evandro, 08/10): quem ja e passageiro abre
+# o app do motorista com OUTRO telefone e usa o mesmo e-mail e CPF. Nao pode
+# impedir: confirma com o codigo enviado a conta de passageiro e usa ela.
+gerar_cpf() { python3 -c "
+import random
+n=[random.randint(0,9) for _ in range(9)]
+for k in (10,11):
+    s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
+print(''.join(map(str,n)))"; }
+gerar_cnh() { python3 -c "import random;print(''.join(str(random.randint(0,9)) for _ in range(11)))"; }
+FONE_V="+55649${SUF}75"; CPFV=$(gerar_cpf); EMAILV="dupla.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
+TPV=$(entrar "$FONE_V" PASSENGER); post /auth/accept-terms '{"version":"1.0.0"}' "$TPV" >/dev/null
+post /auth/cadastro "{\"name\":\"Pessoa Dois Apps\",\"email\":\"$EMAILV\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFV\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TPV" >/dev/null
+IDV=$(get /auth/me "$TPV" | jq -r '.data.id')
+TOUTRO=$(entrar "+55649${SUF}76" DRIVER); post /auth/accept-terms '{"version":"1.0.0"}' "$TOUTRO" >/dev/null
+CNHV=$(gerar_cnh)
+DADOSV="\"name\":\"Pessoa Dois Apps\",\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"birthDate\":\"1988-03-10\",\"cnhNumber\":\"$CNHV\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\""
+X=$(post /drivers/onboarding "{$DADOSV}" "$TOUTRO")
+[ "$(echo "$X" | jq -r '.error.code')" = "CONTA_EXISTENTE" ] && [ "$(echo "$X" | jq -r '.error.details.destino')" = "telefone terminado em ${FONE_V: -4}" ] && [ "$(get /drivers/me "$TOUTRO" | jq -r '.success')" = "false" ] \
+  && ok "Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (telefone terminado em ${FONE_V: -4})" || falha "Motorista: reconhecer a conta de passageiro" "$X"
+X=$(post /auth/vincular-conta/codigo "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\"}" "$TOUTRO"); CV=$(echo "$X" | jq -r '.data.debugCode // empty')
+[ -n "$CV" ] && [ "$(echo "$X" | jq -r '.data.destino')" = "telefone terminado em ${FONE_V: -4}" ] && ok "Motorista: codigo enviado para a conta de passageiro" || falha "Motorista: codigo para a conta existente" "$X"
+X=$(post /auth/vincular-conta/entrar "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"code\":\"000000\"}" "$TOUTRO")
+sucesso "$X" && falha "Codigo errado deveria ser recusado" "$X" || ok "Seguranca: codigo errado nao entra na conta de outra pessoa"
+X=$(post /auth/vincular-conta/entrar "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"code\":\"$CV\"}" "$TOUTRO"); TV=$(echo "$X" | jq -r '.data.accessToken // empty')
+[ "$(echo "$X" | jq -r '.data.user.id')" = "$IDV" ] && ok "Motorista: entrou na MESMA conta do passageiro com o codigo" || falha "Motorista: entrar na conta existente" "$X"
+X=$(post /drivers/onboarding "{$DADOSV}" "$TV"); DIDV=$(echo "$X" | jq -r '.data.id // empty')
+sucesso "$X" && ok "Motorista: cadastro feito na conta de passageiro, com os mesmos dados" || falha "Motorista: cadastro na conta existente" "$X"
+X=$(get /rides/current "$TV"); sucesso "$X" && ok "A mesma conta continua pedindo corrida no app do passageiro" || falha "Conta dupla: app do passageiro" "$X"
+X=$(patch "/admin/drivers/$DIDV/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferido pessoalmente"}' "$TA")
+[ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "Central: aprovou sem fotos (conferencia presencial)" || falha "Central: aprovar sem fotos" "$X"
+
+# ---- Central cadastra o motorista direto (Evandro, 08/10): ja aprovado, com
+# carro; o motorista so entra no app com o telefone e o codigo.
+FONE_C="+55649${SUF}78"; CPFC=$(gerar_cpf); CNHC=$(gerar_cnh); PLACAC="TST$(printf '%04d' $((RANDOM%10000)))"
+CORPOC="{\"name\":\"Motorista Pela Central\",\"phone\":\"(64) 9${SUF}78\",\"cpf\":\"$CPFC\",\"birthDate\":\"1985-07-20\",\"cnhNumber\":\"$CNHC\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2032-05-01\",\"vehicle\":{\"plate\":\"$PLACAC\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"},\"aprovar\":true}"
+X=$(post /admin/drivers "$CORPOC" "$TA"); DIDC=$(echo "$X" | jq -r '.data.id // empty')
+[ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && [ "$(echo "$X" | jq -r '.data.contaExistente')" = "false" ] && ok "Central: cadastrou motorista novo ja aprovado (placa $PLACAC)" || falha "Central: cadastrar motorista" "$X"
+X=$(post /admin/drivers "$CORPOC" "$TA"); sucesso "$X" && falha "Mesmo telefone duas vezes deveria ser recusado" "$X" || ok "Central: nao cadastra o mesmo motorista duas vezes"
+TC=$(entrar "$FONE_C" DRIVER)
+X=$(get /drivers/me "$TC"); [ "$(echo "$X" | jq -r '.data.id')" = "$DIDC" ] && [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "Motorista da Central: entra so com telefone e codigo e ja esta aprovado" || falha "Motorista da Central: entrar" "$X"
+X=$(get /vehicles/me "$TC"); [ "$(echo "$X" | jq -r '(.data | if type=="array" then . else (.items // []) end)[0].plate')" = "$PLACAC" ] && ok "Motorista da Central: carro ja cadastrado" || falha "Motorista da Central: carro" "$X"
+X=$(get /auth/me "$TC"); [ "$(echo "$X" | jq -r '.data.driverStatus')" = "APPROVED" ] && [ "$(echo "$X" | jq -r '.data.name')" = "Motorista Pela Central" ] && ok "Motorista da Central: nome e aprovacao no login" || falha "Motorista da Central: dados no login" "$X"
+FONE_W="+55649${SUF}73"; TPW=$(entrar "$FONE_W" PASSENGER)
+X=$(post /admin/drivers "{\"name\":\"Passageiro Vira Motorista\",\"phone\":\"$FONE_W\",\"cpf\":\"$(gerar_cpf)\",\"birthDate\":\"1990-01-02\",\"cnhNumber\":\"$(gerar_cnh)\",\"cnhCategory\":\"AB\",\"cnhExpiresAt\":\"2030-01-01\",\"vehicle\":{\"plate\":\"TSU$(printf '%04d' $((RANDOM%10000)))\",\"brand\":\"VW\",\"model\":\"Gol\",\"year\":2015,\"color\":\"Prata\"}}" "$TA")
+[ "$(echo "$X" | jq -r '.data.contaExistente')" = "true" ] && [ "$(get /auth/me "$TPW" | jq -r '.data.id')" = "$(echo "$X" | jq -r '.data.userId')" ] && ok "Central: motorista com o telefone de um passageiro usa a mesma conta" || falha "Central: motorista na conta de passageiro" "$X"
+
 X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
 DID=$(echo "$X" | jq -r '.data.id // .data.driver.id // empty')
 sucesso "$X" && ok "Motorista: cadastro (nome, CPF e CNH) aceito" || falha "Motorista: cadastro" "$X"

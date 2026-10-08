@@ -1,10 +1,42 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { listDriversSchema, paginationSchema, reviewDriverSchema, UserRole } from '@ride/shared';
+import {
+  createVehicleSchema,
+  driverOnboardingSchema,
+  emailSchema,
+  listDriversSchema,
+  nameSchema,
+  normalizePhone,
+  paginationSchema,
+  reviewDriverSchema,
+  UserRole,
+} from '@ride/shared';
+import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { DriversService } from './drivers.service';
+
+/**
+ * Motorista cadastrado direto pela Central (pedido do Evandro, 08/10/2026).
+ * O motorista depois so entra no app do motorista com este telefone e o
+ * codigo — o cadastro ja esta pronto.
+ */
+const criarMotoristaSchema = driverOnboardingSchema
+  .omit({ name: true, email: true, phone: true, pixKey: true })
+  .extend({
+    name: nameSchema,
+    phone: z
+      .string()
+      .transform((t) => normalizePhone(t))
+      .refine((t) => /^\+55\d{10,11}$/.test(t), 'Telefone invalido: use DDD + numero.'),
+    email: emailSchema.optional(),
+    vehicle: createVehicleSchema.omit({ isActive: true }),
+    /** Ja aprovado (conferido pessoalmente na Central). */
+    aprovar: z.boolean().default(true),
+  });
+
+export type CriarMotoristaInput = z.infer<typeof criarMotoristaSchema>;
 
 @ApiTags('Admin - Motoristas')
 @ApiBearerAuth()
@@ -12,6 +44,12 @@ import { DriversService } from './drivers.service';
 @Controller('admin/drivers')
 export class AdminDriversController {
   constructor(private readonly drivers: DriversService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Cadastra o motorista pela Central (dados, CNH e veiculo); ja aprovado se pedido' })
+  criar(@CurrentUser('id') adminId: string, @Body(new ZodValidationPipe(criarMotoristaSchema)) body: CriarMotoristaInput) {
+    return this.drivers.adminCreate(adminId, body);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Lista motoristas com filtros e progresso de documentos' })

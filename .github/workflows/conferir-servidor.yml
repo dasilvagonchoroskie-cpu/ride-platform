@@ -1,0 +1,50 @@
+name: Conferir o servidor
+
+# Monta o servidor do mesmo jeito que o Render (shared, prisma, nest build)
+# a cada envio que mexe nele. Erro de digitacao/tipo aparece aqui em ~2 min,
+# antes de o Render recusar a publicacao. Relatorio em logs/servidor-build.txt.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/shared/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  montar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Montar como o Render
+        id: montar
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          corepack enable
+          {
+            pnpm install --frozen-lockfile \
+            && pnpm --filter @ride/shared build \
+            && pnpm --filter @ride/backend exec prisma generate \
+            && pnpm --filter @ride/backend build \
+            && echo "RESULTADO: servidor montado sem erro."
+          } 2>&1 | tee /tmp/servidor-build.txt
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs
+          { echo "Conferir o servidor - $(date -u '+%d/%m/%Y %H:%M UTC') - commit ${GITHUB_SHA::7}"; grep -E "error|Error|RESULTADO|ERR_" /tmp/servidor-build.txt | head -80; } > logs/servidor-build.txt
+          git add logs/servidor-build.txt
+          git commit -m "relatorio: montagem do servidor (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
+      - name: Falhar se nao montou
+        if: steps.montar.outcome != 'success'
+        run: exit 1

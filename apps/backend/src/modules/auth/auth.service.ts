@@ -6,6 +6,7 @@ import { comparePassword, hashPassword } from '../../common/utils/crypto.util';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { TokenService, DeviceContext, IssuedTokens } from './token.service';
 import { OtpService } from './otp.service';
+import { acharContaComOsMesmosDados, DadosDaPessoa } from './conta-existente';
 import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
 
 /** Genero informado no cadastro do passageiro. */
@@ -82,6 +83,37 @@ export class AuthService {
 
   async requestOtp(params: { phone?: string; email?: string; purpose: OtpPurpose }, ip?: string, chaveTeste?: string) {
     return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip, chaveTeste);
+  }
+
+  // ------------------------------------------------------------------
+  // Usar a conta que a pessoa ja tem (ex.: a de passageiro) no app do
+  // motorista: o cadastro recusa com CONTA_EXISTENTE, o app pede um codigo
+  // enviado a ESSA conta e, com ele, entra nela e continua o cadastro.
+  // ------------------------------------------------------------------
+
+  private async contaParaVincular(userId: string, dados: DadosDaPessoa) {
+    const conta = await acharContaComOsMesmosDados(this.prisma, userId, dados);
+    if (!conta) throw BusinessException.notFound('Nenhuma outra conta com estes dados.');
+    const alvo = conta.phone && !conta.phone.startsWith('pend-') ? { phone: conta.phone } : { email: conta.email ?? undefined };
+    if (!alvo.phone && !alvo.email) throw BusinessException.validation('Essa conta nao tem telefone nem e-mail para receber o codigo.');
+    return { conta, alvo };
+  }
+
+  async pedirCodigoVinculo(userId: string, dados: DadosDaPessoa, ip?: string, chaveTeste?: string) {
+    const { conta, alvo } = await this.contaParaVincular(userId, dados);
+    const r = await this.otp.request({ ...alvo, purpose: 'LOGIN' as OtpPurpose }, ip, chaveTeste);
+    return { ...r, destino: conta.destino };
+  }
+
+  async entrarNaContaVinculada(
+    userId: string,
+    dados: DadosDaPessoa,
+    code: string,
+    device?: DeviceContext,
+    chaveTeste?: string,
+  ): Promise<AuthResult> {
+    const { alvo } = await this.contaParaVincular(userId, dados);
+    return this.verifyOtp({ ...alvo, code, purpose: 'LOGIN' as OtpPurpose, role: UserRole.DRIVER, device, chaveTeste });
   }
 
   /** Canais de entrada que funcionam agora (telefone so com SMS ou em teste). */

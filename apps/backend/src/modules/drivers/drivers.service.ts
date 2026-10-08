@@ -5,7 +5,9 @@ import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIR
 import { PrismaService } from '../../database/prisma.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
+import { acharContaComOsMesmosDados, erroContaExistente } from '../auth/conta-existente';
 import { DriversRepository } from './drivers.repository';
+import type { CriarMotoristaInput } from './admin-drivers.controller';
 import { StorageService } from '../../integrations/storage/storage.service';
 import {
   DriverOnboardingInput,
@@ -35,27 +37,23 @@ export class DriversService {
       throw BusinessException.conflict('Motorista ja cadastrado.', ERROR_CODES.DRIVER_ALREADY_EXISTS);
     }
 
-    const conflict = await this.repo.findByCpfOrCnh({ cpf: input.cpf, cnhNumber: input.cnhNumber });
-    if (conflict) {
-      throw BusinessException.conflict('CPF ou CNH ja cadastrados por outro motorista.', ERROR_CODES.CONFLICT);
-    }
-
     // Nome, e-mail e telefone vem no mesmo envio: a conta nasce so com o
     // telefone (ou so com o e-mail) e "Motorista 1234" no lugar do nome.
     const usuario = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!usuario) throw BusinessException.notFound('Usuario nao encontrado.');
     const semTelefone = !usuario.phone || usuario.phone.startsWith('pend-');
     if (semTelefone && !input.phone) throw BusinessException.validation('Informe o seu telefone com DDD.');
-    if (input.email && input.email !== usuario.email) {
-      const dono = await this.prisma.user.findFirst({ where: { email: input.email, NOT: { id: userId } }, select: { id: true } });
-      if (dono) throw BusinessException.conflict('Este e-mail ja esta em outra conta. Se voce ja usa o app do passageiro, entre no app do motorista com o MESMO telefone: a mesma conta serve para os dois aplicativos.', ERROR_CODES.EMAIL_ALREADY_USED);
-    }
-    if (semTelefone && input.phone) {
-      const dono = await this.prisma.user.findFirst({ where: { phone: input.phone, NOT: { id: userId } }, select: { id: true } });
-      if (dono) throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
-    }
-    const cpfDeOutro = await this.prisma.user.findFirst({ where: { cpf: input.cpf, NOT: { id: userId } }, select: { id: true } });
-    if (cpfDeOutro) throw BusinessException.conflict('Este CPF ja esta em outra conta. Se voce ja usa o app do passageiro, entre no app do motorista com o MESMO telefone: a mesma conta serve para os dois aplicativos.', ERROR_CODES.CPF_ALREADY_USED);
+
+    // E-mail, CPF, CNH ou telefone de OUTRA conta (ex.: a de passageiro da
+    // mesma pessoa): nao recusa mais. O app confirma com o codigo enviado a
+    // essa conta e continua o cadastro nela (Evandro, 08/10/2026).
+    const outra = await acharContaComOsMesmosDados(this.prisma, userId, {
+      email: input.email && input.email !== usuario.email ? input.email : null,
+      cpf: input.cpf,
+      cnhNumber: input.cnhNumber,
+      phone: semTelefone ? input.phone : null,
+    });
+    if (outra) throw erroContaExistente(outra);
 
     const driver = await this.prisma.$transaction(async (tx) => {
       const created = await tx.driver.create({
@@ -268,6 +266,97 @@ export class DriversService {
       select: { id: true },
     });
     return registro !== null;
+  }
+
+  /**
+   * Cadastro feito pela Central: conta (ou a conta que ja existe com este
+   * telefone, ex.: a de passageiro), motorista, carteira e veiculo, ja
+   * aprovado se a Central conferiu pessoalmente. O motorista so entra no
+   * app do motorista com o telefone e o codigo.
+   */
+  async adminCreate(adminId: string, input: CriarMotoristaInput) {
+    const existente = await this.prisma.user.findUnique({
+      where: { phone: input.phone },
+      include: { driver: { select: { id: true } } },
+    });
+    if (existente?.role === UserRole.ADMIN) {
+      throw BusinessException.conflict('Este telefone e da conta da Central.', ERROR_CODES.CONFLICT);
+    }
+    if (existente?.driver) {
+      throw BusinessException.conflict('Este telefone ja e de um motorista cadastrado.', ERROR_CODES.DRIVER_ALREADY_EXISTS);
+    }
+    if (existente?.cpf && existente.cpf !== input.cpf) {
+      throw BusinessException.validation('O CPF informado e diferente do CPF da conta deste telefone.');
+    }
+    const outra = await acharContaComOsMesmosDados(this.prisma, existente?.id ?? '00000000-0000-0000-0000-000000000000', {
+      email: input.email && input.email !== existente?.email ? input.email : null,
+      cpf: input.cpf,
+      cnhNumber: input.cnhNumber,
+    });
+    if (outra) {
+      throw BusinessException.conflict(
+        `O e-mail, o CPF ou a CNH ja estao na conta do ${outra.destino}. Cadastre o motorista com esse telefone.`,
+        ERROR_CODES.CONTA_EXISTENTE,
+      );
+    }
+    const placa = input.vehicle.plate;
+    if (await this.prisma.vehicle.findUnique({ where: { plate: placa } })) {
+      throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
+    }
+
+    const agora = new Date();
+    const nome = input.name.replace(/\s+/g, ' ').trim();
+    const driver = await this.prisma.$transaction(async (tx) => {
+      const user = existente
+        ? await tx.user.update({
+            where: { id: existente.id },
+            data: {
+              role: UserRole.DRIVER,
+              status: UserStatus.ACTIVE,
+              name: nome,
+              cpf: input.cpf,
+              birthDate: input.birthDate,
+              ...(input.email && !existente.email ? { email: input.email } : {}),
+            },
+          })
+        : await tx.user.create({
+            data: {
+              role: UserRole.DRIVER,
+              status: UserStatus.ACTIVE,
+              name: nome,
+              phone: input.phone,
+              email: input.email ?? null,
+              cpf: input.cpf,
+              birthDate: input.birthDate,
+            },
+          });
+      const criado = await tx.driver.create({
+        data: {
+          userId: user.id,
+          status: input.aprovar ? DriverStatus.APPROVED : DriverStatus.PENDING,
+          cpf: input.cpf,
+          birthDate: input.birthDate,
+          cnhNumber: input.cnhNumber,
+          cnhCategory: input.cnhCategory,
+          cnhExpiresAt: input.cnhExpiresAt,
+          ...(input.aprovar ? { approvedAt: agora, approvedBy: adminId } : {}),
+        },
+      });
+      await tx.wallet.create({ data: { driverId: criado.id } });
+      await tx.vehicle.create({
+        data: {
+          driverId: criado.id,
+          plate: placa,
+          brand: input.vehicle.brand,
+          model: input.vehicle.model,
+          year: input.vehicle.year,
+          color: input.vehicle.color,
+        },
+      });
+      return criado;
+    });
+    this.logger.log(`Central ${adminId} cadastrou o motorista ${driver.id} (${existente ? 'conta existente' : 'conta nova'})`);
+    return { ...(await this.withProgress(driver.id)), contaExistente: !!existente };
   }
 
   /** Aprova, reprova ou suspende o motorista. */
