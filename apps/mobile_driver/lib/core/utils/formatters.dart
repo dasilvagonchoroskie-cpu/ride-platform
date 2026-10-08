@@ -21,6 +21,14 @@ String formatPhoneInput(String value) {
 
 String onlyDigits(String value) => value.replaceAll(RegExp(r'\D'), '');
 
+/// Telefone da conta (+5564992686632) para mostrar: (64) 99268-6632.
+String telefoneBonito(String? e164) {
+  if (e164 == null || e164.isEmpty) return '';
+  var d = onlyDigits(e164);
+  if (d.startsWith('55') && d.length > 11) d = d.substring(2);
+  return formatPhoneInput(d);
+}
+
 String formatDateTime(String iso) {
   try {
     return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso));

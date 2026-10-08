@@ -343,7 +343,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// E-mail da conta (preenche o cadastro).
   String? email;
 
-  Future<void> verifyOtp(String phone, String code, {String? emailLogin}) async {
+  /// Entra com o codigo. Devolve true quando o servidor acabou de CRIAR a
+  /// conta (numero que nunca tinha entrado): a tela pergunta se o numero
+  /// esta certo — um digito errado abria um cadastro vazio (08/10/2026).
+  Future<bool> verifyOtp(String phone, String code, {String? emailLogin}) async {
     final data = await _client.request('POST', '/auth/otp/verify', body: {
       if (emailLogin != null) 'email': emailLogin.trim().toLowerCase() else 'phone': phone,
       'code': code,
@@ -362,6 +365,20 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       throw ApiException('CONTA_ERRADA', 'Esta conta é da Central. Use o aplicativo da Central.');
     }
     await _usarConta(u, phone);
+    return data['isNewUser'] == true && u['driverId'] == null;
+  }
+
+  /// "Numero errado" logo depois de entrar numa conta nova: o servidor apaga
+  /// essa conta vazia e o aplicativo volta para a tela de entrar.
+  Future<void> desfazerContaNova() async {
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/auth/desfazer-conta-nova');
+      } catch (_) {
+        // Conta ja usada ou sem rede: so sai dela.
+      }
+    }
+    await logout();
   }
 
   /// CPF da conta (ex.: a de passageiro): ja vem preenchido no cadastro.
@@ -1449,6 +1466,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _heartbeat?.cancel();
     _offerTimer?.cancel();
     _vigiaCorrida?.cancel();
+    _statusTimer?.cancel();
+    _sosTimer?.cancel();
     super.dispose();
   }
 }

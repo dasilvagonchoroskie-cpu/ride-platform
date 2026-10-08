@@ -6,6 +6,7 @@ import '../state/driver_state.dart';
 import '../widgets/ui.dart';
 import '../core/config/app_config.dart';
 import '../core/api/api_client.dart';
+import '../core/utils/formatters.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key, required this.phone, this.debugCode, this.email});
@@ -51,9 +52,10 @@ class _OtpScreenState extends State<OtpScreen> {
     });
 
     final driver = context.read<DriverState>();
+    var contaNova = false;
     if (AppConfig.hasApi) {
       try {
-        await driver.verifyOtp(widget.phone, _controller.text, emailLogin: widget.email);
+        contaNova = await driver.verifyOtp(widget.phone, _controller.text, emailLogin: widget.email);
       } on ApiException catch (e) {
         if (mounted) {
           setState(() {
@@ -70,8 +72,37 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (!mounted) return;
     setState(() => _loading = false);
+    // Numero que nunca tinha entrado: confere se foi digitado certo antes de
+    // abrir um cadastro vazio (Evandro digitou 6631 em vez de 6632).
+    if (contaNova && widget.email == null && !await _numeroCerto()) {
+      await driver.desfazerContaNova();
+      if (mounted) Navigator.of(context).pop(); // volta para corrigir o numero
+      return;
+    }
+    if (!mounted) return;
     // Entrou: as telas de entrada saem e o aplicativo segue o cadastro.
     Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
+  /// true = o numero esta certo e a pessoa quer criar a conta.
+  Future<bool> _numeroCerto() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Conta nova'),
+        content: Text(
+          'O número ${telefoneBonito(widget.phone)} ainda não tinha conta no Fortaleza Mov.\n\n'
+          'Se você já é motorista ou usa o app do passageiro, entre com o MESMO número de lá: '
+          'a conta é a mesma para os dois aplicativos e o cadastro aprovado abre direto.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Número errado')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Está certo, cadastrar')),
+        ],
+      ),
+    );
+    return ok ?? false;
   }
 
   @override
@@ -80,7 +111,7 @@ class _OtpScreenState extends State<OtpScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Verificação')),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(Spacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,10 +123,22 @@ class _OtpScreenState extends State<OtpScreen> {
                     ? 'Enviamos um código para ${widget.email}'
                     : context.watch<DriverState>().codigoEnviadoPara != null
                         ? 'Enviamos o código para o ${context.watch<DriverState>().codigoEnviadoPara} '
-                            '(o e-mail da conta do telefone ${widget.phone})'
-                        : 'Código para o telefone ${widget.phone}',
+                            '(o e-mail da conta do telefone ${telefoneBonito(widget.phone)})'
+                        : 'Código para o telefone ${telefoneBonito(widget.phone)}',
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
+              if (widget.email == null) ...[
+                const SizedBox(height: Spacing.md),
+                // O numero bem grande: um digito errado aparece antes de entrar.
+                Text(telefoneBonito(widget.phone), style: AppText.title),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Número errado? Corrigir'),
+                  ),
+                ),
+              ],
               if (widget.debugCode != null) ...[
                 const SizedBox(height: Spacing.lg),
                 Container(

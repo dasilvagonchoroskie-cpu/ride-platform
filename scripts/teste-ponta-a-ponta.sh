@@ -144,6 +144,12 @@ X=$(patch "/admin/drivers/$DIDV/review" '{"status":"APPROVED","presentialCheck":
 
 # ---- Central cadastra o motorista direto (Evandro, 08/10): ja aprovado, com
 # carro; o motorista so entra no app com o telefone e o codigo.
+# Numero digitado errado (Evandro: 6631 em vez de 6632): a conta nova e vazia
+# pode ser desfeita logo depois de entrar; conta com cadastro nao.
+FONE_X="+55649${SUF}70"; TX=$(entrar "$FONE_X" DRIVER)
+X=$(post /auth/desfazer-conta-nova '{}' "$TX"); [ "$(echo "$X" | jq -r '.data.desfeita')" = "true" ] && ok "Numero errado: conta nova vazia desfeita" || falha "Numero errado: desfazer conta nova" "$X"
+X=$(get /auth/me "$TX"); sucesso "$X" && falha "Conta desfeita ainda existe" "$X" || ok "Numero errado: a conta desfeita sumiu"
+X=$(post /auth/desfazer-conta-nova '{}' "$TV"); sucesso "$X" && falha "Conta com cadastro de motorista nao pode ser desfeita" "$X" || ok "Seguranca: conta com cadastro nao e desfeita"
 FONE_C="+55649${SUF}78"; CPFC=$(gerar_cpf); CNHC=$(gerar_cnh); PLACAC="TST$(printf '%04d' $((RANDOM%10000)))"
 CORPOC="{\"name\":\"Motorista Pela Central\",\"phone\":\"(64) 9${SUF}78\",\"cpf\":\"$CPFC\",\"birthDate\":\"1985-07-20\",\"cnhNumber\":\"$CNHC\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2032-05-01\",\"vehicle\":{\"plate\":\"$PLACAC\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"},\"aprovar\":true}"
 X=$(post /admin/drivers "$CORPOC" "$TA"); DIDC=$(echo "$X" | jq -r '.data.id // empty')

@@ -315,10 +315,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// Com qual telefone a pessoa entrou: um digito errado abria um cadastro
+  /// vazio e ela achava que o aplicativo tinha perdido o cadastro aprovado.
+  Widget _contaAtual() {
+    final telefone = telefoneBonito(context.watch<DriverState>().profile?.phone);
+    if (telefone.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: Spacing.lg),
+      padding: const EdgeInsets.all(Spacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(Radii.sm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.phone_android, size: 20, color: AppColors.textMuted),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Text(
+              'Você entrou com $telefone, que ainda não tem cadastro de motorista. '
+              'Já é motorista ou usa o app do passageiro com outro número? Toque em Sair e entre com ele.',
+              style: AppText.caption.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _personalStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _contaAtual(),
         Text('Etapa 1 de 3', style: AppText.label.copyWith(color: AppColors.primary)),
         const SizedBox(height: Spacing.xs),
         Text('Seus dados', style: AppText.title),

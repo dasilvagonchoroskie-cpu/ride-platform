@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ERROR_CODES, OtpPurpose, UserRole, UserStatus } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { BusinessException } from '../../common/errors/business.exception';
@@ -75,6 +75,8 @@ export interface AuthResult extends IssuedTokens {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
@@ -340,6 +342,22 @@ export class AuthService {
     if (fcmToken) {
       await this.tokens.unregisterDevice(userId, fcmToken);
     }
+  }
+
+  /** Ver o controlador: so conta nova, vazia, criada ha menos de 30 min. */
+  async desfazerContaNova(userId: string): Promise<void> {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { driver: { select: { id: true } }, _count: { select: { ridesAsPassenger: true, payments: true, ratingsGiven: true } } },
+    });
+    if (!u) return;
+    const minutos = (Date.now() - u.createdAt.getTime()) / 60_000;
+    const usada = u._count.ridesAsPassenger + u._count.payments + u._count.ratingsGiven > 0;
+    if (u.role === UserRole.ADMIN || u.driver || usada || minutos > 30) {
+      throw BusinessException.validation('Esta conta ja tem uso e nao pode ser desfeita. Toque em Sair para trocar de numero.');
+    }
+    await this.prisma.user.delete({ where: { id: userId } });
+    this.logger.log(`Conta nova desfeita (numero digitado errado): ${userId}`);
   }
 
   async me(userIdOrToken: string): Promise<AuthResult['user']> {

@@ -259,6 +259,21 @@ export class AuthController {
     await this.auth.logout(user.id, body.refreshToken, body.fcmToken, body.allDevices);
   }
 
+  /**
+   * "Numero errado" logo depois de entrar: apaga a conta que acabou de nascer
+   * por engano (Evandro digitou 6631 em vez de 6632 e caiu num cadastro
+   * vazio). So apaga conta de minutos atras, sem corrida e sem cadastro de
+   * motorista.
+   */
+  @ApiBearerAuth()
+  @Post('desfazer-conta-nova')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Apaga a conta recem-criada por engano (numero digitado errado)' })
+  async desfazerContaNova(@CurrentUser() user: AuthenticatedUser): Promise<{ desfeita: boolean }> {
+    await this.auth.desfazerContaNova(user.id);
+    return { desfeita: true };
+  }
+
   @ApiBearerAuth()
   @Patch('password')
   @HttpCode(HttpStatus.NO_CONTENT)
