@@ -8,6 +8,7 @@ import '../state/ride_state.dart';
 import '../core/utils/geo.dart';
 import '../widgets/corrida_ui.dart';
 import '../widgets/motorista_ui.dart';
+import 'sos_screen.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -148,6 +149,13 @@ class _SearchingScreenState extends State<SearchingScreen> {
                 if (motorista.posicaoReal) MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
               ],
               driverRoute: estado.driverRoute,
+            ),
+          ),
+          // SOS sempre visivel no alto do mapa durante a corrida.
+          const SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(padding: EdgeInsets.all(Spacing.md), child: BotaoSos()),
             ),
           ),
           Align(

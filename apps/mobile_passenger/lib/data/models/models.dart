@@ -177,7 +177,7 @@ class UserProfile {
         avatarUrl: json['avatarUrl'] as String?,
       );
 
-  UserProfile copyWith({String? name, String? email, bool? termsAccepted}) => UserProfile(
+  UserProfile copyWith({String? name, String? email, bool? termsAccepted, String? avatarUrl}) => UserProfile(
         id: id,
         name: name ?? this.name,
         phone: phone,
@@ -190,7 +190,7 @@ class UserProfile {
         cidade: cidade,
         temSenha: temSenha,
         telefonePendente: telefonePendente,
-        avatarUrl: avatarUrl,
+        avatarUrl: avatarUrl ?? this.avatarUrl,
       );
 
   String get firstName => name.split(' ').first;
@@ -769,4 +769,31 @@ class MotoristaBloqueado {
         vehicle: j['vehicle'] as String? ?? '',
         plate: j['plate'] as String? ?? '',
       );
+}
+
+
+/// Pessoa avisada em caso de SOS (ate 3 por passageiro).
+class ContatoEmergencia {
+  const ContatoEmergencia({required this.nome, required this.telefone});
+
+  final String nome;
+
+  /// No formato do servidor: +5564999991234.
+  final String telefone;
+
+  Map<String, dynamic> toJson() => {'nome': nome, 'telefone': telefone};
+
+  factory ContatoEmergencia.fromJson(Map<String, dynamic> j) => ContatoEmergencia(
+        nome: j['nome'] as String? ?? 'Contato',
+        telefone: j['telefone'] as String? ?? '',
+      );
+
+  /// "+5564999991234" -> "(64) 99999-1234".
+  String get telefoneBonito {
+    var d = telefone.replaceAll(RegExp(r'\D'), '');
+    if (d.startsWith('55') && d.length > 11) d = d.substring(2);
+    if (d.length == 11) return '(${d.substring(0, 2)}) ${d.substring(2, 7)}-${d.substring(7)}';
+    if (d.length == 10) return '(${d.substring(0, 2)}) ${d.substring(2, 6)}-${d.substring(6)}';
+    return telefone;
+  }
 }

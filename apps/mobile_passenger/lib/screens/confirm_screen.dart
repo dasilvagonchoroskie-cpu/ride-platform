@@ -10,6 +10,7 @@ import '../core/utils/geo.dart';
 import '../data/models/models.dart';
 import '../state/app_state.dart';
 import '../state/ride_state.dart';
+import 'agendadas_screen.dart';
 import 'cupons_screen.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
@@ -51,8 +52,9 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     if (_submitting) return;
     setState(() => _submitting = true);
 
+    final Ride pedida;
     try {
-      await context.read<RideState>().requestRide(
+      pedida = await context.read<RideState>().requestRide(
             origin: context.read<AppState>().coords,
             destination: widget.destination,
             pickupAddress: _embarque ?? 'Local de embarque (GPS)',
@@ -73,6 +75,15 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
 
     if (!mounted) return;
     setState(() => _submitting = false);
+    if (pedida.status == RideStatus.scheduled) {
+      // Agendada: mostra a lista com a corrida nova em destaque.
+      final q = DateTime.tryParse(pedida.agendadaPara ?? '')?.toLocal();
+      if (q != null) avisar('Corrida agendada para ${horarioAgendado(q)}.');
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => AgendadasScreen(recemAgendada: pedida.id)),
+      );
+      return;
+    }
     Navigator.of(context).pop();
   }
 
@@ -148,7 +159,24 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Confirmar viagem', style: SheetText.title),
+                            Text(ride.agendarPara == null ? 'Confirmar viagem' : 'Agendar viagem', style: SheetText.title),
+                            if (ride.agendarPara != null) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.event, size: 16, color: AppColors.brand),
+                                  const SizedBox(width: Spacing.xs),
+                                  Expanded(
+                                    child: Text(
+                                      'Para ${horarioAgendado(ride.agendarPara!)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.brand),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: Spacing.xs),
                             Row(
                               children: [
@@ -251,7 +279,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                   // Botao de acao principal: preto, texto branco em negrito,
                   // largura total, na extremidade inferior com padding confortavel.
                   AppButton(
-                    label: 'Confirmar corrida',
+                    label: ride.agendarPara == null ? 'Confirmar corrida' : 'Agendar corrida',
                     variant: AppButtonVariant.primary,
                     loading: _submitting,
                     enabled: quote != null,

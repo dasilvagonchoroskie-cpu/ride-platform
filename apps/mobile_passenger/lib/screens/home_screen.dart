@@ -16,6 +16,7 @@ import '../state/config_state.dart';
 import 'avisos_screen.dart';
 import 'cupons_screen.dart';
 import '../core/avisos.dart';
+import 'agendadas_screen.dart';
 import 'confirm_screen.dart';
 import 'map_pick_screen.dart';
 
@@ -47,8 +48,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _atualizarCarros());
-    _relogio = Timer.periodic(const Duration(seconds: 30), (_) => _atualizarCarros());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _atualizarCarros();
+      if (mounted) context.read<RideState>().carregarAgendadas();
+    });
+    _relogio = Timer.periodic(const Duration(seconds: 30), (_) {
+      _atualizarCarros();
+      // Perto do horario de uma agendada, a corrida abre sozinha.
+      if (mounted) context.read<RideState>().conferirAgendadas();
+    });
+  }
+
+  /// Calendario ao lado de "Buscar destino" (modelo Du Goias): escolhe o
+  /// dia e a hora e ja abre a busca do destino.
+  Future<void> _agendar() async {
+    final quando = await escolherHorarioAgendado(context);
+    if (quando == null || !mounted) return;
+    context.read<RideState>().escolherHorario(quando);
+    await _escolherDestino();
   }
 
   @override
@@ -111,6 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final ride = context.watch<RideState>();
     final config = context.watch<ConfigState>();
     final nome = auth.user?.firstName;
+    final agendarPara = ride.agendarPara;
 
     final markers = <MapMarker>[
       MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
@@ -224,7 +242,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: SheetText.title.copyWith(fontSize: 24, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: Spacing.lg),
-                  Material(
+                  if (agendarPara != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Spacing.sm),
+                      child: Material(
+                        color: AppColors.brandSoft,
+                        borderRadius: BorderRadius.circular(Radii.pill),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: Spacing.md),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.event, color: AppColors.brand, size: 20),
+                              const SizedBox(width: Spacing.sm),
+                              Expanded(
+                                child: Text(
+                                  'Agendar para ${horarioAgendado(agendarPara)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: SheetText.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.brand),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Chamar agora',
+                                onPressed: () => context.read<RideState>().escolherHorario(null),
+                                icon: const Icon(Icons.close, color: AppColors.brand, size: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Material(
                     color: AppColors.sheetField,
                     borderRadius: BorderRadius.circular(Radii.pill),
                     child: InkWell(
@@ -248,6 +299,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                  ),
+                      ),
+                      const SizedBox(width: Spacing.sm),
+                      Material(
+                        color: AppColors.surface,
+                        shape: const CircleBorder(side: BorderSide(color: AppColors.sheetText, width: 1.5)),
+                        child: IconButton(
+                          tooltip: 'Agendar corrida',
+                          iconSize: 28,
+                          padding: const EdgeInsets.all(14),
+                          onPressed: _agendar,
+                          icon: const Icon(Icons.edit_calendar, color: AppColors.sheetText),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

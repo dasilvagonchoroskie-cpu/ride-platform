@@ -216,6 +216,24 @@ class AuthState extends ChangeNotifier {
     await _guardarUsuario(UserProfile.fromJson(data));
   }
 
+  /// Troca a foto de perfil (Conta > toque na foto).
+  Future<bool> trocarFoto(String mime, String base64) async {
+    final atual = user;
+    if (atual == null) return false;
+    try {
+      final r = await _client.request('POST', '/auth/foto', body: {'mime': mime, 'dados': base64}) as Map<String, dynamic>;
+      final url = r['avatarUrl'] as String?;
+      if (url == null) return false;
+      await _guardarUsuario(atual.copyWith(avatarUrl: url));
+      return true;
+    } on ApiException {
+      return false; // o motivo ja apareceu na tela
+    } catch (_) {
+      avisar('Sem conexão. A foto não foi trocada.');
+      return false;
+    }
+  }
+
   Future<void> trocarSenha(String atual, String nova) async {
     await _client.request('PATCH', '/auth/password', body: {'currentPassword': atual, 'newPassword': nova});
   }

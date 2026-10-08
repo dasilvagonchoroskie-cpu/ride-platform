@@ -30,9 +30,80 @@ class RideState extends ChangeNotifier {
   /// Sem servidor configurado: corrida de demonstracao no aparelho.
   bool get modoDemo => _repository.isDemo;
 
+  // ------------------------------------------------------------------
+  // Corrida agendada (botao do calendario ao lado de "Buscar destino",
+  // modelo Du Goias). De 30 minutos a 7 dias a frente; ate 3 por pessoa.
+  // O servidor comeca a procurar motorista 10 minutos antes.
+  // ------------------------------------------------------------------
+
+  /// Horario escolhido para a proxima corrida. Nulo = chamar agora.
+  DateTime? agendarPara;
+
+  /// Corridas agendadas que ainda nao comecaram.
+  List<Ride> agendadas = [];
+
+  /// Escolhe (ou tira, com null) o horario da proxima corrida.
+  void escolherHorario(DateTime? quando) {
+    agendarPara = quando;
+    notifyListeners();
+  }
+
+  /// Motivo para nao aceitar o horario (ou null se esta bom).
+  static String? horarioInvalido(DateTime quando, [DateTime? agora]) {
+    final minutos = quando.difference(agora ?? DateTime.now()).inMinutes;
+    if (minutos < 30) return 'Agende com pelo menos 30 minutos de antecedência.';
+    if (minutos > 7 * 24 * 60) return 'Dá para agendar até 7 dias à frente.';
+    return null;
+  }
+
+  Future<void> carregarAgendadas() async {
+    if (_repository.isDemo) return;
+    try {
+      agendadas = await _repository.agendadas();
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: fica a lista que ja tinha.
+    }
+  }
+
+  /// Cancela a agendada (antes de comecar a procurar, sem multa).
+  Future<bool> cancelarAgendada(Ride r) async {
+    try {
+      await _repository.cancelar(r.id, 'Agendamento cancelado pelo passageiro');
+      agendadas = agendadas.where((a) => a.id != r.id).toList();
+      notifyListeners();
+      avisar('Agendamento cancelado.');
+      return true;
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return false;
+    } catch (_) {
+      avisar('Sem conexão. O agendamento não foi cancelado.');
+      return false;
+    }
+  }
+
+  /// Chamado de tempos em tempos na tela Inicio: perto do horario de uma
+  /// agendada, pergunta ao servidor se ela ja virou corrida (procurando ou
+  /// com motorista) para o aplicativo abrir a tela da corrida sozinho.
+  Future<void> conferirAgendadas([DateTime? agora]) async {
+    if (activeRide != null || agendadas.isEmpty) return;
+    final limite = (agora ?? DateTime.now()).add(const Duration(minutes: 15));
+    final perto = agendadas.any((a) {
+      final q = DateTime.tryParse(a.agendadaPara ?? '');
+      return q != null && q.isBefore(limite);
+    });
+    if (!perto) return;
+    await sincronizarComServidor();
+    if (activeRide != null) await carregarAgendadas();
+  }
+
   /// Ao sair da conta: nada da corrida desta pessoa fica para a proxima.
   Future<void> limpar() async {
     _pararDeAcompanhar();
+    pararSos();
+    agendadas = [];
+    agendarPara = null;
     activeRide = null;
     history = [];
     quote = null;
@@ -74,7 +145,11 @@ class RideState extends ChangeNotifier {
     notifyListeners();
     try {
       final result = await _repository.estimate(origin, destination,
-          pickupAddress: pickupAddress, dropoffAddress: dropoffAddress, couponCode: cupomCodigo);
+          pickupAddress: pickupAddress,
+          dropoffAddress: dropoffAddress,
+          couponCode: cupomCodigo,
+          // Agendada paga a bandeira do horario da viagem (23h = noturna).
+          agendadaPara: agendarPara);
       quote = result.quote;
       return result.quote;
     } on ApiException catch (e) {
@@ -112,9 +187,17 @@ class RideState extends ChangeNotifier {
       paymentMethod: paymentMethod,
       paymentType: paymentType,
       couponCode: cupomCodigo,
+      agendadaPara: agendarPara,
     );
 
     cupomCodigo = null;
+    if (ride.status == RideStatus.scheduled) {
+      // Agendada nao abre a tela de procura: fica na lista ate o horario.
+      agendarPara = null;
+      agendadas = [...agendadas, ride];
+      notifyListeners();
+      return ride;
+    }
     activeRide = ride;
     driverRoute = [];
     tripRoute = [];
@@ -186,6 +269,92 @@ class RideState extends ChangeNotifier {
     if (r == null || r.mensagensNaoLidas == 0) return;
     activeRide = r.copyWith(mensagensNaoLidas: 0);
     notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // SOS do passageiro: manda a posicao para a Central (alarme la) e repete
+  // a cada 10 s ate a Central encerrar o alerta.
+  // ------------------------------------------------------------------
+
+  String? sosId;
+  Timer? _sosTimer;
+  Coords Function()? _posicaoSos;
+
+  Future<bool> acionarSos(Coords Function() posicao) async {
+    if (_repository.isDemo) {
+      avisar('Modo demonstração: o SOS não foi enviado.');
+      return false;
+    }
+    _posicaoSos = posicao;
+    final p = posicao();
+    try {
+      final r = await _repository.api.request('POST', '/safety/sos', body: {
+        'latitude': p.latitude,
+        'longitude': p.longitude,
+        if (activeRide != null) 'rideId': activeRide!.id,
+      }) as Map<String, dynamic>;
+      sosId = r['id'] as String?;
+      _sosTimer?.cancel();
+      _sosTimer = Timer.periodic(const Duration(seconds: 10), (_) => _enviarPosicaoSos());
+      unawaited(HapticFeedback.heavyImpact());
+      notifyListeners();
+      return sosId != null;
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return false;
+    } catch (_) {
+      avisar('Sem conexão. O SOS não foi enviado: ligue 190.');
+      return false;
+    }
+  }
+
+  Future<void> _enviarPosicaoSos() async {
+    final id = sosId;
+    final posicao = _posicaoSos;
+    if (id == null || posicao == null) return;
+    final p = posicao();
+    try {
+      final r = await _repository.api.request('POST', '/safety/sos/$id/location', body: {
+        'latitude': p.latitude,
+        'longitude': p.longitude,
+      }) as Map<String, dynamic>?;
+      if (r?['resolved'] == true) {
+        pararSos();
+        avisar('A Central encerrou o alerta de SOS.');
+      }
+    } catch (_) {
+      // Sem rede agora: tenta de novo em 10 s.
+    }
+  }
+
+  void pararSos() {
+    _sosTimer?.cancel();
+    _sosTimer = null;
+    sosId = null;
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // Contatos de emergencia (ate 3). Aparecem para a Central no alerta de
+  // SOS, e a tela de SOS tem um botao para avisar cada um pelo WhatsApp.
+  // ------------------------------------------------------------------
+
+  Future<List<ContatoEmergencia>> contatosEmergencia() async {
+    final d = await _repository.api.request('GET', '/users/me/contatos-emergencia') as Map<String, dynamic>;
+    return [
+      for (final c in (d['items'] as List? ?? const []))
+        ContatoEmergencia.fromJson(c as Map<String, dynamic>),
+    ];
+  }
+
+  Future<List<ContatoEmergencia>> gravarContatos(List<ContatoEmergencia> contatos) async {
+    final d = await _repository.api.request('PUT', '/users/me/contatos-emergencia', body: {
+      'contatos': [for (final c in contatos) c.toJson()],
+    }) as Map<String, dynamic>;
+    return [
+      for (final c in (d['items'] as List? ?? const []))
+        ContatoEmergencia.fromJson(c as Map<String, dynamic>),
+    ];
   }
 
   // ------------------------------------------------------------------

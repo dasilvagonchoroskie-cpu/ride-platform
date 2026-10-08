@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/avisos.dart';
 import '../core/config/app_config.dart';
+import '../core/fotos.dart';
 import '../core/theme/app_theme.dart';
 import '../state/auth_state.dart';
 import '../state/config_state.dart';
 import '../state/ride_state.dart';
 import '../widgets/painel_ui.dart';
+import 'agendadas_screen.dart';
 import 'avisos_screen.dart';
+import 'contatos_emergencia_screen.dart';
 import 'cupons_screen.dart';
 import 'motoristas_salvos_screen.dart';
 import 'help_screen.dart';
@@ -20,6 +24,13 @@ class AccountScreen extends StatelessWidget {
 
   void _abrir(BuildContext context, Widget tela) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => tela));
+
+  Future<void> _trocarFoto(BuildContext context) async {
+    final foto = await escolherFoto(context, titulo: 'Foto de perfil');
+    if (foto == null || !context.mounted) return;
+    final ok = await context.read<AuthState>().trocarFoto(foto.mime, foto.base64);
+    if (ok) avisar('Foto de perfil atualizada.');
+  }
 
   Future<void> _sair(BuildContext context) async {
     final sair = await showDialog<bool>(
@@ -50,54 +61,67 @@ class AccountScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthState>().user;
     final avisoNovo = context.watch<ConfigState>().temAvisoNovo;
+    final agendadas = context.watch<RideState>().agendadas.length;
     const faixa = SizedBox(height: 10, child: ColoredBox(color: AppColors.faixa));
     const separador = Divider(height: 1, indent: Spacing.xl, endIndent: Spacing.xl, color: AppColors.border);
+    final iniciais = Container(
+      width: 72,
+      height: 72,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
+      child: Text(
+        user?.iniciais ?? 'P',
+        style: AppText.title.copyWith(color: Colors.white, fontSize: 26),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
         child: ListView(
           children: [
-            InkWell(
-              onTap: () => _abrir(context, const MyDataScreen()),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.xl),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 78,
-                      height: 78,
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 72,
-                            height: 72,
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
-                            child: Text(
-                              user?.iniciais ?? 'P',
-                              style: AppText.title.copyWith(color: Colors.white, fontSize: 26),
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                shape: BoxShape.circle,
-                                boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4)],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.xl),
+              child: Row(
+                children: [
+                  // Foto com o lapis (modelo Du Goias): toque para trocar.
+                  Tooltip(
+                    message: 'Trocar foto',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _trocarFoto(context),
+                      child: SizedBox(
+                        width: 78,
+                        height: 78,
+                        child: Stack(
+                          children: [
+                            if (user?.avatarUrl != null)
+                              FotoDoServidor(caminho: user!.avatarUrl!, tamanho: 72, reserva: iniciais)
+                            else
+                              iniciais,
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4)],
+                                ),
+                                child: const Icon(Icons.edit, size: 17, color: AppColors.text),
                               ),
-                              child: const Icon(Icons.edit, size: 17, color: AppColors.text),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: Spacing.lg),
-                    Expanded(
+                  ),
+                  const SizedBox(width: Spacing.lg),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _abrir(context, const MyDataScreen()),
                       child: Text(
                         user?.name ?? 'Passageiro',
                         maxLines: 2,
@@ -105,8 +129,8 @@ class AccountScreen extends StatelessWidget {
                         style: AppText.title.copyWith(fontSize: 24, fontWeight: FontWeight.w600),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             faixa,
@@ -160,10 +184,25 @@ class AccountScreen extends StatelessWidget {
             ),
             separador,
             MenuLinha(
+              icone: Icons.event,
+              corIcone: AppColors.text,
+              titulo: 'Corridas agendadas',
+              selo: agendadas > 0 ? '$agendadas' : null,
+              onTap: () => _abrir(context, const AgendadasScreen()),
+            ),
+            separador,
+            MenuLinha(
               icone: Icons.favorite,
               corIcone: AppColors.text,
               titulo: 'Motoristas favoritos e bloqueados',
               onTap: () => _abrir(context, const MotoristasSalvosScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.health_and_safety,
+              corIcone: AppColors.text,
+              titulo: 'Contatos de emergência',
+              onTap: () => _abrir(context, const ContatosEmergenciaScreen()),
             ),
             separador,
             MenuLinha(

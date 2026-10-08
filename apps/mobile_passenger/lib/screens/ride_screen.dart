@@ -8,6 +8,7 @@ import '../state/config_state.dart';
 import '../state/ride_state.dart';
 import '../widgets/corrida_ui.dart';
 import '../widgets/motorista_ui.dart';
+import 'sos_screen.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -39,6 +40,13 @@ class RideScreen extends StatelessWidget {
                   MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
               ],
               route: [centro, corrida.dropoff.coords],
+            ),
+          ),
+          // SOS sempre visivel no alto do mapa durante a corrida.
+          const SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(padding: EdgeInsets.all(Spacing.md), child: BotaoSos()),
             ),
           ),
           Align(
