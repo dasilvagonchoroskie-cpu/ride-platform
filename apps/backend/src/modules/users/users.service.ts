@@ -46,6 +46,31 @@ export class UsersService {
     return safe;
   }
 
+  // ---------------- Contatos de emergencia (guardados no usuario) ----------------
+
+  async contatosEmergencia(userId: string) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    const m = (u?.metadata ?? {}) as { contatosEmergencia?: unknown };
+    const lista = Array.isArray(m.contatosEmergencia) ? m.contatosEmergencia : [];
+    return {
+      items: lista
+        .filter((c): c is { nome?: string; telefone?: string } => !!c && typeof c === 'object')
+        .filter((c) => typeof c.telefone === 'string' && c.telefone.length > 0)
+        .map((c) => ({ nome: c.nome ?? 'Contato', telefone: c.telefone as string })),
+    };
+  }
+
+  async gravarContatosEmergencia(userId: string, contatos: Array<{ nome: string; telefone: string }>) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    const meta = u?.metadata && typeof u.metadata === 'object' && !Array.isArray(u.metadata) ? (u.metadata as object) : {};
+    const limpos = contatos.slice(0, 3).map((c) => ({ nome: c.nome.trim(), telefone: normalizePhone(c.telefone) }));
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { metadata: { ...meta, contatosEmergencia: limpos } as never },
+    });
+    return this.contatosEmergencia(userId);
+  }
+
   async listAddresses(userId: string) {
     return this.prisma.userAddress.findMany({
       where: { userId },

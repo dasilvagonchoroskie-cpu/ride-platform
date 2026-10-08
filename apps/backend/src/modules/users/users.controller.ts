@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   createAddressSchema,
@@ -10,10 +10,26 @@ import {
   UserRole,
   UserStatus,
 } from '@ride/shared';
+import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UsersService } from './users.service';
+
+/** Ate 3 pessoas avisadas em caso de SOS (aparecem para a Central no alerta). */
+const contatosSchema = z.object({
+  contatos: z
+    .array(
+      z.object({
+        nome: z.string().trim().min(1, 'Escreva o nome do contato.').max(60, 'Nome muito longo.'),
+        telefone: z
+          .string()
+          .trim()
+          .refine((t) => /^(55)?\d{10,11}$/.test(t.replace(/\D/g, '')), 'Telefone do contato invalido. Use DDD + numero.'),
+      }),
+    )
+    .max(3, 'No maximo 3 contatos de emergencia.'),
+});
 
 @ApiTags('Usuarios')
 @ApiBearerAuth()
@@ -66,6 +82,21 @@ export class UsersController {
   @ApiOperation({ summary: 'Define o endereco como padrao' })
   setDefaultAddress(@CurrentUser('id') userId: string, @Param('id') addressId: string) {
     return this.users.setDefaultAddress(userId, addressId);
+  }
+
+  @Get('me/contatos-emergencia')
+  @ApiOperation({ summary: 'Contatos de emergencia (avisados em caso de SOS)' })
+  contatosEmergencia(@CurrentUser('id') userId: string) {
+    return this.users.contatosEmergencia(userId);
+  }
+
+  @Put('me/contatos-emergencia')
+  @ApiOperation({ summary: 'Grava os contatos de emergencia (ate 3; a lista enviada substitui a anterior)' })
+  gravarContatosEmergencia(
+    @CurrentUser('id') userId: string,
+    @Body(new ZodValidationPipe(contatosSchema)) body: { contatos: Array<{ nome: string; telefone: string }> },
+  ) {
+    return this.users.gravarContatosEmergencia(userId, body.contatos);
   }
 }
 

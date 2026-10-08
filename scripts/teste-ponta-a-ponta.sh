@@ -316,10 +316,17 @@ X=$(post /driver/payouts '{"amountCents":100,"pixKey":"teste@exemplo.com"}' "$TM
 X=$(get "/admin/payouts?status=REQUESTED" "$TA"); [ "$(echo "$X" | jq -r --arg p "$PID_" '[.data.items[] | select(.id==$p)] | length')" = "1" ] && ok "Central: ve o pedido de saque com a chave PIX" || falha "Central: lista de saques" "$X"
 X=$(patch "/admin/payouts/$PID_" '{"paid":true}' "$TA"); [ "$(echo "$X" | jq -r '.data.status')" = "PAID" ] && ok "Central: confirmou o PIX (descontado da carteira)" || falha "Central: confirmar saque" "$X"
 X=$(get "/admin/reports/finance?days=1" "$TA"); sucesso "$X" && ok "Central: relatorio de receitas (dinheiro $(echo "$X" | jq -r '.data.cashCents'), PIX/app $(echo "$X" | jq -r '.data.pixAndAppCents'), comissao $(echo "$X" | jq -r '.data.commissionCents'))" || falha "Central: relatorio financeiro" "$X"
+# Contatos de emergencia do passageiro (aparecem para a Central no SOS).
+X=$(curl -s -m 90 -X PUT "$API/users/me/contatos-emergencia" -H 'Content-Type: application/json' -H "Authorization: Bearer $TP" -d '{"contatos":[{"nome":"Maria (irma)","telefone":"(64) 99999-1234"}]}')
+[ "$(echo "$X" | jq -r '.data.items[0].telefone')" = "+5564999991234" ] && ok "Passageiro: contato de emergencia gravado" || falha "Passageiro: gravar contato de emergencia" "$X"
+X=$(curl -s -m 90 -X PUT "$API/users/me/contatos-emergencia" -H 'Content-Type: application/json' -H "Authorization: Bearer $TP" -d '{"contatos":[{"nome":"X","telefone":"123"}]}')
+sucesso "$X" && falha "Telefone invalido deveria ser recusado" "$X" || ok "Passageiro: contato com telefone invalido recusado"
+X=$(get /users/me/contatos-emergencia "$TP"); [ "$(echo "$X" | jq -r '.data.items | length')" = "1" ] && ok "Passageiro: ve os contatos de emergencia" || falha "Passageiro: ler contatos" "$X"
 X=$(post /safety/sos '{"latitude":-18.0125,"longitude":-49.3547}' "$TP"); SOS=$(echo "$X" | jq -r '.data.id // empty')
 [ -n "$SOS" ] && ok "Passageiro: SOS acionado" || falha "SOS: acionar" "$X"
 post "/safety/sos/$SOS/location" '{"latitude":-18.0130,"longitude":-49.3550}' "$TP" >/dev/null
 X=$(get /admin/safety "$TA"); [ "$(echo "$X" | jq -r --arg s "$SOS" '[.data.items[] | select(.id==$s and .latitude < -18.0128)] | length')" = "1" ] && ok "Central: alerta de SOS com a posicao atualizada" || falha "Central: alerta de SOS" "$X"
+[ "$(echo "$X" | jq -r --arg s "$SOS" '.data.items[] | select(.id==$s) | .emergencyContacts[0].phone')" = "+5564999991234" ] && ok "Central: alerta de SOS mostra o contato de emergencia" || falha "Central: contato no SOS" "$(echo "$X" | jq -c --arg s "$SOS" '.data.items[] | select(.id==$s)')"
 X=$(patch "/admin/safety/$SOS/resolve" '{"note":"Teste automatico"}' "$TA"); sucesso "$X" && ok "Central: SOS encerrado" || falha "Central: encerrar SOS" "$X"
 PIDP=$(get /auth/me "$TP" | jq -r '.data.id')
 X=$(get "/admin/passengers?search=$(echo "$FONE_P" | tr -dc 0-9 | tail -c 8)" "$TA"); [ "$(echo "$X" | jq -r --arg p "$PIDP" '[.data.items[] | select(.id==$p)] | length')" = "1" ] && ok "Central: busca de passageiro pelo telefone" || falha "Central: busca de passageiro" "$X"
