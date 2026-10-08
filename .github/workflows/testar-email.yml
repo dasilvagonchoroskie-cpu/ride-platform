@@ -1,0 +1,42 @@
+name: Testar o e-mail pelo Gmail
+
+# Confere se o script do Google (Apps Script) que manda os codigos por
+# e-mail esta no ar. Recebe um ou mais codigos de implantacao e diz qual
+# responde. O servidor do Claude nao alcanca o script.google.com.
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: 'Codigos de implantacao (AKfy...) separados por espaco'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Chamar o script
+        env:
+          IDS: ${{ inputs.ids }}
+        run: |
+          mkdir -p logs
+          : > logs/testar-email.txt
+          n=0
+          for id in $IDS; do
+            n=$((n+1))
+            r=$(curl -sL -m 30 "https://script.google.com/macros/s/$id/exec" | tr -d '\n' | head -c 160)
+            if echo "$r" | grep -q '"ok":true'; then echo "$n: OK ${id: -6} $r" >> logs/testar-email.txt
+            else echo "$n: nao ($(echo "$r" | sed 's/<[^>]*>//g' | head -c 80))" >> logs/testar-email.txt; fi
+          done
+          cat logs/testar-email.txt
+      - name: Guardar o resultado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add logs/testar-email.txt
+          git commit -m "relatorio: teste do e-mail pelo Gmail" || exit 0
+          for i in 1 2 3; do git pull --rebase -q && git push -q && break; sleep 5; done
