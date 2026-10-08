@@ -123,7 +123,7 @@ void main() {
     await tester.tap(find.text('Sair'));
     await tester.pumpAndSettle();
     expect(find.text('Sair da conta?'), findsOneWidget);
-    expect(find.textContaining('esta tela muda sozinha'), findsOneWidget);
+    expect(find.textContaining('Não precisa sair para esperar'), findsOneWidget);
     await tester.tap(find.text('Ficar'));
     await tester.pumpAndSettle();
     expect(d.profile, isNotNull);

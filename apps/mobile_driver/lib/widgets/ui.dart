@@ -66,9 +66,17 @@ class AppButton extends StatelessWidget {
                 Icon(icon, size: 20, color: foreground),
                 const SizedBox(width: Spacing.sm),
               ],
-              Text(
-                label,
-                style: AppText.button.copyWith(color: foreground),
+              // Texto longo ou letra grande do celular: diminui para caber,
+              // em vez de estourar o botao.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: AppText.button.copyWith(color: foreground),
+                  ),
+                ),
               ),
             ],
           );
