@@ -14,19 +14,19 @@
 00:00 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista a caminho: tempo, chat, fotos, nota, viagens, carro, placa e Cancelar
 00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
 00:01 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
-00:01 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
-00:01 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
-00:01 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
+00:01 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:01 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:01 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
 00:01 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
 00:02 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
 00:02 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
 00:02 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Corridas agendadas: horario, endereco, valor e cancelar sem multa
-00:02 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
-00:02 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
+00:02 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Corridas agendadas: horario, endereco, valor e cancelar sem multa
+00:02 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
 00:02 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
 00:02 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS: panico manda a posicao e a corrida; avisar contatos; 190 e 192
 00:02 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS sem contatos: botao para cadastrar
-00:03 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
+00:02 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
 00:03 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: telefone incompleto nao salva
 00:03 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Conta: foto com lapis, agendadas e contatos de emergencia
 00:03 +30: All tests passed!
