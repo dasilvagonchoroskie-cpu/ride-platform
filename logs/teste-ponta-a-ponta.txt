@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 4901732 (Motorista aprovado sai da tela de analise; Central avisa cadastro novo)
-No ar agora: 4901732
+Ultima mudanca do servidor no GitHub: 1e07f42 (Motorista: numero digitado errado nao abre cadastro vazio sem aviso)
+No ar agora: 1e07f42
 OK: servidor em dia.
-Teste de ponta a ponta - 08/10/2026 17:19 UTC
+Teste de ponta a ponta - 08/10/2026 19:55 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -24,14 +24,17 @@ OK     Passageiro: preco da corrida calculado
 OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
-OK     Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (telefone terminado em 3275)
+OK     Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (telefone terminado em 1475)
 OK     Motorista: codigo enviado para a conta de passageiro
 OK     Seguranca: codigo errado nao entra na conta de outra pessoa
 OK     Motorista: entrou na MESMA conta do passageiro com o codigo
 OK     Motorista: cadastro feito na conta de passageiro, com os mesmos dados
 OK     A mesma conta continua pedindo corrida no app do passageiro
 OK     Central: aprovou sem fotos (conferencia presencial)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST1112)
+OK     Numero errado: conta nova vazia desfeita
+OK     Numero errado: a conta desfeita sumiu
+OK     Seguranca: conta com cadastro nao e desfeita
+OK     Central: cadastrou motorista novo ja aprovado (placa TST4857)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -60,13 +63,13 @@ OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE17193235 criado (R$ 3,00)
+OK     Central: cupom TESTE19551438 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 9275 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 9325 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -80,9 +83,9 @@ OK     Motorista: arrived
 OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (14h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 7 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 69s
+OK     Bandeira certa pela hora de Brasilia (16h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 8 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 66s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -121,7 +124,7 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 7, online 1, faturamento 7000)
+OK     Central: visao geral (ativas 0, concluidas hoje 8, online 1, faturamento 8000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -135,7 +138,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 4900, PIX/app 0, comissao 560)
+OK     Central: relatorio de receitas (dinheiro 5600, PIX/app 0, comissao 640)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
