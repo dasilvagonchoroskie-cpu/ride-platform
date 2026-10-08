@@ -161,6 +161,7 @@ X=$(get /vehicles/me "$TC"); [ "$(echo "$X" | jq -r '(.data | if type=="array" t
 X=$(get /auth/me "$TC"); [ "$(echo "$X" | jq -r '.data.driverStatus')" = "APPROVED" ] && [ "$(echo "$X" | jq -r '.data.name')" = "Motorista Pela Central" ] && ok "Motorista da Central: nome e aprovacao no login" || falha "Motorista da Central: dados no login" "$X"
 FONE_W="+55649${SUF}73"; TPW=$(entrar "$FONE_W" PASSENGER)
 X=$(post /admin/drivers "{\"name\":\"Passageiro Vira Motorista\",\"phone\":\"$FONE_W\",\"cpf\":\"$(gerar_cpf)\",\"birthDate\":\"1990-01-02\",\"cnhNumber\":\"$(gerar_cnh)\",\"cnhCategory\":\"AB\",\"cnhExpiresAt\":\"2030-01-01\",\"vehicle\":{\"plate\":\"TSU$(printf '%04d' $((RANDOM%10000)))\",\"brand\":\"VW\",\"model\":\"Gol\",\"year\":2015,\"color\":\"Prata\"}}" "$TA")
+DIDW=$(echo "$X" | jq -r '.data.id // empty')
 [ -n "$TPW" ] && [ "$(echo "$X" | jq -r '.data.contaExistente')" = "true" ] && [ "$(get /auth/me "$TPW" | jq -r '.data.id')" = "$(echo "$X" | jq -r '.data.userId')" ] && ok "Central: motorista com o telefone de um passageiro usa a mesma conta" || falha "Central: motorista na conta de passageiro" "$X"
 
 X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
@@ -413,7 +414,14 @@ X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":false,"reason":"Fim do tes
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
-patch "/admin/drivers/$DID/review" '{"status":"SUSPENDED","reason":"Conta de teste automatico"}' "$TA" >/dev/null
+# Limpeza pela opcao "Excluir" da Central (Evandro, 08/10/2026): os
+# motoristas de teste nao ficam mais acumulando na lista.
+IDS=$(for i in $DID $DIDC $DIDV $DIDW; do printf '"%s",' "$i"; done | sed 's/,$//'); NIDS=$(echo $DID $DIDC $DIDV $DIDW | wc -w)
+X=$(post /admin/drivers/excluir "{\"ids\":[$IDS]}" "$TA")
+[ "$(echo "$X" | jq -r '.data.excluidos')" = "$NIDS" ] && ok "Central: excluiu $NIDS motoristas de teste ($(echo "$X" | jq -r '[.data.itens[].resultado] | join(", ")'))" || falha "Central: excluir motoristas" "$X"
+X=$(get "/admin/drivers/$DIDC" "$TA"); sucesso "$X" && falha "Motorista excluido ainda existe" "$X" || ok "Central: motorista excluido sumiu"
+X=$(get "/rides/history?page=1&pageSize=5" "$TP"); sucesso "$X" && ok "Passageiro: historico de corridas continua depois de excluir o motorista" || falha "Passageiro: historico sem o motorista" "$X"
+X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] && [ "$(echo "$X" | jq -r '.data.driverId')" = "null" ] && ok "Quem tambem e passageiro continua com a conta de passageiro" || falha "Conta de passageiro depois de excluir o motorista" "$X"
 CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
 echo | tee -a "$REL"; echo "Resultado: $FALHAS falha(s)." | tee -a "$REL"
 exit $FALHAS

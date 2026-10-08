@@ -266,6 +266,37 @@ String nomeDoDocumento(String tipo) {
 }
 
 /// Motorista na lista (Gestao de Motoristas).
+/// O que aconteceu ao excluir motoristas.
+class ResultadoExclusao {
+  const ResultadoExclusao({required this.excluidos, required this.continuamPassageiros, required this.erros});
+
+  final int excluidos;
+
+  /// Usavam tambem o app do passageiro: a conta continua, so como passageiro.
+  final int continuamPassageiros;
+
+  /// Motivo de cada um que nao saiu (ex.: em corrida agora).
+  final List<String> erros;
+
+  factory ResultadoExclusao.fromJson(Map<String, dynamic> j) {
+    final itens = [for (final i in (j['itens'] as List<dynamic>? ?? const [])) i as Map<String, dynamic>];
+    return ResultadoExclusao(
+      excluidos: _int(j['excluidos']),
+      continuamPassageiros: itens.where((i) => i['resultado'] == 'VIROU_PASSAGEIRO').length,
+      erros: [for (final i in itens) if (i['erro'] != null) '${i['erro']}'],
+    );
+  }
+
+  String get resumo {
+    final partes = <String>[
+      excluidos == 1 ? '1 motorista excluído.' : '$excluidos motoristas excluídos.',
+      if (continuamPassageiros > 0) '$continuamPassageiros continua(m) como passageiro(s).',
+      if (erros.isNotEmpty) 'Não excluído(s): ${erros.toSet().join(' ')}',
+    ];
+    return partes.join(' ');
+  }
+}
+
 class MotoristaCadastro {
   const MotoristaCadastro({
     required this.id,
@@ -838,6 +869,10 @@ class PainelApi {
 
   Future<MotoristaDetalhe> motorista(String id) async =>
       MotoristaDetalhe.fromJson(await _c.request('GET', '/admin/drivers/$id') as Map<String, dynamic>);
+
+  /// Exclui motoristas (um ou varios). Corridas ja feitas ficam no historico.
+  Future<ResultadoExclusao> excluirMotoristas(List<String> ids) async =>
+      ResultadoExclusao.fromJson(await _c.request('POST', '/admin/drivers/excluir', body: {'ids': ids}) as Map<String, dynamic>);
 
   Future<void> mudarStatusMotorista(String id, String status, String motivo) =>
       _c.request('PATCH', '/admin/drivers/$id/review', body: {

@@ -88,6 +88,9 @@ Map<String, dynamic> _motoristaLista(String status) => {
       'documentProgress': {'total': 4, 'sent': 1},
     };
 
+/// Ids que a Central mandou excluir (POST /admin/drivers/excluir).
+final List<String> _pedidosDeExclusao = [];
+
 /// Cenario do teste: SOS aberto e cadastro de motorista esperando a Central.
 bool _comSos = true;
 bool _comPendente = false;
@@ -374,6 +377,21 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
 }
 
 MockClient _servidor() => MockClient((http.Request r) async {
+      if (r.url.path == '/api/admin/drivers/excluir') {
+        final ids = [for (final i in (jsonDecode(r.body)['ids'] as List<dynamic>)) '$i'];
+        _pedidosDeExclusao.addAll(ids);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'excluidos': ids.length,
+              'itens': [for (final i in ids) {'id': i, 'resultado': 'APAGADO', 'corridas': 0}],
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
       final dados = _resposta(r.method, r.url.path, r.url.queryParameters);
       if (dados == null) {
         return http.Response(
@@ -427,6 +445,7 @@ void main() {
     mostrarRuasNoMapa = false;
     _comSos = true;
     _comPendente = false;
+    _pedidosDeExclusao.clear();
   });
 
   testWidgets('Visao Geral: indicadores em cima do mapa e toque no carro', (tester) async {
@@ -507,6 +526,49 @@ void main() {
     expect(find.textContaining('R\$'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Bloquear'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Aprovar'), findsWidgets);
+  });
+
+  // Evandro (08/10/2026): "tem que ter a opcao de excluir os motoristas que
+  // eu quiser" (a lista estava cheia de cadastros de teste).
+  testWidgets('Motoristas: selecionar e excluir varios', (tester) async {
+    await _abrir(tester, const Motoristas());
+    await _carregar(tester);
+    await tester.tap(find.text('Selecionar para excluir'));
+    await tester.pumpAndSettle();
+    expect(find.text('Toque nos motoristas que quer excluir.'), findsOneWidget);
+    expect(find.byType(Checkbox), findsOneWidget);
+
+    await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 selecionado(s)'), findsOneWidget);
+    await tester.tap(find.text('Excluir (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Excluir 1 motorista?'), findsOneWidget);
+    expect(find.textContaining('Não dá para desfazer'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await _carregar(tester);
+
+    expect(_pedidosDeExclusao, [_motoristaId]);
+    expect(find.textContaining('1 motorista excluído'), findsOneWidget);
+    expect(find.text('Selecionar para excluir'), findsOneWidget);
+  });
+
+  testWidgets('Motoristas: excluir pelo cadastro do motorista', (tester) async {
+    await _abrir(tester, const Motoristas());
+    await _carregar(tester);
+    await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
+    await _carregar(tester);
+    await tester.scrollUntilVisible(find.text('Excluir motorista'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Excluir motorista'));
+    await tester.pumpAndSettle();
+    expect(find.text('Excluir Joao Batista da Silva Pereira Junior?'), findsOneWidget);
+    expect(find.textContaining('Saldo na carteira'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await _carregar(tester);
+    expect(_pedidosDeExclusao, [_motoristaId]);
+    // Saiu do cadastro e voltou para a lista.
+    expect(find.text('Excluir motorista'), findsNothing);
+    expect(find.text('Selecionar para excluir'), findsOneWidget);
   });
 
   testWidgets('Passageiros: busca, bloqueado e historico', (tester) async {

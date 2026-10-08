@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   createVehicleSchema,
@@ -49,6 +49,22 @@ export class AdminDriversController {
   @ApiOperation({ summary: 'Cadastra o motorista pela Central (dados, CNH e veiculo); ja aprovado se pedido' })
   criar(@CurrentUser('id') adminId: string, @Body(new ZodValidationPipe(criarMotoristaSchema)) body: CriarMotoristaInput) {
     return this.drivers.adminCreate(adminId, body);
+  }
+
+  @Post('excluir')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Exclui varios motoristas (cadastro, documentos, carros, carteira); corridas ficam no historico' })
+  excluirVarios(
+    @CurrentUser('id') adminId: string,
+    @Body(new ZodValidationPipe(z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }))) body: { ids: string[] },
+  ) {
+    return this.drivers.adminDeleteMany(body.ids, adminId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Exclui um motorista (cadastro, documentos, carros, carteira); corridas ficam no historico' })
+  excluir(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('id') adminId: string) {
+    return this.drivers.adminDelete(id, adminId);
   }
 
   @Get()

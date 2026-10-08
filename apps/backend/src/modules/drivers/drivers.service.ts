@@ -451,6 +451,117 @@ export class DriversService {
     return this.withProgress(updated.id);
   }
 
+  // ------------------------------------------------------------------
+  // Excluir motorista (Evandro, 08/10/2026: "nao ficar guardando dados de
+  // motorista que nem faz mais parte da plataforma").
+  // Apaga o cadastro, CNH, fotos dos documentos, carros, carteira e extrato,
+  // saques, jornadas e chamados. As corridas ja feitas ficam no historico do
+  // passageiro e no financeiro, sem o motorista. A conta (telefone/e-mail):
+  //  - tambem usada no app do passageiro (cadastro de passageiro feito ou
+  //    corridas como passageiro): continua, so como passageiro;
+  //  - sem nenhum uso: apagada de vez;
+  //  - com avaliacoes ou pagamentos: dados pessoais apagados (anonimizada).
+  // ------------------------------------------------------------------
+  async adminDelete(
+    driverId: string,
+    adminId: string,
+  ): Promise<{ id: string; resultado: 'APAGADO' | 'ANONIMIZADO' | 'VIROU_PASSAGEIRO'; corridas: number }> {
+    const d = await this.prisma.driver.findUnique({
+      where: { id: driverId },
+      select: { id: true, userId: true, user: { select: { role: true, metadata: true } } },
+    });
+    if (!d) throw BusinessException.notFound('Motorista nao encontrado (ja excluido?).');
+    // Fez o cadastro no app do passageiro (nome, e-mail, cidade): e passageiro tambem.
+    const cadastroDePassageiro = (d.user.metadata as { cadastroCompleto?: boolean } | null)?.cadastroCompleto === true;
+    if (d.user.role === UserRole.ADMIN) throw BusinessException.validation('A conta da Central nao pode ser excluida aqui.');
+    const emCorrida = await this.prisma.ride.count({
+      where: { driverId, status: { in: [...ACTIVE_RIDE_STATUSES] } },
+    });
+    if (emCorrida > 0) {
+      throw BusinessException.conflict('Este motorista esta numa corrida agora. Espere a corrida terminar para excluir.');
+    }
+    const userId = d.userId;
+    const [corridas, comoPassageiro, pagamentos, avaliacoes] = await Promise.all([
+      this.prisma.ride.count({ where: { driverId } }),
+      this.prisma.ride.count({ where: { passengerId: userId } }),
+      this.prisma.payment.count({ where: { payerId: userId } }),
+      this.prisma.rating.count({ where: { OR: [{ authorId: userId }, { targetId: userId }] } }),
+    ]);
+
+    let resultado: 'APAGADO' | 'ANONIMIZADO' | 'VIROU_PASSAGEIRO' = 'APAGADO';
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Fotos dos documentos (CNH, CRLV, antecedentes) guardadas no banco.
+        await tx.arquivo.deleteMany({ where: { ownerId: userId, tipo: { not: 'AVATAR' } } });
+        // Em cascata: documentos, carros, carteira e extrato, saques,
+        // jornadas, chamados e posicao. Corridas ficam, sem o motorista.
+        await tx.driver.delete({ where: { id: driverId } });
+
+        if (comoPassageiro > 0 || cadastroDePassageiro) {
+          await tx.user.update({ where: { id: userId }, data: { role: UserRole.PASSENGER } });
+          resultado = 'VIROU_PASSAGEIRO';
+        } else if (pagamentos + avaliacoes === 0) {
+          await tx.arquivo.deleteMany({ where: { ownerId: userId } });
+          await tx.user.delete({ where: { id: userId } });
+          resultado = 'APAGADO';
+        } else {
+          // Avaliacoes das corridas continuam apontando para a conta, entao
+          // ela fica, mas sem nada que identifique a pessoa.
+          await tx.arquivo.deleteMany({ where: { ownerId: userId } });
+          await tx.refreshToken.deleteMany({ where: { userId } });
+          await tx.device.deleteMany({ where: { userId } });
+          await tx.userAddress.deleteMany({ where: { userId } });
+          await tx.user.update({
+            where: { id: userId },
+            data: {
+              role: UserRole.PASSENGER,
+              status: UserStatus.DELETED,
+              name: 'Motorista excluido',
+              email: null,
+              phone: `excl-${userId.replace(/-/g, '').slice(0, 15)}`,
+              cpf: null,
+              birthDate: null,
+              passwordHash: null,
+              avatarUrl: null,
+              metadata: {},
+              blockedReason: 'Conta excluida pela Central.',
+              deletedAt: new Date(),
+            },
+          });
+          resultado = 'ANONIMIZADO';
+        }
+
+        await tx.auditLog.create({
+          data: {
+            actorId: adminId,
+            actorRole: 'ADMIN',
+            action: 'DRIVER_DELETED',
+            entity: 'Driver',
+            entityId: driverId,
+            after: { resultado, corridas },
+          },
+        });
+      },
+      { timeout: 30_000 },
+    );
+
+    this.logger.log(`Motorista ${driverId} excluido pela Central (${resultado}, ${corridas} corrida(s)) por ${adminId}`);
+    return { id: driverId, resultado, corridas };
+  }
+
+  /** Varios de uma vez (ex.: limpar os cadastros de teste). Um erro nao para os outros. */
+  async adminDeleteMany(ids: string[], adminId: string) {
+    const itens: Array<{ id: string; resultado?: string; corridas?: number; erro?: string }> = [];
+    for (const id of ids) {
+      try {
+        itens.push(await this.adminDelete(id, adminId));
+      } catch (e) {
+        itens.push({ id, erro: (e as Error).message });
+      }
+    }
+    return { excluidos: itens.filter((i) => !i.erro).length, itens };
+  }
+
   /** Mapa do admin: motoristas online com posicao atual. */
   async adminActiveDrivers() {
     return this.prisma.$queryRaw<

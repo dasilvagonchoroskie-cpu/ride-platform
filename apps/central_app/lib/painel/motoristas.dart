@@ -26,6 +26,12 @@ class _MotoristasState extends State<Motoristas> {
   late final PainelState _painel;
   String? _ultimoPendenteVisto;
 
+  /// Modo "Selecionar para excluir" e quem esta marcado.
+  bool _selecionando = false;
+  final Set<String> _marcados = {};
+  List<MotoristaCadastro> _ultimaLista = const [];
+  bool _excluindo = false;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +58,69 @@ class _MotoristasState extends State<Motoristas> {
 
   void _recarregar() => setState(() { _lista = _api.motoristas(_situacao); });
 
+  void _sairDaSelecao() => setState(() {
+        _selecionando = false;
+        _marcados.clear();
+      });
+
+  Future<void> _excluirMarcados() async {
+    final ids = _marcados.toList();
+    if (ids.isEmpty) return;
+    final ok = await confirmarExclusaoDeMotoristas(context, quantos: ids.length);
+    if (!ok || !mounted) return;
+    setState(() => _excluindo = true);
+    try {
+      final r = await _api.excluirMotoristas(ids);
+      if (mounted) avisar(context, r.resumo, erro: r.erros.isNotEmpty);
+    } catch (e) {
+      if (mounted) avisar(context, mensagemDe(e), erro: true);
+    }
+    if (!mounted) return;
+    setState(() => _excluindo = false);
+    _sairDaSelecao();
+    _recarregar();
+  }
+
+  Widget _barraDeSelecao() {
+    final todos = _ultimaLista.isNotEmpty && _ultimaLista.every((m) => _marcados.contains(m.id));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _marcados.isEmpty ? 'Toque nos motoristas que quer excluir.' : '${_marcados.length} selecionado(s)',
+          style: AppText.bodyStrong,
+        ),
+        const SizedBox(height: Spacing.xs),
+        Wrap(
+          spacing: Spacing.sm,
+          runSpacing: Spacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton(
+              onPressed: () => setState(() {
+                if (todos) {
+                  _marcados.clear();
+                } else {
+                  _marcados.addAll(_ultimaLista.map((m) => m.id));
+                }
+              }),
+              child: Text(todos ? 'Desmarcar todos' : 'Marcar todos'),
+            ),
+            TextButton(onPressed: _excluindo ? null : _sairDaSelecao, child: const Text('Cancelar')),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: _marcados.isEmpty || _excluindo ? null : _excluirMarcados,
+              icon: _excluindo
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.delete_forever),
+              label: Text('Excluir (${_marcados.length})'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -69,6 +138,7 @@ class _MotoristasState extends State<Motoristas> {
                     selected: _situacao == s.$1,
                     onSelected: (_) {
                       _situacao = s.$1;
+                      _marcados.clear();
                       _recarregar();
                     },
                   ),
@@ -78,20 +148,34 @@ class _MotoristasState extends State<Motoristas> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.sm),
-          child: FilledButton.icon(
-            onPressed: () async {
-              final criou = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(builder: (_) => const CadastrarMotoristaTela()),
-              );
-              if (criou == true) {
-                // Aprovado na hora: mostra na aba Ativos.
-                _situacao = 'APPROVED';
-                _recarregar();
-              }
-            },
-            icon: const Icon(Icons.person_add_alt_1),
-            label: const Text('Cadastrar motorista'),
-          ),
+          child: _selecionando
+              ? _barraDeSelecao()
+              : Wrap(
+                  spacing: Spacing.sm,
+                  runSpacing: Spacing.sm,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final criou = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(builder: (_) => const CadastrarMotoristaTela()),
+                        );
+                        if (criou == true) {
+                          // Aprovado na hora: mostra na aba Ativos.
+                          _situacao = 'APPROVED';
+                          _recarregar();
+                        }
+                      },
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: const Text('Cadastrar motorista'),
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                      onPressed: () => setState(() => _selecionando = true),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Selecionar para excluir'),
+                    ),
+                  ],
+                ),
         ),
         Expanded(
           child: FutureBuilder<List<MotoristaCadastro>>(
@@ -100,6 +184,7 @@ class _MotoristasState extends State<Motoristas> {
               if (s.hasError) return Aviso(texto: 'Não foi possível carregar: ${s.error}', tentarDeNovo: _recarregar);
               if (!s.hasData) return const Center(child: CircularProgressIndicator());
               final lista = s.data!;
+              _ultimaLista = lista;
               if (lista.isEmpty) return const Aviso(texto: 'Nenhum motorista nesta situação.');
               return RefreshIndicator(
                 onRefresh: () async => _recarregar(),
@@ -114,6 +199,12 @@ class _MotoristasState extends State<Motoristas> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(Radii.md),
                       child: ListTile(
+                        leading: _selecionando
+                            ? Checkbox(
+                                value: _marcados.contains(m.id),
+                                onChanged: (_) => setState(() => _marcados.contains(m.id) ? _marcados.remove(m.id) : _marcados.add(m.id)),
+                              )
+                            : null,
                         title: Text(m.nome, style: AppText.bodyStrong),
                         subtitle: Text(
                           '${telefoneBonito(m.telefone)}\n${m.veiculo.isEmpty ? 'Sem veículo' : '${m.veiculo} · ${m.placa}'} · ${m.categoria}'
@@ -123,6 +214,10 @@ class _MotoristasState extends State<Motoristas> {
                         isThreeLine: true,
                         trailing: m.online ? const Icon(Icons.circle, color: AppColors.success, size: 12) : null,
                         onTap: () async {
+                          if (_selecionando) {
+                            setState(() => _marcados.contains(m.id) ? _marcados.remove(m.id) : _marcados.add(m.id));
+                            return;
+                          }
                           await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DetalheMotorista(id: m.id)));
                           _recarregar();
                         },
@@ -137,6 +232,33 @@ class _MotoristasState extends State<Motoristas> {
       ],
     );
   }
+}
+
+/// Confirmacao antes de excluir: explica o que some e o que fica.
+Future<bool> confirmarExclusaoDeMotoristas(BuildContext context, {required int quantos, String? nome, int saldoCents = 0, int corridas = 0}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: const Icon(Icons.delete_forever, color: AppColors.danger, size: 36),
+      title: Text(nome != null ? 'Excluir $nome?' : (quantos == 1 ? 'Excluir 1 motorista?' : 'Excluir $quantos motoristas?')),
+      content: Text(
+        'Apaga de vez: cadastro, CPF e CNH, fotos dos documentos, carros, carteira e extrato.'
+        '${saldoCents != 0 ? '\n\nSaldo na carteira: ${reais(saldoCents)} (também é apagado).' : ''}'
+        '\n\nAs corridas já feitas${corridas > 0 ? ' ($corridas)' : ''} continuam no histórico, sem o motorista. '
+        'Se a pessoa também usa o app do passageiro, a conta de passageiro continua.'
+        '\n\nNão dá para desfazer.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Excluir'),
+        ),
+      ],
+    ),
+  );
+  return ok ?? false;
 }
 
 class DetalheMotorista extends StatefulWidget {
@@ -180,6 +302,25 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
     }
     final ok = await tentar(context, () => _api.mudarStatusMotorista(d.base.id, status, motivo), sucesso: 'Pronto: ${nomeDoStatusMotorista(status)}.');
     if (ok) _recarregar();
+  }
+
+  Future<void> _excluir(MotoristaDetalhe d) async {
+    final ok = await confirmarExclusaoDeMotoristas(
+      context,
+      quantos: 1,
+      nome: d.base.nome,
+      saldoCents: d.saldoCents,
+      corridas: d.corridas,
+    );
+    if (!ok || !mounted) return;
+    try {
+      final r = await _api.excluirMotoristas([d.base.id]);
+      if (!mounted) return;
+      avisar(context, r.resumo, erro: r.erros.isNotEmpty);
+      if (r.excluidos > 0) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) avisar(context, mensagemDe(e), erro: true);
+    }
   }
 
   @override
@@ -299,6 +440,12 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                       onPressed: () => _mudarStatus(d, 'BLOCKED', 'Bloquear', 'Bloqueio por falta grave. Ele não recebe corridas.'),
                       child: const Text('Bloquear'),
                     ),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Excluir motorista'),
+                    onPressed: () => _excluir(d),
+                  ),
                 ],
               ),
               const SizedBox(height: Spacing.xl),
