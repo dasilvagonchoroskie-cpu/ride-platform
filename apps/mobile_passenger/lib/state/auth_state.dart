@@ -32,6 +32,10 @@ class AuthState extends ChangeNotifier {
   /// Para onde o ultimo codigo foi (ex.: "e-mail e•••@gmail.com"), quando
   /// pediu pelo telefone e ele foi para o e-mail da conta (sem SMS).
   String? codigoEnviadoPara;
+
+  /// Telefone digitado que ainda nao tinha conta: a conta nasce pelo e-mail
+  /// e o cadastro ja vem com este telefone preenchido.
+  String? telefoneParaCadastro;
   String? accessToken;
   bool ready = false;
   bool loading = false;

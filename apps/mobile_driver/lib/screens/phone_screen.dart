@@ -70,10 +70,25 @@ class _PhoneScreenState extends State<PhoneScreen> {
     String? debugCode;
     if (AppConfig.hasApi) {
       setState(() => _error = null);
+      final driver = context.read<DriverState>();
       try {
-        debugCode = await context.read<DriverState>().requestOtp(phone);
+        debugCode = await driver.requestOtp(phone);
       } on ApiException catch (e) {
-        if (mounted) setState(() => _error = e.message);
+        if (!mounted) return;
+        if (e.code == 'TELEFONE_SEM_CONTA') {
+          // Sem SMS, a conta nova nasce pelo e-mail: o codigo chega nele.
+          driver.telefoneParaCadastro = phone;
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => EmailScreen(
+                aviso: 'O telefone ${telefoneBonito(phone)} ainda não tem conta. Para criar a sua, '
+                    'digite o seu e-mail: o código de confirmação chega nele.',
+              ),
+            ),
+          );
+          return;
+        }
+        setState(() => _error = e.message);
         return;
       }
     }

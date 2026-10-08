@@ -42,6 +42,12 @@ class _SignupScreenState extends State<SignupScreen> {
       // O servidor cria a conta como "Passageiro 1234": isso nao e nome.
       if (!u.name.startsWith('Passageiro') && !u.name.startsWith('Motorista')) _nome.text = u.name;
       _pedeTelefone = u.telefonePendente || u.phone.isEmpty;
+      // Digitou o telefone antes (sem conta): ja vem preenchido.
+      final digitado = context.read<AuthState>().telefoneParaCadastro;
+      if (_pedeTelefone && digitado != null) {
+        final d = onlyDigits(digitado);
+        _telefone.text = formatPhoneInput(d.startsWith('55') && d.length > 11 ? d.substring(2) : d);
+      }
       _email.text = u.email ?? '';
       if (u.cpf != null) _cpf.text = formatarCpf(u.cpf!);
       _genero = u.genero;

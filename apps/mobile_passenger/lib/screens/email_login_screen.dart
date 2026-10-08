@@ -13,7 +13,10 @@ import 'reset_password_screen.dart';
 /// Entrar pelo e-mail: com o codigo que chega no e-mail (gratis) ou com a
 /// senha criada no cadastro. Conta nova tambem nasce por aqui.
 class EmailLoginScreen extends StatefulWidget {
-  const EmailLoginScreen({super.key});
+  const EmailLoginScreen({super.key, this.aviso});
+
+  /// Explicacao no topo (ex.: telefone sem conta: a conta nasce pelo e-mail).
+  final String? aviso;
 
   @override
   State<EmailLoginScreen> createState() => _EmailLoginScreenState();
@@ -82,13 +85,26 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final codigoLigado = context.watch<ConfigState>().loginEmail;
-    final comSenha = _comSenha ?? !codigoLigado;
+    // Veio criar conta (telefone sem conta): direto pelo codigo no e-mail.
+    final comSenha = _comSenha ?? (widget.aviso != null ? false : !codigoLigado);
 
     return TelaFormulario(
       titulo: 'Entrar com e-mail',
       child: ListView(
         padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.xl),
         children: [
+          if (widget.aviso != null) ...[
+            Container(
+              padding: const EdgeInsets.all(Spacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                border: Border.all(color: AppColors.primary),
+                borderRadius: BorderRadius.circular(Radii.sm),
+              ),
+              child: Text(widget.aviso!, style: AppText.body.copyWith(fontSize: 16, color: AppColors.primaryDark, height: 1.4)),
+            ),
+            const SizedBox(height: Spacing.lg),
+          ],
           if (!comSenha) ...[
             Text(
               'Você recebe um código de 6 números no e-mail. Se ainda não tem conta, ela é criada agora.',

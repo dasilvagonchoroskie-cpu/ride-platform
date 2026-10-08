@@ -44,6 +44,10 @@ export const ERROR_CODES = {
   CPF_ALREADY_USED: 'CPF_ALREADY_USED',
   /** Os dados do cadastro sao de uma conta que ja existe (a mesma pessoa). */
   CONTA_EXISTENTE: 'CONTA_EXISTENTE',
+  /** Telefone sem conta (ou so com uma conta vazia): a conta nova nasce pelo e-mail. */
+  TELEFONE_SEM_CONTA: 'TELEFONE_SEM_CONTA',
+  /** Conta do telefone sem e-mail para receber o codigo (sem SMS). */
+  TELEFONE_SEM_EMAIL: 'TELEFONE_SEM_EMAIL',
   PHONE_ALREADY_USED: 'PHONE_ALREADY_USED',
   DRIVER_ALREADY_EXISTS: 'DRIVER_ALREADY_EXISTS',
   DRIVER_NOT_APPROVED: 'DRIVER_NOT_APPROVED',

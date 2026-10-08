@@ -13,6 +13,8 @@ falha() { echo "FALHA  $1" | tee -a "$REL"; echo "       resposta: $(echo "$2" |
 CHAVE="${OTP_CHAVE_TESTE:-}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@ride.local}"
 post()  { curl -s -m 90 -X POST "$API$1" -H 'Content-Type: application/json' ${CHAVE:+-H "x-chave-teste: $CHAVE"} ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
+# Como o aplicativo de verdade (sem a chave do teste): o codigo nunca volta na resposta.
+post_app() { curl -s -m 90 -X POST "$API$1" -H 'Content-Type: application/json' -d "$2"; }
 patch() { curl -s -m 90 -X PATCH "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 put()   { curl -s -m 90 -X PUT "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 get()   { curl -s -m 90 "$API$1" ${2:+-H "Authorization: Bearer $2"}; }
@@ -128,10 +130,11 @@ TOUTRO=$(entrar "+55649${SUF}76" DRIVER); post /auth/accept-terms '{"version":"1
 CNHV=$(gerar_cnh)
 DADOSV="\"name\":\"Pessoa Dois Apps\",\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"birthDate\":\"1988-03-10\",\"cnhNumber\":\"$CNHV\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\""
 X=$(post /drivers/onboarding "{$DADOSV}" "$TOUTRO")
-[ "$(echo "$X" | jq -r '.error.code')" = "CONTA_EXISTENTE" ] && [ "$(echo "$X" | jq -r '.error.details.destino')" = "telefone terminado em ${FONE_V: -4}" ] && [ "$(get /drivers/me "$TOUTRO" | jq -r '.success')" = "false" ] \
-  && ok "Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (telefone terminado em ${FONE_V: -4})" || falha "Motorista: reconhecer a conta de passageiro" "$X"
+DESTV="e-mail d•••@teste.fortalezamov.com.br"
+[ "$(echo "$X" | jq -r '.error.code')" = "CONTA_EXISTENTE" ] && [ "$(echo "$X" | jq -r '.error.details.destino')" = "$DESTV" ] && [ "$(get /drivers/me "$TOUTRO" | jq -r '.success')" = "false" ] \
+  && ok "Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (codigo vai para o $DESTV)" || falha "Motorista: reconhecer a conta de passageiro" "$X"
 X=$(pedir_codigo "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\"}" /auth/vincular-conta/codigo "$TOUTRO"); CV=$(echo "$X" | jq -r '.data.debugCode // empty')
-[ -n "$CV" ] && [ "$(echo "$X" | jq -r '.data.destino')" = "telefone terminado em ${FONE_V: -4}" ] && ok "Motorista: codigo enviado para a conta de passageiro" || falha "Motorista: codigo para a conta existente" "$X"
+[ -n "$CV" ] && [ "$(echo "$X" | jq -r '.data.destino')" = "$DESTV" ] && ok "Motorista: codigo enviado para a conta de passageiro" || falha "Motorista: codigo para a conta existente" "$X"
 X=$(post /auth/vincular-conta/entrar "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"code\":\"000000\"}" "$TOUTRO")
 sucesso "$X" && falha "Codigo errado deveria ser recusado" "$X" || ok "Seguranca: codigo errado nao entra na conta de outra pessoa"
 X=$(post /auth/vincular-conta/entrar "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"code\":\"$CV\"}" "$TOUTRO"); TV=$(echo "$X" | jq -r '.data.accessToken // empty')
@@ -150,6 +153,11 @@ FONE_X="+55649${SUF}70"; TX=$(entrar "$FONE_X" DRIVER)
 X=$(post /auth/desfazer-conta-nova '{}' "$TX"); [ "$(echo "$X" | jq -r '.data.desfeita')" = "true" ] && ok "Numero errado: conta nova vazia desfeita" || falha "Numero errado: desfazer conta nova" "$X"
 X=$(get /auth/me "$TX"); sucesso "$X" && falha "Conta desfeita ainda existe" "$X" || ok "Numero errado: a conta desfeita sumiu"
 X=$(post /auth/desfazer-conta-nova '{}' "$TV"); sucesso "$X" && falha "Conta com cadastro de motorista nao pode ser desfeita" "$X" || ok "Seguranca: conta com cadastro nao e desfeita"
+# Codigo por e-mail para todos (Evandro, 08/10/2026): telefone sem conta nao
+# recebe codigo na tela; o app pede o e-mail e a conta nasce por ele.
+X=$(post_app /auth/otp/request "{\"phone\":\"+55649${SUF}69\",\"purpose\":\"LOGIN\"}")
+[ "$(echo "$X" | jq -r '.error.code')" = "TELEFONE_SEM_CONTA" ] && [ -z "$(echo "$X" | jq -r '.data.debugCode // empty')" ] \
+  && ok "Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)" || falha "Telefone novo sem codigo na tela" "$X"
 FONE_C="+55649${SUF}78"; CPFC=$(gerar_cpf); CNHC=$(gerar_cnh); PLACAC="TST$(printf '%04d' $((RANDOM%10000)))"
 CORPOC="{\"name\":\"Motorista Pela Central\",\"phone\":\"(64) 9${SUF}78\",\"cpf\":\"$CPFC\",\"birthDate\":\"1985-07-20\",\"cnhNumber\":\"$CNHC\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2032-05-01\",\"vehicle\":{\"plate\":\"$PLACAC\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"},\"aprovar\":true}"
 X=$(post /admin/drivers "$CORPOC" "$TA"); DIDC=$(echo "$X" | jq -r '.data.id // empty')

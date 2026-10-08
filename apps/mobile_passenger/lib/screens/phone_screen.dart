@@ -67,7 +67,21 @@ class _PhoneScreenState extends State<PhoneScreen> {
         MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: numero, debugCode: codigoTeste)),
       );
     } on ApiException catch (e) {
-      if (mounted) setState(() => _erro = e.message);
+      if (!mounted) return;
+      if (e.code == 'TELEFONE_SEM_CONTA') {
+        // Sem SMS, a conta nova nasce pelo e-mail: o codigo chega nele.
+        auth.telefoneParaCadastro = numero;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => EmailLoginScreen(
+              aviso: 'O telefone ${telefoneLegivel(numero)} ainda não tem conta. Para criar a sua, '
+                  'digite o seu e-mail: o código de confirmação chega nele.',
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() => _erro = e.message);
     } finally {
       if (mounted) setState(() => _enviando = false);
     }

@@ -9,7 +9,10 @@ import 'otp_screen.dart';
 
 /// Entrada pelo e-mail: o codigo de 6 numeros chega no e-mail (gratis).
 class EmailScreen extends StatefulWidget {
-  const EmailScreen({super.key});
+  const EmailScreen({super.key, this.aviso});
+
+  /// Explicacao no topo (ex.: telefone sem conta: a conta nasce pelo e-mail).
+  final String? aviso;
 
   @override
   State<EmailScreen> createState() => _EmailScreenState();
@@ -63,6 +66,18 @@ class _EmailScreenState extends State<EmailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.aviso != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(Spacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    border: Border.all(color: AppColors.primaryDark),
+                    borderRadius: BorderRadius.circular(Radii.sm),
+                  ),
+                  child: Text(widget.aviso!, style: AppText.body.copyWith(color: AppColors.primary)),
+                ),
+                const SizedBox(height: Spacing.lg),
+              ],
               Text('Qual o seu e-mail?', style: AppText.title),
               const SizedBox(height: Spacing.sm),
               Text(

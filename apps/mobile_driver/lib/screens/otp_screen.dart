@@ -139,6 +139,14 @@ class _OtpScreenState extends State<OtpScreen> {
                   ),
                 ),
               ],
+              if (widget.debugCode == null) ...[
+                const SizedBox(height: Spacing.sm),
+                Text(
+                  'Não chegou? Olhe também a caixa de Spam (lixo eletrônico). '
+                  'Nunca passe este código para ninguém: a Fortaleza Mov nunca pede o seu código.',
+                  style: AppText.caption.copyWith(color: AppColors.textMuted),
+                ),
+              ],
               if (widget.debugCode != null) ...[
                 const SizedBox(height: Spacing.lg),
                 Container(

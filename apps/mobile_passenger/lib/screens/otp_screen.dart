@@ -142,6 +142,13 @@ class _OtpScreenState extends State<OtpScreen> {
                 : telefoneLegivel(widget.phone),
             style: AppText.bodyStrong.copyWith(fontSize: 19),
           ),
+          const SizedBox(height: Spacing.sm),
+          if (_codigoTeste == null)
+            Text(
+              'Não chegou? Olhe também a caixa de Spam (lixo eletrônico). '
+              'Nunca passe este código para ninguém: a Fortaleza Mov nunca pede o seu código.',
+              style: AppText.body.copyWith(fontSize: 15, color: AppColors.textMuted, height: 1.4),
+            ),
           const SizedBox(height: Spacing.lg),
           if (_codigoTeste != null) ...[
             AvisoCodigoTeste(codigo: _codigoTeste!),

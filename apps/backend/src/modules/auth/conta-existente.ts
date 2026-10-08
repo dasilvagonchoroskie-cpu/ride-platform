@@ -49,15 +49,53 @@ export async function acharContaComOsMesmosDados(
     select: { id: true, role: true, phone: true, email: true },
   });
   if (!u) return null;
+  // Conta vazia presa so pelo telefone: libera em vez de pedir codigo para
+  // uma conta que nao tem para onde mandar.
+  if (telefoneDeVerdade(dados.phone) && u.phone === dados.phone && !u.email && (await contaVaziaSemEmail(prisma, u.id))) {
+    await prisma.user.delete({ where: { id: u.id } });
+    return acharContaComOsMesmosDados(prisma, userId, dados);
+  }
   if (u.role === UserRole.ADMIN) {
     throw BusinessException.conflict('Estes dados sao da conta da Central. Use outros dados.', ERROR_CODES.CONFLICT);
   }
-  const destino = telefoneDeVerdade(u.phone)
-    ? `telefone terminado em ${u.phone.slice(-4)}`
-    : u.email
-      ? `e-mail ${mascararEmail(u.email)}`
+  // Sem SMS o codigo vai para o e-mail da conta: e ele que aparece.
+  const destino = u.email
+    ? `e-mail ${mascararEmail(u.email)}`
+    : telefoneDeVerdade(u.phone)
+      ? `telefone terminado em ${u.phone.slice(-4)}`
       : 'conta sem contato';
   return { id: u.id, phone: u.phone, email: u.email, destino };
+}
+
+/**
+ * Conta que so tem o telefone: nunca terminou cadastro, sem e-mail, sem
+ * corrida, sem cadastro de motorista. Sem SMS, ninguem consegue mais entrar
+ * nela (o codigo vai para o e-mail da conta, e ela nao tem). Ela nao pode
+ * prender o telefone de quem vai criar a conta de verdade pelo e-mail.
+ */
+export async function contaVaziaSemEmail(prisma: PrismaService, userId: string): Promise<boolean> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      email: true,
+      role: true,
+      metadata: true,
+      driver: { select: { id: true } },
+      _count: { select: { ridesAsPassenger: true, payments: true, ratingsGiven: true, ratingsReceived: true } },
+    },
+  });
+  if (!u || u.email || u.role === UserRole.ADMIN || u.driver) return false;
+  if ((u.metadata as { cadastroCompleto?: boolean } | null)?.cadastroCompleto === true) return false;
+  const c = u._count;
+  return c.ridesAsPassenger + c.payments + c.ratingsGiven + c.ratingsReceived === 0;
+}
+
+/** Apaga a conta vazia que prendia o telefone. Devolve true se apagou. */
+export async function liberarTelefoneDeContaVazia(prisma: PrismaService, phone: string, exceto: string): Promise<boolean> {
+  const dono = await prisma.user.findFirst({ where: { phone, NOT: { id: exceto } }, select: { id: true } });
+  if (!dono || !(await contaVaziaSemEmail(prisma, dono.id))) return false;
+  await prisma.user.delete({ where: { id: dono.id } });
+  return true;
 }
 
 /** Recusa do cadastro quando os dados sao de outra conta da mesma pessoa. */

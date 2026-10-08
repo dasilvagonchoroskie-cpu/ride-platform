@@ -320,6 +320,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// Para onde o ultimo codigo foi (ex.: "e-mail e•••@gmail.com").
   String? codigoEnviadoPara;
 
+  /// Telefone digitado que ainda nao tinha conta: a conta nasce pelo e-mail
+  /// e o cadastro ja vem com este telefone preenchido.
+  String? telefoneParaCadastro;
+
   /// Codigo pelo e-mail (gratis; o SMS ainda nao esta contratado).
   Future<String?> requestOtpEmail(String email) async {
     final data = await _client.request('POST', '/auth/otp/request', body: {

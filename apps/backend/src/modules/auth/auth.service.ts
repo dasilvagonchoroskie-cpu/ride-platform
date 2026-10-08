@@ -6,7 +6,7 @@ import { comparePassword, hashPassword } from '../../common/utils/crypto.util';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { TokenService, DeviceContext, IssuedTokens } from './token.service';
 import { OtpService } from './otp.service';
-import { acharContaComOsMesmosDados, DadosDaPessoa } from './conta-existente';
+import { acharContaComOsMesmosDados, DadosDaPessoa, liberarTelefoneDeContaVazia } from './conta-existente';
 import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
 
 /** Genero informado no cadastro do passageiro. */
@@ -96,7 +96,8 @@ export class AuthService {
   private async contaParaVincular(userId: string, dados: DadosDaPessoa) {
     const conta = await acharContaComOsMesmosDados(this.prisma, userId, dados);
     if (!conta) throw BusinessException.notFound('Nenhuma outra conta com estes dados.');
-    const alvo = conta.phone && !conta.phone.startsWith('pend-') ? { phone: conta.phone } : { email: conta.email ?? undefined };
+    // O codigo vai para o e-mail da conta (sem SMS); sem e-mail, pelo telefone.
+    const alvo: { phone?: string; email?: string } = conta.email ? { email: conta.email } : conta.phone && !conta.phone.startsWith('pend-') ? { phone: conta.phone } : {};
     if (!alvo.phone && !alvo.email) throw BusinessException.validation('Essa conta nao tem telefone nem e-mail para receber o codigo.');
     return { conta, alvo };
   }
@@ -582,7 +583,9 @@ export class AuthService {
     }
     if (!novo) throw BusinessException.validation('Informe o seu telefone com DDD.');
     const dono = await this.prisma.user.findFirst({ where: { phone: novo, NOT: { id: userId } }, select: { id: true } });
-    if (dono) throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
+    if (dono && !(await liberarTelefoneDeContaVazia(this.prisma, novo, userId))) {
+      throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
+    }
     return novo;
   }
 

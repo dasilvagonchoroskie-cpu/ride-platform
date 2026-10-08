@@ -49,6 +49,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.initState();
     final driver = context.read<DriverState>();
     _semTelefone = (driver.profile?.phone ?? '').isEmpty;
+    // Digitou o telefone antes (sem conta, entrou pelo e-mail): ja vem preenchido.
+    final digitado = driver.telefoneParaCadastro;
+    if (_semTelefone && digitado != null) _telefone.text = telefoneBonito(digitado);
     final nome = driver.profile?.name ?? '';
     // A conta nasce como "Motorista 1234" (ou "Passageiro 1234"): isso nao e nome.
     if (nome.isNotEmpty && !nome.startsWith('Motorista') && !nome.startsWith('Passageiro')) _nome.text = nome;
