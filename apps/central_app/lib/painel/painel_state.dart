@@ -70,7 +70,7 @@ class PainelState extends ChangeNotifier {
       final r = await Future.wait([
         api.indicadores(),
         api.corridas(),
-        api.motoristasOnline(centro),
+        api.motoristasOnline(centro, todos: true),
         api.alertas(),
       ]);
       indicadores = r[0] as Indicadores;
@@ -86,10 +86,13 @@ class PainelState extends ChangeNotifier {
         Alarme.parar();
       }
       await _conferirPendente();
+      _falhasSeguidas = 0;
     } on ApiException catch (e) {
-      erro = e.message;
-    } catch (e) {
-      erro = 'Falha ao atualizar: $e';
+      _falhou(e.code == 'NETWORK_ERROR'
+          ? 'Sem internet no celular agora. Tentando de novo…'
+          : e.message);
+    } catch (_) {
+      _falhou('Sem internet no celular agora. Tentando de novo…');
     } finally {
       _consultando = false;
       notifyListeners();
@@ -129,6 +132,16 @@ class PainelState extends ChangeNotifier {
       await AppStorage.write(_chavePendenteVisto, p.id);
     } catch (_) {}
     notifyListeners();
+  }
+
+  /// Uma falha so (rede piscou) nao vira faixa vermelha: o painel segue com
+  /// o ultimo retrato e tenta de novo em 5 s. So avisa depois de 2 seguidas,
+  /// e sem o texto tecnico do erro (Evandro, 08/10/2026).
+  int _falhasSeguidas = 0;
+
+  void _falhou(String mensagem) {
+    _falhasSeguidas += 1;
+    if (_falhasSeguidas >= 2) erro = mensagem;
   }
 
   void silenciar(String alertaId) {

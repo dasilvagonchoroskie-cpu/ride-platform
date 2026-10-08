@@ -18,6 +18,8 @@ interface MetaUsuario {
   cidade?: string;
   cadastroCompleto?: boolean;
   cadastroConcluidoEm?: string;
+  /** Conta do teste automatico (corridas so entre contas de teste). */
+  teste?: boolean;
   [k: string]: unknown;
 }
 
@@ -192,6 +194,12 @@ export class AuthService {
         });
 
     this.assertUserActive(user.status);
+
+    // Conta do teste automatico: suas corridas nunca vao para motorista de
+    // verdade, e motorista de teste nunca recebe corrida de verdade.
+    if (this.otp.chaveTesteValida(params.chaveTeste) && user.role !== UserRole.ADMIN && metaDe(user).teste !== true) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { metadata: { ...metaDe(user), teste: true } as never } });
+    }
 
     const issued = await this.tokens.issueTokens(
       {

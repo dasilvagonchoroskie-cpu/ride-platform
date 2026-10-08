@@ -74,9 +74,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     limit?: number;
     /** So motoristas com veiculo ativo desta categoria (CARRO, MOTO...). */
     category?: string;
+    /**
+     * Corrida do teste automatico so vai para motorista do teste, e corrida
+     * de verdade nunca vai para motorista do teste (Evandro, 08/10/2026: o
+     * celular dele tocou chamado de teste na rua).
+     */
+    teste?: boolean;
   }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>> {
     const limit = params.limit ?? 20;
     const categoria = params.category ?? 'CARRO';
+    const teste = params.teste === true;
     return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>>`
       SELECT
         dl.driver_id                     AS "driverId",
@@ -85,9 +92,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         ST_X(dl.location::geometry)      AS "longitude"
       FROM driver_locations dl
       JOIN drivers d ON d.id = dl.driver_id
+      JOIN users u ON u.id = d.user_id
       WHERE d.status = 'APPROVED'
         AND d.is_online = TRUE
         AND dl.is_available = TRUE
+        AND COALESCE(u.metadata->>'teste' = 'true', FALSE) = ${teste}
         AND dl.last_seen_at > NOW() - INTERVAL '2 minutes'
         AND EXISTS (
           SELECT 1 FROM vehicles v
@@ -103,6 +112,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     `;
   }
 
+
+  /** Conta criada pelo teste automatico (entrou com a chave de teste). */
+  async contaDeTeste(userId: string): Promise<boolean> {
+    const u = await this.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    return (u?.metadata as { teste?: boolean } | null)?.teste === true;
+  }
 
   async isHealthy(): Promise<boolean> {
     try {

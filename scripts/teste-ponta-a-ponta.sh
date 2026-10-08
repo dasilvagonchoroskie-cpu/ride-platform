@@ -421,6 +421,11 @@ X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":true,"reason":"Teste autom
 X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":false,"reason":"Fim do teste"}' "$TA"); [ "$(echo "$X" | jq -r '.data.history | length')" -ge 2 ] 2>/dev/null && ok "Central: desbloqueado, historico com $(echo "$X" | jq -r '.data.history | length') registros" || falha "Central: historico de bloqueio" "$X"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
+# Mapa da Central: motorista offline continua no mapa (cinza), na ultima posicao.
+X=$(get "/admin/dispatch/drivers?lat=-18.0125&lng=-49.3547&todos=1" "$TA")
+[ "$(echo "$X" | jq -r --arg d "$DID" '[.data[] | select(.driverId==$d and .online==false and .latitude != null)] | length')" = "1" ] && ok "Central: motorista offline continua no mapa (cinza, ultima posicao)" || falha "Central: motorista offline no mapa" "$(echo "$X" | jq -c --arg d "$DID" '[.data[] | select(.driverId==$d)]')"
+X=$(get "/admin/dispatch/drivers?lat=-18.0125&lng=-49.3547" "$TA")
+[ "$(echo "$X" | jq -r --arg d "$DID" '[.data[] | select(.driverId==$d)] | length')" = "0" ] && ok "Despacho: so motoristas online" || falha "Despacho: offline na lista" "$X"
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
 # Limpeza pela opcao "Excluir" da Central (Evandro, 08/10/2026): os
 # motoristas de teste nao ficam mais acumulando na lista.

@@ -49,6 +49,7 @@ class RideScreen extends StatelessWidget {
                     span: 0.04,
                     rounded: false,
                     route: rota,
+                    minhaPosicao: d.position,
                     markers: [
                       MapMarker(id: 'me', coords: d.position, kind: MarkerKind.car),
                       MapMarker(id: 'pickup', coords: offer.pickupCoords, kind: MarkerKind.pickup),

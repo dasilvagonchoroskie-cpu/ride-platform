@@ -226,6 +226,7 @@ export class RidesService {
     // Motorista bloqueado pelo passageiro nunca recebe as corridas dele.
     const bloqueados = await this.bloqueadosDe(corrida.passengerId);
     const primeiraRodada = (await this.prisma.rideOffer.count({ where: { rideId } })) === 0;
+    const teste = await this.prisma.contaDeTeste(corrida.passengerId);
 
     for (const raio of RidesService.RAIOS_METROS) {
       const achados = await this.prisma.findNearbyDrivers({
@@ -234,6 +235,7 @@ export class RidesService {
         radiusMeters: raio,
         limit: 10,
         category: corrida.category,
+        teste,
       });
       const proximos = achados.filter((m) => !bloqueados.includes(m.driverId));
       if (proximos.length === 0) continue;
@@ -350,12 +352,13 @@ export class RidesService {
    * Posicao arredondada (uns 50 m) e sem identificar o motorista: o
    * passageiro ve que ha carro por perto, nao onde cada um esta parado.
    */
-  async carrosPerto(lat: number, lng: number) {
+  async carrosPerto(lat: number, lng: number, userId?: string) {
     const perto = await this.prisma.findNearbyDrivers({
       latitude: lat,
       longitude: lng,
       radiusMeters: 5000,
       limit: 12,
+      teste: userId ? await this.prisma.contaDeTeste(userId) : false,
     });
     const arredondar = (n: number) => Math.round(n * 2000) / 2000;
     return perto.map((m, i) => ({

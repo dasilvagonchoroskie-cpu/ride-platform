@@ -105,6 +105,9 @@ class _HomeScreenState extends State<HomeScreen> {
               markers: [MapMarker(id: 'me', coords: driver.position, kind: MarkerKind.car)],
               span: 0.02,
               rounded: false,
+              // Bussola automatica e centralizar (Evandro, 08/10/2026).
+              minhaPosicao: driver.position,
+              bussolaAutomatica: true,
             ),
           ),
 

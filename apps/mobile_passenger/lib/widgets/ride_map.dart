@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/utils/geo.dart';
+import 'bussola.dart';
 
 enum MarkerKind { pickup, dropoff, driver, car }
 
@@ -38,7 +41,19 @@ class RideMap extends StatefulWidget {
     this.rounded = true,
     this.interactive = true,
     this.recentrar = 0,
+    this.bussola = false,
+    this.minhaPosicao,
+    this.controlesAlinhamento = const Alignment(1, -0.45),
   });
+
+  /// Mostra a bussola (Evandro, 08/10/2026: "nos tres aplicativos").
+  final bool bussola;
+
+  /// Com ela, aparece tambem o botao de centralizar (telas sem botao proprio).
+  final Coords? minhaPosicao;
+
+  /// Onde ficam a bussola e o centralizar (fora do caminho dos paineis).
+  final Alignment controlesAlinhamento;
 
   /// Mude o numero para o mapa voltar a [center] (botao "minha localizacao").
   final int recentrar;
@@ -199,6 +214,34 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             MarkerLayer(markers: widget.markers.map(_buildMarker).toList()),
           ],
         ),
+
+        if ((widget.bussola || widget.minhaPosicao != null) && widget.interactive)
+          SafeArea(
+            child: Align(
+              alignment: widget.controlesAlinhamento,
+              child: Padding(
+                padding: const EdgeInsets.all(Spacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BotaoBussola(mapa: _mapa),
+                    if (widget.minhaPosicao != null) ...[
+                      const SizedBox(height: Spacing.sm),
+                      BotaoDoMapa(
+                        dica: 'Centralizar na minha localização',
+                        aoTocar: () {
+                          try {
+                            _mapa.move(_latLng(widget.minhaPosicao!), math.max(_mapa.camera.zoom, 15));
+                          } catch (_) {}
+                        },
+                        child: const Icon(Icons.my_location, color: Color(0xFF1A73E8)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
 
         // Atribuicao obrigatoria: OpenStreetMap (ODbL) + CARTO.
         Positioned(

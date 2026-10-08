@@ -34,6 +34,8 @@ class RideScreen extends StatelessWidget {
               center: centro,
               span: 0.03,
               rounded: false,
+              // Bussola e centralizar (no carro, ou no embarque enquanto ele nao aparece).
+              minhaPosicao: centro,
               markers: [
                 MapMarker(id: 'dropoff', coords: corrida.dropoff.coords, kind: MarkerKind.dropoff),
                 if (motorista != null && motorista.posicaoReal)

@@ -182,12 +182,20 @@ class MotoristaOnline {
     required this.distanciaKm,
     required this.posicao,
     required this.nota,
+    this.online = true,
+    this.vistoEm,
   });
 
   final String id;
   final String nome;
   final String? telefone;
   final bool ocupado;
+
+  /// Offline aparece cinza no mapa, na ultima posicao conhecida.
+  final bool online;
+
+  /// Ultima vez que o aparelho mandou a posicao.
+  final DateTime? vistoEm;
   final String veiculo;
   final String placa;
   final String categoria;
@@ -209,6 +217,8 @@ class MotoristaOnline {
       distanciaKm: _num(j['distanceKm']),
       posicao: lat != null && lng != null ? Coords(lat, lng) : null,
       nota: _num(j['rating']) ?? 5,
+      online: j['online'] != false,
+      vistoEm: DateTime.tryParse('${j['lastSeenAt'] ?? ''}')?.toLocal(),
     );
   }
 }
@@ -838,9 +848,14 @@ class PainelApi {
   Future<List<CorridaAtiva>> corridas() async =>
       [for (final j in _lista(await _c.request('GET', '/admin/rides/active'))) CorridaAtiva.fromJson(j)];
 
-  Future<List<MotoristaOnline>> motoristasOnline(Coords perto) async => [
-        for (final j in _lista(await _c.request('GET', '/admin/dispatch/drivers',
-            query: {'lat': '${perto.latitude}', 'lng': '${perto.longitude}'})))
+  /// Motoristas online do mais perto ao mais longe. [todos]: tambem os
+  /// offline (mapa da Central, cinza na ultima posicao).
+  Future<List<MotoristaOnline>> motoristasOnline(Coords perto, {bool todos = false}) async => [
+        for (final j in _lista(await _c.request('GET', '/admin/dispatch/drivers', query: {
+          'lat': '${perto.latitude}',
+          'lng': '${perto.longitude}',
+          if (todos) 'todos': '1',
+        })))
           MotoristaOnline.fromJson(j),
       ];
 

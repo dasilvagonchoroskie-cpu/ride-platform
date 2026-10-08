@@ -6,10 +6,24 @@ import 'package:provider/provider.dart';
 import '../core/theme/central_theme.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
+import '../widgets/bussola.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 
 LatLng _ll(Coords c) => LatLng(c.latitude, c.longitude);
+
+/// Carro offline: cinza, parado na ultima posicao que o aparelho mandou.
+const Color _cinzaOffline = Color(0xFF8E8E93);
+
+/// " · visto há 5 min" (ou ha horas/dias).
+String _vistoHa(DateTime? quando) {
+  if (quando == null) return '';
+  final d = DateTime.now().difference(quando);
+  if (d.inMinutes < 1) return ' · visto agora';
+  if (d.inMinutes < 60) return ' · visto há ${d.inMinutes} min';
+  if (d.inHours < 24) return ' · visto há ${d.inHours} h';
+  return ' · visto há ${d.inDays} dia(s)';
+}
 
 /// Visao Geral: o mapa da cidade em tela cheia, com os carros ao vivo,
 /// as corridas procurando motorista e os alertas de SOS. Os numeros do
@@ -71,7 +85,10 @@ class _VisaoGeralState extends State<VisaoGeral> {
             height: 40,
             child: GestureDetector(
               onTap: () => _mostrarMotorista(context, m, p),
-              child: _Pino(cor: m.ocupado ? AppColors.warning : AppColors.success, icone: Icons.local_taxi),
+              child: _Pino(
+                cor: !m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success),
+                icone: Icons.local_taxi,
+              ),
             ),
           ),
       for (final a in p.alertas)
@@ -133,7 +150,13 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(Spacing.sm),
                   decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(Radii.sm)),
-                  child: Text('Sem atualizar: ${p.erro}', style: AppText.caption.copyWith(color: Colors.white)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                      const SizedBox(width: Spacing.sm),
+                      Expanded(child: Text(p.erro!, style: AppText.caption.copyWith(color: Colors.white))),
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -152,22 +175,32 @@ class _VisaoGeralState extends State<VisaoGeral> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Legenda(cor: AppColors.success, texto: 'Livre'),
+                _Legenda(cor: AppColors.success, texto: 'Livre (online)'),
                 _Legenda(cor: AppColors.warning, texto: 'Em corrida'),
+                _Legenda(cor: _cinzaOffline, texto: 'Offline (última posição)'),
                 _Legenda(cor: AppColors.primary, texto: 'Esperando motorista'),
                 _Legenda(cor: AppColors.danger, texto: 'SOS'),
               ],
             ),
           ),
         ),
+        // Bussola (como no Google Maps) e enquadrar todos os carros.
         Positioned(
           right: Spacing.sm,
           bottom: Spacing.sm,
-          child: FloatingActionButton.small(
-            heroTag: 'enquadrar',
-            backgroundColor: AppColors.surfaceElevated,
-            onPressed: () => _enquadrar(p),
-            child: const Icon(Icons.center_focus_strong, color: AppColors.text),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BotaoBussola(mapa: _mapa),
+              const SizedBox(height: Spacing.sm),
+              FloatingActionButton.small(
+                heroTag: 'enquadrar',
+                backgroundColor: AppColors.surfaceElevated,
+                tooltip: 'Mostrar todos os carros',
+                onPressed: () => _enquadrar(p),
+                child: const Icon(Icons.center_focus_strong, color: AppColors.text),
+              ),
+            ],
           ),
         ),
       ],
@@ -194,7 +227,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   BotoesContato(telefone: m.telefone),
                 ],
               ),
-              Linha('Situação', m.ocupado ? 'Em corrida' : 'Livre', destaque: true),
+              Linha('Situação', !m.online ? 'Offline${_vistoHa(m.vistoEm)}' : (m.ocupado ? 'Em corrida' : 'Livre'), destaque: true),
               Linha('Telefone', telefoneBonito(m.telefone)),
               Linha('Veículo', m.veiculo.isEmpty ? '-' : m.veiculo),
               Linha('Placa', m.placa.isEmpty ? '-' : m.placa),

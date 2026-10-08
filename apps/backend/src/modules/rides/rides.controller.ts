@@ -114,8 +114,8 @@ export class RidesController {
 
   @Get('nearby-drivers')
   @ApiOperation({ summary: 'Carros disponiveis perto do passageiro (posicao aproximada)' })
-  nearby(@Query(new ZodValidationPipe(pertoSchema)) q: { lat: number; lng: number }) {
-    return this.rides.carrosPerto(q.lat, q.lng);
+  nearby(@CurrentUser('id') userId: string, @Query(new ZodValidationPipe(pertoSchema)) q: { lat: number; lng: number }) {
+    return this.rides.carrosPerto(q.lat, q.lng, userId);
   }
 
   @Get(':id')

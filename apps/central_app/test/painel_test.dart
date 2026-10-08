@@ -145,6 +145,23 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
         'longitude': null,
         'rating': 5,
       },
+      // Mapa da Central (todos=1): offline aparece cinza na ultima posicao.
+      if (q['todos'] == '1')
+        {
+          'driverId': '66666666-6666-4666-8666-666666666666',
+          'name': 'Carla Offline',
+          'phone': '+5564955554444',
+          'busy': false,
+          'vehicle': 'Fiat Mobi Branco',
+          'plate': 'OFF1L23',
+          'category': 'CARRO',
+          'distanceKm': 2.5,
+          'latitude': -18.02,
+          'longitude': -49.36,
+          'rating': 4.7,
+          'online': false,
+          'lastSeenAt': DateTime.now().toUtc().subtract(const Duration(minutes: 7)).toIso8601String(),
+        },
     ];
   }
   if (caminho == '/api/admin/safety') {
@@ -456,13 +473,22 @@ void main() {
     expect(find.text('3'), findsOneWidget);
     expect(find.text('12 / 4'), findsOneWidget);
     expect(find.textContaining('1.234,56'), findsOneWidget);
-    expect(find.byIcon(Icons.local_taxi), findsOneWidget);
+    // Online (verde) e offline (cinza, na ultima posicao).
+    expect(find.byIcon(Icons.local_taxi), findsNWidgets(2));
     expect(find.byIcon(Icons.sos), findsNothing);
+    expect(find.text('Offline (última posição)'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.local_taxi));
+    await tester.tap(find.byIcon(Icons.local_taxi).first);
     await tester.pumpAndSettle();
     expect(find.text('Joao Batista da Silva'), findsOneWidget);
     expect(find.text('Livre'), findsWidgets);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.local_taxi).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Carla Offline'), findsOneWidget);
+    expect(find.textContaining('Offline · visto há 7 min'), findsOneWidget);
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
 

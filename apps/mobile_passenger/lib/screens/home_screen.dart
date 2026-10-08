@@ -140,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: RideMap(center: app.coords, markers: markers, span: 0.03, rounded: false, recentrar: _recentrar),
+            child: RideMap(center: app.coords, markers: markers, span: 0.03, rounded: false, recentrar: _recentrar, bussola: true),
           ),
 
           // ---- Topo: marca a esquerda, sino a direita ----

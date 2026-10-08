@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/utils/geo.dart';
+import 'bussola.dart';
 
 /// Desenho das ruas. Os testes automaticos desligam (la nao ha internet).
 bool mostrarRuasNoMapa = true;
@@ -37,7 +40,20 @@ class RideMap extends StatefulWidget {
     this.span = 0.05,
     this.rounded = true,
     this.interactive = true,
+    this.minhaPosicao,
+    this.bussolaAutomatica = false,
+    this.controlesAlinhamento = const Alignment(1, -0.25),
   });
+
+  /// Posicao do motorista: com ela o mapa mostra a bussola e o botao de
+  /// centralizar (Evandro, 08/10/2026: "nos tres aplicativos").
+  final Coords? minhaPosicao;
+
+  /// A bussola ja comeca no automatico (o mapa gira com o celular e segue o carro).
+  final bool bussolaAutomatica;
+
+  /// Onde ficam a bussola e o centralizar (fora do caminho dos paineis).
+  final Alignment controlesAlinhamento;
 
   final Coords center;
   final List<MapMarker> markers;
@@ -56,6 +72,19 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   final Map<String, Coords> _animated = {};
   final Map<String, Coords> _targets = {};
+  final MapController _mapa = MapController();
+
+  /// Bussola no automatico: o mapa acompanha o carro.
+  bool _seguir = false;
+
+  void _centralizar() {
+    final p = widget.minhaPosicao ?? widget.center;
+    try {
+      _mapa.move(_latLng(p), math.max(_mapa.camera.zoom, 15));
+    } catch (_) {
+      // Mapa ainda nao desenhado.
+    }
+  }
 
   @override
   void initState() {
@@ -68,6 +97,13 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant RideMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final antes = oldWidget.minhaPosicao;
+    final agora = widget.minhaPosicao;
+    if (_seguir && agora != null && (antes == null || antes.latitude != agora.latitude || antes.longitude != agora.longitude)) {
+      try {
+        _mapa.move(_latLng(agora), _mapa.camera.zoom);
+      } catch (_) {}
+    }
     _syncTargets();
   }
 
@@ -135,6 +171,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
       fit: StackFit.expand,
       children: [
         FlutterMap(
+          mapController: _mapa,
           options: MapOptions(
             initialCenter: _latLng(widget.center),
             initialZoom: _zoom,
@@ -186,6 +223,35 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             MarkerLayer(markers: widget.markers.map(_buildMarker).toList()),
           ],
         ),
+
+        if (widget.minhaPosicao != null && widget.interactive)
+          SafeArea(
+            child: Align(
+              alignment: widget.controlesAlinhamento,
+              child: Padding(
+                padding: const EdgeInsets.all(Spacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    BotaoBussola(
+                      mapa: _mapa,
+                      automatico: widget.bussolaAutomatica,
+                      aoMudarModo: (ligado) {
+                        _seguir = ligado;
+                        if (ligado) _centralizar();
+                      },
+                    ),
+                    const SizedBox(height: Spacing.sm),
+                    BotaoDoMapa(
+                      dica: 'Centralizar na minha localização',
+                      aoTocar: _centralizar,
+                      child: const Icon(Icons.my_location, color: Color(0xFF1A73E8)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
         // Atribuicao obrigatoria: OpenStreetMap (ODbL) + CARTO.
         Positioned(

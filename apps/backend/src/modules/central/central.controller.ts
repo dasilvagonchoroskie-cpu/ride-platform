@@ -76,9 +76,9 @@ export class AdminCentralController {
   }
 
   @Get('dispatch/drivers')
-  @ApiOperation({ summary: 'Motoristas online, do mais perto ao mais longe do ponto' })
-  livres(@Query('lat') lat: string, @Query('lng') lng: string) {
-    return this.central.livresPerto(Number(lat) || 0, Number(lng) || 0);
+  @ApiOperation({ summary: 'Motoristas online (todos=1: tambem os offline, na ultima posicao), do mais perto ao mais longe' })
+  livres(@Query('lat') lat: string, @Query('lng') lng: string, @Query('todos') todos?: string) {
+    return this.central.livresPerto(Number(lat) || 0, Number(lng) || 0, todos === '1' || todos === 'true');
   }
 
   @Patch('drivers/:id/finance')

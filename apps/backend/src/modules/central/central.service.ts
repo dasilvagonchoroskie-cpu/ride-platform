@@ -196,9 +196,14 @@ export class CentralService {
   }
 
   /** Motoristas online e livres, do mais perto ao mais longe do embarque. */
-  async livresPerto(lat: number, lng: number) {
+  /**
+   * Motoristas para o despacho (so os online) ou para o mapa da Central
+   * ([todos]: tambem os offline, cinza, na ultima posicao conhecida —
+   * Evandro, 08/10/2026: "o carro some do mapa quando fica offline").
+   */
+  async livresPerto(lat: number, lng: number, todos = false) {
     const lista = await this.prisma.driver.findMany({
-      where: { isOnline: true, status: DriverStatus.APPROVED },
+      where: { status: DriverStatus.APPROVED, ...(todos ? { location: { isNot: null } } : { isOnline: true }) },
       include: {
         user: { select: { name: true, phone: true } },
         location: true,
@@ -211,9 +216,12 @@ export class CentralService {
         await this.prisma.ride.findMany({ where: { status: { in: EM_ANDAMENTO } }, select: { driverId: true } })
       ).map((r) => r.driverId),
     );
-    const posicoes = await this.prisma.$queryRaw<Array<{ driverId: string; latitude: number; longitude: number }>>`
-      SELECT driver_id AS "driverId", ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude
-      FROM driver_locations WHERE is_online = TRUE
+    const posicoes = await this.prisma.$queryRaw<
+      Array<{ driverId: string; latitude: number; longitude: number; lastSeenAt: Date | null }>
+    >`
+      SELECT driver_id AS "driverId", ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude,
+             last_seen_at AS "lastSeenAt"
+      FROM driver_locations WHERE is_online = TRUE OR ${todos}
     `;
     const pos = new Map(posicoes.map((p) => [p.driverId, p]));
     return lista
@@ -231,9 +239,11 @@ export class CentralService {
           latitude: p ? Number(p.latitude) : null,
           longitude: p ? Number(p.longitude) : null,
           rating: Number(m.ratingAvg),
+          online: m.isOnline,
+          lastSeenAt: p?.lastSeenAt ?? null,
         };
       })
-      .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+      .sort((a, b) => Number(b.online) - Number(a.online) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
   }
 
   // ================= Motoristas =================
