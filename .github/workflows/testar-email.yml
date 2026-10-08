@@ -7,8 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       ids:
-        description: 'Codigos de implantacao (AKfy...) separados por espaco'
-        required: true
+        description: 'Codigos de implantacao (AKfy...) separados por espaco (pode ficar vazio)'
+        required: false
+        type: string
+      email:
+        description: 'Mandar um codigo de entrada de verdade para este e-mail (pelo servidor no ar)'
+        required: false
         type: string
 
 permissions:
@@ -22,6 +26,7 @@ jobs:
       - name: Chamar o script
         env:
           IDS: ${{ inputs.ids }}
+          EMAIL: ${{ inputs.email }}
         run: |
           mkdir -p logs
           : > logs/testar-email.txt
@@ -32,6 +37,10 @@ jobs:
             if echo "$r" | grep -q '"ok":true'; then echo "$n: OK ${id: -6} $r" >> logs/testar-email.txt
             else echo "$n: nao ($(echo "$r" | sed 's/<[^>]*>//g' | head -c 80))" >> logs/testar-email.txt; fi
           done
+          if [ -n "${EMAIL:-}" ]; then
+            r=$(curl -s -m 90 -X POST https://fortaleza-mov-backend.onrender.com/api/auth/otp/request -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"purpose\":\"LOGIN\"}")
+            echo "codigo para ${EMAIL%%@*}@...: sucesso=$(echo "$r" | jq -r '.success') $(echo "$r" | jq -r '.error.message // empty')" >> logs/testar-email.txt
+          fi
           cat logs/testar-email.txt
       - name: Guardar o resultado
         run: |
