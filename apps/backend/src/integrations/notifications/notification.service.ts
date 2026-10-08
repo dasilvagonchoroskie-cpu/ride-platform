@@ -57,10 +57,56 @@ export class NotificationService {
     return { delivered: true };
   }
 
-  /** E-mail de verdade ligado (chave da Brevo e remetente configurados). */
+  /** E-mail de verdade ligado: Gmail (script do Google) ou Brevo. */
   get emailConfigurado(): boolean {
+    return this.gmailConfigurado || this.brevoConfigurada;
+  }
+
+  private get gmailConfigurado(): boolean {
+    const m = this.config.mail;
+    return !!m.googleScriptUrl && !!m.googleScriptSegredo;
+  }
+
+  private get brevoConfigurada(): boolean {
     const m = this.config.mail;
     return !!m.brevoApiKey && !!m.remetente;
+  }
+
+  /**
+   * Envio pelo Gmail do Evandro, de graca (ate ~100 e-mails por dia): o
+   * servidor chama, por HTTPS, um script do Google (Apps Script) publicado
+   * na conta dele, e o script manda o e-mail. Nao usa SMTP — o plano gratis
+   * do Render bloqueia as portas de SMTP. Codigo do script:
+   * scripts/email-gmail/Codigo.gs.
+   */
+  private async enviarPeloGmail(para: string, assunto: string, texto: string, html?: string) {
+    const m = this.config.mail;
+    try {
+      const r = await fetch(m.googleScriptUrl as string, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ segredo: m.googleScriptSegredo, para, assunto, texto, html, nome: m.remetenteNome }),
+        redirect: 'follow',
+        signal: AbortSignal.timeout(20_000),
+      });
+      const corpo = await r.text();
+      let resposta: { ok?: boolean; erro?: string; restantes?: number } = {};
+      try {
+        resposta = JSON.parse(corpo) as typeof resposta;
+      } catch {
+        this.logger.error(`Script do Gmail respondeu algo inesperado (${r.status}): ${corpo.slice(0, 160)}`);
+        return { delivered: false, error: 'Resposta inesperada do Gmail.' };
+      }
+      if (!resposta.ok) {
+        this.logger.error(`Script do Gmail recusou o e-mail: ${resposta.erro ?? 'sem motivo'}`);
+        return { delivered: false, error: `Gmail: ${resposta.erro ?? 'recusado'}` };
+      }
+      this.logger.log(`E-mail enviado pelo Gmail para ${this.mask(para)} (restam ${resposta.restantes ?? '?'} hoje).`);
+      return { delivered: true };
+    } catch (e) {
+      this.logger.error(`Falha ao falar com o script do Gmail: ${(e as Error).message}`);
+      return { delivered: false, error: 'Sem conexao com o Gmail.' };
+    }
   }
 
   /**
@@ -75,6 +121,11 @@ export class NotificationService {
       return { delivered: false, error: 'E-mail nao configurado.' };
     }
     const html = typeof input.data?.html === 'string' ? (input.data.html as string) : undefined;
+    if (this.gmailConfigurado) {
+      const pelo = await this.enviarPeloGmail(para, input.title, input.body, html);
+      // Gmail fora do ar ou cota do dia acabou: tenta a Brevo, se houver.
+      if (pelo.delivered || !this.brevoConfigurada) return pelo;
+    }
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',

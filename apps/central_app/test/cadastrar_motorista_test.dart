@@ -79,6 +79,7 @@ void main() {
     await _escrever(tester, 'Nome completo', 'Evandro da Silva');
     await _escrever(tester, 'Telefone com DDD', '64992686632');
     expect(find.text('(64) 99268-6632'), findsWidgets);
+    await _escrever(tester, 'E-mail (o código de entrada chega nele)', 'evandro@exemplo.com');
     await _escrever(tester, 'CPF', '52998224725');
     await _escrever(tester, 'Data de nascimento', '10051990');
     await _escrever(tester, 'Número da CNH', '05494287230');
@@ -99,6 +100,7 @@ void main() {
     expect(rota, 'POST /api/admin/drivers');
     expect(corpo!['phone'], '+5564992686632');
     expect(corpo['cpf'], '52998224725');
+    expect(corpo['email'], 'evandro@exemplo.com');
     expect(corpo['birthDate'], '1990-05-10');
     expect(corpo['cnhExpiresAt'], '2031-06-18');
     expect(corpo['aprovar'], true);

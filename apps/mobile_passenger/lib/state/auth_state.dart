@@ -28,6 +28,10 @@ class AuthState extends ChangeNotifier {
   final ApiClient _client;
 
   UserProfile? user;
+
+  /// Para onde o ultimo codigo foi (ex.: "e-mail e•••@gmail.com"), quando
+  /// pediu pelo telefone e ele foi para o e-mail da conta (sem SMS).
+  String? codigoEnviadoPara;
   String? accessToken;
   bool ready = false;
   bool loading = false;
@@ -98,6 +102,8 @@ class AuthState extends ChangeNotifier {
         'purpose': finalidade,
       }) as Map<String, dynamic>;
 
+      // Sem SMS, o codigo do telefone vai para o e-mail da conta.
+      codigoEnviadoPara = data['destino'] as String?;
       return data['debugCode'] as String?;
     } on ApiException catch (exception) {
       error = exception.message;

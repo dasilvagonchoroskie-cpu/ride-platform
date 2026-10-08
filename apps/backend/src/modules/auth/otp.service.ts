@@ -41,25 +41,50 @@ export class OtpService {
     return !target.phone && !!target.email && this.notifications.emailConfigurado;
   }
 
-  /** Canais de login que funcionam agora (mostrados pelos aplicativos). */
+  /**
+   * Canais de login que funcionam agora (mostrados pelos aplicativos).
+   * Telefone sem SMS: o codigo vai para o e-mail da conta daquele telefone
+   * (gratis). Por isso, com e-mail ligado, entrar pelo telefone funciona.
+   */
   canais(): { telefone: boolean; email: boolean; emailReal: boolean } {
     const teste = this.config.otp.debugReturn;
     const real = this.notifications.emailConfigurado;
     // emailReal: o codigo sai mesmo pelo e-mail (a Central so entra por codigo assim).
-    return { telefone: teste, email: real || teste, emailReal: real };
+    return { telefone: teste || real, email: real || teste, emailReal: real };
+  }
+
+  /** "e•••@gmail.com" */
+  private mascararEmail(e: string): string {
+    const [nome, dominio] = e.split('@');
+    return `${nome.slice(0, 1)}•••@${dominio ?? ''}`;
   }
 
   /** Cria e envia um novo codigo. Invalida codigos anteriores do mesmo alvo. */
-  async request(target: OtpTarget, ip?: string, chaveTeste?: string): Promise<{ expiresIn: number; debugCode?: string; enviadoPor: 'email' | 'tela' }> {
+  async request(
+    target: OtpTarget,
+    ip?: string,
+    chaveTeste?: string,
+  ): Promise<{ expiresIn: number; debugCode?: string; enviadoPor: 'email' | 'tela'; destino?: string }> {
     const { phone, email, purpose } = target;
     // Teste automatico: o codigo volta na resposta e nenhum e-mail sai
     // (os enderecos do teste nao existem).
     const teste = this.chaveTesteValida(chaveTeste);
-    const entrega = !teste && this.entregaReal(target);
-    const devolver = teste || (this.config.otp.debugReturn && !this.entregaReal(target));
+
+    // Sem SMS (custa dinheiro): quem entra pelo telefone recebe o codigo no
+    // e-mail da conta daquele telefone (decisao do Evandro, 08/10/2026:
+    // evitar custo agora). O codigo continua valendo para o telefone.
+    let emailDoTelefone: string | null = null;
+    if (phone && !teste && this.notifications.emailConfigurado) {
+      const dono = await this.prisma.user.findUnique({ where: { phone }, select: { email: true } });
+      emailDoTelefone = dono?.email ?? null;
+    }
+    const entrega = !teste && (this.entregaReal(target) || !!emailDoTelefone);
+    const devolver = teste || (this.config.otp.debugReturn && !entrega);
     if (!entrega && !devolver) {
       throw BusinessException.validation(
-        phone ? 'Entrada pelo telefone indisponivel no momento. Use o e-mail.' : 'Envio de codigo por e-mail indisponivel no momento.',
+        phone
+          ? 'Este telefone ainda nao tem e-mail cadastrado para receber o codigo. Entre pelo e-mail, ou peca a Central para cadastrar o seu e-mail.'
+          : 'Envio de codigo por e-mail indisponivel no momento.',
       );
     }
 
@@ -107,14 +132,15 @@ export class OtpService {
       }),
     ]);
 
-    if (phone) {
+    const paraEmail = entrega ? (emailDoTelefone ?? email ?? null) : null;
+    if (phone && !paraEmail) {
       await this.notifications.sendOtpCode(phone, code, this.config.otp.ttlSeconds);
-    } else if (email && entrega) {
+    } else if (paraEmail) {
       const minutos = Math.round(this.config.otp.ttlSeconds / 60);
       const r = await this.notifications.send({
-        userId: email,
+        userId: paraEmail,
         channel: NotificationChannel.EMAIL,
-        to: email,
+        to: paraEmail,
         title: `${code} e o seu codigo Fortaleza Mov`,
         body: `Seu codigo de acesso Fortaleza Mov e ${code}. Ele vale por ${minutos} minutos. Se nao foi voce que pediu, ignore este e-mail.`,
         data: { html: htmlDoCodigo(code, minutos) },
@@ -127,6 +153,7 @@ export class OtpService {
     return {
       expiresIn: this.config.otp.ttlSeconds,
       enviadoPor: entrega ? 'email' : 'tela',
+      ...(emailDoTelefone && entrega ? { destino: `e-mail ${this.mascararEmail(emailDoTelefone)}` } : {}),
       ...(devolver ? { debugCode: code } : {}),
     };
   }

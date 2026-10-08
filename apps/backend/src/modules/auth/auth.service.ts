@@ -102,7 +102,8 @@ export class AuthService {
   async pedirCodigoVinculo(userId: string, dados: DadosDaPessoa, ip?: string, chaveTeste?: string) {
     const { conta, alvo } = await this.contaParaVincular(userId, dados);
     const r = await this.otp.request({ ...alvo, purpose: 'LOGIN' as OtpPurpose }, ip, chaveTeste);
-    return { ...r, destino: conta.destino };
+    // Sem SMS, o codigo do telefone vai para o e-mail da conta: diz para onde foi.
+    return { ...r, destino: r.destino ?? conta.destino };
   }
 
   async entrarNaContaVinculada(

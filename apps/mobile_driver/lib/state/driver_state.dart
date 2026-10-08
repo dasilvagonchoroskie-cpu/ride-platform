@@ -306,8 +306,13 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       'phone': phone,
       'purpose': 'LOGIN',
     }) as Map<String, dynamic>;
+    // Sem SMS, o codigo do telefone vai para o e-mail da conta.
+    codigoEnviadoPara = data['destino'] as String?;
     return data['debugCode'] as String?;
   }
+
+  /// Para onde o ultimo codigo foi (ex.: "e-mail e•••@gmail.com").
+  String? codigoEnviadoPara;
 
   /// Codigo pelo e-mail (gratis; o SMS ainda nao esta contratado).
   Future<String?> requestOtpEmail(String email) async {

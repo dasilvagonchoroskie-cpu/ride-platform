@@ -38,6 +38,8 @@ export interface AppConfiguration {
     brevoApiKey?: string;
     remetente?: string;
     remetenteNome: string;
+    googleScriptUrl?: string;
+    googleScriptSegredo?: string;
   };
   fcm: { projectId?: string; clientEmail?: string; privateKey?: string };
   maps: { apiKey?: string; cacheTtl: number };
@@ -108,6 +110,8 @@ export function configuration(): AppConfiguration {
       brevoApiKey: env.BREVO_API_KEY || undefined,
       remetente: env.EMAIL_REMETENTE || undefined,
       remetenteNome: env.EMAIL_REMETENTE_NOME,
+      googleScriptUrl: env.EMAIL_GOOGLE_SCRIPT_URL || undefined,
+      googleScriptSegredo: env.EMAIL_GOOGLE_SCRIPT_SEGREDO || undefined,
     },
     fcm: {
       projectId: env.FCM_PROJECT_ID || undefined,

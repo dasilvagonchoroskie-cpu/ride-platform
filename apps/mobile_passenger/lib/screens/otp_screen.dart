@@ -136,7 +136,12 @@ class _OtpScreenState extends State<OtpScreen> {
             style: AppText.body.copyWith(fontSize: 18, color: AppColors.textMuted),
           ),
           const SizedBox(height: Spacing.xs),
-          Text(telefoneLegivel(widget.phone), style: AppText.bodyStrong.copyWith(fontSize: 19)),
+          Text(
+            context.watch<AuthState>().codigoEnviadoPara != null && !widget.phone.contains('@')
+                ? 'o seu ${context.watch<AuthState>().codigoEnviadoPara} (o e-mail desta conta)'
+                : telefoneLegivel(widget.phone),
+            style: AppText.bodyStrong.copyWith(fontSize: 19),
+          ),
           const SizedBox(height: Spacing.lg),
           if (_codigoTeste != null) ...[
             AvisoCodigoTeste(codigo: _codigoTeste!),

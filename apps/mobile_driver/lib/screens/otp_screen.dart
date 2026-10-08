@@ -90,7 +90,10 @@ class _OtpScreenState extends State<OtpScreen> {
               Text(
                 widget.email != null
                     ? 'Enviamos um código para ${widget.email}'
-                    : 'Código para o telefone ${widget.phone}',
+                    : context.watch<DriverState>().codigoEnviadoPara != null
+                        ? 'Enviamos o código para o ${context.watch<DriverState>().codigoEnviadoPara} '
+                            '(o e-mail da conta do telefone ${widget.phone})'
+                        : 'Código para o telefone ${widget.phone}',
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
               if (widget.debugCode != null) ...[

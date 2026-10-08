@@ -102,8 +102,9 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
     }
     final fone = _telefone.text.replaceAll(RegExp(r'\D'), '');
     if (fone.length < 10 || fone.length > 11) return 'Telefone com DDD: ex. (64) 99999-1234.';
+    // Sem SMS, o codigo de entrada do motorista chega no e-mail: obrigatorio.
     final email = _email.text.trim();
-    if (email.isNotEmpty && !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) return 'E-mail inválido (ou deixe em branco).';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) return 'Informe o e-mail do motorista: o código de entrada chega nele.';
     if (_cpf.text.replaceAll(RegExp(r'\D'), '').length != 11) return 'CPF com 11 dígitos.';
     if (dataParaServidor(_nascimento.text) == null) return 'Data de nascimento: DD/MM/AAAA.';
     if (_cnh.text.replaceAll(RegExp(r'\D'), '').length != 11) return 'Número da CNH com 11 dígitos.';
@@ -137,7 +138,7 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
       final r = await api.cadastrarMotorista({
         'name': _nome.text.trim().replaceAll(RegExp(r'\s+'), ' '),
         'phone': telefone,
-        if (_email.text.trim().isNotEmpty) 'email': _email.text.trim().toLowerCase(),
+        'email': _email.text.trim().toLowerCase(),
         'cpf': _cpf.text.replaceAll(RegExp(r'\D'), ''),
         'birthDate': dataParaServidor(_nascimento.text),
         'cnhNumber': _cnh.text.replaceAll(RegExp(r'\D'), ''),
@@ -161,8 +162,8 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
           title: const Text('Motorista cadastrado'),
           content: Text(
             '${r.contaExistente ? 'Este telefone já tinha conta de passageiro: o cadastro de motorista entrou nessa mesma conta.\n\n' : ''}'
-            'O motorista entra no app do motorista com o telefone ${telefoneBonito(telefone)} '
-            'e o código que chega no celular. O cadastro e o carro já estão prontos'
+            'O motorista entra no app do motorista com o telefone ${telefoneBonito(telefone)}; '
+            'o código de entrada chega no e-mail ${_email.text.trim().toLowerCase()}. O cadastro e o carro já estão prontos'
             '${_aprovar ? ' e aprovados.' : '; falta aprovar em Motoristas → Pendentes.'}'
             '${saldo > 0 ? '\n\nSaldo inicial: ${reais(saldo)}.' : ''}',
           ),
@@ -220,7 +221,7 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
             _titulo('Dados'),
             _campo('Nome completo', _nome, maiusculas: TextCapitalization.words),
             _campo('Telefone com DDD', _telefone, dica: '(64) 99999-1234', teclado: TextInputType.phone, mascara: _mascaraTelefone),
-            _campo('E-mail (opcional)', _email, teclado: TextInputType.emailAddress),
+            _campo('E-mail (o código de entrada chega nele)', _email, teclado: TextInputType.emailAddress),
             _campo('CPF', _cpf, dica: '000.000.000-00', teclado: TextInputType.number, mascara: _mascaraCpf),
             _campo('Data de nascimento', _nascimento, dica: 'DD/MM/AAAA', teclado: TextInputType.number, mascara: _mascaraData),
             _titulo('CNH'),
