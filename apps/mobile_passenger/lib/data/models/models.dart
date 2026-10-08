@@ -264,10 +264,14 @@ class RideQuote {
     this.minFareApplied = false,
     this.discountCents = 0,
     this.couponCode,
+    this.taximetro = false,
   });
 
   final FareFlag flag;
   final int priceCents;
+
+  /// O valor final sai do taximetro (trajeto feito); o preco e estimado.
+  final bool taximetro;
 
   /// Desconto do cupom aplicado (0 sem cupom).
   final int discountCents;
@@ -305,6 +309,7 @@ class RideQuote {
         minFareApplied: json['minFareApplied'] as bool? ?? false,
         discountCents: (json['discountCents'] as num?)?.toInt() ?? 0,
         couponCode: json['couponCode'] as String?,
+        taximetro: json['cobranca'] == 'TAXIMETRO',
       );
 
   Map<String, dynamic> toJson() => {
@@ -391,7 +396,18 @@ class Ride {
     this.favorito = false,
     this.bloqueado = false,
     this.mensagensNaoLidas = 0,
+    this.taximetroCents,
+    this.taximetroMetros,
+    this.cobranca,
   });
+
+  /// Taximetro ao vivo durante a viagem (Evandro, 08/10/2026: "a contagem do
+  /// valor na corrida"): o valor e o trajeto ate agora, vindos do servidor.
+  final int? taximetroCents;
+  final int? taximetroMetros;
+
+  /// TAXIMETRO (valor pelo trajeto) ou FECHADO (o estimado no pedido).
+  final String? cobranca;
 
   /// O motorista desta corrida esta nos favoritos / bloqueados do passageiro.
   final bool favorito;
@@ -454,6 +470,9 @@ class Ride {
         favorito: favorito ?? this.favorito,
         bloqueado: bloqueado ?? this.bloqueado,
         mensagensNaoLidas: mensagensNaoLidas ?? this.mensagensNaoLidas,
+        taximetroCents: taximetroCents,
+        taximetroMetros: taximetroMetros,
+        cobranca: cobranca,
       );
 
   Map<String, dynamic> toJson() => {
@@ -601,6 +620,9 @@ class Ride {
       favorito: j['favorito'] == true,
       bloqueado: j['bloqueado'] == true,
       mensagensNaoLidas: (j['mensagensNaoLidas'] as num?)?.toInt() ?? 0,
+      taximetroCents: ((j['taximetro'] as Map?)?['valorCents'] as num?)?.toInt(),
+      taximetroMetros: ((j['taximetro'] as Map?)?['distanceMeters'] as num?)?.toInt(),
+      cobranca: j['cobranca'] as String?,
     );
   }
 

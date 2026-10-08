@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../core/storage/app_storage.dart';
+import '../core/vigia_corrida.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/demo_engine.dart';
 import '../data/models/models.dart';
@@ -21,6 +22,9 @@ class RideState extends ChangeNotifier {
   Ride? activeRide;
   List<Coords> driverRoute = [];
   List<Coords> tripRoute = [];
+
+  /// Caminho pelas ruas na tela de confirmar (embarque -> destino).
+  List<Coords> rotaPrevia = [];
   List<Ride> history = [];
   /// O orcamento da viagem. Um so, porque a modalidade e unica.
   RideQuote? quote;
@@ -101,6 +105,7 @@ class RideState extends ChangeNotifier {
   /// Ao sair da conta: nada da corrida desta pessoa fica para a proxima.
   Future<void> limpar() async {
     _pararDeAcompanhar();
+    unawaited(VigiaCorrida.parar());
     pararSos();
     agendadas = [];
     agendarPara = null;
@@ -151,6 +156,7 @@ class RideState extends ChangeNotifier {
           // Agendada paga a bandeira do horario da viagem (23h = noturna).
           agendadaPara: agendarPara);
       quote = result.quote;
+      unawaited(_buscarRotaPrevia(origin, destination));
       return result.quote;
     } on ApiException catch (e) {
       avisar(e.message);
@@ -204,6 +210,7 @@ class RideState extends ChangeNotifier {
     await _persist();
     notifyListeners();
     _acompanhar();
+    unawaited(VigiaCorrida.iniciar(ride.id));
 
     return ride;
   }
@@ -268,6 +275,73 @@ class RideState extends ChangeNotifier {
     final r = activeRide;
     if (r == null || r.mensagensNaoLidas == 0) return;
     activeRide = r.copyWith(mensagensNaoLidas: 0);
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // Rota pelas ruas (Evandro, 08/10/2026: "tem que mostrar a rota pela
+  // estrada certa, nao aquele risco que parece rota de aviao").
+  // ------------------------------------------------------------------
+
+  /// Caminho pelas ruas (servidor -> OpenStreetMap). null = sem rota agora.
+  Future<List<Coords>?> rotaPelaRua(Coords de, Coords para) async {
+    if (_repository.isDemo) return buildRoute(de, para, steps: 30);
+    try {
+      final r = await _repository.api.request('GET', '/geo/rota', query: {
+        'deLat': de.latitude.toStringAsFixed(6),
+        'deLng': de.longitude.toStringAsFixed(6),
+        'paraLat': para.latitude.toStringAsFixed(6),
+        'paraLng': para.longitude.toStringAsFixed(6),
+      });
+      if (r is Map && r['porRua'] != true) return null;
+      final pontos = pontosDaRota(r);
+      return pontos.length >= 2 ? pontos : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _buscarRotaPrevia(Coords de, Coords para) async {
+    rotaPrevia = [];
+    final r = await rotaPelaRua(de, para);
+    final u = _ultimaCotacao;
+    if (r == null || u == null || u.$1 != de || u.$2 != para) return;
+    rotaPrevia = r;
+    notifyListeners();
+  }
+
+  DateTime _rotaEm = DateTime.fromMillisecondsSinceEpoch(0);
+  String? _rotaFase;
+
+  /// Carro vindo: rota do carro ao embarque. Em viagem: do carro ao destino.
+  /// Refaz quando o carro sai do caminho (ou a cada 90 s).
+  Future<void> _atualizarRotas(Ride r) async {
+    final carro = r.driver;
+    final emViagem = r.status == RideStatus.inProgress;
+    final vindo = r.status == RideStatus.driverAssigned || r.status == RideStatus.driverArriving;
+    if (carro == null || !carro.posicaoReal || (!emViagem && !vindo)) {
+      if (!emViagem && driverRoute.isNotEmpty) {
+        driverRoute = [];
+        notifyListeners();
+      }
+      return;
+    }
+    final fase = emViagem ? 'viagem' : 'vindo';
+    final rota = emViagem ? tripRoute : driverRoute;
+    final agora = DateTime.now();
+    final segundos = agora.difference(_rotaEm).inSeconds;
+    final saiu = rota.length < 2 || trechoMaisPerto(carro.position, rota).$2 > 150;
+    if (fase == _rotaFase && (segundos < 20 || (!saiu && segundos < 90))) return;
+    _rotaEm = agora;
+    _rotaFase = fase;
+    final pontos = await rotaPelaRua(carro.position, emViagem ? r.dropoff.coords : r.pickup.coords);
+    if (pontos == null || activeRide?.id != r.id) return;
+    if (emViagem) {
+      tripRoute = pontos;
+      driverRoute = [];
+    } else {
+      driverRoute = pontos;
+    }
     notifyListeners();
   }
 
@@ -398,10 +472,7 @@ class RideState extends ChangeNotifier {
         avisar('Nova mensagem do motorista. Toque em "chat" para ler.');
       }
       activeRide = nova;
-      final carro = nova.driver;
-      driverRoute = carro != null && carro.posicaoReal && nova.status != RideStatus.inProgress
-          ? [carro.position, nova.pickup.coords]
-          : [];
+      unawaited(_atualizarRotas(nova));
       if (nova.status == RideStatus.completed) _pararDeAcompanhar();
       await _persist();
       notifyListeners();
@@ -422,6 +493,7 @@ class RideState extends ChangeNotifier {
 
   Future<void> _encerrarSemViagem(Ride ride) async {
     _pararDeAcompanhar();
+    unawaited(VigiaCorrida.parar());
     avisoEncerramento = switch (ride.status) {
       RideStatus.cancelledByDriver => 'O motorista cancelou a corrida. Você pode pedir outra.',
       RideStatus.cancelledBySystem => 'A Central cancelou a corrida.',
@@ -489,6 +561,7 @@ class RideState extends ChangeNotifier {
     );
 
     _pararDeAcompanhar();
+    unawaited(VigiaCorrida.parar());
     history = [finished, ...history.where((item) => item.id != finished.id)];
     activeRide = null;
     driverRoute = [];
@@ -519,6 +592,7 @@ class RideState extends ChangeNotifier {
     }
 
     _pararDeAcompanhar();
+    unawaited(VigiaCorrida.parar());
     history = [ride.copyWith(status: RideStatus.cancelledByPassenger), ...history.where((h) => h.id != ride.id)];
     activeRide = null;
     driverRoute = [];
@@ -586,6 +660,7 @@ class RideState extends ChangeNotifier {
       await _persist();
       notifyListeners();
       _acompanhar();
+      if (r.status.isActive) unawaited(VigiaCorrida.iniciar(r.id));
     } catch (_) {
       // Sem rede ou sem login: segue com o que tem; tenta de novo depois.
       if (activeRide != null && activeRide!.status.isActive) _acompanhar();

@@ -25,6 +25,33 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         Bussola.registrar(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
+        // Vigia da corrida com o app minimizado (avisos com som).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "fortaleza/corrida")
+            .setMethodCallHandler { call, result ->
+                try {
+                    when (call.method) {
+                        "iniciar" -> {
+                            val i = Intent(this, CorridaService::class.java)
+                                .setAction(CorridaService.ACAO_INICIAR)
+                                .putExtra("api", call.argument<String>("api"))
+                                .putExtra("rideId", call.argument<String>("rideId"))
+                            ContextCompat.startForegroundService(this, i)
+                            result.success(true)
+                        }
+                        "parar" -> {
+                            try {
+                                startService(Intent(this, CorridaService::class.java).setAction(CorridaService.ACAO_PARAR))
+                            } catch (e: Exception) {
+                                // Ja estava parado.
+                            }
+                            result.success(true)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (e: Exception) {
+                    result.error("FALHA", e.message, null)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "fortaleza/permissoes")
             .setMethodCallHandler { call, result ->
                 try {

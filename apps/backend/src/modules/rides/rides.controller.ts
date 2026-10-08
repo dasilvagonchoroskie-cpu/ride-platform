@@ -13,6 +13,7 @@ import {
   cancelRideSchema,
   estimateRideSchema,
   finishRideSchema,
+  taximetroSchema,
   listRidesSchema,
   requestRideSchema,
   rideLocationSchema,
@@ -229,6 +230,16 @@ export class DriverRidesController {
     @Body(new ZodValidationPipe(finishRideSchema)) body: never,
   ) {
     return this.rides.finalizar(driverId, rideId, body);
+  }
+
+  @Post(':id/taximetro')
+  @ApiOperation({ summary: 'Taximetro ao vivo: o que o celular mediu ate agora (o passageiro acompanha)' })
+  taximetro(
+    @CurrentUser('driverId') driverId: string,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Body(new ZodValidationPipe(taximetroSchema)) body: { distanceMeters: number },
+  ) {
+    return this.rides.registrarTaximetro(driverId, rideId, body.distanceMeters);
   }
 
   @Post(':id/cancel')

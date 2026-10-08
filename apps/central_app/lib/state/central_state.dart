@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/alarme.dart';
 import '../core/config/app_config.dart';
 import '../core/storage/app_storage.dart';
 import '../data/demo/central_demo.dart';
@@ -150,6 +151,8 @@ class CentralState extends ChangeNotifier {
 
   Future<void> logout() async {
     _monitorTimer?.cancel();
+    // Sem login, o vigia com o app fechado tambem para.
+    await VigiaCentral.parar();
     await AppStorage.remove(AppStorage.adminUser);
     await AppStorage.remove(AppStorage.accessToken);
     await AppStorage.remove(AppStorage.refreshToken);

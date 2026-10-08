@@ -94,6 +94,8 @@ class _TarifasTelaState extends State<TarifasTela> {
     return ListView(
       padding: const EdgeInsets.all(Spacing.md),
       children: [
+        _Cobranca(t: t, api: _api, aoSalvar: (novo) => setState(() => _t = novo)),
+        const SizedBox(height: Spacing.md),
         Wrap(
           spacing: Spacing.sm,
           runSpacing: Spacing.xs,
@@ -204,6 +206,76 @@ class _TarifasTelaState extends State<TarifasTela> {
         _Multiplicador(t: t, api: _api, aoSalvar: (novo) => setState(() => _t = novo)),
         const SizedBox(height: Spacing.xl),
       ],
+    );
+  }
+}
+
+/// Como cobrar a corrida (Evandro, 08/10/2026: "a contagem do valor na
+/// corrida"). Taximetro: o valor corre durante a viagem, pelo km rodado,
+/// tempo e espera. Preco fechado: cobra o valor estimado no pedido.
+class _Cobranca extends StatefulWidget {
+  const _Cobranca({required this.t, required this.api, required this.aoSalvar});
+
+  final Tarifas t;
+  final PainelApi api;
+  final ValueChanged<Tarifas> aoSalvar;
+
+  @override
+  State<_Cobranca> createState() => _CobrancaState();
+}
+
+class _CobrancaState extends State<_Cobranca> {
+  bool _salvando = false;
+
+  Future<void> _trocar(String modo) async {
+    if (modo == widget.t.cobranca || _salvando) return;
+    setState(() => _salvando = true);
+    try {
+      final novo = await widget.api.salvarCobranca(modo);
+      widget.aoSalvar(novo);
+      if (mounted) {
+        avisar(context, modo == 'TAXIMETRO'
+            ? 'Taxímetro ligado: o valor corre durante a viagem. Vale a partir da próxima corrida.'
+            : 'Preço fechado: cobra o valor estimado no pedido. Vale a partir da próxima corrida.');
+      }
+    } catch (e) {
+      if (mounted) avisar(context, mensagemDe(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final taximetro = widget.t.cobranca == 'TAXIMETRO';
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(Radii.md),
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Como cobrar a corrida', style: AppText.heading),
+            const SizedBox(height: Spacing.sm),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'TAXIMETRO', icon: Icon(Icons.speed), label: Text('Taxímetro')),
+                ButtonSegment(value: 'FECHADO', icon: Icon(Icons.lock_outline), label: Text('Preço fechado')),
+              ],
+              selected: {widget.t.cobranca},
+              onSelectionChanged: _salvando ? null : (s) => _trocar(s.first),
+            ),
+            const SizedBox(height: Spacing.sm),
+            Text(
+              taximetro
+                  ? 'O valor corre na tela do motorista e do passageiro durante a viagem: bandeirada + km rodado + minutos + espera no embarque. No fim, cobra o que o taxímetro marcou.'
+                  : 'Cobra o valor estimado no pedido, qualquer que seja o caminho. O motorista e o passageiro veem o preço fechado.',
+              style: AppText.caption.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

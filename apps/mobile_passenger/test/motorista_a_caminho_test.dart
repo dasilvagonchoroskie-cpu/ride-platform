@@ -204,6 +204,33 @@ void main() {
     expect(find.text('OBL3A45'), findsOneWidget);
   });
 
+  // Evandro (08/10/2026): "a contagem do valor na corrida".
+  testWidgets('Em viagem: taximetro correndo no canto da tela', (tester) async {
+    final base = _corrida('IN_PROGRESS');
+    final comTaximetro = Ride.fromServer({
+      'id': base.id,
+      'code': base.code,
+      'status': 'IN_PROGRESS',
+      'pickupAddress': base.pickup.address,
+      'pickupLat': '-18.0125',
+      'pickupLng': '-49.3547',
+      'dropoffAddress': base.dropoff.address,
+      'dropoffLat': '-18.0050',
+      'dropoffLng': '-49.3610',
+      'estimatedFareCents': 1850,
+      'paymentMethodType': 'CASH',
+      'pin': '4821',
+      'cobranca': 'TAXIMETRO',
+      'taximetro': {'valorCents': 2370, 'distanceMeters': 4200, 'durationSeconds': 600, 'waitingSeconds': 0},
+    });
+    expect(comTaximetro.taximetroCents, 2370);
+    await _abrir(tester, const RideScreen(), corrida: comTaximetro);
+    expect(find.text('Taxímetro'), findsOneWidget);
+    expect(find.text('Taxímetro (até agora)'), findsOneWidget);
+    expect(find.textContaining('23,70'), findsNWidgets(2));
+    expect(find.text('4,2 km'), findsOneWidget);
+  });
+
   testWidgets('Chat: conversa, mensagem lida e resposta pronta', (tester) async {
     final api = ApiClient(client: _servidor());
     tester.view.physicalSize = const Size(360, 780);

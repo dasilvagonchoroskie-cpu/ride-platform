@@ -5,6 +5,9 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { TariffsService } from './tariffs.service';
 import { updateTariffsSchema } from './dto';
+import { z } from 'zod';
+
+const cobrancaSchema = z.object({ modo: z.enum(['TAXIMETRO', 'FECHADO']) });
 
 @ApiTags('Admin - Bandeiras')
 @ApiBearerAuth()
@@ -29,6 +32,12 @@ export class TariffsController {
   @ApiOperation({ summary: 'Multiplicador dinamico (cidade toda e zonas)' })
   multiplicador(@Body(new ZodValidationPipe(multiplierSchema)) body: never) {
     return this.tariffs.salvarMultiplicador(body);
+  }
+
+  @Put('cobranca')
+  @ApiOperation({ summary: 'Como cobrar a corrida: TAXIMETRO (pelo trajeto) ou FECHADO (o estimado)' })
+  cobranca(@Body(new ZodValidationPipe(cobrancaSchema)) body: { modo: 'TAXIMETRO' | 'FECHADO' }) {
+    return this.tariffs.salvarCobranca(body.modo);
   }
 
   @Put('categoria/:codigo')

@@ -58,6 +58,14 @@ export const finishRideSchema = z.object({
   distanceMeters: z.number().int().min(0).max(2_000_000).optional(),
   durationSeconds: z.number().int().min(0).max(86_400).optional(),
   waitingSeconds: z.number().int().min(0).max(86_400).optional(),
+  /** Onde a viagem terminou (confere a medicao do taximetro). */
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+});
+
+/** Taximetro ao vivo: o que o celular do motorista mediu ate agora. */
+export const taximetroSchema = z.object({
+  distanceMeters: z.number().int().min(0).max(2_000_000),
 });
 
 export const rideLocationSchema = coordinatesSchema;

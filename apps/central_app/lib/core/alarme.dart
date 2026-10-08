@@ -15,9 +15,9 @@ class Alarme {
   /// Aviso curto (nao e SOS): um som de notificacao, uma vibracao e a
   /// notificacao do Android na barra — ex.: motorista novo esperando
   /// aprovacao.
-  static Future<void> aviso(String titulo, String texto) async {
+  static Future<void> aviso(String titulo, String texto, {String? id}) async {
     try {
-      await _canal.invokeMethod('aviso', {'titulo': titulo, 'texto': texto});
+      await _canal.invokeMethod('aviso', {'titulo': titulo, 'texto': texto, if (id != null) 'id': id});
     } catch (_) {}
   }
 
@@ -42,4 +42,24 @@ class Alarme {
   static Future<void> whatsapp(String numero) => abrir('https://wa.me/${numero.replaceAll(RegExp(r'\D'), '')}');
 
   static Future<void> mapa(double lat, double lng) => abrir('geo:$lat,$lng?q=$lat,$lng(SOS)');
+}
+
+/// Vigia da Central com o aplicativo fechado (servico do Android): alarme
+/// do SOS e aviso de cadastro novo mesmo com a Central minimizada.
+class VigiaCentral {
+  VigiaCentral._();
+
+  static const MethodChannel _canal = MethodChannel('fortaleza/vigia');
+
+  static Future<void> iniciar(String api) async {
+    try {
+      await _canal.invokeMethod('iniciar', {'api': api});
+    } catch (_) {}
+  }
+
+  static Future<void> parar() async {
+    try {
+      await _canal.invokeMethod('parar');
+    } catch (_) {}
+  }
 }

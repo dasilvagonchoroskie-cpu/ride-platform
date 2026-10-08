@@ -33,9 +33,45 @@ import io.flutter.plugin.common.MethodChannel
  */
 class MainActivity : FlutterActivity() {
 
+    override fun onResume() {
+        super.onResume()
+        VigiaCentralService.naTela = true
+    }
+
+    override fun onPause() {
+        VigiaCentralService.naTela = false
+        super.onPause()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         Bussola.registrar(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
+        // Vigia com o app fechado: SOS e cadastro novo (VigiaCentralService).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "fortaleza/vigia")
+            .setMethodCallHandler { call, result ->
+                try {
+                    when (call.method) {
+                        "iniciar" -> {
+                            val i = Intent(this, VigiaCentralService::class.java)
+                                .setAction(VigiaCentralService.ACAO_INICIAR)
+                                .putExtra("api", call.argument<String>("api"))
+                            ContextCompat.startForegroundService(this, i)
+                            result.success(true)
+                        }
+                        "parar" -> {
+                            try {
+                                startService(Intent(this, VigiaCentralService::class.java).setAction(VigiaCentralService.ACAO_PARAR))
+                            } catch (e: Exception) {
+                                // Ja estava parado.
+                            }
+                            result.success(true)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (e: Exception) {
+                    result.error("FALHA", e.message, null)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "fortaleza/permissoes")
             .setMethodCallHandler { call, result ->
                 try {
@@ -62,7 +98,13 @@ class MainActivity : FlutterActivity() {
                         "tocar" -> { tocar(); result.success(true) }
                         "parar" -> { parar(); result.success(true) }
                         "aviso" -> {
-                            aviso(call.argument<String>("titulo") ?: "", call.argument<String>("texto") ?: "")
+                            // Mesmo cadastro ja avisado pelo vigia (app fechado): nao repete.
+                            val id = call.argument<String>("id")
+                            val prefs = getSharedPreferences("fortaleza_central", Context.MODE_PRIVATE)
+                            if (id == null || id != prefs.getString("cadastro_avisado", null)) {
+                                if (id != null) prefs.edit().putString("cadastro_avisado", id).apply()
+                                aviso(call.argument<String>("titulo") ?: "", call.argument<String>("texto") ?: "")
+                            }
                             result.success(true)
                         }
                         "ligar" -> {
@@ -167,6 +209,8 @@ class MainActivity : FlutterActivity() {
         toque?.stop()
         toque = null
         vibrador()?.cancel()
+        // Alarme tocado pelo vigia com o app fechado: a Central abriu, para.
+        Sirene.parar()
     }
 
     override fun onDestroy() {

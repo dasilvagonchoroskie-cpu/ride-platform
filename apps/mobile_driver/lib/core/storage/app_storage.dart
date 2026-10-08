@@ -11,6 +11,8 @@ class AppStorage {
   static const String recentPlaces = 'ride.recentPlaces';
   static const String driverProfile = 'ride.driverProfile';
   static const String vehicle = 'ride.vehicle';
+  /// Taximetro da viagem em andamento (sobrevive ao app fechar).
+  static const String taximetro = 'ride.taximetro';
 
   static Future<void> write(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -36,6 +38,7 @@ class AppStorage {
     await prefs.remove(driverProfile);
     await prefs.remove(vehicle);
     await prefs.remove(activeRide);
+    await prefs.remove(taximetro);
   }
 
   static Future<void> clearSession() async {

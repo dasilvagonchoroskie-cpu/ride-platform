@@ -119,6 +119,7 @@ class PainelState extends ChangeNotifier {
     await Alarme.aviso(
       'Motorista aguardando aprovação',
       '${ultimo.nome} terminou o cadastro${outros > 0 ? ' (e mais $outros na fila)' : ''}. Toque para conferir.',
+      id: ultimo.id,
     );
   }
 

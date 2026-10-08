@@ -216,6 +216,15 @@ X=$(get "/geo/search?q=Porto%20Alegre&lat=-18.0128&lng=-49.3556" "$TP")
 [ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)] | length')" -ge 1 ] 2>/dev/null && ok "Passageiro: busca acha destino fora da regiao (Porto Alegre)" || falha "Passageiro: busca fora da regiao" "$X"
 X=$(get "/geo/search?q=Rua%20Sao%20Paulo&lat=-18.0128&lng=-49.3556" "$TP")
 [ "$(echo "$X" | jq -r '(.data | length) > 0 and ((.data[0].distanceKm // 9999) < 80)')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
+# Rota pelas ruas (Evandro, 08/10/2026: "nao aquele risco verde que parece rota de aviao").
+X=$(get "/geo/rota?deLat=-18.0125&deLng=-49.3547&paraLat=-18.0050&paraLng=-49.3610" "$TP")
+[ "$(echo "$X" | jq -r '.data.porRua')" = "true" ] && [ "$(echo "$X" | jq -r '.data.pontos | length')" -ge 3 ] 2>/dev/null \
+  && ok "Mapa: rota pelas ruas ($(echo "$X" | jq -r '.data.pontos | length') pontos, $(echo "$X" | jq -r '.data.distanceMeters') m)" || falha "Mapa: rota pelas ruas" "$(echo "$X" | jq -c '{porRua:.data.porRua, n:(.data.pontos|length), d:.data.distanceMeters}' 2>/dev/null)"
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Goiania - GO\",\"latitude\":-16.6869,\"longitude\":-49.2648}}" "$TP")
+MIN=$(echo "$X" | jq -r '(.data.durationSeconds // 0) / 60 | floor')
+[ "${MIN:-0}" -ge 60 ] 2>/dev/null && [ "${MIN:-0}" -le 300 ] 2>/dev/null && ok "Passageiro: tempo de viagem pela estrada (Goiania: $MIN min, antes dava 479)" || falha "Passageiro: tempo pela estrada" "$(echo "$X" | jq -c '{d:.data.distanceMeters,t:.data.durationSeconds}' 2>/dev/null)"
+X=$(get /admin/tariffs "$TA"); C=$(echo "$X" | jq -r '.data.cobranca')
+[ "$C" = "TAXIMETRO" ] || [ "$C" = "FECHADO" ] && ok "Central: modo de cobranca em Tarifas ($C)" || falha "Central: modo de cobranca" "$C"
 # Renovacao do login (refresh): sem ela o app travava com "Token de acesso
 # ausente ou invalido" quando o acesso vencia (Evandro, 05/10/2026).
 P=$(pedir_codigo "{\"phone\":\"+55649${SUF}79\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
@@ -256,7 +265,20 @@ for passo in arriving arrived start; do
   X=$(post "/driver/rides/$RID/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM")
   sucesso "$X" && ok "Motorista: $passo" || falha "Motorista: $passo" "$X"
 done
-X=$(post "/driver/rides/$RID/finish" '{}' "$TM")
+# Taximetro (Evandro, 08/10/2026: "a contagem do valor na corrida").
+X=$(get /driver/rides/current "$TM")
+[ "$(echo "$X" | jq -r '.data.ride.tarifa.baseFareCents // empty')" != "" ] && [ "$(echo "$X" | jq -r '.data.ride.cobranca')" != "null" ] \
+  && ok "Taximetro: app do motorista recebe a tabela da corrida ($(echo "$X" | jq -r '.data.ride.cobranca'))" || falha "Taximetro: tabela da corrida" "$(echo "$X" | jq -c '.data.ride | {tarifa, cobranca}' 2>/dev/null)"
+X=$(post "/driver/rides/$RID/taximetro" '{"distanceMeters":1000}' "$TM")
+[ "$(echo "$X" | jq -r '.data.ok')" = "true" ] && ok "Taximetro: motorista manda a medicao ao vivo (1 km)" || falha "Taximetro: medicao ao vivo" "$X"
+X=$(get "/rides/$RID" "$TP")
+if [ "$(echo "$X" | jq -r '.data.ride.cobranca')" = "TAXIMETRO" ]; then
+  [ "$(echo "$X" | jq -r '.data.ride.taximetro.distanceMeters')" = "1000" ] && [ "$(echo "$X" | jq -r '.data.ride.taximetro.valorCents')" -ge 1 ] 2>/dev/null \
+    && ok "Passageiro: ve o taximetro correndo ($(echo "$X" | jq -r '.data.ride.taximetro.valorCents') centavos, 1 km)" || falha "Passageiro: taximetro ao vivo" "$(echo "$X" | jq -c '.data.ride.taximetro' 2>/dev/null)"
+else
+  ok "Passageiro: corrida com preco fechado (sem taximetro ao vivo)"
+fi
+X=$(post "/driver/rides/$RID/finish" '{"distanceMeters":1000,"latitude":-18.0126,"longitude":-49.3548}' "$TM")
 sucesso "$X" && ok "Motorista: corrida finalizada, valor $(echo "$X" | jq -r '.data.finalFareCents // "?"') centavos" || falha "Motorista: finalizar" "$X"
 [ "$(echo "$X" | jq -r '.data.discountCents')" = "300" ] && [ "$(echo "$X" | jq -r '.data.toCollectCents')" = "$(( $(echo "$X" | jq -r '.data.finalFareCents') - 300 ))" ] \
   && ok "Motorista: sabe quanto cobrar com o cupom ($(echo "$X" | jq -r '.data.toCollectCents') centavos)" || falha "Motorista: valor com cupom" "$X"
@@ -264,6 +286,9 @@ VAL=$(echo "$X" | jq -r '.data.finalFareCents // 0')
 HORA=$((10#$(TZ=America/Sao_Paulo date +%H)))
 TAR=$(get /admin/tariffs "$TA")
 if [ "$HORA" -ge 6 ] && [ "$HORA" -lt 22 ]; then BAND=diurna; ESP=$(echo "$TAR" | jq -r '.data.diurna.baseFareCents // .data.DIURNA.baseFareCents // 1000'); else BAND=noturna; ESP=$(echo "$TAR" | jq -r '.data.noturna.baseFareCents // .data.NOTURNA.baseFareCents // 2000'); fi
+# Taximetro: 1 km fica na franquia; os segundos de viagem entram pelo valor por minuto.
+DUR=$(echo "$X" | jq -r '.data.durationSeconds // 0'); PM=$(echo "$TAR" | jq -r ".data.$BAND.perMinuteCents // 0")
+ESP=$(awk -v b="$ESP" -v d="$DUR" -v p="$PM" 'BEGIN{printf "%d", b + int(d/60*p + 0.5)}')
 [ "$VAL" = "$ESP" ] && ok "Bandeira certa pela hora de Brasilia (${HORA}h, $BAND: $VAL centavos)" || falha "Bandeira pela hora de Brasilia (${HORA}h deveria ser $BAND, $ESP centavos; cobrou $VAL)" "$TAR"
 X=$(get /admin/reports/summary "$TA"); sucesso "$X" && ok "Central: resumo de hoje com $(echo "$X" | jq -r '.data.ridesToday') corrida(s)" || falha "Central: resumo" "$X"
 

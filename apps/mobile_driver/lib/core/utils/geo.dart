@@ -85,3 +85,67 @@ String formatPlate(String value) {
   }
   return plate;
 }
+
+// ---------------------------------------------------------------------------
+// Rota pelas ruas (Evandro, 08/10/2026: "tem que mostrar a rota pela estrada
+// certa, nao aquele risco verde que parece rota de aviao").
+// ---------------------------------------------------------------------------
+
+/// Pontos do caminho que o servidor devolve em /geo/rota: [[lat, lng], ...].
+List<Coords> pontosDaRota(dynamic dados) {
+  final lista = dados is Map ? dados['pontos'] : null;
+  if (lista is! List) return const [];
+  final pontos = <Coords>[];
+  for (final p in lista) {
+    if (p is List && p.length >= 2 && p[0] is num && p[1] is num) {
+      pontos.add(Coords((p[0] as num).toDouble(), (p[1] as num).toDouble()));
+    }
+  }
+  return pontos;
+}
+
+/// Projecao plana local (metros) — boa para distancias de cidade.
+(double, double) _metros(Coords p, double latRef) {
+  const m = 111320.0;
+  return (p.longitude * m * math.cos(_toRad(latRef)), p.latitude * m);
+}
+
+/// Distancia (m) do ponto ao trecho a-b.
+double _ateTrecho(Coords p, Coords a, Coords b) {
+  final ref = p.latitude;
+  final (px, py) = _metros(p, ref);
+  final (ax, ay) = _metros(a, ref);
+  final (bx, by) = _metros(b, ref);
+  final dx = bx - ax;
+  final dy = by - ay;
+  final l2 = dx * dx + dy * dy;
+  var t = l2 == 0 ? 0.0 : ((px - ax) * dx + (py - ay) * dy) / l2;
+  t = t.clamp(0.0, 1.0);
+  final cx = ax + t * dx;
+  final cy = ay + t * dy;
+  return math.sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
+}
+
+/// Trecho da rota mais perto do ponto: (indice do trecho, distancia em m).
+(int, double) trechoMaisPerto(Coords p, List<Coords> rota) {
+  if (rota.length < 2) return (0, rota.isEmpty ? double.infinity : distanceKm(p, rota.first) * 1000);
+  var melhor = 0;
+  var menor = double.infinity;
+  for (var i = 0; i < rota.length - 1; i++) {
+    final d = _ateTrecho(p, rota[i], rota[i + 1]);
+    if (d < menor) {
+      menor = d;
+      melhor = i;
+    }
+  }
+  return (melhor, menor);
+}
+
+/// O que falta da rota a partir de onde o carro esta (o traco vai sumindo
+/// atras do carro, como no Waze).
+List<Coords> restanteDaRota(Coords p, List<Coords> rota) {
+  if (rota.length < 2) return rota;
+  final (i, d) = trechoMaisPerto(p, rota);
+  if (d > 80) return rota;
+  return [p, ...rota.sublist(i + 1)];
+}

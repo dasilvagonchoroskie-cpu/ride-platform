@@ -65,7 +65,10 @@ class OfferScreen extends StatelessWidget {
               center: _enquadrar(driver.position, offer),
               span: _abertura(driver.position, offer),
               rounded: false,
-              route: [driver.position, offer.pickupCoords, offer.dropoffCoords],
+              // Pelas ruas (ate o embarque em azul, a viagem em verde). Sem a
+              // rota ainda (ou sem rede), so os pontos aparecem.
+              driverRoute: driver.rotaOfertaAteEmbarque,
+              route: driver.rotaOfertaViagem,
               markers: [
                 MapMarker(id: 'me', coords: driver.position, kind: MarkerKind.car),
                 MapMarker(id: 'pickup', coords: offer.pickupCoords, kind: MarkerKind.pickup),

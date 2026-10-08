@@ -11,6 +11,7 @@ import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
 import '../core/native/corridas_nativo.dart';
 import '../core/storage/app_storage.dart';
+import '../core/taximetro.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/demo/driver_demo.dart';
@@ -87,6 +88,45 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   List<Coords> routeToPickup = [];
   List<Coords> tripRoute = [];
 
+  /// Caminho pelas ruas da oferta na tela (ate o embarque e a viagem).
+  List<Coords> rotaOfertaAteEmbarque = const [];
+  List<Coords> rotaOfertaViagem = const [];
+  DateTime _rotaPedidaEm = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _buscandoRota = false;
+
+  // ---- Taximetro (Evandro, 08/10/2026: "a contagem do valor na corrida") ----
+  /// TAXIMETRO (valor corre pelo trajeto) ou FECHADO (o estimado), pela Central.
+  String cobranca = 'TAXIMETRO';
+  TarifaDaCorrida? tarifa;
+  Taximetro taximetro = Taximetro();
+  DateTime? viagemIniciouEm;
+  DateTime _taximetroEnviadoEm = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _taximetroGuardadoEm = DateTime.fromMillisecondsSinceEpoch(0);
+
+  bool get precoFechado => cobranca == 'FECHADO';
+
+  int get segundosDeViagem {
+    final inicio = viagemIniciouEm;
+    return inicio == null ? 0 : DateTime.now().difference(inicio).inSeconds.clamp(0, 1 << 30);
+  }
+
+  int get segundosDeEspera {
+    final chegou = chegouEm;
+    final inicio = viagemIniciouEm;
+    if (chegou == null || inicio == null) return 0;
+    return inicio.difference(chegou).inSeconds.clamp(0, 1 << 30);
+  }
+
+  /// O valor que o taximetro marca agora (ou o estimado, se for preco fechado
+  /// ou se a tabela ainda nao chegou do servidor).
+  int get valorAgoraCents {
+    final ride = activeRide;
+    if (ride == null) return 0;
+    final t = tarifa;
+    if (precoFechado || t == null || ride.phase != RidePhase.inProgress) return ride.offer.fareCents;
+    return t.valorCents(metros: taximetro.metros, segundosViagem: segundosDeViagem, segundosEspera: segundosDeEspera);
+  }
+
   // ---- Painel (dados reais do servidor) ----
   /// Resumo de hoje: alimenta o valor no topo da tela inicial.
   ActivitySummary? hoje;
@@ -137,6 +177,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
+    if (activeRide != null) await _lerTaximetro();
+
     WidgetsBinding.instance.addObserver(this);
     await checarPermissoes();
     ready = true;
@@ -152,7 +194,13 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       _startHeartbeat();
       unawaited(_ligarServicoNativo());
     }
-    if (activeRide != null) _vigiarCorrida();
+    if (activeRide != null) {
+      _vigiarCorrida();
+      // Corrida aberta: o GPS mede o taximetro e redesenha a rota mesmo se
+      // o motorista nao estiver "disponivel".
+      if (!isOnline) unawaited(_iniciarGps());
+      unawaited(_buscarRotas(forcar: true));
+    }
   }
 
   void _vigiarCorrida() {
@@ -196,9 +244,21 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         'IN_PROGRESS' => RidePhase.inProgress,
         _ => RidePhase.toPickup,
       };
+      // Tabela de preco e modo de cobranca (taximetro ou preco fechado).
+      tarifa = TarifaDaCorrida.doServidor(corrida['tarifa']) ?? tarifa;
+      final modo = corrida['cobranca'];
+      if (modo == 'TAXIMETRO') cobranca = 'TAXIMETRO';
+      if (modo == 'FECHADO') cobranca = 'FECHADO';
+      chegouEm ??= DateTime.tryParse(corrida['arrivedAt'] as String? ?? '')?.toLocal();
+      if (fase == RidePhase.inProgress) {
+        viagemIniciouEm ??= DateTime.tryParse(corrida['startedAt'] as String? ?? '')?.toLocal();
+        unawaited(_enviarTaximetro());
+      }
       if (fase != ride.phase) {
         activeRide = ride.copyWith(phase: fase);
+        if (fase == RidePhase.inProgress) _comecarTaximetro();
         await _persistRide();
+        unawaited(_buscarRotas(forcar: true));
       }
       notifyListeners();
     } catch (_) {
@@ -225,6 +285,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     telefonePassageiro = null;
     routeToPickup = [];
     tripRoute = [];
+    _zerarTaximetro();
     await AppStorage.remove(AppStorage.activeRide);
     notifyListeners();
     unawaited(atualizarPainel());
@@ -299,6 +360,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (isOnline && offer == null && activeRide == null && AppConfig.hasApi) {
       _buscarChamados();
     }
+    // Garante o vigia de chamados de pe (o Android pode ter derrubado).
+    if (isOnline) unawaited(_ligarServicoNativo());
   }
 
   // ------------------------------------------------------------------
@@ -907,6 +970,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         position = Coords(p.latitude, p.longitude);
         posicaoReal = true;
         positionAccuracy = p.accuracy;
+        _naCorrida(position, p.accuracy);
         notifyListeners();
         _mandarPosicao(p);
       }, onError: (_) {
@@ -1044,6 +1108,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       );
       offerSecondsLeft = restam;
       notifyListeners();
+      // Chamado com o app aberto: toca o alarme aqui tambem (o vigia nativo
+      // nao repete o mesmo chamado).
+      unawaited(CorridasNativo.tocarChamado(offer!.id, o['expiresAt'] as String? ?? '', offer!.pickupAddress, offer!.dropoffAddress));
+      unawaited(_rotasDaOferta(offer!));
 
       _offerTimer?.cancel();
       _offerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -1065,6 +1133,161 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _offerTimer = null;
     offer = null;
     offerSecondsLeft = 0;
+  }
+
+  // ------------------------------------------------------------------
+  // Rota pelas ruas (Evandro, 08/10/2026: "tem que mostrar a rota pela
+  // estrada certa, nao aquele risco verde que parece rota de aviao")
+  // ------------------------------------------------------------------
+
+  /// Caminho pelas ruas entre dois pontos (servidor -> OpenStreetMap).
+  /// null = sem rota agora (sem rede ou o servico de rotas nao respondeu).
+  Future<List<Coords>?> _rotaPelaRua(Coords de, Coords para) async {
+    if (!AppConfig.hasApi) return buildRoute(de, para, steps: 30);
+    try {
+      final r = await _client.request('GET', '/geo/rota', query: {
+        'deLat': de.latitude.toStringAsFixed(6),
+        'deLng': de.longitude.toStringAsFixed(6),
+        'paraLat': para.latitude.toStringAsFixed(6),
+        'paraLng': para.longitude.toStringAsFixed(6),
+      });
+      if (r is Map && r['porRua'] != true) return null;
+      final pontos = pontosDaRota(r);
+      return pontos.length >= 2 ? pontos : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _rotasDaOferta(RideOffer o) async {
+    rotaOfertaAteEmbarque = const [];
+    rotaOfertaViagem = const [];
+    final resultados = await Future.wait([
+      _rotaPelaRua(position, o.pickupCoords),
+      _rotaPelaRua(o.pickupCoords, o.dropoffCoords),
+    ]);
+    if (offer?.id != o.id) return;
+    rotaOfertaAteEmbarque = resultados[0] ?? const [];
+    rotaOfertaViagem = resultados[1] ?? const [];
+    notifyListeners();
+  }
+
+  /// Busca (ou refaz) as rotas da corrida em andamento. Refaz quando o
+  /// motorista sai do caminho, no maximo a cada 30 s.
+  Future<void> _buscarRotas({bool forcar = false}) async {
+    final ride = activeRide;
+    if (ride == null || _buscandoRota) return;
+    final agora = DateTime.now();
+    if (!forcar && agora.difference(_rotaPedidaEm).inSeconds < 30) return;
+    _buscandoRota = true;
+    _rotaPedidaEm = agora;
+    try {
+      final o = ride.offer;
+      switch (ride.phase) {
+        case RidePhase.toPickup:
+          routeToPickup = await _rotaPelaRua(position, o.pickupCoords) ?? (routeToPickup.length > 2 ? routeToPickup : [position, o.pickupCoords]);
+          if (tripRoute.length <= 2) tripRoute = await _rotaPelaRua(o.pickupCoords, o.dropoffCoords) ?? [o.pickupCoords, o.dropoffCoords];
+        case RidePhase.waitingPassenger:
+          if (tripRoute.length <= 2) tripRoute = await _rotaPelaRua(o.pickupCoords, o.dropoffCoords) ?? [o.pickupCoords, o.dropoffCoords];
+        case RidePhase.inProgress:
+          tripRoute = await _rotaPelaRua(position, o.dropoffCoords) ?? (tripRoute.length > 2 ? tripRoute : [position, o.dropoffCoords]);
+        case RidePhase.completed:
+          break;
+      }
+      notifyListeners();
+    } finally {
+      _buscandoRota = false;
+    }
+  }
+
+  /// Nova posicao do GPS com corrida aberta: soma no taximetro e confere se
+  /// o carro saiu da rota desenhada.
+  void _naCorrida(Coords p, double precisao) {
+    final ride = activeRide;
+    if (ride == null) return;
+    if (ride.phase == RidePhase.inProgress) {
+      if (taximetro.adicionar(p, precisao: precisao)) {
+        final agora = DateTime.now();
+        if (agora.difference(_taximetroGuardadoEm).inSeconds >= 10) {
+          _taximetroGuardadoEm = agora;
+          unawaited(_guardarTaximetro());
+        }
+      }
+    }
+    final rota = switch (ride.phase) {
+      RidePhase.toPickup => routeToPickup,
+      RidePhase.inProgress => tripRoute,
+      _ => const <Coords>[],
+    };
+    if (ride.phase != RidePhase.toPickup && ride.phase != RidePhase.inProgress) return;
+    if (rota.length <= 2 || trechoMaisPerto(p, rota).$2 > 120) unawaited(_buscarRotas());
+  }
+
+  // ------------------------------------------------------------------
+  // Taximetro
+  // ------------------------------------------------------------------
+
+  void _comecarTaximetro() {
+    viagemIniciouEm ??= DateTime.now();
+    taximetro = Taximetro(ultimo: posicaoReal ? position : null, ultimoEm: DateTime.now());
+    unawaited(_guardarTaximetro());
+  }
+
+  void _zerarTaximetro() {
+    taximetro = Taximetro();
+    viagemIniciouEm = null;
+    tarifa = null;
+    chegouEm = null;
+    rotaOfertaAteEmbarque = const [];
+    rotaOfertaViagem = const [];
+    unawaited(AppStorage.remove(AppStorage.taximetro));
+  }
+
+  Future<void> _guardarTaximetro() async {
+    final ride = activeRide;
+    if (ride == null) return;
+    await AppStorage.write(
+      AppStorage.taximetro,
+      jsonEncode({
+        'rideId': ride.offer.id,
+        'medida': taximetro.toJson(),
+        if (viagemIniciouEm != null) 'iniciou': viagemIniciouEm!.toIso8601String(),
+        if (chegouEm != null) 'chegou': chegouEm!.toIso8601String(),
+        if (tarifa != null) 'tarifa': tarifa!.toJson(),
+        'cobranca': cobranca,
+      }),
+    );
+  }
+
+  Future<void> _lerTaximetro() async {
+    final raw = await AppStorage.read(AppStorage.taximetro);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      if (j['rideId'] != activeRide?.offer.id) return;
+      taximetro = Taximetro.deJson((j['medida'] as Map?)?.cast<String, dynamic>() ?? const {});
+      viagemIniciouEm = DateTime.tryParse(j['iniciou'] as String? ?? '');
+      chegouEm = DateTime.tryParse(j['chegou'] as String? ?? '');
+      tarifa = TarifaDaCorrida.doServidor(j['tarifa']);
+      cobranca = j['cobranca'] == 'FECHADO' ? 'FECHADO' : 'TAXIMETRO';
+    } catch (_) {
+      // Guardado com defeito: comeca do zero.
+    }
+  }
+
+  /// O passageiro acompanha o valor: manda a medicao a cada 15 s.
+  Future<void> _enviarTaximetro() async {
+    final ride = activeRide;
+    if (ride == null || ride.phase != RidePhase.inProgress || precoFechado || !AppConfig.hasApi) return;
+    final agora = DateTime.now();
+    if (agora.difference(_taximetroEnviadoEm).inSeconds < 15) return;
+    _taximetroEnviadoEm = agora;
+    try {
+      await _client.request('POST', '/driver/rides/${ride.offer.id}/taximetro',
+          body: {'distanceMeters': taximetro.metros.round()});
+    } catch (_) {
+      // Sem rede agora: manda na proxima volta.
+    }
   }
 
   Future<void> acceptOffer() async {
@@ -1100,13 +1323,22 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       startedAt: DateTime.now().toIso8601String(),
     );
 
-    routeToPickup = buildRoute(position, current.pickupCoords, steps: 30);
-    tripRoute = buildRoute(current.pickupCoords, current.dropoffCoords, steps: 40);
+    // Rotas pelas ruas que ja vieram com a oferta; sem elas, busca agora.
+    routeToPickup = rotaOfertaAteEmbarque.length > 2 ? rotaOfertaAteEmbarque : [position, current.pickupCoords];
+    tripRoute = rotaOfertaViagem.length > 2 ? rotaOfertaViagem : [current.pickupCoords, current.dropoffCoords];
+    if (!AppConfig.hasApi) {
+      routeToPickup = buildRoute(position, current.pickupCoords, steps: 30);
+      tripRoute = buildRoute(current.pickupCoords, current.dropoffCoords, steps: 40);
+    }
+    taximetro = Taximetro();
+    viagemIniciouEm = null;
+    chegouEm = null;
 
     _clearOffer();
     await _persistRide();
     notifyListeners();
     _vigiarCorrida();
+    if (AppConfig.hasApi) unawaited(_buscarRotas(forcar: true));
   }
 
   void declineOffer() {
@@ -1131,7 +1363,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     chegouEm = DateTime.now();
     activeRide = ride.copyWith(phase: RidePhase.waitingPassenger);
     await _persistRide();
+    unawaited(_guardarTaximetro());
     notifyListeners();
+    unawaited(_buscarRotas(forcar: true));
   }
 
   Future<void> startRide() async {
@@ -1139,8 +1373,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (ride == null) return;
     if (AppConfig.hasApi && !await _avisarServidor(ride, 'start')) return;
     activeRide = ride.copyWith(phase: RidePhase.inProgress);
+    viagemIniciouEm = DateTime.now();
+    _comecarTaximetro();
     await _persistRide();
     notifyListeners();
+    unawaited(_buscarRotas(forcar: true));
   }
 
   /// Esperando o servidor confirmar uma etapa (evita toque duplo).
@@ -1259,9 +1496,13 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
     if (AppConfig.hasApi) {
       try {
-        // Sem medicao propria, o servidor usa a estimativa do pedido e
-        // calcula o valor pela bandeira gravada na corrida.
-        final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {});
+        // Taximetro: o servidor confere a distancia medida (e o ponto onde
+        // terminou) e conta o tempo e a espera pelo relogio dele.
+        final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {
+          if (ride.phase == RidePhase.inProgress && viagemIniciouEm != null) 'distanceMeters': taximetro.metros.round(),
+          if (posicaoReal) 'latitude': position.latitude,
+          if (posicaoReal) 'longitude': position.longitude,
+        });
         if (r is Map<String, dynamic>) {
           valorFinalCents = (r['finalFareCents'] as num?)?.toInt();
           resumoFinal = r;
@@ -1297,6 +1538,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     chegouEm = null;
     routeToPickup = [];
     tripRoute = [];
+    _zerarTaximetro();
     await AppStorage.remove(AppStorage.activeRide);
     notifyListeners();
     // Ganho do dia e comissao descontada: busca do servidor, que e quem

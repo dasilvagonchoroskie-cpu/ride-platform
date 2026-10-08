@@ -4,6 +4,7 @@ export {
   requestRideSchema,
   cancelRideSchema,
   finishRideSchema,
+  taximetroSchema,
   rideLocationSchema,
   listRidesSchema,
   type RidePointInput,

@@ -1,0 +1,30 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+
+import 'config/app_config.dart';
+
+/// Ponte com o servico do Android que acompanha a corrida com o aplicativo
+/// minimizado (CorridaService): avisa com som quando o motorista aceita,
+/// chega, inicia a viagem, manda mensagem ou a corrida termina.
+class VigiaCorrida {
+  VigiaCorrida._();
+
+  static const MethodChannel _canal = MethodChannel('fortaleza/corrida');
+
+  static Future<void> iniciar(String rideId) async {
+    if (!Platform.isAndroid || !AppConfig.hasApi || rideId.isEmpty) return;
+    try {
+      await _canal.invokeMethod<dynamic>('iniciar', {'api': AppConfig.apiUrl, 'rideId': rideId});
+    } catch (_) {
+      // Reforco: sem ele o aplicativo continua funcionando aberto.
+    }
+  }
+
+  static Future<void> parar() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _canal.invokeMethod<dynamic>('parar');
+    } catch (_) {}
+  }
+}

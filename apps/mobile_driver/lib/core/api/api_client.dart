@@ -59,7 +59,15 @@ class ApiClient {
 
   Future<bool> _fazerRenovacao() async {
     final prefs = await SharedPreferences.getInstance();
+    final acessoAntes = prefs.getString(AppStorage.accessToken);
     await prefs.reload();
+    // O vigia nativo (chamados com o app fechado) pode ter renovado o login
+    // por conta propria: usa o acesso novo que ele gravou.
+    final acessoGravado = prefs.getString(AppStorage.accessToken);
+    if (acessoGravado != null && acessoGravado.isNotEmpty && acessoGravado != acessoAntes) {
+      aoRenovarToken?.call(acessoGravado);
+      return true;
+    }
     final refresh = prefs.getString(AppStorage.refreshToken);
     if (refresh == null || refresh.isEmpty) return false;
     try {
@@ -70,17 +78,27 @@ class ApiClient {
             body: jsonEncode({'refreshToken': refresh}),
           )
           .timeout(AppConfig.apiTimeout);
+      // Servidor acordando ou fora do ar nao e login vencido: nao desloga.
+      if (r.statusCode >= 500) throw ApiException('NETWORK_ERROR', 'Servidor indisponível agora. Tente de novo.');
       final d = jsonDecode(r.body) as Map<String, dynamic>;
       final dados = d['data'] as Map<String, dynamic>?;
       final acesso = dados?['accessToken'] as String?;
-      if (d['success'] != true || acesso == null || acesso.isEmpty) return false;
+      if (d['success'] != true || acesso == null || acesso.isEmpty) {
+        // Recusado: o vigia nativo pode ter trocado o refresh agora mesmo.
+        await prefs.reload();
+        final outro = prefs.getString(AppStorage.refreshToken);
+        return outro != null && outro.isNotEmpty && outro != refresh;
+      }
       await AppStorage.write(AppStorage.accessToken, acesso);
       final novoRefresh = dados?['refreshToken'] as String?;
       if (novoRefresh != null && novoRefresh.isNotEmpty) await AppStorage.write(AppStorage.refreshToken, novoRefresh);
       aoRenovarToken?.call(acesso);
       return true;
+    } on ApiException {
+      rethrow;
     } catch (_) {
-      return false;
+      // Sem rede (ou resposta truncada): tenta de novo depois, sem deslogar.
+      throw ApiException('NETWORK_ERROR', 'Sem conexão com o servidor.');
     }
   }
 

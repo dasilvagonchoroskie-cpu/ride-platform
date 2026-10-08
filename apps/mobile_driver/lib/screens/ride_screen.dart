@@ -34,7 +34,13 @@ class RideScreen extends StatelessWidget {
     final offer = ride.offer;
     final fase = ride.phase;
     final indoBuscar = fase == RidePhase.toPickup || fase == RidePhase.waitingPassenger;
-    final rota = fase == RidePhase.toPickup ? d.routeToPickup : (fase == RidePhase.inProgress ? d.tripRoute : const <Coords>[]);
+    // Rotas pelas ruas; o traco some atras do carro conforme ele anda.
+    final ateEmbarque = fase == RidePhase.toPickup ? restanteDaRota(d.position, d.routeToPickup) : const <Coords>[];
+    final viagem = switch (fase) {
+      RidePhase.inProgress => restanteDaRota(d.position, d.tripRoute),
+      RidePhase.toPickup || RidePhase.waitingPassenger => d.tripRoute,
+      RidePhase.completed => const <Coords>[],
+    };
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -48,7 +54,8 @@ class RideScreen extends StatelessWidget {
                     center: indoBuscar ? offer.pickupCoords : offer.dropoffCoords,
                     span: 0.04,
                     rounded: false,
-                    route: rota,
+                    route: viagem,
+                    driverRoute: ateEmbarque,
                     minhaPosicao: d.position,
                     markers: [
                       MapMarker(id: 'me', coords: d.position, kind: MarkerKind.car),
@@ -63,7 +70,19 @@ class RideScreen extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: Align(alignment: Alignment.centerLeft, child: _Etapa(fase: fase))),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _Etapa(fase: fase),
+                              if (fase != RidePhase.completed) ...[
+                                const SizedBox(height: Spacing.sm),
+                                _ValorDaCorrida(d: d, fase: fase),
+                              ],
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: Spacing.sm),
                         if (fase != RidePhase.completed)
                           FloatingActionButton(
@@ -124,6 +143,86 @@ class _Etapa extends StatelessWidget {
         boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8)],
       ),
       child: Text('Etapa $n de 3 · $texto', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.bodyStrong),
+    );
+  }
+}
+
+/// Valor no canto da tela (Evandro, 08/10/2026: "quando ele aceita a
+/// corrida... aparecer o valor, a contagem do valor na corrida").
+/// - A caminho e no embarque: o valor estimado.
+/// - Em viagem: o TAXIMETRO correndo (bandeirada + km rodado + tempo +
+///   espera), atualizado a cada segundo; ou o preco fechado, se a Central
+///   escolheu cobrar assim.
+class _ValorDaCorrida extends StatefulWidget {
+  const _ValorDaCorrida({required this.d, required this.fase});
+
+  final DriverState d;
+  final RidePhase fase;
+
+  @override
+  State<_ValorDaCorrida> createState() => _ValorDaCorridaState();
+}
+
+class _ValorDaCorridaState extends State<_ValorDaCorrida> {
+  Timer? _relogio;
+
+  @override
+  void initState() {
+    super.initState();
+    _relogio = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && widget.fase == RidePhase.inProgress) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _relogio?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = widget.d;
+    final emViagem = widget.fase == RidePhase.inProgress;
+    final correndo = emViagem && !d.precoFechado && d.tarifa != null;
+    final rotulo = !emViagem ? 'Valor estimado' : (d.precoFechado ? 'Preço fechado' : 'Taxímetro');
+    final seg = d.segundosDeViagem;
+    final tempo = '${(seg ~/ 60).toString().padLeft(2, '0')}:${(seg % 60).toString().padLeft(2, '0')}';
+    return Semantics(
+      label: '$rotulo ${formatMoney(d.valorAgoraCents)}',
+      child: Container(
+        key: const ValueKey('valor-da-corrida'),
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(Radii.md),
+          border: Border.all(color: correndo ? AppColors.primary : AppColors.border, width: correndo ? 2 : 1),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(correndo ? Icons.speed : Icons.payments_outlined, size: 16, color: AppColors.textMuted),
+                const SizedBox(width: 4),
+                Text(rotulo, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+              ],
+            ),
+            Text(
+              formatMoney(d.valorAgoraCents),
+              style: AppText.title.copyWith(color: AppColors.primaryDark, fontWeight: FontWeight.w800),
+            ),
+            if (correndo)
+              Text(
+                '${formatDistance(d.taximetro.metros)} · $tempo',
+                style: AppText.caption.copyWith(color: AppColors.textMuted),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -424,6 +523,12 @@ class _Viagem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text('Viagem em andamento', style: AppText.title),
+        Text(
+          d.precoFechado
+              ? 'Preço fechado: ${formatMoney(offer.fareCents)}, o valor combinado no pedido.'
+              : 'O valor corre pelo taxímetro (no canto da tela): bandeirada, km rodado, tempo e espera.',
+          style: AppText.caption.copyWith(color: AppColors.textMuted),
+        ),
         const SizedBox(height: Spacing.md),
         _Passageiro(d: d, offer: offer),
         _Endereco(rotulo: 'Destino', texto: offer.dropoffAddress, cor: AppColors.danger),

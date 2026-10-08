@@ -19,6 +19,19 @@ interface ItemNominatim {
   address?: Record<string, string>;
 }
 
+/** Rota por rua (OSRM, OpenStreetMap): gratuito e sem chave. */
+const OSRM = 'https://router.project-osrm.org';
+
+/** Caminho pelas ruas entre dois pontos, para desenhar no mapa e medir a corrida. */
+export interface RotaPorRua {
+  distanceMeters: number;
+  durationSeconds: number;
+  /** [latitude, longitude] de cada ponto do caminho. */
+  pontos: Array<[number, number]>;
+  /** false = nao achou rota por rua (linha reta de reserva). */
+  porRua: boolean;
+}
+
 const BASE = 'https://nominatim.openstreetmap.org';
 /** Reserva: Photon (Komoot), tambem OpenStreetMap, gratuito e sem chave. */
 const PHOTON = 'https://photon.komoot.io';
@@ -94,6 +107,66 @@ export class GeoService {
     });
     this.gravarCache(chave, unicos);
     return this.comDistancia(unicos, lat, lng);
+  }
+
+  /**
+   * Caminho pelas estradas (Evandro, 08/10/2026: "a rota tem que ir pela
+   * estrada certa, nao aquele risco verde que parece rota de aviao").
+   * OSRM publico do OpenStreetMap; guardado por um dia. Sem resposta,
+   * devolve null e quem chamou usa a linha reta.
+   */
+  async rota(
+    origem: { latitude: number; longitude: number },
+    destino: { latitude: number; longitude: number },
+  ): Promise<RotaPorRua | null> {
+    const f = (n: number) => n.toFixed(4);
+    const chave = `rota:${f(origem.latitude)},${f(origem.longitude)}:${f(destino.latitude)},${f(destino.longitude)}`;
+    const guardada = this.lerCache<RotaPorRua>(chave);
+    if (guardada) return guardada;
+
+    const controle = new AbortController();
+    const relogio = setTimeout(() => controle.abort(), 9000);
+    try {
+      const url =
+        `${OSRM}/route/v1/driving/${origem.longitude},${origem.latitude};${destino.longitude},${destino.latitude}` +
+        '?overview=full&geometries=geojson&alternatives=false&steps=false';
+      const resp = await fetch(url, {
+        headers: { 'User-Agent': 'FortalezaMov/1.0 (+https://fortalezadigitalsecurity.com.br)' },
+        signal: controle.signal,
+      });
+      if (!resp.ok) {
+        this.logger.warn(`OSRM respondeu ${resp.status}`);
+        return null;
+      }
+      const corpo = (await resp.json()) as {
+        code?: string;
+        routes?: Array<{ distance: number; duration: number; geometry?: { coordinates?: Array<[number, number]> } }>;
+      };
+      const r = corpo.routes?.[0];
+      const coords = r?.geometry?.coordinates ?? [];
+      if (corpo.code !== 'Ok' || !r || coords.length < 2) return null;
+      // No maximo uns 500 pontos (o mapa do celular nao precisa de mais).
+      const passo = Math.max(1, Math.ceil(coords.length / 500));
+      const pontos: Array<[number, number]> = [];
+      for (let i = 0; i < coords.length; i += passo) pontos.push([coords[i][1], coords[i][0]]);
+      const ultimo = coords[coords.length - 1];
+      if (pontos[pontos.length - 1][0] !== ultimo[1] || pontos[pontos.length - 1][1] !== ultimo[0]) {
+        pontos.push([ultimo[1], ultimo[0]]);
+      }
+      const rota: RotaPorRua = {
+        distanceMeters: Math.round(r.distance),
+        durationSeconds: Math.round(r.duration),
+        pontos,
+        porRua: true,
+      };
+      this.gravarCache(chave, rota);
+      return rota;
+    } catch (e) {
+      this.logger.warn(`OSRM sem resposta: ${(e as Error).message}`);
+      return null;
+    } finally {
+      clearTimeout(relogio);
+    }
   }
 
   /** Endereco escrito de um ponto do mapa (embarque pelo GPS, destino no mapa). */

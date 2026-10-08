@@ -140,6 +140,13 @@ export class CentralService {
       include: { location: true, vehicles: { where: { isActive: true }, take: 1 }, user: { select: { name: true } } },
     });
     if (!motorista || motorista.status !== DriverStatus.APPROVED) throw BusinessException.validation('Motorista nao aprovado.');
+    // Mesma conta no app do passageiro e no do motorista: ninguem leva a
+    // propria corrida (evita fraude com cupom e confusao na avaliacao).
+    if (motorista.userId === corrida.passengerId) {
+      throw BusinessException.validation(
+        `${motorista.user.name} e a mesma conta do passageiro desta corrida. Para testar, peça a corrida com outro numero ou e-mail no app do passageiro.`,
+      );
+    }
     if (!motorista.isOnline) throw BusinessException.validation(`${motorista.user.name} esta desconectado.`);
 
     const regras = await regrasDaCarteira(this.prisma);

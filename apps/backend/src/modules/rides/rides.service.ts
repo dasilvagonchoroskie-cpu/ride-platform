@@ -6,10 +6,12 @@ import { ERROR_CODES, generateNumericCode } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { FareService } from './fare.service';
+import { GeoService } from '../geo/geo.service';
 import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
 import { lerCategorias } from './categorias';
+import { distanciaDoTaximetro, lerCobranca } from './cobranca';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -60,7 +62,21 @@ export class RidesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly fare: FareService,
+    private readonly geo: GeoService,
   ) {}
+
+  /**
+   * Distancia e tempo pela estrada (OSRM). Sem rota por rua, a estimativa
+   * antiga (linha reta x 1,35 a 25 km/h) — que dava 479 min para Goiania.
+   */
+  private async medirRota(
+    origem: { latitude: number; longitude: number },
+    destino: { latitude: number; longitude: number },
+  ): Promise<{ distanceMeters: number; durationSeconds: number }> {
+    const r = await this.geo.rota(origem, destino).catch(() => null);
+    if (r?.porRua && r.distanceMeters > 0) return { distanceMeters: r.distanceMeters, durationSeconds: r.durationSeconds };
+    return this.fare.estimarRota(origem, destino);
+  }
 
   // ------------------------------------------------------------------
   // Orcamento antes de chamar
@@ -70,7 +86,7 @@ export class RidesService {
   // pode ver quanto da uma corrida para qualquer lugar, mesmo fora da regiao.
 
   async estimar(input: EstimateRideInput, passengerId?: string) {
-    const rota = this.fare.estimarRota(input.pickup, input.dropoff);
+    const rota = await this.medirRota(input.pickup, input.dropoff);
     const orcamento = await this.fare.calcular({
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
@@ -100,6 +116,8 @@ export class RidesService {
       durationSeconds: orcamento.durationSeconds,
       chargedDistanceMeters: orcamento.chargedDistanceMeters,
       minFareApplied: orcamento.minFareApplied,
+      /** TAXIMETRO: o valor final sai do trajeto feito; FECHADO: e este. */
+      cobranca: await lerCobranca(this.prisma),
     };
   }
 
@@ -135,7 +153,7 @@ export class RidesService {
       if (agendadas >= 3) throw BusinessException.validation('Você já tem 3 corridas agendadas.');
     }
 
-    const rota = this.fare.estimarRota(input.pickup, input.dropoff);
+    const rota = await this.medirRota(input.pickup, input.dropoff);
     const pedidoEm = new Date();
     // A bandeira e a do horario da viagem: agendada para as 23h paga noturna.
     const orcamento = await this.fare.calcular({
@@ -488,6 +506,120 @@ export class RidesService {
     return this.detalhe(rideId);
   }
 
+  // ------------------------------------------------------------------
+  // Taximetro (Evandro, 08/10/2026: "a contagem do valor na corrida")
+  // ------------------------------------------------------------------
+
+  /**
+   * Ultima medicao do celular do motorista durante a viagem. Fica so na
+   * memoria: serve para o passageiro acompanhar o valor; no fim, o celular
+   * manda a medicao de novo.
+   */
+  private readonly taximetros = new Map<string, { distanceMeters: number; em: number }>();
+
+  async registrarTaximetro(driverId: string, rideId: string, distanceMeters: number) {
+    const corrida = await this.daCorridaDoMotorista(driverId, rideId);
+    if (corrida.status !== RideStatus.IN_PROGRESS) return { ok: false };
+    this.taximetros.set(rideId, { distanceMeters: Math.round(distanceMeters), em: Date.now() });
+    if (this.taximetros.size > 500) {
+      const velho = Date.now() - 6 * 3_600_000;
+      for (const [id, t] of this.taximetros) if (t.em < velho) this.taximetros.delete(id);
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Distancia, tempo e espera que valem no fim.
+   * TAXIMETRO: distancia medida pelo celular (conferida), tempo de viagem e
+   * espera no embarque pelo relogio do SERVIDOR (do "cheguei" ao "iniciar").
+   * FECHADO: o estimado no pedido, sem espera.
+   */
+  private async medicaoFinal(corrida: Ride, input: FinishRideInput) {
+    const modo = await lerCobranca(this.prisma);
+    if (modo === 'FECHADO') {
+      return { modo, distanceMeters: corrida.distanceMeters, durationSeconds: corrida.durationSeconds, waitingSeconds: 0 };
+    }
+    const agora = Date.now();
+    const durationSeconds = corrida.startedAt
+      ? Math.max(0, Math.round((agora - corrida.startedAt.getTime()) / 1000))
+      : (input.durationSeconds ?? corrida.durationSeconds);
+    const waitingSeconds =
+      corrida.arrivedAt && corrida.startedAt
+        ? Math.max(0, Math.round((corrida.startedAt.getTime() - corrida.arrivedAt.getTime()) / 1000))
+        : 0;
+    let fim: { latitude: number; longitude: number } | null =
+      input.latitude != null && input.longitude != null ? { latitude: input.latitude, longitude: input.longitude } : null;
+    if (!fim && corrida.driverId) {
+      const p = await this.posicaoDoMotorista(corrida.driverId).catch(() => null);
+      if (p) fim = { latitude: p.latitude, longitude: p.longitude };
+    }
+    const embarque = { latitude: corrida.pickupLat, longitude: corrida.pickupLng };
+    const distanceMeters = await distanciaDoTaximetro({
+      medida: input.distanceMeters ?? this.taximetros.get(corrida.id)?.distanceMeters,
+      embarque,
+      fim,
+      estimadaMetros: corrida.distanceMeters,
+      porRuaAte: async (ate) => (await this.medirRota(embarque, ate)).distanceMeters,
+    });
+    return { modo, distanceMeters, durationSeconds, waitingSeconds };
+  }
+
+  /**
+   * O que o taximetro marca agora (aparece no canto da tela do motorista e
+   * do passageiro). Mesma conta do fim da corrida.
+   */
+  private async taximetroAoVivo(corrida: Ride) {
+    const modo = await lerCobranca(this.prisma);
+    const tabela =
+      (await this.prisma.fareConfig.findUnique({
+        where: { category_flag: { category: corrida.category, flag: corrida.fareFlag } },
+      })) ??
+      (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: 'CARRO', flag: corrida.fareFlag } } }));
+    const tarifa = tabela
+      ? {
+          baseFareCents: tabela.baseFareCents,
+          perKmCents: tabela.perKmCents,
+          perMinuteCents: tabela.perMinuteCents,
+          waitingPerMinuteCents: tabela.waitingPerMinuteCents,
+          freeDistanceMeters: tabela.freeDistanceMeters,
+          freeWaitingSeconds: tabela.freeWaitingSeconds,
+          minFareCents: tabela.minFareCents,
+          multiplier: Number(corrida.multiplier),
+        }
+      : null;
+    let taximetro: {
+      distanceMeters: number;
+      durationSeconds: number;
+      waitingSeconds: number;
+      valorCents: number;
+      atualizadoEm: string | null;
+    } | null = null;
+    if (corrida.status === RideStatus.IN_PROGRESS && corrida.startedAt && modo === 'TAXIMETRO') {
+      const medida = this.taximetros.get(corrida.id);
+      const durationSeconds = Math.max(0, Math.round((Date.now() - corrida.startedAt.getTime()) / 1000));
+      const waitingSeconds = corrida.arrivedAt
+        ? Math.max(0, Math.round((corrida.startedAt.getTime() - corrida.arrivedAt.getTime()) / 1000))
+        : 0;
+      const distanceMeters = medida?.distanceMeters ?? 0;
+      const o = await this.fare.calcular({
+        distanceMeters,
+        durationSeconds,
+        waitingSeconds,
+        flag: corrida.fareFlag,
+        category: corrida.category,
+        multiplier: Number(corrida.multiplier),
+      });
+      taximetro = {
+        distanceMeters,
+        durationSeconds,
+        waitingSeconds,
+        valorCents: o.totalCents,
+        atualizadoEm: medida ? new Date(medida.em).toISOString() : null,
+      };
+    }
+    return { cobranca: modo, tarifa, taximetro };
+  }
+
   /**
    * Fim da corrida.
    *
@@ -499,15 +631,17 @@ export class RidesService {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.COMPLETED);
 
-    const distancia = input.distanceMeters ?? corrida.distanceMeters;
-    const duracao = input.durationSeconds ?? corrida.durationSeconds;
+    const medida = await this.medicaoFinal(corrida, input);
+    const distancia = medida.distanceMeters;
+    const duracao = medida.durationSeconds;
+    this.taximetros.delete(rideId);
 
     // A bandeira e a do PEDIDO, nao a do instante em que terminou: quem
     // chamou as 21h55 nao paga noturna por ter descido as 22h05.
     const orcamento = await this.fare.calcular({
       distanceMeters: distancia,
       durationSeconds: duracao,
-      waitingSeconds: input.waitingSeconds,
+      waitingSeconds: medida.waitingSeconds,
       flag: corrida.fareFlag,
       category: corrida.category,
       multiplier: Number(corrida.multiplier),
@@ -1090,7 +1224,7 @@ export class RidesService {
           },
         },
         vehicle: { select: { plate: true, brand: true, model: true, color: true } },
-        ratings: { select: { authorId: true, score: true } },
+        ratings: { select: { authorId: true, score: true, targetDriverId: true } },
       },
     });
     if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
@@ -1109,7 +1243,15 @@ export class RidesService {
     ];
     const driverPosition =
       corrida.driverId && comCarro.includes(corrida.status) ? await this.posicaoDoMotorista(corrida.driverId) : null;
-    const minhaNota = quem ? (corrida.ratings.find((r) => r.authorId === quem.userId)?.score ?? null) : null;
+    // A nota que ESTA ponta deu: passageiro avalia o motorista (com
+    // targetDriverId), motorista avalia o passageiro (sem).
+    const minhaNota = quem
+      ? (corrida.ratings.find(
+          (r) =>
+            r.authorId === quem.userId &&
+            (quem.papel === UserRole.DRIVER ? r.targetDriverId == null : r.targetDriverId != null),
+        )?.score ?? null)
+      : null;
     const { ratings: _notas, ...semNotas } = corrida;
     // Foto do carro (de frente) que o motorista mandou nos documentos.
     const driver = corrida.driver
@@ -1127,7 +1269,23 @@ export class RidesService {
       favorito = (await this.favoritosDe(quem.userId)).includes(corrida.driverId);
       bloqueado = (await this.bloqueadosDe(quem.userId)).includes(corrida.driverId);
     }
-    return { ride: { ...semNotas, driver, driverPosition, minhaNota, mensagensNaoLidas, favorito, bloqueado } };
+    const aoVivo = comCarro.includes(corrida.status)
+      ? await this.taximetroAoVivo(corrida).catch(() => null)
+      : null;
+    return {
+      ride: {
+        ...semNotas,
+        driver,
+        driverPosition,
+        minhaNota,
+        mensagensNaoLidas,
+        favorito,
+        bloqueado,
+        cobranca: aoVivo?.cobranca ?? null,
+        tarifa: aoVivo?.tarifa ?? null,
+        taximetro: aoVivo?.taximetro ?? null,
+      },
+    };
   }
 
   async posicaoDoMotorista(driverId: string): Promise<{ latitude: number; longitude: number; updatedAt: string } | null> {

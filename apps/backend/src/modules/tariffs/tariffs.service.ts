@@ -13,6 +13,8 @@ import {
   lerCategorias,
   lerMultiplicador,
 } from '../rides/categorias';
+import { gravarCobranca, lerCobranca } from '../rides/cobranca';
+import type { ModoCobranca } from '../rides/cobranca';
 
 /**
  * Administracao das bandeiras.
@@ -51,7 +53,14 @@ export class TariffsService {
         proprias: tabelas.some((t) => t.category === c.codigo),
       })),
       multiplicador: await lerMultiplicador(this.prisma),
+      /** TAXIMETRO (valor corre na viagem) ou FECHADO (o estimado no pedido). */
+      cobranca: await lerCobranca(this.prisma),
     };
+  }
+
+  async salvarCobranca(modo: ModoCobranca) {
+    await gravarCobranca(this.prisma, modo);
+    return this.listar();
   }
 
   /** Compatibilidade: salvar so as bandeiras do Carro. */

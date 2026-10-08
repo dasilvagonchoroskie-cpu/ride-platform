@@ -148,7 +148,8 @@ class _SearchingScreenState extends State<SearchingScreen> {
                 MapMarker(id: 'pickup', coords: corrida.pickup.coords, kind: MarkerKind.pickup),
                 if (motorista.posicaoReal) MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
               ],
-              driverRoute: estado.driverRoute,
+              // Pelas ruas; o traco some atras do carro conforme ele anda.
+              driverRoute: motorista.posicaoReal ? restanteDaRota(motorista.position, estado.driverRoute) : const [],
             ),
           ),
           // SOS sempre visivel no alto do mapa durante a corrida.

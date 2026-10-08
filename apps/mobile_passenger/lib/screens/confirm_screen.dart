@@ -112,7 +112,8 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                     center: center,
                     span: 0.075,
                     rounded: false,
-                    route: [app.coords, widget.destination],
+                    // Pelas ruas (aparece assim que o servidor responde).
+                    route: ride.rotaPrevia,
                     markers: [
                       MapMarker(id: 'pickup', coords: app.coords, kind: MarkerKind.pickup),
                       MapMarker(
@@ -419,6 +420,13 @@ class _PriceCard extends StatelessWidget {
                 : 'Tempo parado esperando so entra na conta depois de 3 minutos.',
             style: SheetText.muted,
           ),
+          if (quote.taximetro) ...[
+            const SizedBox(height: Spacing.xs),
+            Text(
+              'Valor estimado. O valor final é o do taxímetro: pelo trajeto feito (km rodado, tempo e espera).',
+              style: SheetText.muted,
+            ),
+          ],
         ],
       ),
     );

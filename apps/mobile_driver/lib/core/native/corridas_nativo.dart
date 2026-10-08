@@ -24,6 +24,16 @@ class CorridasNativo {
 
   static Future<void> pararAlarme() => _chamar('pararAlarme');
 
+  /// Chamado aparecendo com o aplicativo aberto: toca o alarme (o Android
+  /// nao repete se o vigia ja tocou o mesmo chamado).
+  static Future<void> tocarChamado(String rideId, String expiresAt, String embarque, String destino) => _chamar(
+        'tocarChamado',
+        {'rideId': rideId, 'expiresAt': expiresAt, 'embarque': embarque, 'destino': destino},
+      );
+
+  /// Toca o alarme por 5 s no volume maximo, para o motorista conferir o som.
+  static Future<void> testarAlarme() => _chamar('testarAlarme');
+
   static Future<void> pedir(String qual) => _chamar('pedir', {'qual': qual});
 
   /// O que ja esta liberado. Fora do Android (onde nao ha o servico),

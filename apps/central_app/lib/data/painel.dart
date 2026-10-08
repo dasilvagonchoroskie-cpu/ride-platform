@@ -572,11 +572,15 @@ class Zona {
 }
 
 class Tarifas {
-  Tarifas({required this.categorias, required this.multiplicadorCidade, required this.zonas});
+  Tarifas({required this.categorias, required this.multiplicadorCidade, required this.zonas, this.cobranca = 'TAXIMETRO'});
 
   final List<Categoria> categorias;
   double multiplicadorCidade;
   final List<Zona> zonas;
+
+  /// Como a corrida e cobrada: TAXIMETRO (valor corre pelo trajeto feito)
+  /// ou FECHADO (o valor estimado no pedido).
+  String cobranca;
 
   factory Tarifas.fromJson(Map<String, dynamic> j) {
     final m = j['multiplicador'] is Map ? j['multiplicador'] as Map : const {};
@@ -586,6 +590,7 @@ class Tarifas {
       ],
       multiplicadorCidade: _num(m['cidade']) ?? 1,
       zonas: [for (final z in (m['zonas'] as List? ?? const []).whereType<Map<String, dynamic>>()) Zona.fromJson(z)],
+      cobranca: j['cobranca'] == 'FECHADO' ? 'FECHADO' : 'TAXIMETRO',
     );
   }
 }
@@ -942,6 +947,9 @@ class PainelApi {
         '/admin/tariffs/categoria/$codigo',
         body: {'nome': c.nome, 'ativa': c.ativa, 'diurna': c.diurna.toJson(), 'noturna': c.noturna.toJson()},
       ) as Map<String, dynamic>);
+
+  Future<Tarifas> salvarCobranca(String modo) async => Tarifas.fromJson(
+      await _c.request('PUT', '/admin/tariffs/cobranca', body: {'modo': modo}) as Map<String, dynamic>);
 
   Future<Tarifas> salvarMultiplicador(double cidade, List<Zona> zonas) async => Tarifas.fromJson(await _c.request(
         'PUT',

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/alarme.dart';
+import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import '../painel/alertas.dart';
@@ -28,7 +30,7 @@ class ShellScreen extends StatefulWidget {
   State<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen> {
+class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   int _index = 0;
 
   /// Abas ja abertas: so carregam quando a pessoa entra nelas.
@@ -62,6 +64,15 @@ class _ShellScreenState extends State<ShellScreen> {
     _painel.addListener(_sosNovo);
     _painel.addListener(_motoristaNovo);
     _painel.iniciar();
+    // Alarme do SOS e cadastro novo tambem com a Central minimizada.
+    WidgetsBinding.instance.addObserver(this);
+    if (AppConfig.hasApi) VigiaCentral.iniciar(AppConfig.apiUrl);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Voltou para a Central: garante o vigia de pe (o Android pode ter derrubado).
+    if (state == AppLifecycleState.resumed && AppConfig.hasApi) VigiaCentral.iniciar(AppConfig.apiUrl);
   }
 
   @override
@@ -69,6 +80,7 @@ class _ShellScreenState extends State<ShellScreen> {
     _painel.removeListener(_sosNovo);
     _painel.removeListener(_motoristaNovo);
     _painel.parar();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

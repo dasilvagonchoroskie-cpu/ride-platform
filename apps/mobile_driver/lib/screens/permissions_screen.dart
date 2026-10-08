@@ -103,6 +103,20 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
             onPressed: () => CorridasNativo.pedir('ajustes'),
           ),
           const SizedBox(height: Spacing.sm),
+          // Evandro, 08/10/2026: "os aplicativos nao estao alarmando". O
+          // motorista confere aqui se o som do chamado sai (volume maximo).
+          AppButton(
+            label: 'Testar o alarme de corrida',
+            icon: Icons.notifications_active,
+            variant: AppButtonVariant.secondary,
+            onPressed: () {
+              CorridasNativo.testarAlarme();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Tocando por 5 segundos no volume máximo. É assim que a corrida nova toca.')),
+              );
+            },
+          ),
+          const SizedBox(height: Spacing.sm),
           AppButton(
             label: 'Verificar de novo',
             variant: AppButtonVariant.ghost,

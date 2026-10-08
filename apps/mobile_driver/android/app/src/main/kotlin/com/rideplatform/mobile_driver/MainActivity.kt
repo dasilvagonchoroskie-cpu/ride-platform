@@ -72,7 +72,28 @@ class MainActivity : FlutterActivity() {
                         result.success(true)
                     }
                     "pararAlarme" -> {
-                        startService(Intent(this, CorridasService::class.java).setAction(CorridasService.ACAO_PARAR_ALARME))
+                        Sirene.parar()
+                        try {
+                            startService(Intent(this, CorridasService::class.java).setAction(CorridasService.ACAO_PARAR_ALARME))
+                        } catch (e: Exception) {
+                            // Servico parado e app em segundo plano: o som ja parou acima.
+                        }
+                        result.success(true)
+                    }
+                    // Chamado visto com o aplicativo aberto: toca tambem (uma vez so).
+                    "tocarChamado" -> {
+                        CorridasService.chamadaDoApp(
+                            this,
+                            call.argument<String>("rideId") ?: "",
+                            call.argument<String>("expiresAt") ?: "",
+                            call.argument<String>("embarque") ?: "",
+                            call.argument<String>("destino") ?: ""
+                        )
+                        result.success(true)
+                    }
+                    // Botao "Testar alarme": 5 segundos no volume maximo.
+                    "testarAlarme" -> {
+                        Sirene.tocar(this, 5000)
                         result.success(true)
                     }
                     "permissoes" -> result.success(estado())

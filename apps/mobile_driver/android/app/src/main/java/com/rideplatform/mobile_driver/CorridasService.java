@@ -14,18 +14,12 @@ import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.media.AudioAttributes;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.provider.Settings;
 
 import androidx.core.app.NotificationCompat;
@@ -41,8 +35,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Vigia de corridas enquanto o motorista esta DISPONIVEL — inclusive com o
@@ -78,9 +70,8 @@ public class CorridasService extends Service {
     private static final int ID_CHAMADA = 5102;
 
     private static final long INTERVALO_MS = 4000;
-    // Um chamado dura 20 s no servidor; o alarme nao toca alem disso.
-    private static final long ALARME_MAX_MS = 22000;
     private static final long POSICAO_MIN_MS = 10000;
+    private static final int ID_SESSAO = 5104;
 
     private static final String PREFS = "fortaleza_corridas";
 
@@ -88,12 +79,8 @@ public class CorridasService extends Service {
     private Thread vigia;
     private String api = "";
     private String token = "";
-    private final Set<String> jaTocadas = new HashSet<>();
 
-    private MediaPlayer tocador;
-    private Vibrator vibrador;
     private final Handler principal = new Handler(Looper.getMainLooper());
-    private final Runnable desligarAlarme = this::pararAlarme;
 
     private PowerManager.WakeLock trava;
     private LocationManager gps;
@@ -137,6 +124,7 @@ public class CorridasService extends Service {
             api = p.getString("api", "");
             token = p.getString("token", "");
         }
+        token = Sessao.acesso(this, token);
         if (api.isEmpty() || token == null || token.isEmpty()) {
             stopSelf();
             return START_NOT_STICKY;
@@ -218,13 +206,23 @@ public class CorridasService extends Service {
 
         JSONObject oferta = lista.getJSONObject(0);
         String id = oferta.optString("rideId", "");
-        if (id.isEmpty() || jaTocadas.contains(id)) return;
-        jaTocadas.add(id);
-        if (jaTocadas.size() > 50) jaTocadas.clear();
+        String expira = oferta.optString("expiresAt", "");
+        // Corrida + prazo: a Central reenviando a mesma corrida toca de novo.
+        if (id.isEmpty() || !Sirene.primeiraVez(id + "|" + expira)) return;
 
         String embarque = oferta.optString("pickupAddress", "");
         String destino = oferta.optString("dropoffAddress", "");
-        principal.post(() -> chamar(embarque, destino));
+        long duracao = Sirene.duracaoAte(expira);
+        principal.post(() -> chamar(embarque, destino, duracao));
+    }
+
+    /**
+     * Chamado visto pelo aplicativo aberto (o vigia pode estar parado ou
+     * ainda nao ter consultado): toca do mesmo jeito, uma vez so.
+     */
+    public static void chamadaDoApp(Context c, String rideId, String expira, String embarque, String destino) {
+        if (rideId == null || rideId.isEmpty() || !Sirene.primeiraVez(rideId + "|" + (expira == null ? "" : expira))) return;
+        Sirene.tocar(c, Sirene.duracaoAte(expira));
     }
 
     /**
@@ -299,6 +297,12 @@ public class CorridasService extends Service {
     }
 
     private JSONObject requisitar(String metodo, String caminho, JSONObject corpo) throws Exception {
+        return requisitar(metodo, caminho, corpo, true);
+    }
+
+    private JSONObject requisitar(String metodo, String caminho, JSONObject corpo, boolean renovarSe401) throws Exception {
+        // O login mais novo e sempre o que o aplicativo guardou.
+        token = Sessao.acesso(this, token);
         HttpURLConnection c = (HttpURLConnection) new URL(api + caminho).openConnection();
         c.setRequestMethod(metodo);
         c.setConnectTimeout(15000);
@@ -314,11 +318,21 @@ public class CorridasService extends Service {
             }
             int codigo = c.getResponseCode();
             if (codigo == 401) {
-                // Sessao expirou: nao adianta insistir ate o motorista
-                // entrar de novo no aplicativo.
-                rodando = false;
-                principal.post(this::encerrar);
-                return null;
+                if (!renovarSe401) return null;
+                // Acesso vencido: renova sozinho (antes o vigia parava aqui
+                // e o motorista deixava de receber chamados sem saber).
+                String usado = token;
+                String novo = Sessao.renovar(this, api, usado);
+                if (novo == null) {
+                    avisarSessaoVencida();
+                    rodando = false;
+                    principal.post(this::encerrar);
+                    return null;
+                }
+                if (novo.equals(usado)) return null; // sem rede agora: tenta na proxima volta
+                token = novo;
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("token", novo).apply();
+                return requisitar(metodo, caminho, corpo, false);
             }
             if (codigo >= 400) return null;
             StringBuilder r = new StringBuilder();
@@ -337,7 +351,29 @@ public class CorridasService extends Service {
     // Chamado: alarme + tela cheia por cima de tudo
     // ------------------------------------------------------------------
 
-    private void chamar(String embarque, String destino) {
+    private void avisarSessaoVencida() {
+        Intent abrir = new Intent(this, MainActivity.class);
+        abrir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent toque = PendingIntent.getActivity(this, 11, abrir,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        String texto = "Abra o aplicativo e entre de novo para voltar a receber corridas.";
+        Notification aviso = new NotificationCompat.Builder(this, CANAL_CARTEIRA)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("Você parou de receber corridas")
+                .setContentText(texto)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(texto))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(toque)
+                .setAutoCancel(true)
+                .build();
+        principal.post(() -> {
+            try {
+                NotificationManagerCompat.from(this).notify(ID_SESSAO, aviso);
+            } catch (SecurityException ignored) { }
+        });
+    }
+
+    private void chamar(String embarque, String destino, long duracao) {
         Intent abrir = new Intent(this, MainActivity.class);
         abrir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
@@ -360,13 +396,13 @@ public class CorridasService extends Service {
                 .setContentIntent(telaCheia)
                 .setFullScreenIntent(telaCheia, true)
                 .setOngoing(true)
-                .setTimeoutAfter(ALARME_MAX_MS)
+                .setTimeoutAfter(duracao)
                 .build();
         try {
             NotificationManagerCompat.from(this).notify(ID_CHAMADA, aviso);
         } catch (SecurityException ignored) { }
 
-        ligarAlarme();
+        Sirene.tocar(this, duracao);
 
         // Por cima de OUTRO aplicativo aberto: so o Android permite trazer a
         // tela para a frente se o motorista liberou "sobrepor a outros apps".
@@ -377,49 +413,8 @@ public class CorridasService extends Service {
         } catch (Exception ignored) { }
     }
 
-    /** Toca em alca, como ligacao, pelo canal de ALARME. */
-    private void ligarAlarme() {
-        pararAlarme();
-        try {
-            Uri som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-            if (som == null) som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-            if (som != null) {
-                tocador = new MediaPlayer();
-                tocador.setDataSource(this, som);
-                tocador.setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build());
-                tocador.setLooping(true);
-                tocador.prepare();
-                tocador.start();
-            }
-        } catch (Exception e) {
-            tocador = null;
-        }
-        try {
-            if (vibrador == null) vibrador = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            long[] padrao = new long[]{0, 700, 400, 700, 400, 900, 600};
-            if (Build.VERSION.SDK_INT >= 26) {
-                vibrador.vibrate(VibrationEffect.createWaveform(padrao, 0));
-            } else {
-                vibrador.vibrate(padrao, 0);
-            }
-        } catch (Exception ignored) { }
-        principal.removeCallbacks(desligarAlarme);
-        principal.postDelayed(desligarAlarme, ALARME_MAX_MS);
-    }
-
     private void pararAlarme() {
-        principal.removeCallbacks(desligarAlarme);
-        try {
-            if (tocador != null) {
-                tocador.stop();
-                tocador.release();
-            }
-        } catch (Exception ignored) { }
-        tocador = null;
-        try { if (vibrador != null) vibrador.cancel(); } catch (Exception ignored) { }
+        Sirene.parar();
         try { NotificationManagerCompat.from(this).cancel(ID_CHAMADA); } catch (Exception ignored) { }
     }
 
