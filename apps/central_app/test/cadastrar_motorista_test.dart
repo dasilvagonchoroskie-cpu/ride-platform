@@ -69,8 +69,8 @@ void main() {
 
   testWidgets('Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial', (tester) async {
     await _abrir(tester);
-    await tester.ensureVisible(find.text('Cadastrar motorista').last);
-    await tester.tap(find.text('Cadastrar motorista').last);
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Cadastrar motorista'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Cadastrar motorista'));
     await tester.pumpAndSettle();
     expect(find.textContaining('nome completo'), findsOneWidget);
     expect(pedidos, isEmpty);
@@ -89,9 +89,9 @@ void main() {
     await _escrever(tester, 'Placa', 'fbp8h67');
     await _escrever(tester, 'Saldo inicial em R\$ (opcional)', '50,00');
 
-    await tester.ensureVisible(find.text('Cadastrar motorista').last);
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Cadastrar motorista'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cadastrar motorista').last);
+    await tester.tap(find.widgetWithText(FilledButton, 'Cadastrar motorista'));
     await tester.pumpAndSettle();
 
     final (rota, corpo) = pedidos.firstWhere((p) => p.$1 == 'POST /api/admin/drivers');
