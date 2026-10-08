@@ -134,6 +134,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
   }
 
+  Future<void> _sair() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sair do cadastro?'),
+        content: const Text(
+          'Você volta para a tela de entrar e pode usar outro telefone. '
+          'Se você já usa o app do passageiro, entre com o MESMO telefone: '
+          'a mesma conta serve para os dois aplicativos.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Continuar o cadastro')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Sair')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) await context.read<DriverState>().logout();
+  }
+
   Future<void> _finish() async {
     final driver = context.read<DriverState>();
 
@@ -158,6 +177,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Cadastro do motorista'),
+        // Sair durante o cadastro: para entrar com o telefone da conta de
+        // passageiro (a mesma conta serve para os dois apps). Antes nao havia
+        // como sair daqui sem apagar os dados do aplicativo.
+        actions: [
+          TextButton(
+            onPressed: _sair,
+            child: const Text('Sair'),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: Row(

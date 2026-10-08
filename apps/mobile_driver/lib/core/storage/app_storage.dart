@@ -30,6 +30,9 @@ class AppStorage {
   static Future<void> clearDriverSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(accessToken);
+    // Sem isto, depois de "Sair" o app podia renovar sozinho o login da
+    // conta antiga no primeiro pedido recusado.
+    await prefs.remove(refreshToken);
     await prefs.remove(driverProfile);
     await prefs.remove(vehicle);
     await prefs.remove(activeRide);

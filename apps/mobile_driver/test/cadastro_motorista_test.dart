@@ -6,12 +6,15 @@
 
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile_driver/core/api/api_client.dart';
 import 'package:mobile_driver/data/models/driver_models.dart';
+import 'package:mobile_driver/screens/onboarding_screen.dart';
 import 'package:mobile_driver/state/driver_state.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final List<String> pedidos = [];
@@ -53,7 +56,7 @@ Future<DriverState> _enviar(MockClient servidor) async {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste'});
+    SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste', 'ride.refreshToken': 'refresh-de-teste'});
     pedidos.clear();
   });
 
@@ -79,5 +82,30 @@ void main() {
     final d = await _enviar(_servidor(status: 200));
     expect(pedidos, ['POST /api/drivers/onboarding', 'POST /api/vehicles']);
     expect(d.profile!.name, 'Evandro da Silva');
+  });
+
+  testWidgets('Cadastro: botao Sair para entrar com outro telefone', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final d = DriverState(client: ApiClient(client: _servidor(status: 200)));
+    d.profile = const DriverProfile(id: 'u1', name: 'Motorista 2794', phone: '+5564996472794', termsAccepted: true);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<DriverState>.value(
+        value: d,
+        child: const MaterialApp(home: OnboardingScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Sair'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sair do cadastro?'), findsOneWidget);
+    expect(find.textContaining('MESMO telefone'), findsOneWidget);
+    await tester.tap(find.text('Sair').last);
+    await tester.pumpAndSettle();
+    expect(d.profile, isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('ride.refreshToken'), isNull);
   });
 }
