@@ -82,7 +82,7 @@ X=$(get "/geo/search?q=Avenida%20Brasilia&lat=-18.0125&lng=-49.3547" "$TP")
 N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: busca de destino real ($N resultado(s), 1o: $(echo "$X" | jq -r '.data[0].address') - $(echo "$X" | jq -r '.data[0].detail'))" || falha "Passageiro: busca de destino" "$X"
 X=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
-[ -n "$(echo "$X" | jq -r '.data.address // empty')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
+[ -n "$(echo "$X" | jq -r '.data.address // empty' | grep -v '^Ponto no mapa')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
 
 TM=$(entrar "+55649${SUF}72" DRIVER)
 [ -n "$TM" ] && ok "Motorista: login pelo codigo de teste" || falha "Motorista: login" "sem token"
@@ -128,7 +128,7 @@ X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Porto Aleg
 X=$(get "/geo/search?q=Porto%20Alegre&lat=-18.0128&lng=-49.3556" "$TP")
 [ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)] | length')" -ge 1 ] 2>/dev/null && ok "Passageiro: busca acha destino fora da regiao (Porto Alegre)" || falha "Passageiro: busca fora da regiao" "$X"
 X=$(get "/geo/search?q=Rua%20Sao%20Paulo&lat=-18.0128&lng=-49.3556" "$TP")
-[ "$(echo "$X" | jq -r '.data[0].distanceKm < 80')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
+[ "$(echo "$X" | jq -r '(.data | length) > 0 and ((.data[0].distanceKm // 9999) < 80)')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
 # Renovacao do login (refresh): sem ela o app travava com "Token de acesso
 # ausente ou invalido" quando o acesso vencia (Evandro, 05/10/2026).
 P=$(post /auth/otp/request "{\"phone\":\"+55649${SUF}79\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')

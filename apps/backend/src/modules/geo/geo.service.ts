@@ -20,6 +20,24 @@ interface ItemNominatim {
 }
 
 const BASE = 'https://nominatim.openstreetmap.org';
+/** Reserva: Photon (Komoot), tambem OpenStreetMap, gratuito e sem chave. */
+const PHOTON = 'https://photon.komoot.io';
+
+interface ItemPhoton {
+  geometry?: { coordinates?: [number, number] };
+  properties?: Record<string, string | undefined>;
+}
+
+/** Nome do estado -> sigla (o Photon devolve o nome por extenso). */
+const UF: Record<string, string> = {
+  acre: 'AC', alagoas: 'AL', amapa: 'AP', amazonas: 'AM', bahia: 'BA', ceara: 'CE',
+  'distrito federal': 'DF', 'espirito santo': 'ES', goias: 'GO', maranhao: 'MA',
+  'mato grosso': 'MT', 'mato grosso do sul': 'MS', 'minas gerais': 'MG', para: 'PA',
+  paraiba: 'PB', parana: 'PR', pernambuco: 'PE', piaui: 'PI', 'rio de janeiro': 'RJ',
+  'rio grande do norte': 'RN', 'rio grande do sul': 'RS', rondonia: 'RO', roraima: 'RR',
+  'santa catarina': 'SC', 'sao paulo': 'SP', sergipe: 'SE', tocantins: 'TO',
+};
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 const DIA_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -35,6 +53,12 @@ export class GeoService {
   private readonly logger = new Logger(GeoService.name);
   private readonly cache = new Map<string, { quando: number; valor: unknown }>();
   private proximaVez = 0;
+  /**
+   * O Nominatim publico bloqueia (429) o IP compartilhado do servidor
+   * gratuito do Render (visto em 08/10/2026: TODA busca voltava vazia).
+   * Depois de um bloqueio, por 15 minutos vai direto ao Photon.
+   */
+  private nominatimBloqueadoAte = 0;
 
   async buscar(texto: string, lat: number, lng: number): Promise<Lugar[]> {
     const q = texto.trim().replace(/\s+/g, ' ');
@@ -57,7 +81,8 @@ export class GeoService {
     if (itens.length < 5) {
       itens = [...itens, ...((await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}`)) ?? [])];
     }
-    const lugares = (itens ?? []).map((i) => this.paraLugar(i));
+    let lugares = (itens ?? []).map((i) => this.paraLugar(i));
+    if (lugares.length === 0) lugares = await this.buscarPhoton(q, lat, lng);
     // Sem repetidos (o mesmo nome no mesmo ponto aparece as vezes duas vezes).
     const vistos = new Set<string>();
     const unicos = lugares.filter((l) => {
@@ -79,8 +104,11 @@ export class GeoService {
     const item = await this.consultar<ItemNominatim>(
       `/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
     );
+    const reserva = item && item.lat ? null : await this.reversoPhoton(lat, lng);
     const lugar: Lugar = item && item.lat
       ? { ...this.paraLugar(item), latitude: lat, longitude: lng, distanceKm: null }
+      : reserva
+      ? { ...reserva, latitude: lat, longitude: lng, distanceKm: null }
       : {
           address: `Ponto no mapa (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
           detail: '',
@@ -88,8 +116,81 @@ export class GeoService {
           longitude: lng,
           distanceKm: null,
         };
-    if (item && item.lat) this.gravarCache(chave, lugar);
+    if ((item && item.lat) || reserva) this.gravarCache(chave, lugar);
     return lugar;
+  }
+
+  // ---------------- Reserva: Photon ----------------
+
+  /** Regiao primeiro (caixa de uns 80 km); se vier pouco, o Brasil todo, perto primeiro. */
+  private async buscarPhoton(q: string, lat: number, lng: number): Promise<Lugar[]> {
+    const g = 0.75;
+    const caixa = [lng - g, lat - g, lng + g, lat + g].map((n) => n.toFixed(5)).join(',');
+    const base = `/api/?q=${encodeURIComponent(q)}&lat=${lat}&lon=${lng}&limit=10&lang=default`;
+    const regiao = (await this.consultarPhoton<{ features?: ItemPhoton[] }>(`${base}&bbox=${caixa}`))?.features ?? [];
+    let todos = regiao;
+    if (regiao.length < 5) {
+      const brasil = (await this.consultarPhoton<{ features?: ItemPhoton[] }>(base))?.features ?? [];
+      todos = [...regiao, ...brasil];
+    }
+    return todos
+      .filter((f) => (f.properties?.countrycode ?? 'BR').toUpperCase() === 'BR')
+      .map((f) => this.paraLugarPhoton(f))
+      .filter((l): l is Lugar => l !== null)
+      .slice(0, 12);
+  }
+
+  private async reversoPhoton(lat: number, lng: number): Promise<Lugar | null> {
+    const r = await this.consultarPhoton<{ features?: ItemPhoton[] }>(`/reverse?lat=${lat}&lon=${lng}&lang=default`);
+    const f = r?.features?.[0];
+    return f ? this.paraLugarPhoton(f) : null;
+  }
+
+  private paraLugarPhoton(f: ItemPhoton): Lugar | null {
+    const c = f.geometry?.coordinates;
+    const p = f.properties ?? {};
+    if (!c || c.length < 2) return null;
+    const eRua = p.osm_key === 'highway';
+    const eCidade = ['city', 'town', 'village'].includes(p.type ?? '') || ['city', 'town', 'village'].includes(p.osm_value ?? '');
+    const nome = (p.name ?? '').trim();
+    const rua = (p.street ?? (eRua ? nome : '')).trim();
+    const numero = p.housenumber ? `, ${p.housenumber}` : '';
+    const bairro = p.district ?? p.locality ?? '';
+    const cidade = p.city ?? (eCidade ? nome : '') ?? '';
+    const uf = UF[semAcento(p.state ?? '')] ?? p.state ?? '';
+    const linhaRua = rua ? `${rua}${numero}` : '';
+    const principal = nome && !eRua ? nome : linhaRua || nome;
+    const apoio = [nome && !eRua && linhaRua ? linhaRua : '', bairro, cidade && uf ? `${cidade} - ${uf}` : cidade || uf]
+      .filter((x) => x && x.length > 0 && x !== principal)
+      .join(', ');
+    return {
+      address: principal || 'Endereco sem nome',
+      detail: apoio,
+      latitude: Number(c[1]),
+      longitude: Number(c[0]),
+      distanceKm: null,
+    };
+  }
+
+  private async consultarPhoton<T>(caminho: string): Promise<T | null> {
+    const controle = new AbortController();
+    const relogio = setTimeout(() => controle.abort(), 9000);
+    try {
+      const resp = await fetch(`${PHOTON}${caminho}`, {
+        headers: { 'User-Agent': 'FortalezaMov/1.0 (+https://fortalezadigitalsecurity.com.br)' },
+        signal: controle.signal,
+      });
+      if (!resp.ok) {
+        this.logger.warn(`Photon respondeu ${resp.status} em ${caminho.split('?')[0]}`);
+        return null;
+      }
+      return (await resp.json()) as T;
+    } catch (e) {
+      this.logger.warn(`Photon sem resposta: ${(e as Error).message}`);
+      return null;
+    } finally {
+      clearTimeout(relogio);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -131,6 +232,7 @@ export class GeoService {
 
   /** Uma consulta por vez, com 1,1 s de intervalo (regra do Nominatim). */
   private async consultar<T>(caminho: string): Promise<T | null> {
+    if (Date.now() < this.nominatimBloqueadoAte) return null;
     const agora = Date.now();
     const espera = Math.max(0, this.proximaVez - agora);
     this.proximaVez = Math.max(agora, this.proximaVez) + 1100;
@@ -148,6 +250,7 @@ export class GeoService {
       });
       if (!resp.ok) {
         this.logger.warn(`Nominatim respondeu ${resp.status} em ${caminho.split('?')[0]}`);
+        if (resp.status === 429 || resp.status === 403) this.nominatimBloqueadoAte = Date.now() + 15 * 60_000;
         return null;
       }
       return (await resp.json()) as T;
