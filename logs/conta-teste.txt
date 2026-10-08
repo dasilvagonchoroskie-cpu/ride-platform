@@ -1,7 +1,7 @@
-Conta de teste do motorista - 04/10/2026 11:58 UTC
+Conta de teste do motorista - 08/10/2026 12:16 UTC
 OK    login do telefone (64) 90000-0001
 OK    cadastro ja existia
-OK    veiculo criado (Chevrolet Spin 2020 prata, placa FMV0T01)
+OK    veiculo ja existia: Chevrolet Spin FMV0T01
 OK    ja estava aprovado
 OK    carteira com R$ 100,00
 
