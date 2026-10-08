@@ -78,9 +78,10 @@ export class GeoService {
     if (itens.length < 3) {
       itens = [...itens, ...((await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}&bounded=1`)) ?? [])];
     }
-    if (itens.length < 5) {
-      itens = [...itens, ...((await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}`)) ?? [])];
-    }
+    // Sempre tambem o Brasil todo (regiao continua primeiro): com varias
+    // "Rua Porto Alegre" na regiao, a cidade de Porto Alegre sumia da lista.
+    const regiaoNominatim = itens.slice(0, 7);
+    itens = [...regiaoNominatim, ...((await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}`)) ?? [])];
     let lugares = (itens ?? []).map((i) => this.paraLugar(i));
     if (lugares.length === 0) lugares = await this.buscarPhoton(q, lat, lng);
     // Sem repetidos (o mesmo nome no mesmo ponto aparece as vezes duas vezes).
@@ -127,16 +128,28 @@ export class GeoService {
     const g = 0.75;
     const caixa = [lng - g, lat - g, lng + g, lat + g].map((n) => n.toFixed(5)).join(',');
     const base = `/api/?q=${encodeURIComponent(q)}&lat=${lat}&lon=${lng}&limit=10&lang=default`;
-    const regiao = (await this.consultarPhoton<{ features?: ItemPhoton[] }>(`${base}&bbox=${caixa}`))?.features ?? [];
-    let todos = regiao;
-    if (regiao.length < 5) {
-      const brasil = (await this.consultarPhoton<{ features?: ItemPhoton[] }>(base))?.features ?? [];
-      todos = [...regiao, ...brasil];
-    }
+    // Regiao e Brasil juntos (regiao primeiro). Antes o Brasil so entrava
+    // com menos de 5 achados na regiao: "Porto Alegre" em Goiatuba so
+    // mostrava as ruas Porto Alegre da regiao, nunca a cidade.
+    // O Brasil vai SEM o ponto de referencia: assim vem pela importancia
+    // (a cidade de Porto Alegre), e nao de novo as ruas daqui.
+    const brasilBase = `/api/?q=${encodeURIComponent(q)}&limit=10&lang=default`;
+    const [regiao, brasil] = await Promise.all([
+      this.consultarPhoton<{ features?: ItemPhoton[] }>(`${base}&bbox=${caixa}`).then((r) => r?.features ?? []),
+      this.consultarPhoton<{ features?: ItemPhoton[] }>(brasilBase).then((r) => r?.features ?? []),
+    ]);
+    const todos = [...regiao.slice(0, 6), ...brasil, ...regiao.slice(6)];
+    const vistos = new Set<string>();
     return todos
       .filter((f) => (f.properties?.countrycode ?? 'BR').toUpperCase() === 'BR')
       .map((f) => this.paraLugarPhoton(f))
       .filter((l): l is Lugar => l !== null)
+      .filter((l) => {
+        const k = `${l.address}|${l.latitude.toFixed(3)}|${l.longitude.toFixed(3)}`;
+        if (vistos.has(k)) return false;
+        vistos.add(k);
+        return true;
+      })
       .slice(0, 12);
   }
 
