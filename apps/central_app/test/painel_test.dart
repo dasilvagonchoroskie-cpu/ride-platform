@@ -88,6 +88,10 @@ Map<String, dynamic> _motoristaLista(String status) => {
       'documentProgress': {'total': 4, 'sent': 1},
     };
 
+/// Cenario do teste: SOS aberto e cadastro de motorista esperando a Central.
+bool _comSos = true;
+bool _comPendente = false;
+
 Object? _resposta(String metodo, String caminho, Map<String, String> q) {
   if (caminho == '/api/admin/overview') {
     return {
@@ -99,6 +103,10 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       'revenueTodayCents': 123456,
       'commissionTodayCents': 24690,
       'sosActive': 0,
+      'driversPending': _comPendente ? 2 : 0,
+      'latestPendingDriver': _comPendente
+          ? {'id': _motoristaId, 'name': 'Evandro Da Silva gonchoroski', 'phone': '+5564992686632', 'createdAt': '2026-10-08T15:05:14.317Z'}
+          : null,
     };
   }
   if (caminho == '/api/admin/rides/active') {
@@ -155,6 +163,7 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
         ],
       };
     }
+    if (!_comSos) return {'items': <dynamic>[]};
     return {
       'items': [
         {
@@ -416,6 +425,8 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste'});
     mostrarRuasNoMapa = false;
+    _comSos = true;
+    _comPendente = false;
   });
 
   testWidgets('Visao Geral: indicadores em cima do mapa e toque no carro', (tester) async {
@@ -658,6 +669,56 @@ void main() {
     await _carregar(tester);
     expect(find.textContaining('Recarga confirmada'), findsOneWidget);
     expect(find.textContaining('98,50'), findsWidgets);
+  });
+
+  // Evandro (08/10/2026): "la na Central eu nao recebi notificacao nenhuma
+  // de que tinha motorista pendente de aprovacao".
+  testWidgets('Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro', (tester) async {
+    _comSos = false;
+    _comPendente = true;
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    Future<void> abrirCasca() => tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<CentralState>(
+                create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+              ),
+              ChangeNotifierProvider<PainelState>.value(value: painel),
+            ],
+            child: MaterialApp(
+              theme: CentralTheme.dark,
+              locale: const Locale('pt', 'BR'),
+              supportedLocales: const [Locale('pt', 'BR')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+              home: const ShellScreen(),
+            ),
+          ),
+        );
+    await abrirCasca();
+    await _carregar(tester);
+
+    expect(find.text('Motorista aguardando aprovação'), findsOneWidget);
+    expect(find.textContaining('Evandro Da Silva gonchoroski · (64) 99268-6632'), findsOneWidget);
+    expect(find.textContaining('mais 1 cadastro(s) na fila'), findsOneWidget);
+    expect(painel.indicadores.pendentes, 2);
+
+    await tester.tap(find.text('Ver cadastro'));
+    await _carregar(tester);
+    // Abriu direto o cadastro do motorista para aprovar.
+    expect(find.text('Motorista aguardando aprovação'), findsNothing);
+    expect(find.text('Dados'), findsOneWidget);
+    expect(painel.pendenteNovo, isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('central.pendenteVisto'), _motoristaId);
+
+    // Ja visto: na proxima consulta (5 s) o aviso nao abre de novo.
+    await tester.runAsync(() => painel.atualizar());
+    await tester.pumpAndSettle();
+    expect(find.text('Motorista aguardando aprovação'), findsNothing);
   });
 
   test('Leitura dos dados no formato do servidor', () {

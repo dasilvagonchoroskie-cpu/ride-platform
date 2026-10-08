@@ -43,7 +43,7 @@ export class CentralService {
 
   async visaoGeral() {
     const hoje = inicioDeHoje();
-    const [ativas, concluidasHoje, online, ocupados, soma, sos] = await Promise.all([
+    const [ativas, concluidasHoje, online, ocupados, soma, sos, pendentes, ultimoPendente] = await Promise.all([
       this.prisma.ride.count({ where: { status: { in: ABERTAS.filter((s) => s !== 'SCHEDULED') } } }),
       this.prisma.ride.count({ where: { status: RideStatus.COMPLETED, finishedAt: { gte: hoje } } }),
       this.prisma.driver.count({ where: { isOnline: true, status: DriverStatus.APPROVED } }),
@@ -53,6 +53,13 @@ export class CentralService {
         _sum: { finalFareCents: true, commissionCents: true },
       }),
       this.prisma.safetyEvent.count({ where: { type: 'PANIC_BUTTON', resolved: false } }),
+      // Cadastros esperando a Central (o painel avisa quando chega um novo).
+      this.prisma.driver.count({ where: { status: DriverStatus.PENDING, user: { deletedAt: null } } }),
+      this.prisma.driver.findFirst({
+        where: { status: DriverStatus.PENDING, user: { deletedAt: null } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, createdAt: true, user: { select: { name: true, phone: true } } },
+      }),
     ]);
     return {
       activeRides: ativas,
@@ -63,6 +70,15 @@ export class CentralService {
       revenueTodayCents: soma._sum.finalFareCents ?? 0,
       commissionTodayCents: soma._sum.commissionCents ?? 0,
       sosActive: sos,
+      driversPending: pendentes,
+      latestPendingDriver: ultimoPendente
+        ? {
+            id: ultimoPendente.id,
+            name: ultimoPendente.user?.name ?? null,
+            phone: ultimoPendente.user?.phone ?? null,
+            createdAt: ultimoPendente.createdAt,
+          }
+        : null,
     };
   }
 

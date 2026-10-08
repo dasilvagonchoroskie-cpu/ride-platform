@@ -9,6 +9,8 @@ import { acharContaComOsMesmosDados, erroContaExistente } from '../auth/conta-ex
 import { DriversRepository } from './drivers.repository';
 import type { CriarMotoristaInput } from './admin-drivers.controller';
 import { StorageService } from '../../integrations/storage/storage.service';
+import { NotificationService } from '../../integrations/notifications/notification.service';
+import { NotificationChannel } from '@ride/shared';
 import {
   DriverOnboardingInput,
   UpdateDriverInput,
@@ -28,6 +30,7 @@ export class DriversService {
     private readonly repo: DriversRepository,
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly notifications: NotificationService,
   ) {}
 
   /** Onboarding do motorista: cria o registro e a carteira virtual. */
@@ -87,7 +90,44 @@ export class DriversService {
       return created;
     });
 
+    // Avisa a Central por e-mail (quando o e-mail estiver ligado): com o
+    // aplicativo da Central fechado ninguem ficava sabendo do cadastro novo.
+    void this.avisarCentralCadastroNovo(driver.id).catch(() => undefined);
+
     return this.withProgress(driver.id);
+  }
+
+  /** E-mail para cada conta da Central: motorista novo esperando aprovacao. */
+  private async avisarCentralCadastroNovo(driverId: string) {
+    if (!this.notifications.emailConfigurado) return;
+    const d = await this.prisma.driver.findUnique({
+      where: { id: driverId },
+      include: { user: { select: { name: true, phone: true, email: true } } },
+    });
+    if (!d) return;
+    const admins = await this.prisma.user.findMany({
+      where: { role: UserRole.ADMIN, deletedAt: null, email: { not: null } },
+      select: { id: true, email: true },
+    });
+    const tel = (d.user?.phone ?? '').replace(/^\+55(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+    const texto = [
+      'Um motorista novo terminou o cadastro e esta aguardando aprovacao.',
+      '',
+      `Nome: ${d.user?.name ?? '-'}`,
+      `Telefone: ${tel || '-'}`,
+      `E-mail: ${d.user?.email ?? '-'}`,
+      '',
+      'Abra o aplicativo da Central > Motoristas > Pendentes para conferir e aprovar.',
+    ].join('\n');
+    for (const a of admins) {
+      await this.notifications.send({
+        userId: a.id,
+        channel: NotificationChannel.EMAIL,
+        to: a.email,
+        title: `Motorista aguardando aprovacao: ${d.user?.name ?? 'cadastro novo'}`,
+        body: texto,
+      });
+    }
   }
 
   async getMe(userId: string) {

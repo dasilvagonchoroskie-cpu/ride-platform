@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../core/alarme.dart';
 import '../core/api/api_client.dart';
 import '../core/posicao_aparelho.dart';
+import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
 
@@ -29,6 +30,17 @@ class PainelState extends ChangeNotifier {
 
   Timer? _vigia;
   bool _consultando = false;
+
+  /// Cadastro de motorista novo que a Central ainda nao viu: a casca abre
+  /// uma janela com som (Evandro, 08/10/2026: "nao recebi notificacao
+  /// nenhuma de que tinha motorista pendente de aprovacao").
+  MotoristaPendenteResumo? pendenteNovo;
+
+  /// Ultimo cadastro pendente ja mostrado (guardado no aparelho para nao
+  /// repetir o aviso a cada abertura). null = ainda nao lido do aparelho.
+  String? _pendenteVisto;
+  bool _pendenteVistoLido = false;
+  static const String _chavePendenteVisto = 'central.pendenteVisto';
 
   Coords get centro {
     if (PosicaoDoAparelho.atual != null) return PosicaoDoAparelho.atual!;
@@ -73,6 +85,7 @@ class PainelState extends ChangeNotifier {
       } else {
         Alarme.parar();
       }
+      await _conferirPendente();
     } on ApiException catch (e) {
       erro = e.message;
     } catch (e) {
@@ -81,6 +94,41 @@ class PainelState extends ChangeNotifier {
       _consultando = false;
       notifyListeners();
     }
+  }
+
+  /// Chegou cadastro novo (ou havia um que a Central nunca viu)? Avisa uma
+  /// vez: janela, som curto e notificacao do Android.
+  Future<void> _conferirPendente() async {
+    if (!_pendenteVistoLido) {
+      try {
+        _pendenteVisto = await AppStorage.read(_chavePendenteVisto);
+      } catch (_) {}
+      _pendenteVistoLido = true;
+    }
+    final ultimo = indicadores.ultimoPendente;
+    if (ultimo == null || ultimo.id.isEmpty) {
+      pendenteNovo = null;
+      return;
+    }
+    if (ultimo.id == _pendenteVisto || ultimo.id == pendenteNovo?.id) return;
+    pendenteNovo = ultimo;
+    final outros = indicadores.pendentes - 1;
+    await Alarme.aviso(
+      'Motorista aguardando aprovação',
+      '${ultimo.nome} terminou o cadastro${outros > 0 ? ' (e mais $outros na fila)' : ''}. Toque para conferir.',
+    );
+  }
+
+  /// A pessoa viu o aviso (abriu o cadastro ou deixou para depois).
+  Future<void> marcarPendenteVisto() async {
+    final p = pendenteNovo;
+    if (p == null) return;
+    _pendenteVisto = p.id;
+    pendenteNovo = null;
+    try {
+      await AppStorage.write(_chavePendenteVisto, p.id);
+    } catch (_) {}
+    notifyListeners();
   }
 
   void silenciar(String alertaId) {

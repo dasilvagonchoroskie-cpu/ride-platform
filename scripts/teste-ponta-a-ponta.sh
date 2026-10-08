@@ -166,8 +166,16 @@ X=$(post /documents/foto "{\"type\":\"CNH_FRONT\",\"mime\":\"image/jpeg\",\"dado
 DOCURL=$(echo "$X" | jq -r '.data.fileUrl // empty')
 [ "$(echo "$X" | jq -r '.data.status')" = "PENDING" ] && ok "Motorista: foto da CNH enviada (fica pendente para a Central)" || falha "Motorista: foto de documento" "$X"
 PLACA="TST$((RANDOM%10))A$(printf '%02d' $((RANDOM%100)))"
-X=$(post /vehicles "{\"plate\":\"$PLACA\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"}" "$TM")
+# Dois envios no mesmo instante (toque duplo no celular): os dois tem que dar certo.
+CORPOV="{\"plate\":\"$PLACA\",\"brand\":\"Fiat\",\"model\":\"Argo\",\"year\":2021,\"color\":\"Branco\"}"
+V1=$(mktemp); V2=$(mktemp)
+post /vehicles "$CORPOV" "$TM" > "$V1" & post /vehicles "$CORPOV" "$TM" > "$V2" & wait
+X=$(cat "$V1"); Y=$(cat "$V2")
 sucesso "$X" && ok "Motorista: veiculo cadastrado depois do cadastro" || falha "Motorista: veiculo" "$X"
+sucesso "$Y" && [ "$(echo "$X" | jq -r '.data.id')" = "$(echo "$Y" | jq -r '.data.id')" ] && ok "Motorista: toque duplo no envio nao da erro (mesmo carro)" || falha "Motorista: envio duplo do veiculo" "$Y"
+X=$(get /admin/overview "$TA")
+[ "$(echo "$X" | jq -r '.data.driversPending')" -ge 1 ] 2>/dev/null && [ "$(echo "$X" | jq -r '.data.latestPendingDriver.id')" = "$DID" ] \
+  && ok "Central: aviso de motorista novo aguardando aprovacao ($(echo "$X" | jq -r '.data.driversPending') pendente(s))" || falha "Central: aviso de motorista pendente" "$X"
 
 X=$(get "/admin/drivers?status=PENDING&limit=50" "$TA")
 [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents | type] | first')" = "array" ] && [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents[0].fileUrl] | first')" = "$DOCURL" ] \
@@ -177,6 +185,7 @@ C=$(curl -s -o /dev/null -w "%{http_code} %{content_type}" "$API$DOCURL" -H "Aut
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$DOCURL" -H "Authorization: Bearer $TP"); [ "$C" = "403" ] && ok "Seguranca: passageiro nao abre documento de motorista" || falha "Seguranca: foto de documento aberta" "$C"
 X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
 sucesso "$X" && ok "Central: motorista aprovado com conferencia presencial" || falha "Central: aprovar motorista" "$X"
+X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "App do motorista ve a aprovacao (botao Atualizar status)" || falha "Motorista: ver aprovacao" "$(echo "$X" | jq -c '.data.status')"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Motorista sem saldo nao deveria ficar disponivel" "$X" || ok "Carteira: motorista com saldo zero nao fica disponivel ($(echo "$X" | jq -r '.error.message' | cut -c1-60)...)"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")
 [ "$(echo "$X" | jq -r '.data.balanceCents')" = "5000" ] && ok "Central: recarga de R\$ 50,00 (credito no extrato)" || falha "Central: recarga inicial" "$X"

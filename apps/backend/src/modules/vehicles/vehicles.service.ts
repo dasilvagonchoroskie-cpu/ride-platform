@@ -35,17 +35,26 @@ export class VehiclesService {
       throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
     }
 
-    return this.prisma.vehicle.create({
-      data: {
-        driverId: driver.id,
-        plate,
-        brand: input.brand,
-        model: input.model,
-        year: input.year,
-        color: input.color,
-        isActive: input.isActive,
-      },
-    });
+    try {
+      return await this.prisma.vehicle.create({
+        data: {
+          driverId: driver.id,
+          plate,
+          brand: input.brand,
+          model: input.model,
+          year: input.year,
+          color: input.color,
+          isActive: input.isActive,
+        },
+      });
+    } catch (e) {
+      // Dois envios no mesmo instante (toque duplo no celular, 08/10/2026):
+      // o segundo batia na placa unica e o motorista via um erro do banco.
+      if ((e as { code?: string })?.code !== 'P2002') throw e;
+      const mesmo = await this.prisma.vehicle.findUnique({ where: { plate } });
+      if (mesmo && mesmo.driverId === driver.id) return mesmo;
+      throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
+    }
   }
 
   async update(userId: string, vehicleId: string, input: UpdateVehicleInput) {

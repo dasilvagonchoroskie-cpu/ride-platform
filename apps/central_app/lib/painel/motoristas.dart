@@ -23,10 +23,31 @@ class _MotoristasState extends State<Motoristas> {
 
   PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
+  late final PainelState _painel;
+  String? _ultimoPendenteVisto;
+
   @override
   void initState() {
     super.initState();
+    _painel = Provider.of<PainelState>(context, listen: false);
+    _ultimoPendenteVisto = _painel.indicadores.ultimoPendente?.id;
+    _painel.addListener(_cadastroNovo);
     _lista = _api.motoristas(_situacao);
+  }
+
+  @override
+  void dispose() {
+    _painel.removeListener(_cadastroNovo);
+    super.dispose();
+  }
+
+  /// Chegou cadastro novo enquanto a lista de pendentes esta aberta: a lista
+  /// se atualiza sozinha (antes so ao trocar de aba).
+  void _cadastroNovo() {
+    final id = _painel.indicadores.ultimoPendente?.id;
+    if (id == _ultimoPendenteVisto) return;
+    _ultimoPendenteVisto = id;
+    if (_situacao == 'PENDING' && mounted) _recarregar();
   }
 
   void _recarregar() => setState(() { _lista = _api.motoristas(_situacao); });

@@ -160,19 +160,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (ok == true && mounted) await context.read<DriverState>().logout();
   }
 
-  Future<void> _finish() async {
-    final driver = context.read<DriverState>();
+  /// Enviando o cadastro: o botao trava. Dois toques seguidos mandavam o
+  /// cadastro e o carro duas vezes ao mesmo tempo (o segundo dava erro).
+  bool _enviando = false;
 
-    final resultado = await driver.completeOnboarding(
-      nome: _nome.text.trim().replaceAll(RegExp(r'\s+'), ' '),
-      emailConta: _email.text.trim(),
-      telefone: _semTelefone ? '+55${onlyDigits(_telefone.text)}' : null,
-      birthDate: _nascimento.text,
-      cpf: onlyDigits(_cpf.text),
-      cnhNumber: onlyDigits(_cnh.text),
-      cnhCategory: _cnhCategory,
-      cnhExpiresAt: _cnhExpiry.text,
-    );
+  Future<void> _finish() async {
+    if (_enviando) return;
+    final driver = context.read<DriverState>();
+    setState(() => _enviando = true);
+
+    final ResultadoCadastro resultado;
+    try {
+      resultado = await driver.completeOnboarding(
+        nome: _nome.text.trim().replaceAll(RegExp(r'\s+'), ' '),
+        emailConta: _email.text.trim(),
+        telefone: _semTelefone ? '+55${onlyDigits(_telefone.text)}' : null,
+        birthDate: _nascimento.text,
+        cpf: onlyDigits(_cpf.text),
+        cnhNumber: onlyDigits(_cnh.text),
+        cnhCategory: _cnhCategory,
+        cnhExpiresAt: _cnhExpiry.text,
+      );
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
 
     // Cadastro enviado: o aplicativo segue sozinho para a tela de
     // conferencia na Central (antes abria um envio de documentos simulado).
@@ -491,7 +502,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         const SizedBox(height: Spacing.lg),
-        AppButton(label: 'Enviar documentos', onPressed: _finish),
+        AppButton(label: 'Enviar documentos', loading: _enviando, onPressed: _finish),
         const SizedBox(height: Spacing.sm),
         AppButton(label: 'Voltar', variant: AppButtonVariant.ghost, onPressed: () => setState(() => _step = 1)),
       ],

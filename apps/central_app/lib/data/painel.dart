@@ -22,6 +22,8 @@ class Indicadores {
     this.faturamentoHojeCents = 0,
     this.comissaoHojeCents = 0,
     this.sosAbertos = 0,
+    this.pendentes = 0,
+    this.ultimoPendente,
   });
 
   final int ativas;
@@ -33,6 +35,12 @@ class Indicadores {
   final int comissaoHojeCents;
   final int sosAbertos;
 
+  /// Cadastros de motorista esperando a Central aprovar.
+  final int pendentes;
+
+  /// O cadastro pendente mais novo (para avisar quando chega um).
+  final MotoristaPendenteResumo? ultimoPendente;
+
   factory Indicadores.fromJson(Map<String, dynamic> j) => Indicadores(
         ativas: _int(j['activeRides']),
         concluidasHoje: _int(j['completedToday']),
@@ -42,6 +50,25 @@ class Indicadores {
         faturamentoHojeCents: _int(j['revenueTodayCents']),
         comissaoHojeCents: _int(j['commissionTodayCents']),
         sosAbertos: _int(j['sosActive']),
+        pendentes: _int(j['driversPending']),
+        ultimoPendente: j['latestPendingDriver'] is Map<String, dynamic>
+            ? MotoristaPendenteResumo.fromJson(j['latestPendingDriver'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
+/// Motorista que acabou de se cadastrar e espera aprovacao.
+class MotoristaPendenteResumo {
+  const MotoristaPendenteResumo({required this.id, required this.nome, required this.telefone});
+
+  final String id;
+  final String nome;
+  final String telefone;
+
+  factory MotoristaPendenteResumo.fromJson(Map<String, dynamic> j) => MotoristaPendenteResumo(
+        id: j['id'] as String? ?? '',
+        nome: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : 'Motorista novo',
+        telefone: j['phone'] as String? ?? '',
       );
 }
 

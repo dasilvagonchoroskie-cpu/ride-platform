@@ -142,6 +142,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     ready = true;
     notifyListeners();
     if (profile != null) _vigiarAprovacao();
+    // Aberto de novo ainda "em analise": pergunta ja, sem esperar 20 s.
+    if (profile != null && !isApproved) unawaited(refreshFromServer());
     if (profile != null && isApproved) unawaited(atualizarPainel());
     // Reabriu o aplicativo ja disponivel: religa tudo, senao ele ficaria
     // "disponivel" sem estar ouvindo chamado nenhum.
@@ -288,6 +290,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     checarPermissoes();
+    // Voltou para o aplicativo (ex.: depois de aprovar na Central no mesmo
+    // celular): confere a aprovacao na hora. Com o app em segundo plano o
+    // Android congela o relogio de 20 s e a tela ficava parada.
+    if (profile != null && !isApproved && AppConfig.hasApi) unawaited(refreshFromServer());
     // Voltou por causa de um chamado (ou o motorista abriu o app): busca
     // na hora, sem esperar a proxima volta do relogio.
     if (isOnline && offer == null && activeRide == null && AppConfig.hasApi) {
@@ -423,6 +429,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         return DriverApproval.approved;
       case 'REJECTED':
       case 'SUSPENDED':
+      case 'BLOCKED':
         return DriverApproval.rejected;
       default:
         return DriverApproval.pending;
@@ -482,16 +489,51 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (!AppConfig.hasApi || profile == null) return;
     try {
       final u = await _client.request('GET', '/auth/me') as Map<String, dynamic>;
-      final nova = _aprovacao(u['driverStatus'] as String?);
-      if (profile!.approval != nova) {
-        profile = profile!.copyWith(approval: nova);
-        await _persistProfile();
-        notifyListeners();
-        if (nova == DriverApproval.approved) unawaited(atualizarPainel());
-      }
+      await _mudarAprovacao(u['driverStatus'] as String?);
     } catch (_) {
       // Sem rede agora; tenta de novo na proxima volta do relogio.
     }
+  }
+
+  /// Aplica o status que veio do servidor. Quando a Central acabou de
+  /// aprovar, avisa e o aplicativo vai sozinho para a tela inicial.
+  Future<void> _mudarAprovacao(String? status) async {
+    final atual = profile;
+    if (atual == null || status == null) return;
+    final nova = _aprovacao(status);
+    if (atual.approval == nova) return;
+    profile = atual.copyWith(approval: nova);
+    await _persistProfile();
+    notifyListeners();
+    if (nova == DriverApproval.approved) {
+      avisar('Cadastro aprovado pela Central! Você já pode ficar disponível.');
+      unawaited(atualizarPainel());
+    }
+  }
+
+  /// Botao "Atualizar status" da tela de analise: pergunta na hora ao
+  /// servidor. Antes ele so recarregava os dados e nao olhava a aprovacao
+  /// (o motorista aprovado continuava preso na tela "em analise").
+  /// Devolve true se o cadastro ja esta aprovado.
+  Future<bool> conferirAprovacao() async {
+    if (!AppConfig.hasApi || profile == null) return isApproved;
+    try {
+      final u = await _client.request('GET', '/auth/me') as Map<String, dynamic>;
+      await _mudarAprovacao(u['driverStatus'] as String?);
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return isApproved;
+    } catch (_) {
+      avisar('Sem conexão com o servidor. Confira a internet e tente de novo.');
+      return isApproved;
+    }
+    await sincronizarCadastro();
+    if (!isApproved) {
+      avisar(profile?.approval == DriverApproval.rejected
+          ? 'A Central não aprovou o cadastro. Fale com ela.'
+          : 'Ainda aguardando a Central conferir o seu cadastro.');
+    }
+    return isApproved;
   }
 
   void _vigiarAprovacao() {
@@ -1327,6 +1369,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         acceptanceRate: aceite?.round(),
       );
       await _persistProfile();
+      // O cadastro do servidor tambem diz se a Central ja aprovou.
+      await _mudarAprovacao(d['status'] as String?);
     } catch (_) {
       // Ainda sem cadastro no servidor, ou sem rede.
     }

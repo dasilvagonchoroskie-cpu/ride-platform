@@ -12,6 +12,15 @@ class Alarme {
     } catch (_) {}
   }
 
+  /// Aviso curto (nao e SOS): um som de notificacao, uma vibracao e a
+  /// notificacao do Android na barra — ex.: motorista novo esperando
+  /// aprovacao.
+  static Future<void> aviso(String titulo, String texto) async {
+    try {
+      await _canal.invokeMethod('aviso', {'titulo': titulo, 'texto': texto});
+    } catch (_) {}
+  }
+
   static Future<void> parar() async {
     try {
       await _canal.invokeMethod('parar');

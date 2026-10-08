@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
+import '../data/painel.dart';
 import '../painel/alertas.dart';
 import '../painel/carteiras.dart';
+import '../painel/comuns.dart';
 import '../painel/cupons.dart';
 import '../painel/despacho.dart';
 import '../painel/financeiro.dart';
@@ -35,6 +37,9 @@ class _ShellScreenState extends State<ShellScreen> {
   /// Alertas que ja abriram a janela de SOS sozinhos.
   final Set<String> _abertosAutomatico = {};
 
+  /// Cadastro novo cuja janela de aviso esta aberta agora.
+  String? _avisoPendenteAberto;
+
   late final PainelState _painel;
 
   static const _titulos = [
@@ -55,12 +60,14 @@ class _ShellScreenState extends State<ShellScreen> {
     super.initState();
     _painel = context.read<PainelState>();
     _painel.addListener(_sosNovo);
+    _painel.addListener(_motoristaNovo);
     _painel.iniciar();
   }
 
   @override
   void dispose() {
     _painel.removeListener(_sosNovo);
+    _painel.removeListener(_motoristaNovo);
     _painel.parar();
     super.dispose();
   }
@@ -75,6 +82,43 @@ class _ShellScreenState extends State<ShellScreen> {
         break;
       }
     }
+  }
+
+  /// Motorista novo esperando aprovacao: janela por cima de qualquer aba
+  /// (o SOS tem prioridade e abre antes).
+  void _motoristaNovo() {
+    final novo = _painel.pendenteNovo;
+    if (novo == null || novo.id == _avisoPendenteAberto || _painel.alertasNovos.isNotEmpty) return;
+    _avisoPendenteAberto = novo.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _abrirAvisoPendente(novo);
+    });
+  }
+
+  Future<void> _abrirAvisoPendente(MotoristaPendenteResumo novo) async {
+    final outros = _painel.indicadores.pendentes - 1;
+    final ver = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.person_add_alt_1, color: AppColors.primary, size: 36),
+        title: const Text('Motorista aguardando aprovação'),
+        content: Text(
+          '${novo.nome}${novo.telefone.isEmpty ? '' : ' · ${telefoneBonito(novo.telefone)}'} terminou o cadastro no aplicativo do motorista.'
+          '${outros > 0 ? '\n\nHá mais $outros cadastro(s) na fila.' : ''}'
+          '\n\nConfira os dados (e as fotos, se enviou) e aprove ou recuse.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Ver cadastro')),
+        ],
+      ),
+    );
+    _avisoPendenteAberto = null;
+    await _painel.marcarPendenteVisto();
+    if (ver != true || !mounted) return;
+    _ir(2);
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DetalheMotorista(id: novo.id)));
+    if (mounted) await context.read<CentralState>().loadAll();
   }
 
   void _ir(int i) => setState(() {
@@ -108,6 +152,8 @@ class _ShellScreenState extends State<ShellScreen> {
     }
   }
 
+  int _pendentes(PainelState p, CentralState c) => p.atualizadoEm == null ? c.pendingCount : p.indicadores.pendentes;
+
   @override
   Widget build(BuildContext context) {
     final p = context.watch<PainelState>();
@@ -120,7 +166,8 @@ class _ShellScreenState extends State<ShellScreen> {
       ShellDestination(
         icon: Icons.badge_outlined,
         label: 'Motoristas',
-        badge: central.pendingCount == 0 ? null : central.pendingCount,
+        // Ao vivo (a cada 5 s), nao so quando a Central abre.
+        badge: _pendentes(p, central) == 0 ? null : _pendentes(p, central),
       ),
       const ShellDestination(icon: Icons.people_outline, label: 'Passageiros'),
       const ShellDestination(icon: Icons.price_change_outlined, label: 'Tarifas'),

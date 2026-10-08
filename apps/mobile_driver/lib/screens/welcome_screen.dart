@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/config/app_config.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
 import '../widgets/ui.dart';
@@ -10,7 +11,7 @@ class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   static const List<List<String>> _highlights = [
-    ['Ganhe quando quiser', 'Fique online e receba chamadas na sua regiao.'],
+    ['Ganhe quando quiser', 'Fique disponível e receba chamadas na sua região.'],
     ['Valores transparentes', 'Veja o ganho de cada corrida antes de aceitar.'],
     ['Saque via Pix', 'Transfira seu saldo quando atingir o valor mínimo.'],
   ];
@@ -65,30 +66,31 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               const SizedBox(height: Spacing.lg),
               AppButton(
-                label: 'Comecar cadastro',
+                label: 'Entrar ou cadastrar',
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const PhoneScreen()),
                 ),
               ),
               const SizedBox(height: Spacing.md),
-              AppButton(
-                label: 'Entrar em modo demonstração',
-                variant: AppButtonVariant.secondary,
-                onPressed: () => context.read<DriverState>().demoLogin(
-                      'Motorista Demo',
-                      '+5511988880000',
-                    ),
-              ),
-              const SizedBox(height: Spacing.md),
               const Text(
-                'No modo demonstração o fluxo completo do motorista roda no aparelho, sem servidor.',
+                'Já tem cadastro, ou usa o app do passageiro? Entre com o mesmo telefone: '
+                'a conta é a mesma e o que já foi aprovado pela Central continua valendo.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppText.family,
-                  color: AppColors.textFaint,
-                  fontSize: 13,
-                ),
+                style: TextStyle(fontFamily: AppText.family, color: AppColors.textMuted, fontSize: 13),
               ),
+              // Modo demonstracao so existe no aplicativo sem servidor (testes):
+              // no aplicativo de verdade ele confundia e nao fazia nada real.
+              if (!AppConfig.hasApi) ...[
+                const SizedBox(height: Spacing.md),
+                AppButton(
+                  label: 'Entrar em modo demonstração',
+                  variant: AppButtonVariant.secondary,
+                  onPressed: () => context.read<DriverState>().demoLogin(
+                        'Motorista Demo',
+                        '+5511988880000',
+                      ),
+                ),
+              ],
               const SizedBox(height: Spacing.xxl),
             ],
           ),

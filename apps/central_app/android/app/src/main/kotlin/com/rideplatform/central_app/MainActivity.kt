@@ -1,6 +1,9 @@
 package com.rideplatform.central_app
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,6 +19,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -55,6 +60,10 @@ class MainActivity : FlutterActivity() {
                     when (call.method) {
                         "tocar" -> { tocar(); result.success(true) }
                         "parar" -> { parar(); result.success(true) }
+                        "aviso" -> {
+                            aviso(call.argument<String>("titulo") ?: "", call.argument<String>("texto") ?: "")
+                            result.success(true)
+                        }
                         "ligar" -> {
                             val numero = call.argument<String>("numero") ?: ""
                             startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$numero")))
@@ -102,6 +111,55 @@ class MainActivity : FlutterActivity() {
             @Suppress("DEPRECATION")
             vibrador()?.vibrate(padrao, 0)
         }
+    }
+
+    /**
+     * Aviso curto (motorista novo esperando aprovacao): som de notificacao
+     * uma vez, uma vibracao e a notificacao na barra do Android, que abre a
+     * Central ao tocar.
+     */
+    private fun aviso(titulo: String, texto: String) {
+        try {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            RingtoneManager.getRingtone(applicationContext, uri)?.play()
+        } catch (e: Exception) {}
+        if (Build.VERSION.SDK_INT >= 26) {
+            vibrador()?.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrador()?.vibrate(400)
+        }
+        val canal = "cadastros"
+        if (Build.VERSION.SDK_INT >= 26) {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (nm.getNotificationChannel(canal) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(canal, "Cadastros de motoristas", NotificationManager.IMPORTANCE_HIGH)
+                        .apply { description = "Motorista novo esperando aprovacao" }
+                )
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return
+        val abrir = packageManager.getLaunchIntentForPackage(packageName)
+            ?.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val toque = abrir?.let {
+            PendingIntent.getActivity(this, 901, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+        val n = NotificationCompat.Builder(this, canal)
+            .setSmallIcon(applicationInfo.icon)
+            .setContentTitle(titulo)
+            .setContentText(texto)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .apply { if (toque != null) setContentIntent(toque) }
+            .build()
+        try {
+            NotificationManagerCompat.from(this).notify(902, n)
+        } catch (e: SecurityException) {}
     }
 
     private fun parar() {
