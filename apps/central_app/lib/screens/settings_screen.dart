@@ -54,7 +54,7 @@ class SettingsScreen extends StatelessWidget {
           AppCard(
             child: Column(
               children: [
-                _InfoRow(label: 'Versao do app', value: AppConfig.appVersion),
+                _InfoRow(label: 'Versão do app', value: AppConfig.appVersion),
                 const AppDivider(),
                 _InfoRow(label: 'Stack', value: 'Flutter / Dart'),
                 const AppDivider(),
@@ -167,6 +167,7 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
   bool _servidor = false;
   bool _banco = false;
   bool _cache = false;
+  String? _versao;
 
   @override
   void initState() {
@@ -187,6 +188,14 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
       servidor = true;
       banco = dep['database'] == 'up';
       cache = dep['redis'] == 'up';
+      final v = m['versao'] as String?;
+      final desde = DateTime.tryParse(m['noArDesde'] as String? ?? '')?.toLocal();
+      _versao = v == null
+          ? null
+          : desde == null
+              ? v
+              : '$v · no ar desde ${desde.day.toString().padLeft(2, '0')}/${desde.month.toString().padLeft(2, '0')} '
+                  '${desde.hour.toString().padLeft(2, '0')}:${desde.minute.toString().padLeft(2, '0')}';
     } catch (_) {
       // Sem resposta: tudo aparece como fora do ar, que e a verdade.
     }
@@ -210,7 +219,7 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
           _IntegrationRow(
             icon: Icons.cloud_outlined,
             title: 'Servidor (API)',
-            subtitle: _texto(_servidor, AppConfig.apiUrl),
+            subtitle: _texto(_servidor, _versao == null ? AppConfig.apiUrl : 'Versão $_versao'),
             connected: _servidor,
           ),
           const AppDivider(),

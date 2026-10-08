@@ -560,8 +560,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'cnhExpiresAt': _paraIso(cnhExpiresAt),
         });
       } on ApiException catch (e) {
-        // Cadastro ja existente (reinstalou o app) nao e erro de verdade.
-        if (e.statusCode != 409) {
+        // So "motorista ja cadastrado" (reinstalou o app) nao e erro. Antes
+        // QUALQUER recusa 409 era tratada assim — "e-mail ja esta em outra
+        // conta", "CPF ja esta em outra conta" — e o motivo sumia: a tela
+        // mostrava "Cadastro de motorista nao encontrado" (Evandro, 08/10).
+        if (e.code != 'DRIVER_ALREADY_EXISTS') {
           _avisar(e.message);
           return;
         }
@@ -579,10 +582,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
             'color': v.color,
           });
         } on ApiException catch (e) {
-          if (e.statusCode != 409) {
-            _avisar(e.message);
-            return;
-          }
+          // O servidor ja aceita de novo o mesmo carro do mesmo motorista;
+          // qualquer recusa aqui e de verdade (ex.: placa de outro motorista).
+          _avisar(e.message);
+          return;
         }
       }
     }
@@ -613,10 +616,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'color': info.color,
         });
       } on ApiException catch (e) {
-        if (e.statusCode != 409) {
-          _avisar(e.message);
-          return;
-        }
+        // O mesmo carro de novo o servidor aceita; recusa aqui e de verdade.
+        _avisar(e.message);
+        return;
       }
     }
     vehicle = info;

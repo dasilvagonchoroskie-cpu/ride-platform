@@ -13,6 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Antes de testar: o servidor no ar tem que ser o do codigo atual
+      # (atualiza sozinho com RENDER_DEPLOY_HOOK; sem ele, avisa no topo
+      # do relatorio e o teste falha).
+      - name: Servidor em dia
+        id: servidor
+        continue-on-error: true
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          set -o pipefail
+          bash scripts/servidor-em-dia.sh 2>&1 | tee /tmp/servidor.txt
       - name: Rodar o teste no servidor real
         id: teste
         continue-on-error: true
@@ -27,10 +40,10 @@ jobs:
         run: |
           git config user.name "CI Fortaleza"
           git config user.email "ci@fortalezadigitalsecurity.com.br"
-          mkdir -p logs && cp /tmp/relatorio.txt logs/teste-ponta-a-ponta.txt
+          mkdir -p logs && cat /tmp/servidor.txt /tmp/relatorio.txt > logs/teste-ponta-a-ponta.txt 2>/dev/null || cp /tmp/relatorio.txt logs/teste-ponta-a-ponta.txt
           git add logs/teste-ponta-a-ponta.txt
           git commit -m "relatorio: teste de ponta a ponta (execucao ${{ github.run_number }})" || exit 0
           for t in 1 2 3; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
       - name: Falhar se alguma etapa falhou
-        if: steps.teste.outcome != 'success'
+        if: steps.teste.outcome != 'success' || steps.servidor.outcome != 'success'
         run: exit 1

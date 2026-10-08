@@ -29,8 +29,10 @@ export class VehiclesService {
 
     const plate = normalizePlate(input.plate);
     const plateTaken = await this.prisma.vehicle.findUnique({ where: { plate } });
+    // Mesmo carro do mesmo motorista (reenviou o cadastro): nao e erro.
+    if (plateTaken && plateTaken.driverId === driver.id) return plateTaken;
     if (plateTaken) {
-      throw BusinessException.conflict('Placa ja cadastrada.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
+      throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
     }
 
     return this.prisma.vehicle.create({

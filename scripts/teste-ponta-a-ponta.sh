@@ -94,6 +94,11 @@ for k in (10,11):
     s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
 print(''.join(map(str,n)))")
 CNH=$(python3 -c "import random;print(''.join(str(random.randint(0,9)) for _ in range(11)))")
+# Cadastro com o e-mail de OUTRA conta (caso do Evandro em 08/10): tem que
+# recusar com o motivo e a dica, e nao pode criar o motorista pela metade.
+X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"email\":\"$EMAILP\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
+[ "$(echo "$X" | jq -r '.error.code')" = "EMAIL_ALREADY_USED" ] && echo "$X" | jq -r '.error.message' | grep -q "MESMO telefone" && [ "$(get /drivers/me "$TM" | jq -r '.success')" = "false" ] \
+  && ok "Motorista: e-mail de outra conta recusado com o motivo e a dica (sem cadastro pela metade)" || falha "Motorista: e-mail de outra conta" "$X"
 X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
 DID=$(echo "$X" | jq -r '.data.id // .data.driver.id // empty')
 sucesso "$X" && ok "Motorista: cadastro (nome, CPF e CNH) aceito" || falha "Motorista: cadastro" "$X"

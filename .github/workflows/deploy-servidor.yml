@@ -1,0 +1,48 @@
+name: Publicar o servidor
+
+# A cada envio que mexe no servidor, publica no Render e roda o teste de
+# ponta a ponta. Ninguem precisa lembrar de atualizar o servidor
+# (pedido do Evandro em 08/10/2026). Precisa do segredo RENDER_DEPLOY_HOOK.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/shared/**'
+  workflow_dispatch: {}
+
+concurrency:
+  group: publicar-servidor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Publicar no Render e esperar ficar no ar
+        id: publicar
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          set +e
+          bash scripts/servidor-em-dia.sh
+          r=$?
+          if [ $r -eq 2 ]; then
+            echo "::warning::Sem o segredo RENDER_DEPLOY_HOOK: o servidor nao foi publicado automaticamente."
+            echo "publicado=nao" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "publicado=sim" >> "$GITHUB_OUTPUT"
+          exit $r
+      - name: Rodar o teste de ponta a ponta
+        if: steps.publicar.outputs.publicado == 'sim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run teste-ponta-a-ponta.yml --repo "${{ github.repository }}" --ref main

@@ -70,6 +70,27 @@ jobs:
           print("builds=" + json.dumps(escolhidos))
           PY
 
+  # Junto com os aplicativos, o servidor: se o codigo do servidor no GitHub
+  # for mais novo que o que esta no ar, manda o Render publicar (com o
+  # segredo RENDER_DEPLOY_HOOK). Roda em paralelo e nao atrasa os APKs.
+  servidor:
+    name: Servidor em dia
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Conferir e publicar o servidor
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          set +e
+          bash scripts/servidor-em-dia.sh
+          r=$?
+          if [ $r -eq 2 ]; then echo "::warning::Servidor desatualizado e sem RENDER_DEPLOY_HOOK para publicar sozinho."; fi
+          if [ $r -eq 1 ]; then echo "::warning::O Render nao publicou a versao nova a tempo."; fi
+          exit 0
+
   validate:
     name: Validar ${{ matrix.app }}
     runs-on: ubuntu-latest
@@ -219,7 +240,9 @@ jobs:
           # fica com uns 21 MB; o de 32 bits vai junto para celular antigo.
           # Obs.: o Flutter soma 2000 (64 bits) ou 1000 (32 bits) ao numero da
           # versao, entao ele instala por cima do APK unico antigo.
+          # Versao sobe sozinha: 1.0.<numero da montagem> (aparece no app).
           flutter build apk --$BUILD_TYPE --split-per-abi --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} \
             2>&1 | tee "$RUNNER_TEMP/build-${{ matrix.app }}.txt"
 
       # O token normal nao consegue ler o log de uma tarefa pela API.

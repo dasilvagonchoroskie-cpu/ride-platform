@@ -11,5 +11,11 @@ void avisar(String mensagem) {
   if (tela == null) return;
   tela
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(mensagem), duration: const Duration(seconds: 6)));
+    // Mensagem longa (ex.: o motivo de uma recusa com a dica do que fazer)
+    // fica mais tempo: uns 6 s mais 1 s a cada 15 letras, ate 14 s.
+    ..showSnackBar(SnackBar(
+      content: Text(mensagem),
+      duration: Duration(seconds: (6 + mensagem.length ~/ 15).clamp(6, 14)),
+      showCloseIcon: mensagem.length > 80,
+    ));
 }

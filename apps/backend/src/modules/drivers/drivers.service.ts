@@ -37,7 +37,7 @@ export class DriversService {
 
     const conflict = await this.repo.findByCpfOrCnh({ cpf: input.cpf, cnhNumber: input.cnhNumber });
     if (conflict) {
-      throw BusinessException.conflict('CPF ou CNH ja vinculados a outro motorista.', ERROR_CODES.CONFLICT);
+      throw BusinessException.conflict('CPF ou CNH ja cadastrados por outro motorista.', ERROR_CODES.CONFLICT);
     }
 
     // Nome, e-mail e telefone vem no mesmo envio: a conta nasce so com o
@@ -48,14 +48,14 @@ export class DriversService {
     if (semTelefone && !input.phone) throw BusinessException.validation('Informe o seu telefone com DDD.');
     if (input.email && input.email !== usuario.email) {
       const dono = await this.prisma.user.findFirst({ where: { email: input.email, NOT: { id: userId } }, select: { id: true } });
-      if (dono) throw BusinessException.conflict('Este e-mail ja esta em outra conta.', ERROR_CODES.EMAIL_ALREADY_USED);
+      if (dono) throw BusinessException.conflict('Este e-mail ja esta em outra conta. Se voce ja usa o app do passageiro, entre no app do motorista com o MESMO telefone: a mesma conta serve para os dois aplicativos.', ERROR_CODES.EMAIL_ALREADY_USED);
     }
     if (semTelefone && input.phone) {
       const dono = await this.prisma.user.findFirst({ where: { phone: input.phone, NOT: { id: userId } }, select: { id: true } });
       if (dono) throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
     }
     const cpfDeOutro = await this.prisma.user.findFirst({ where: { cpf: input.cpf, NOT: { id: userId } }, select: { id: true } });
-    if (cpfDeOutro) throw BusinessException.conflict('Este CPF ja esta em outra conta.', ERROR_CODES.CONFLICT);
+    if (cpfDeOutro) throw BusinessException.conflict('Este CPF ja esta em outra conta. Se voce ja usa o app do passageiro, entre no app do motorista com o MESMO telefone: a mesma conta serve para os dois aplicativos.', ERROR_CODES.CPF_ALREADY_USED);
 
     const driver = await this.prisma.$transaction(async (tx) => {
       const created = await tx.driver.create({
