@@ -1,12 +1,2 @@
-1: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-2: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-3: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-4: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-5: OK woeQLe {"ok":true,"servico":"Fortaleza Mov - e-mail","restantes":100}
-6: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-7: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-8: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-9: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-10: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-11: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
-12: nao (window['ppConfig'] = {productName: '26981ed0d57bbad37e728ff58134270c', deleteIsE)
+1: nao ()
+codigo para dasilvagonchoroskie@...: sucesso=true 
