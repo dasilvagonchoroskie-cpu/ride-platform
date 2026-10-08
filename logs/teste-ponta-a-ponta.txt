@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 690e78e (Codigo de entrada por e-mail para todos, sem codigo na tela)
-No ar agora: 690e78e
+Ultima mudanca do servidor no GitHub: 46be078 (Bussola e centralizar nos tres mapas; carro offline cinza na Central; corrida de)
+No ar agora: 46be078
 OK: servidor em dia.
-Teste de ponta a ponta - 08/10/2026 21:30 UTC
+Teste de ponta a ponta - 08/10/2026 22:16 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -35,7 +35,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST0064)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST9468)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -64,13 +64,13 @@ OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE21310116 criado (R$ 3,00)
+OK     Central: cupom TESTE22165388 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 0028 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 8891 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -84,9 +84,9 @@ OK     Motorista: arrived
 OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (18h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 11 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 73s
+OK     Bandeira certa pela hora de Brasilia (19h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 12 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 70s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -125,7 +125,7 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 11, online 2, faturamento 11000)
+OK     Central: visao geral (ativas 0, concluidas hoje 12, online 1, faturamento 12000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -139,7 +139,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 7700, PIX/app 0, comissao 880)
+OK     Central: relatorio de receitas (dinheiro 8400, PIX/app 0, comissao 960)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -150,6 +150,8 @@ OK     Central: SOS encerrado
 OK     Central: busca de passageiro pelo telefone
 OK     Central: passageiro bloqueado com motivo
 OK     Central: desbloqueado, historico com 2 registros
+OK     Central: motorista offline continua no mapa (cinza, ultima posicao)
+OK     Despacho: so motoristas online
 OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSAGEIRO, APAGADO)
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
