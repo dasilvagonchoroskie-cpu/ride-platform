@@ -246,13 +246,14 @@ void main() {
   testWidgets('Contatos de emergencia: mostra, adiciona e salva', (tester) async {
     await _abrir(tester, const ContatosEmergenciaScreen());
     await tester.pumpAndSettle();
-    expect(find.text('Maria (irmã)'), findsOneWidget);
-    expect(find.text('(64) 99999-1234'), findsOneWidget);
+    String campo(int i) => tester.widget<TextField>(find.byType(TextField).at(i)).controller!.text;
+    expect(campo(0), 'Maria (irmã)');
+    expect(campo(1), '(64) 99999-1234');
     await tester.tap(find.text('Adicionar contato'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(2), 'João');
     await tester.enterText(find.byType(TextField).at(3), '64988887777');
-    expect(find.text('(64) 98888-7777'), findsOneWidget);
+    expect(campo(3), '(64) 98888-7777');
     await tester.ensureVisible(find.text('Salvar contatos'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar contatos'));
