@@ -28,7 +28,8 @@ MockClient _servidor() => MockClient((r) async {
     });
 
 Future<void> _abrir(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1080, 2340);
+  // Tela alta: o formulario inteiro fica montado (a lista so monta o que aparece).
+  tester.view.physicalSize = const Size(1080, 7200);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
