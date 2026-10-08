@@ -1,25 +1,19 @@
 Ultima mudanca do servidor no GitHub: b36d9b7 (Motorista: cadastro mostra o motivo real da recusa (e-mail/CPF de outra conta) e)
 No ar agora: b36d9b7
 OK: servidor em dia.
-Teste de ponta a ponta - 08/10/2026 12:16 UTC
+Teste de ponta a ponta - 08/10/2026 12:22 UTC
 
 OK     Servidor, banco e Redis no ar
-FALHA  Central: login do administrador pelo codigo do e-mail
-       resposta: {"success":true,"data":{"expiresIn":300,"enviadoPor":"tela","debugCode":"927826"},"timestamp":"2026-10-08T12:16:19.116Z"} {"success":false,"error":{"code":"OTP_INVALID","message":"Codigo incorreto."},"timestamp":"2026-10-08T12:16:20.009Z","path":"/api/auth/otp/verify"}
-FALHA  Central carrega /admin/drivers?status=PENDING
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:20.125Z","path":"/api/admin/drivers?status=PENDING"}
-FALHA  Central carrega /admin/rides/active
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:20.245Z","path":"/api/admin/rides/active"}
-FALHA  Central carrega /admin/reports/summary
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:20.358Z","path":"/api/admin/reports/summary"}
-FALHA  Central carrega /admin/tariffs
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:20.467Z","path":"/api/admin/tariffs"}
+OK     Central: login do administrador pelo codigo do e-mail
+OK     Central carrega /admin/drivers?status=PENDING
+OK     Central carrega /admin/rides/active
+OK     Central carrega /admin/reports/summary
+OK     Central carrega /admin/tariffs
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
 OK     App: entrada por codigo no e-mail disponivel (telefone: true)
 OK     App: configuracao publica (1 cidade(s), WhatsApp 5564996472794)
-FALHA  Central: cidades e avisos
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:27.653Z","path":"/api/admin/operacao"}
+OK     Central: cidades e avisos carregados
 OK     Passageiro: cadastro completo gravado (cidade: Goiatuba - GO)
 OK     Passageiro: cadastro repetido recusado
 OK     Passageiro: entra pelo e-mail e senha
@@ -29,137 +23,113 @@ OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
 OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
-FALHA  Motorista: login
-       resposta: sem token
-FALHA  Motorista: e-mail de outra conta
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:43.655Z","path":"/api/drivers/onboarding"}
-FALHA  Motorista: cadastro
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:43.776Z","path":"/api/drivers/onboarding"}
-FALHA  Motorista: nome no cadastro
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:43.889Z","path":"/api/auth/me"}
-FALHA  Motorista: foto de documento
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:43.984Z","path":"/api/documents/foto"}
-FALHA  Motorista: veiculo
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:44.082Z","path":"/api/vehicles"}
-FALHA  Central: lista de pendentes
-       resposta: null
-FALHA  Central: detalhe do motorista
-       resposta: null
-FALHA  Central: abrir foto
-       resposta: 404 application/json; charset=utf-8
-FALHA  Seguranca: foto de documento aberta
-       resposta: 404
-FALHA  Central: aprovar motorista
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot PATCH /api/admin/drivers//review"},"timestamp":"2026-10-08T12:16:44.638Z","path":"/api/admin/drivers//review"}
-OK     Carteira: motorista com saldo zero nao fica disponivel (Token de acesso ausente ou invalido....)
-FALHA  Central: recarga inicial
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/admin/drivers//wallet/credit"},"timestamp":"2026-10-08T12:16:44.841Z","path":"/api/admin/drivers//wallet/credit"}
-FALHA  Motorista: ficar disponivel
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:44.955Z","path":"/api/drivers/me/online"}
-FALHA  Motorista: posicao
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:45.052Z","path":"/api/drivers/me/location"}
-FALHA  Passageiro: carros por perto
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-08T12:16:45.834Z"}
+OK     Motorista: login pelo codigo de teste
+OK     Motorista: e-mail de outra conta recusado com o motivo e a dica (sem cadastro pela metade)
+OK     Motorista: cadastro (nome, CPF e CNH) aceito
+OK     Central ve o nome do motorista (nao mais "Passageiro 1234")
+OK     Motorista: foto da CNH enviada (fica pendente para a Central)
+OK     Motorista: veiculo cadastrado depois do cadastro
+OK     Central: lista de pendentes com a foto do documento (antes a lista nem abria)
+OK     Central: detalhe do motorista com a foto do documento
+OK     Central: abre a foto do documento
+OK     Seguranca: passageiro nao abre documento de motorista
+OK     Central: motorista aprovado com conferencia presencial
+OK     Carteira: motorista com saldo zero nao fica disponivel (Saldo insuficiente na carteira (R$ 0,00). O mínimo para rec...)
+OK     Central: recarga de R$ 50,00 (credito no extrato)
+OK     Motorista: ficou disponivel
+OK     Motorista: posicao enviada
+OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1822 km)
 OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
-FALHA  Login: renovar o acesso
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Dados invalidos na requisicao.","details":[{"path":"refreshToken","message":"Refresh token invalido.","code":"too_small"}]},"timestamp":"2026-10-08T12:16:48.965Z","path":"/api/auth/refresh"}
-FALHA  Login: acesso renovado
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:49.061Z","path":"/api/auth/me"}
+OK     Login: acesso vencido e renovado sozinho (refresh)
+OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-FALHA  Central: criar cupom
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:16:49.266Z","path":"/api/admin/coupons"}
-FALHA  Passageiro: lista de cupons
-       resposta: {"success":true,"data":[{"code":"PRIMEIRACORRIDA","description":"Desconto de R$ 10 na primeira corrida","discountType":"FIXED","discountValue":1000,"maxDiscountCents":1000,"minFareCents":1500,"expiresAt":null}],"timestamp":"2026-10-08T12:16:50.254Z"}
-FALHA  Passageiro: estimativa com cupom
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Cupom não encontrado."},"timestamp":"2026-10-08T12:16:51.077Z","path":"/api/rides/estimate"}
-FALHA  Passageiro: pedir corrida
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Cupom não encontrado."},"timestamp":"2026-10-08T12:16:52.066Z","path":"/api/rides"}
-FALHA  Motorista: chamado chegou
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:07.741Z","path":"/api/driver/rides/offers"}
-FALHA  Motorista: forma de pagamento no chamado
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:07.741Z","path":"/api/driver/rides/offers"}
-FALHA  Motorista: accept com PIN
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//accept"},"timestamp":"2026-10-08T12:17:07.881Z","path":"/api/driver/rides//accept"}
-FALHA  Passageiro: acompanhar a corrida
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-08T12:17:08.226Z","path":"/api/rides/"}
-FALHA  Chat: passageiro manda mensagem
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//messages"},"timestamp":"2026-10-08T12:17:08.409Z","path":"/api/rides//messages"}
-FALHA  Chat: aviso de mensagem ao motorista
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:08.506Z","path":"/api/driver/rides/current"}
-FALHA  Chat: motorista le
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/driver/rides//messages"},"timestamp":"2026-10-08T12:17:08.681Z","path":"/api/driver/rides//messages"}
-FALHA  Chat: motorista responde
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//messages"},"timestamp":"2026-10-08T12:17:08.951Z","path":"/api/driver/rides//messages"}
-FALHA  Passageiro: dados do motorista a caminho
-       resposta: {"n":null,"f":null,"d":null}
-FALHA  Chat: conversa do passageiro
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides//messages"},"timestamp":"2026-10-08T12:17:09.651Z","path":"/api/rides//messages"}
-FALHA  Passageiro: favoritar durante a corrida
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides/favoritos/"},"timestamp":"2026-10-08T12:17:09.810Z","path":"/api/rides/favoritos/"}
-FALHA  Motorista: arriving
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//arriving"},"timestamp":"2026-10-08T12:17:09.940Z","path":"/api/driver/rides//arriving"}
-FALHA  Motorista: arrived
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//arrived"},"timestamp":"2026-10-08T12:17:10.037Z","path":"/api/driver/rides//arrived"}
-FALHA  Motorista: start
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//start"},"timestamp":"2026-10-08T12:17:10.149Z","path":"/api/driver/rides//start"}
-FALHA  Motorista: finalizar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//finish"},"timestamp":"2026-10-08T12:17:10.377Z","path":"/api/driver/rides//finish"}
-FALHA  Motorista: valor com cupom
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//finish"},"timestamp":"2026-10-08T12:17:10.377Z","path":"/api/driver/rides//finish"}
-FALHA  Bandeira pela hora de Brasilia (9h deveria ser diurna, 1000 centavos; cobrou 0)
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:10.585Z","path":"/api/admin/tariffs"}
-FALHA  Central: resumo
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:10.727Z","path":"/api/admin/reports/summary"}
-FALHA  Motorista: Atividades de hoje
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:10.852Z","path":"/api/driver/activity?period=day"}
-FALHA  Motorista: grafico week
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:10.967Z","path":"/api/driver/activity?period=week"}
-FALHA  Motorista: grafico month
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:11.096Z","path":"/api/driver/activity?period=month"}
-FALHA  Motorista: credito do cupom
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:11.204Z","path":"/api/driver/wallet"}
-FALHA  Motorista: carteira pre-paga
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:11.204Z","path":"/api/driver/wallet"}
-FALHA  Central: lancar recarga
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/admin/drivers//wallet/credit"},"timestamp":"2026-10-08T12:17:11.377Z","path":"/api/admin/drivers//wallet/credit"}
-FALHA  Central: contato de recarga
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:11.557Z","path":"/api/admin/settings/central"}
-FALHA  Passageiro: avaliar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//rate"},"timestamp":"2026-10-08T12:17:11.696Z","path":"/api/rides//rate"}
-FALHA  Passageiro: recibo
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-08T12:17:11.825Z","path":"/api/rides/"}
+OK     Central: cupom TESTE12221325 criado (R$ 3,00)
+OK     Passageiro: ve o cupom na tela Cupons
+OK     Passageiro: estimativa ja mostra o desconto do cupom
+OK     Passageiro: corrida pedida
+OK     Motorista: chamado chegou
+OK     Motorista: chamado mostra a forma de pagamento (CASH)
+OK     Motorista: accept (PIN de embarque 9187 vindo do servidor)
+OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
+OK     Chat: passageiro manda mensagem ao motorista
+OK     Chat: o app do motorista sabe que chegou 1 mensagem
+OK     Chat: motorista le a mensagem
+OK     Chat: motorista responde
+OK     Passageiro: tela do motorista a caminho com foto, foto do carro, favorito e mensagem nova
+OK     Chat: passageiro ve a conversa e que o motorista leu
+OK     Passageiro: favoritou o motorista que esta vindo buscar
+OK     Motorista: arriving
+OK     Motorista: arrived
+OK     Motorista: start
+OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
+OK     Bandeira certa pela hora de Brasilia (9h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 3 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 58s
+OK     Motorista: grafico week com 7 dias
+OK     Motorista: grafico month com 31 dias
+OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
+OK     Motorista: carteira pre-paga so descontou a comissao (saldo 5220 centavos)
+OK     Central: recarga lancada, saldo agora 6220 centavos
+OK     Central: contato de recarga carregado
+OK     Passageiro: avaliou o motorista com 5 estrelas
+OK     Passageiro: recibo da corrida concluida com a nota
 OK     Chat: fecha quando a corrida termina
-FALHA  Motorista: avaliar passageiro
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//rate"},"timestamp":"2026-10-08T12:17:12.290Z","path":"/api/driver/rides//rate"}
-FALHA  Motorista: historico com periodo
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:12.418Z","path":"/api/driver/rides/history?period=day"}
-FALHA  Passageiro: favoritar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides/favoritos/"},"timestamp":"2026-10-08T12:17:12.527Z","path":"/api/rides/favoritos/"}
-FALHA  Passageiro: bloquear motorista
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides/bloqueados/"},"timestamp":"2026-10-08T12:17:12.630Z","path":"/api/rides/bloqueados/"}
+OK     Motorista: avaliou o passageiro com 4 estrelas
+OK     Motorista: historico de hoje com totais e desempenho (aceitacao 100%, taxa 80)
+OK     Passageiro: motorista adicionado aos favoritos
+OK     Passageiro: bloqueou o motorista (sai dos favoritos)
 OK     Passageiro: desbloqueou o motorista
-FALHA  Passageiro: foto de perfil
-       resposta: {"success":true,"data":{"avatarUrl":"/arquivos/393580f5-9dff-4769-8f38-ef8dae349c1f"},"timestamp":"2026-10-08T12:17:14.194Z"} 401
+OK     Passageiro: foto de perfil (o motorista consegue ver)
 OK     Passageiro: corrida agendada para daqui a 2 horas
 OK     Passageiro: ve a agendada em Corridas agendadas
 OK     Passageiro: agendamento muito em cima da hora recusado
 OK     Passageiro: cancelou a agendada
-FALHA  Motorista: cancelar corrida
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:41.358Z","path":"/api/driver/rides/2675836e-14ca-49fd-8921-3e182790294d/cancel"}
-FALHA  Passageiro: ver cancelamento do motorista
-       resposta: {"success":true,"data":{"ride":{"id":"2675836e-14ca-49fd-8921-3e182790294d","code":"052990","passengerId":"3b6c3f18-7a65-403d-9bd2-9342e9005730","driverId":null,"vehicleId":null,"status":"SEARCHING","fareFlag":"DIURNA","pickupAddress":"Praca da Matriz, Goiatuba","pickupLat":-18.0125,"pickupLng":-49.3547,"pickupPlaceId":null,"dropoffAddress":"Rodoviaria de Goiatuba","dropoffLat":-18.005,"dropoffLng
-FALHA  Passageiro: cancelar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//cancel"},"timestamp":"2026-10-08T12:17:45.376Z","path":"/api/rides//cancel"}
-FALHA  Passageiro: corrida atual
-       resposta: {"success":true,"data":{"ride":{"id":"2675836e-14ca-49fd-8921-3e182790294d","code":"052990","passengerId":"3b6c3f18-7a65-403d-9bd2-9342e9005730","driverId":null,"vehicleId":null,"status":"SEARCHING","fareFlag":"DIURNA","pickupAddress":"Praca da Matriz, Goiatuba","pickupLat":-18.0125,"pickupLng":-49.3547,"pickupPlaceId":null,"dropoffAddress":"Rodoviaria de Goiatuba","dropoffLat":-18.005,"dropoffLng
-FALHA  Motorista: historico de corridas
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:48.956Z","path":"/api/driver/rides/history"}
+OK     Motorista: cancelou a corrida aceita
+OK     Passageiro: fica sabendo que o motorista cancelou
+OK     Passageiro: cancelou enquanto procurava, sem taxa
+OK     Passageiro: nenhuma corrida aberta depois de cancelar
+OK     Motorista: historico de corridas com 2 corrida(s)
 OK     Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)
 OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
 OK     Motorista tambem pede corrida como passageiro
 OK     Seguranca: outra conta nao ve a corrida (nem nome e telefone)
-FALHA  Central: lista de carteiras
-       resposta: {"success":false,"error":{"code":"UNAUTHORIZED","message":"Token de acesso ausente ou invalido."},"timestamp":"2026-10-08T12:17:59.899Z","path":"/api/admin/wallets"}
+OK     Central: aba Carteiras lista o motorista com o saldo
+OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
+OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
+OK     Carteira: saldo zerado avisa mas nao corta o turno
+OK     Carteira: motorista ja online e sem saldo continua recebendo chamado
+OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passageiro (4)
+OK     Carteira: sem saldo nao consegue ficar online de novo
+OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
+OK     Carteira: com a recarga, ficou online de novo
+OK     Central: visao geral (ativas 0, concluidas hoje 3, online 1, faturamento 3000)
+OK     Central: tarifas por categoria (Carro)
+OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
+OK     Central: multiplicador dinamico salvo (1x)
+OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
+OK     Central: categoria do veiculo do motorista
+OK     Central: corrida manual criada (pedido por telefone)
+OK     Central: motoristas livres por distancia, com posicao no mapa
+OK     Central: corrida enviada para motorista especifico
+OK     Motorista: recebeu o chamado enviado pela Central
+OK     Central: cancelou a corrida
+OK     Motorista: pediu saque PIX de R$ 1,00
+OK     Central: ve o pedido de saque com a chave PIX
+OK     Central: confirmou o PIX (descontado da carteira)
+OK     Central: relatorio de receitas (dinheiro 2100, PIX/app 0, comissao 240)
+OK     Passageiro: contato de emergencia gravado
+OK     Passageiro: contato com telefone invalido recusado
+OK     Passageiro: ve os contatos de emergencia
+OK     Passageiro: SOS acionado
+OK     Central: alerta de SOS com a posicao atualizada
+OK     Central: alerta de SOS mostra o contato de emergencia
+OK     Central: SOS encerrado
+OK     Central: busca de passageiro pelo telefone
+OK     Central: passageiro bloqueado com motivo
+OK     Central: desbloqueado, historico com 2 registros
+
+Resultado: 0 falha(s).
