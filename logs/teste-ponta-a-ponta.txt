@@ -1,4 +1,4 @@
-Teste de ponta a ponta - 08/10/2026 11:16 UTC
+Teste de ponta a ponta - 08/10/2026 11:27 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -18,9 +18,8 @@ OK     Passageiro: esqueci a senha (codigo do telefone + senha nova)
 OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
-FALHA  Passageiro: busca de destino
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-08T11:17:23.647Z"}
-OK     Passageiro: endereco do embarque pelo GPS (Ponto no mapa (-18.01250, -49.35470))
+OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
+OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
 OK     Motorista: cadastro (nome, CPF e CNH) aceito
 OK     Central ve o nome do motorista (nao mais "Passageiro 1234")
@@ -37,19 +36,18 @@ OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1822 km)
-FALHA  Passageiro: busca fora da regiao
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-08T11:17:59.259Z"}
+OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE11165667 criado (R$ 3,00)
+OK     Central: cupom TESTE1127591 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 5327 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 8333 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -64,8 +62,8 @@ OK     Motorista: start
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (8h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 68s
+OK     Central: resumo de hoje com 2 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 61s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -104,7 +102,7 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 1, online 1, faturamento 1000)
+OK     Central: visao geral (ativas 0, concluidas hoje 2, online 1, faturamento 2000)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -118,7 +116,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 700, PIX/app 0, comissao 80)
+OK     Central: relatorio de receitas (dinheiro 1400, PIX/app 0, comissao 160)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -130,4 +128,4 @@ OK     Central: busca de passageiro pelo telefone
 OK     Central: passageiro bloqueado com motivo
 OK     Central: desbloqueado, historico com 2 registros
 
-Resultado: 2 falha(s).
+Resultado: 0 falha(s).
