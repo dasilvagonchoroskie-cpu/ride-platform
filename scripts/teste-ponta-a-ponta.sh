@@ -17,10 +17,26 @@ patch() { curl -s -m 90 -X PATCH "$API$1" -H 'Content-Type: application/json' ${
 put()   { curl -s -m 90 -X PUT "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 get()   { curl -s -m 90 "$API$1" ${2:+-H "Authorization: Bearer $2"}; }
 sucesso() { echo "$1" | jq -e '.success == true' >/dev/null 2>&1; }
+# Pedido de codigo com espera: 5 por minuto do mesmo IP (protecao do servidor).
+pedir_codigo() {
+  local r t
+  for t in 1 2 3 4; do
+    r=$(post "${2:-/auth/otp/request}" "$1" "${3:-}")
+    echo "$r" | jq -e '.data.debugCode' >/dev/null 2>&1 && break
+    sleep 20
+  done
+  echo "$r"
+}
 entrar() {
-  local p c v
-  p=$(post /auth/otp/request "{\"phone\":\"$1\",\"purpose\":\"LOGIN\"}")
-  c=$(echo "$p" | jq -r '.data.debugCode // empty')
+  local p c v t
+  # O servidor aceita 5 pedidos de codigo por minuto do mesmo IP (protecao
+  # contra abuso). O teste faz muitos logins seguidos: espera e tenta de novo.
+  for t in 1 2 3 4; do
+    p=$(post /auth/otp/request "{\"phone\":\"$1\",\"purpose\":\"LOGIN\"}")
+    c=$(echo "$p" | jq -r '.data.debugCode // empty')
+    [ -n "$c" ] && break
+    sleep 20
+  done
   v=$(post /auth/otp/verify "{\"phone\":\"$1\",\"code\":\"$c\",\"purpose\":\"LOGIN\",\"role\":\"$2\",\"device\":{\"deviceId\":\"teste-automatico\",\"platform\":\"ANDROID\"}}")
   echo "$v" | jq -r '.data.accessToken // empty'
 }
@@ -61,7 +77,7 @@ X=$(post /auth/cadastro "$CORPO" "$TP")
 sucesso "$X" && falha "Passageiro: cadastro repetido deveria ser recusado" "$X" || ok "Passageiro: cadastro repetido recusado"
 X=$(post /auth/password/login "{\"email\":\"$EMAILP\",\"password\":\"Teste1234\"}")
 [ "$(echo "$X" | jq -r '.data.user.role' 2>/dev/null)" = "PASSENGER" ] && ok "Passageiro: entra pelo e-mail e senha" || falha "Passageiro: entrar pelo e-mail" "$X"
-P=$(post /auth/otp/request "{\"phone\":\"+55649${SUF}71\",\"purpose\":\"PASSWORD_RESET\"}")
+P=$(pedir_codigo "{\"phone\":\"+55649${SUF}71\",\"purpose\":\"PASSWORD_RESET\"}")
 C=$(echo "$P" | jq -r '.data.debugCode // empty')
 X=$(post /auth/password/reset "{\"phone\":\"+55649${SUF}71\",\"code\":\"$C\",\"newPassword\":\"Nova12345\"}")
 NT=$(echo "$X" | jq -r '.data.accessToken // empty')
@@ -114,12 +130,12 @@ DADOSV="\"name\":\"Pessoa Dois Apps\",\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"
 X=$(post /drivers/onboarding "{$DADOSV}" "$TOUTRO")
 [ "$(echo "$X" | jq -r '.error.code')" = "CONTA_EXISTENTE" ] && [ "$(echo "$X" | jq -r '.error.details.destino')" = "telefone terminado em ${FONE_V: -4}" ] && [ "$(get /drivers/me "$TOUTRO" | jq -r '.success')" = "false" ] \
   && ok "Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (telefone terminado em ${FONE_V: -4})" || falha "Motorista: reconhecer a conta de passageiro" "$X"
-X=$(post /auth/vincular-conta/codigo "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\"}" "$TOUTRO"); CV=$(echo "$X" | jq -r '.data.debugCode // empty')
+X=$(pedir_codigo "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\"}" /auth/vincular-conta/codigo "$TOUTRO"); CV=$(echo "$X" | jq -r '.data.debugCode // empty')
 [ -n "$CV" ] && [ "$(echo "$X" | jq -r '.data.destino')" = "telefone terminado em ${FONE_V: -4}" ] && ok "Motorista: codigo enviado para a conta de passageiro" || falha "Motorista: codigo para a conta existente" "$X"
 X=$(post /auth/vincular-conta/entrar "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"code\":\"000000\"}" "$TOUTRO")
 sucesso "$X" && falha "Codigo errado deveria ser recusado" "$X" || ok "Seguranca: codigo errado nao entra na conta de outra pessoa"
 X=$(post /auth/vincular-conta/entrar "{\"email\":\"$EMAILV\",\"cpf\":\"$CPFV\",\"code\":\"$CV\"}" "$TOUTRO"); TV=$(echo "$X" | jq -r '.data.accessToken // empty')
-[ "$(echo "$X" | jq -r '.data.user.id')" = "$IDV" ] && ok "Motorista: entrou na MESMA conta do passageiro com o codigo" || falha "Motorista: entrar na conta existente" "$X"
+[ -n "$TV" ] && [ "$(echo "$X" | jq -r '.data.user.id')" = "$IDV" ] && ok "Motorista: entrou na MESMA conta do passageiro com o codigo" || falha "Motorista: entrar na conta existente" "$X"
 X=$(post /drivers/onboarding "{$DADOSV}" "$TV"); DIDV=$(echo "$X" | jq -r '.data.id // empty')
 sucesso "$X" && ok "Motorista: cadastro feito na conta de passageiro, com os mesmos dados" || falha "Motorista: cadastro na conta existente" "$X"
 X=$(get /rides/current "$TV"); sucesso "$X" && ok "A mesma conta continua pedindo corrida no app do passageiro" || falha "Conta dupla: app do passageiro" "$X"
@@ -139,7 +155,7 @@ X=$(get /vehicles/me "$TC"); [ "$(echo "$X" | jq -r '(.data | if type=="array" t
 X=$(get /auth/me "$TC"); [ "$(echo "$X" | jq -r '.data.driverStatus')" = "APPROVED" ] && [ "$(echo "$X" | jq -r '.data.name')" = "Motorista Pela Central" ] && ok "Motorista da Central: nome e aprovacao no login" || falha "Motorista da Central: dados no login" "$X"
 FONE_W="+55649${SUF}73"; TPW=$(entrar "$FONE_W" PASSENGER)
 X=$(post /admin/drivers "{\"name\":\"Passageiro Vira Motorista\",\"phone\":\"$FONE_W\",\"cpf\":\"$(gerar_cpf)\",\"birthDate\":\"1990-01-02\",\"cnhNumber\":\"$(gerar_cnh)\",\"cnhCategory\":\"AB\",\"cnhExpiresAt\":\"2030-01-01\",\"vehicle\":{\"plate\":\"TSU$(printf '%04d' $((RANDOM%10000)))\",\"brand\":\"VW\",\"model\":\"Gol\",\"year\":2015,\"color\":\"Prata\"}}" "$TA")
-[ "$(echo "$X" | jq -r '.data.contaExistente')" = "true" ] && [ "$(get /auth/me "$TPW" | jq -r '.data.id')" = "$(echo "$X" | jq -r '.data.userId')" ] && ok "Central: motorista com o telefone de um passageiro usa a mesma conta" || falha "Central: motorista na conta de passageiro" "$X"
+[ -n "$TPW" ] && [ "$(echo "$X" | jq -r '.data.contaExistente')" = "true" ] && [ "$(get /auth/me "$TPW" | jq -r '.data.id')" = "$(echo "$X" | jq -r '.data.userId')" ] && ok "Central: motorista com o telefone de um passageiro usa a mesma conta" || falha "Central: motorista na conta de passageiro" "$X"
 
 X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
 DID=$(echo "$X" | jq -r '.data.id // .data.driver.id // empty')
@@ -178,7 +194,7 @@ X=$(get "/geo/search?q=Rua%20Sao%20Paulo&lat=-18.0128&lng=-49.3556" "$TP")
 [ "$(echo "$X" | jq -r '(.data | length) > 0 and ((.data[0].distanceKm // 9999) < 80)')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
 # Renovacao do login (refresh): sem ela o app travava com "Token de acesso
 # ausente ou invalido" quando o acesso vencia (Evandro, 05/10/2026).
-P=$(post /auth/otp/request "{\"phone\":\"+55649${SUF}79\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+P=$(pedir_codigo "{\"phone\":\"+55649${SUF}79\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
 V=$(post /auth/otp/verify "{\"phone\":\"+55649${SUF}79\",\"code\":\"$C\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\",\"device\":{\"deviceId\":\"teste-refresh\",\"platform\":\"ANDROID\"}}")
 RT=$(echo "$V" | jq -r '.data.refreshToken // empty'); UID_=$(echo "$V" | jq -r '.data.user.id // empty')
 X=$(post /auth/refresh "{\"refreshToken\":\"$RT\"}"); NOVO=$(echo "$X" | jq -r '.data.accessToken // empty')
@@ -286,7 +302,7 @@ X=$(get "/driver/rides/history" "$TM")
 
 # ---- Entrar pelo e-mail (conta nova) e o mesmo telefone virar motorista ----
 EM2="passageiro2.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
-P=$(post /auth/otp/request "{\"email\":\"$EM2\",\"purpose\":\"LOGIN\"}")
+P=$(pedir_codigo "{\"email\":\"$EM2\",\"purpose\":\"LOGIN\"}")
 C=$(echo "$P" | jq -r '.data.debugCode // empty')
 X=$(post /auth/otp/verify "{\"email\":\"$EM2\",\"code\":\"${C:-000000}\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}")
 TE=$(echo "$X" | jq -r '.data.accessToken // empty')
