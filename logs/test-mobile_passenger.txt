@@ -9,18 +9,18 @@
 00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: telefone legivel
 00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: saudacao pela hora
 00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: perfil antigo guardado no aparelho pede o cadastro
-00:00 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
-00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
+00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Cadastro ja vem com o telefone digitado antes
 00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
 00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista chegou: faixa verde
 00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
 00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: taximetro correndo no canto da tela
-00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
-00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
-00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
-00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
+00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
+00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
+00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
 00:03 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
 00:03 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
 00:03 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
