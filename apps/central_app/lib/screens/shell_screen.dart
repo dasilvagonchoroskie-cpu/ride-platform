@@ -72,6 +72,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _painel = context.read<PainelState>();
     _painel.addListener(_sosNovo);
     _painel.addListener(_motoristaNovo);
+    _painel.addListener(_fotoNova);
     _painel.iniciar();
     // Alarme do SOS e cadastro novo tambem com a Central minimizada.
     WidgetsBinding.instance.addObserver(this);
@@ -88,6 +89,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void dispose() {
     _painel.removeListener(_sosNovo);
     _painel.removeListener(_motoristaNovo);
+    _painel.removeListener(_fotoNova);
     _painel.parar();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -140,6 +142,46 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _irPara('motoristas');
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DetalheMotorista(id: novo.id)));
     if (mounted) await context.read<CentralState>().loadAll();
+  }
+
+  /// Motorista ativo trocou a foto de perfil (ou mandou documento novo):
+  /// janela para conferir. SOS e cadastro novo vem antes.
+  String? _avisoFotoAberto;
+
+  void _fotoNova() {
+    final doc = _painel.fotoNova;
+    if (doc == null || doc.id == _avisoFotoAberto || _avisoPendenteAberto != null || _painel.alertasNovos.isNotEmpty) return;
+    if (_painel.pendenteNovo != null) return;
+    _avisoFotoAberto = doc.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _abrirAvisoFoto(doc);
+    });
+  }
+
+  Future<void> _abrirAvisoFoto(DocumentoParaConferir doc) async {
+    final outros = _painel.indicadores.paraConferir - 1;
+    final ver = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(doc.ehFotoDePerfil ? Icons.face_retouching_natural : Icons.description_outlined, color: AppColors.primary, size: 36),
+        title: Text(doc.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento novo para conferir'),
+        content: Text(
+          doc.ehFotoDePerfil
+              ? '${doc.nome} trocou a foto de perfil no aplicativo. Os passageiros continuam vendo a foto antiga até você aprovar a nova.'
+              : '${doc.nome} mandou ${nomeDoDocumento(doc.tipo)} novo. O aprovado continua valendo até você conferir.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Conferir')),
+        ],
+      ),
+    );
+    _avisoFotoAberto = null;
+    await _painel.marcarDocumentoVisto();
+    if (ver != true || !mounted) return;
+    _irPara('motoristas');
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DetalheMotorista(id: doc.motoristaId)));
+    if (outros > 0 && mounted) avisar(context, 'Há mais $outros documento(s) para conferir em Motoristas → Ativos.');
   }
 
   /// Aba aberta, pelo codigo (a lista muda conforme quem esta na Central).

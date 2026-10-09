@@ -6,6 +6,7 @@ import '../data/painel.dart';
 import 'cadastrar_motorista.dart';
 import 'carteiras.dart';
 import 'comuns.dart';
+import 'foto.dart';
 import 'painel_state.dart';
 import 'relatorio_pdf.dart';
 
@@ -274,6 +275,7 @@ class DetalheMotorista extends StatefulWidget {
 class _DetalheMotoristaState extends State<DetalheMotorista> {
   late Future<MotoristaDetalhe> _dados;
   List<Categoria> _categorias = const [];
+  bool _enviandoFoto = false;
 
   PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
@@ -302,6 +304,27 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
       return;
     }
     final ok = await tentar(context, () => _api.mudarStatusMotorista(d.base.id, status, motivo), sucesso: 'Pronto: ${nomeDoStatusMotorista(status)}.');
+    if (ok) _recarregar();
+  }
+
+  /// A Central poe ou troca a foto do motorista (Evandro, 09/10/2026).
+  /// Tirada ou escolhida pela Central: ja entra aprovada.
+  Future<void> _trocarFoto(MotoristaDetalhe d) async {
+    final foto = await escolherFoto(
+      context,
+      titulo: d.avatarUrl == null ? 'Pôr a foto de ${d.base.nome}' : 'Trocar a foto de ${d.base.nome}',
+    );
+    if (foto == null || !mounted) return;
+    setState(() => _enviandoFoto = true);
+    final ok = await tentar(
+      context,
+      () async {
+        await _api.fotoDoMotorista(d.base.id, foto.mime, foto.base64);
+      },
+      sucesso: 'Foto salva. Os passageiros já veem a foto nova.',
+    );
+    if (!mounted) return;
+    setState(() => _enviandoFoto = false);
     if (ok) _recarregar();
   }
 
@@ -362,11 +385,15 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
             children: [
               Row(
                 children: [
-                  if (d.avatarUrl != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: Spacing.md),
-                      child: FotoDoServidor(caminho: d.avatarUrl!, largura: 64, altura: 64, redonda: true),
+                  Padding(
+                    padding: const EdgeInsets.only(right: Spacing.md),
+                    child: FotoDoMotorista(
+                      caminho: d.avatarUrl,
+                      iniciais: iniciaisDe(m.nome),
+                      enviando: _enviandoFoto,
+                      aoTrocar: () => _trocarFoto(d),
                     ),
+                  ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,6 +409,14 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                   BotoesContato(telefone: m.telefone),
                 ],
               ),
+              if (d.avatarUrl == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: Spacing.sm),
+                  child: Text(
+                    'Sem foto de perfil: toque na câmera para tirar ou escolher a foto do motorista.',
+                    style: AppText.caption.copyWith(color: AppColors.warning),
+                  ),
+                ),
               if (m.motivo != null && m.status != 'APPROVED')
                 Padding(
                   padding: const EdgeInsets.only(top: Spacing.sm),
@@ -418,7 +453,8 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                       'O motorista ainda não enviou fotos. Confira os originais pessoalmente (CNH com EAR, CRLV em dia, antecedentes criminais).',
                       style: AppText.caption.copyWith(color: AppColors.textMuted),
                     ),
-                  for (final doc in m.documentos) _Documento(doc: doc, api: _api, depois: _recarregar),
+                  for (final doc in m.documentos)
+                    _Documento(doc: doc, api: _api, depois: _recarregar, temAprovado: d.tiposAprovados.contains(doc.tipo)),
                 ],
               ),
               _Bloco(
@@ -515,11 +551,14 @@ class _Bloco extends StatelessWidget {
 }
 
 class _Documento extends StatelessWidget {
-  const _Documento({required this.doc, required this.api, required this.depois});
+  const _Documento({required this.doc, required this.api, required this.depois, this.temAprovado = false});
 
   final DocumentoFoto doc;
   final PainelApi api;
   final VoidCallback depois;
+
+  /// Ja existe um aprovado deste tipo: o enviado agora e uma troca.
+  final bool temAprovado;
 
   @override
   Widget build(BuildContext context) {
@@ -530,7 +569,9 @@ class _Documento extends StatelessWidget {
     };
     final rotulo = switch (doc.status) {
       'APPROVED' => 'Aprovado',
+      'REJECTED' when temAprovado => 'Troca recusada (o aprovado continua valendo)',
       'REJECTED' => 'Rejeitado',
+      _ when temAprovado => 'Troca para conferir (o aprovado continua valendo até você aprovar)',
       _ => 'Para conferir',
     };
     return Padding(

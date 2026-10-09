@@ -42,6 +42,13 @@ class PainelState extends ChangeNotifier {
   bool _pendenteVistoLido = false;
   static const String _chavePendenteVisto = 'central.pendenteVisto';
 
+  /// Motorista ativo que trocou a foto de perfil (ou outro documento) e a
+  /// Central ainda nao viu o aviso (Evandro, 09/10/2026).
+  DocumentoParaConferir? fotoNova;
+  String? _fotoVista;
+  bool _fotoVistaLida = false;
+  static const String _chaveFotoVista = 'central.documentoVisto';
+
   Coords get centro {
     if (PosicaoDoAparelho.atual != null) return PosicaoDoAparelho.atual!;
     if (motoristas.any((m) => m.posicao != null)) return motoristas.firstWhere((m) => m.posicao != null).posicao!;
@@ -142,6 +149,7 @@ class PainelState extends ChangeNotifier {
         Alarme.parar();
       }
       await _conferirPendente();
+      await _conferirDocumentoNovo();
       _falhasSeguidas = 0;
     } on ApiException catch (e) {
       _falhou(e.code == 'NETWORK_ERROR'
@@ -177,6 +185,42 @@ class PainelState extends ChangeNotifier {
       '${ultimo.nome} terminou o cadastro${outros > 0 ? ' (e mais $outros na fila)' : ''}. Toque para conferir.',
       id: ultimo.id,
     );
+  }
+
+  /// Motorista ativo mandou foto nova (ou documento novo)? Avisa uma vez.
+  Future<void> _conferirDocumentoNovo() async {
+    if (!_fotoVistaLida) {
+      try {
+        _fotoVista = await AppStorage.read(_chaveFotoVista);
+      } catch (_) {}
+      _fotoVistaLida = true;
+    }
+    final ultimo = indicadores.ultimoParaConferir;
+    if (ultimo == null || ultimo.id.isEmpty) {
+      fotoNova = null;
+      return;
+    }
+    if (ultimo.id == _fotoVista || ultimo.id == fotoNova?.id) return;
+    fotoNova = ultimo;
+    await Alarme.aviso(
+      ultimo.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento novo para conferir',
+      ultimo.ehFotoDePerfil
+          ? '${ultimo.nome} trocou a foto de perfil. Toque para aprovar ou recusar.'
+          : '${ultimo.nome} mandou ${nomeDoDocumento(ultimo.tipo)} novo. Toque para conferir.',
+      id: ultimo.id,
+    );
+  }
+
+  /// A pessoa viu o aviso da foto nova.
+  Future<void> marcarDocumentoVisto() async {
+    final d = fotoNova;
+    if (d == null) return;
+    _fotoVista = d.id;
+    fotoNova = null;
+    try {
+      await AppStorage.write(_chaveFotoVista, d.id);
+    } catch (_) {}
+    notifyListeners();
   }
 
   /// A pessoa viu o aviso (abriu o cadastro ou deixou para depois).

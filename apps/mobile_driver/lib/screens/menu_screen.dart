@@ -75,6 +75,7 @@ class MenuScreen extends StatelessWidget {
                 name: perfil?.name ?? 'Motorista',
                 initials: perfil?.initials ?? 'M',
                 rating: perfil?.rating ?? 5,
+                fotoUrl: perfil?.avatarUrl,
               ),
             ),
           ),

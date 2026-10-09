@@ -224,6 +224,39 @@ C=$(curl -s -o /dev/null -w "%{http_code}" "$API$DOCURL" -H "Authorization: Bear
 X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
 sucesso "$X" && ok "Central: motorista aprovado com conferencia presencial" || falha "Central: aprovar motorista" "$X"
 X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "App do motorista ve a aprovacao (botao Atualizar status)" || falha "Motorista: ver aprovacao" "$(echo "$X" | jq -c '.data.status')"
+
+# Foto de perfil do motorista (Evandro, 09/10/2026): o motorista troca pelo
+# app, a Central confere; a Central tambem poe/troca a foto.
+avatar_de() { get /auth/me "$1" | jq -r '.data.avatarUrl // empty'; }
+X=$(post /documents/foto "{\"type\":\"PROFILE_PHOTO\",\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TM")
+F1=$(echo "$X" | jq -r '.data.fileUrl // empty'); D1=$(echo "$X" | jq -r '.data.id // empty')
+[ -n "$F1" ] && [ "$(echo "$X" | jq -r '.data.aguardaCentral')" = "false" ] && [ "$(avatar_de "$TM")" = "$F1" ] \
+  && ok "Motorista: primeira foto de perfil ja aparece" || falha "Motorista: primeira foto de perfil" "$X"
+X=$(patch "/admin/documents/$D1/review" '{"status":"APPROVED"}' "$TA"); sucesso "$X" && ok "Central: aprova a foto de perfil" || falha "Central: aprovar foto de perfil" "$X"
+X=$(post /documents/foto "{\"type\":\"PROFILE_PHOTO\",\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TM")
+D2=$(echo "$X" | jq -r '.data.id // empty')
+[ "$(echo "$X" | jq -r '.data.aguardaCentral')" = "true" ] && [ "$(avatar_de "$TM")" = "$F1" ] \
+  && ok "Motorista: troca a foto; o passageiro continua vendo a aprovada ate a Central conferir" || falha "Motorista: trocar foto de perfil" "$X"
+X=$(get /admin/overview "$TA")
+[ "$(echo "$X" | jq -r '.data.documentsToReview')" -ge 1 ] 2>/dev/null && [ "$(echo "$X" | jq -r '.data.latestDocumentToReview.id')" = "$D2" ] && [ "$(echo "$X" | jq -r '.data.latestDocumentToReview.type')" = "PROFILE_PHOTO" ] \
+  && ok "Central: aviso de foto nova para conferir" || falha "Central: aviso de foto para conferir" "$(echo "$X" | jq -c '.data | {documentsToReview, latestDocumentToReview}' 2>/dev/null)"
+X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "Motorista: continua aprovado enquanto a foto nova espera" || falha "Motorista: status com foto nova" "$(echo "$X" | jq -c '.data.status')"
+X=$(patch "/admin/documents/$D2/review" '{"status":"REJECTED","rejectionReason":"Foto escura, mande outra"}' "$TA")
+sucesso "$X" && [ "$(avatar_de "$TM")" = "$F1" ] && ok "Central: recusa a foto nova e a aprovada continua" || falha "Central: recusar foto nova" "$X"
+X=$(post /documents/foto "{\"type\":\"PROFILE_PHOTO\",\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TM")
+F3=$(echo "$X" | jq -r '.data.fileUrl // empty'); D3=$(echo "$X" | jq -r '.data.id // empty')
+X=$(patch "/admin/documents/$D3/review" '{"status":"APPROVED"}' "$TA")
+N=$(get "/admin/drivers/$DID" "$TA" | jq -r '[.data.documents[] | select(.type=="PROFILE_PHOTO")] | length')
+sucesso "$X" && [ "$(avatar_de "$TM")" = "$F3" ] && [ "$N" = "1" ] && ok "Central: aprova a foto nova; ela passa a aparecer e a antiga sai" || falha "Central: aprovar foto nova ($N fotos)" "$X"
+X=$(post "/admin/drivers/$DID/foto" "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TA")
+F4=$(echo "$X" | jq -r '.data.avatarUrl // empty')
+N=$(get "/admin/drivers/$DID" "$TA" | jq -r '[.data.documents[] | select(.type=="PROFILE_PHOTO")] | length')
+[ -n "$F4" ] && [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && [ "$(avatar_de "$TM")" = "$F4" ] && [ "$N" = "1" ] \
+  && ok "Central: poe a foto do motorista (ja aprovada)" || falha "Central: por a foto do motorista" "$X"
+C=$(curl -s -o /dev/null -w "%{http_code}" "$API$F4" -H "Authorization: Bearer $TP"); [ "$C" = "200" ] && ok "Passageiro: ve a foto do motorista" || falha "Passageiro: foto do motorista" "$C"
+X=$(post "/admin/drivers/$DID/foto" "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TP"); sucesso "$X" && falha "Seguranca: passageiro trocou foto de motorista" "$X" || ok "Seguranca: so a Central troca a foto do motorista"
+X=$(get /admin/overview "$TA"); [ "$(echo "$X" | jq -r --arg d "$DID" 'if .data.latestDocumentToReview == null then "ok" elif .data.latestDocumentToReview.driverId == $d then "ainda" else "ok" end')" = "ok" ] \
+  && ok "Central: aviso de foto some depois de conferida" || falha "Central: aviso de foto continua" "$(echo "$X" | jq -c '.data.latestDocumentToReview' 2>/dev/null)"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Motorista sem saldo nao deveria ficar disponivel" "$X" || ok "Carteira: motorista com saldo zero nao fica disponivel ($(echo "$X" | jq -r '.error.message' | cut -c1-60)...)"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")
 [ "$(echo "$X" | jq -r '.data.balanceCents')" = "5000" ] && ok "Central: recarga de R\$ 50,00 (credito no extrato)" || falha "Central: recarga inicial" "$X"

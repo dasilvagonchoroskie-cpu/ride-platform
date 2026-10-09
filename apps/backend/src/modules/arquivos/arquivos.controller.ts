@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { BusinessException } from '../../common/errors/business.exception';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { PracasService } from '../pracas/pracas.service';
 import { ArquivosService } from './arquivos.service';
 
 const fotoSchema = z.object({
@@ -23,7 +25,10 @@ const documentoSchema = fotoSchema.extend({
 @ApiBearerAuth()
 @Controller()
 export class ArquivosController {
-  constructor(private readonly arquivos: ArquivosService) {}
+  constructor(
+    private readonly arquivos: ArquivosService,
+    private readonly pracas: PracasService,
+  ) {}
 
   @Post('auth/foto')
   @ApiOperation({ summary: 'Troca a foto de perfil (passageiro ou motorista)' })
@@ -41,6 +46,23 @@ export class ArquivosController {
     // O cadastro de motorista pode ter acabado de ser feito: o login ainda
     // nao traz o numero do motorista, entao ele e buscado pelo usuario.
     return this.arquivos.fotoDeDocumento(user.id, body.type, body.mime, body.dados);
+  }
+
+  @Post('admin/drivers/:id/foto')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'A Central poe ou troca a foto do motorista (ja aprovada)' })
+  async fotoPelaCentral(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(fotoSchema)) body: { mime: string; dados: string },
+  ) {
+    // Operador de uma cidade so mexe nos motoristas dela (ou ainda sem cidade).
+    const praca = await this.pracas.pracaDoMotorista(id);
+    const minha = await this.pracas.escopoDe(user.id);
+    if (minha && praca && praca !== minha) {
+      throw BusinessException.forbidden('Este motorista e de outra cidade. Voce so ve e mexe na sua cidade.');
+    }
+    return this.arquivos.fotoDoMotoristaPelaCentral(id, user.id, body.mime, body.dados);
   }
 
   @Get('arquivos/:id')

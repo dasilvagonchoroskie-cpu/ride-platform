@@ -128,6 +128,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               name: perfil?.name ?? 'Motorista',
               initials: perfil?.initials ?? 'M',
               rating: perfil?.rating ?? 5,
+              fotoUrl: perfil?.avatarUrl,
             ),
             const SizedBox(height: Spacing.md),
             OutlinedButton.icon(

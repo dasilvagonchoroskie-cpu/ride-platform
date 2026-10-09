@@ -5,6 +5,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { StorageService } from '../../integrations/storage/storage.service';
 import { DriversService } from '../drivers/drivers.service';
+import { soArquivosDoBanco } from '../arquivos/arquivos.service';
 import { RequestDocumentUploadInput, ReviewDocumentInput } from '@ride/shared';
 
 @Injectable()
@@ -148,10 +149,47 @@ export class DocumentsService {
       },
     });
 
+    await this.depoisDaConferencia(updated);
+
     const progress = await this.drivers.getDocumentProgress(document.driverId);
     this.logger.log(`Documento ${documentId} -> ${updated.status} por ${reviewerId}`);
 
     return { ...this.toPublic(updated), driverProgress: progress };
+  }
+
+  /**
+   * Troca de documento conferida (09/10/2026):
+   * - aprovada: a versao nova passa a valer e a aprovada antiga sai; se for a
+   *   foto de perfil, vira a foto que o passageiro ve.
+   * - recusada: a foto de perfil volta a ser a aprovada (ou nenhuma).
+   */
+  private async depoisDaConferencia(doc: { id: string; driverId: string; type: string; status: string; fileUrl: string | null }) {
+    const motorista = await this.prisma.driver.findUnique({ where: { id: doc.driverId }, select: { userId: true } });
+    if (!motorista) return;
+    if (doc.status === 'APPROVED') {
+      const antigas = await this.prisma.driverDocument.findMany({
+        where: { driverId: doc.driverId, type: doc.type as never, id: { not: doc.id }, status: 'APPROVED' },
+        select: { id: true, fileKey: true },
+      });
+      if (antigas.length) {
+        await this.prisma.driverDocument.deleteMany({ where: { id: { in: antigas.map((a) => a.id) } } });
+        await this.prisma.arquivo.deleteMany({ where: { id: { in: soArquivosDoBanco(antigas.map((a) => a.fileKey)) } } });
+      }
+      if (doc.type === 'PROFILE_PHOTO' && doc.fileUrl) {
+        await this.prisma.user.update({ where: { id: motorista.userId }, data: { avatarUrl: doc.fileUrl } });
+      }
+      return;
+    }
+    if (doc.type === 'PROFILE_PHOTO') {
+      const user = await this.prisma.user.findUnique({ where: { id: motorista.userId }, select: { avatarUrl: true } });
+      if (user?.avatarUrl !== doc.fileUrl) return;
+      const aprovada = await this.prisma.driverDocument.findFirst({
+        where: { driverId: doc.driverId, type: 'PROFILE_PHOTO', status: 'APPROVED' },
+        orderBy: { createdAt: 'desc' },
+        select: { fileUrl: true },
+      });
+      await this.prisma.user.update({ where: { id: motorista.userId }, data: { avatarUrl: aprovada?.fileUrl ?? null } });
+    }
   }
 
   /** Remove um documento reprovado para permitir novo envio. */

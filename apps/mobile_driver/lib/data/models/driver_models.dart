@@ -52,6 +52,7 @@ class DriverProfile {
     this.totalRides = 0,
     this.acceptanceRate = 100,
     this.termsAccepted = false,
+    this.avatarUrl,
   });
 
   final String id;
@@ -71,6 +72,9 @@ class DriverProfile {
   /// o aplicativo mostra a tela de aceite antes de qualquer outra coisa
   /// — inclusive antes do cadastro do veiculo.
   final bool termsAccepted;
+
+  /// Foto de perfil aprovada (a que o passageiro ve). Ex.: /arquivos/<id>.
+  final String? avatarUrl;
 
   bool get isOnboarded => cpf != null && cnhNumber != null;
 
@@ -95,6 +99,7 @@ class DriverProfile {
         'totalRides': totalRides,
         'acceptanceRate': acceptanceRate,
         'termsAccepted': termsAccepted,
+        'avatarUrl': avatarUrl,
       };
 
   factory DriverProfile.fromJson(Map<String, dynamic> json) => DriverProfile(
@@ -114,6 +119,7 @@ class DriverProfile {
         totalRides: (json['totalRides'] as num?)?.toInt() ?? 0,
         acceptanceRate: (json['acceptanceRate'] as num?)?.toInt() ?? 100,
         termsAccepted: json['termsAccepted'] as bool? ?? false,
+        avatarUrl: json['avatarUrl'] as String?,
       );
 
   DriverProfile copyWith({
@@ -129,6 +135,7 @@ class DriverProfile {
     double? rating,
     int? totalRides,
     int? acceptanceRate,
+    String? avatarUrl,
   }) =>
       DriverProfile(
         id: id,
@@ -144,6 +151,7 @@ class DriverProfile {
         totalRides: totalRides ?? this.totalRides,
         acceptanceRate: acceptanceRate ?? this.acceptanceRate,
         termsAccepted: termsAccepted ?? this.termsAccepted,
+        avatarUrl: avatarUrl ?? this.avatarUrl,
       );
 }
 

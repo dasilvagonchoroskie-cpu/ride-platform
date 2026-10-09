@@ -97,6 +97,9 @@ final List<String> _pedidosDeExclusao = [];
 bool _comSos = true;
 bool _comPendente = false;
 
+/// Motorista ativo trocou a foto de perfil e espera a Central (09/10/2026).
+bool _comFotoNova = false;
+
 /// Conta de operador de uma cidade (Teutonia), e nao o dono.
 bool _operador = false;
 
@@ -144,6 +147,10 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       'driversPending': _comPendente ? 2 : 0,
       'latestPendingDriver': _comPendente
           ? {'id': _motoristaId, 'name': 'Evandro Da Silva gonchoroski', 'phone': '+5564992686632', 'createdAt': '2026-10-08T15:05:14.317Z'}
+          : null,
+      'documentsToReview': _comFotoNova ? 1 : 0,
+      'latestDocumentToReview': _comFotoNova
+          ? {'id': 'doc-foto-2', 'type': 'PROFILE_PHOTO', 'driverId': _motoristaId, 'name': 'Joao Batista da Silva', 'createdAt': '2026-10-09T05:00:00.000Z'}
           : null,
     };
   }
@@ -255,6 +262,12 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
   if (caminho == '/api/admin/drivers/$_motoristaId') {
     return {
       ..._motoristaLista('PENDING'),
+      // Todos os envios (o mais novo primeiro): a foto nova e uma troca.
+      'documents': [
+        {'id': 'doc-foto-2', 'type': 'PROFILE_PHOTO', 'status': 'PENDING', 'rejectionReason': null, 'fileUrl': '/arquivos/f2', 'uploadedAt': '2026-10-09T05:00:00.000Z'},
+        {'id': 'd1', 'type': 'CNH_FRONT', 'status': 'PENDING', 'rejectionReason': null, 'fileUrl': '/arquivos/abc', 'uploadedAt': null},
+        {'id': 'doc-foto-1', 'type': 'PROFILE_PHOTO', 'status': 'APPROVED', 'rejectionReason': null, 'fileUrl': '/arquivos/f1', 'uploadedAt': '2026-10-01T05:00:00.000Z'},
+      ],
       'cpf': '12345678909',
       'cnhNumber': '01234567890',
       'cnhCategory': 'B',
@@ -497,6 +510,7 @@ void main() {
     mostrarRuasNoMapa = false;
     _comSos = true;
     _comPendente = false;
+    _comFotoNova = false;
     _operador = false;
     _pedidosDeExclusao.clear();
   });
@@ -658,9 +672,15 @@ void main() {
 
     await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
     await _carregar(tester);
+    // Sem foto de perfil: aviso e o botao da camera para por a foto.
+    expect(find.textContaining('Sem foto de perfil'), findsOneWidget);
+    expect(find.bySemanticsLabel('Pôr foto'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('CNH (frente)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('CNH (frente)'), findsOneWidget);
-    expect(find.text('Rejeitar'), findsOneWidget);
+    // A foto nova do motorista aprovado aparece como troca para conferir.
+    expect(find.text('Foto do motorista', skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('Troca para conferir', skipOffstage: false), findsOneWidget);
+    expect(find.text('Rejeitar', skipOffstage: false), findsNWidgets(2));
     await tester.scrollUntilVisible(find.text('Mensalidade (sem comissão)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Modelo financeiro'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Carteira pré-paga'), 300, scrollable: find.byType(Scrollable).first);
@@ -924,6 +944,55 @@ void main() {
     await tester.runAsync(() => painel.atualizar());
     await tester.pumpAndSettle();
     expect(find.text('Motorista aguardando aprovação'), findsNothing);
+  });
+
+  // Evandro (09/10/2026): o motorista troca a foto de perfil pelo app e a
+  // Central confere.
+  testWidgets('Casca: foto nova de motorista ativo abre aviso e leva ao cadastro', (tester) async {
+    _comSos = false;
+    _comPendente = false;
+    _comFotoNova = true;
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<CentralState>(
+            create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+          ),
+          ChangeNotifierProvider<PainelState>.value(value: painel),
+        ],
+        child: MaterialApp(
+          theme: CentralTheme.dark,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const ShellScreen(),
+        ),
+      ),
+    );
+    await _carregar(tester);
+
+    expect(find.text('Foto nova para conferir'), findsOneWidget);
+    expect(find.textContaining('Joao Batista da Silva trocou a foto de perfil'), findsOneWidget);
+    expect(painel.indicadores.paraConferir, 1);
+
+    await tester.tap(find.text('Conferir'));
+    await _carregar(tester);
+    expect(find.text('Foto nova para conferir'), findsNothing);
+    expect(find.text('Dados'), findsOneWidget);
+    expect(painel.fotoNova, isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('central.documentoVisto'), 'doc-foto-2');
+
+    // Ja visto: nao abre de novo.
+    await tester.runAsync(() => painel.atualizar());
+    await tester.pumpAndSettle();
+    expect(find.text('Foto nova para conferir'), findsNothing);
+    _comFotoNova = false;
   });
 
   test('Leitura dos dados no formato do servidor', () {

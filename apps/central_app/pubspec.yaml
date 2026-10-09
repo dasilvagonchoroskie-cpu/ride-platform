@@ -19,6 +19,8 @@ dependencies:
   intl: any
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
+  # Foto do motorista tirada ou escolhida pela Central (09/10/2026).
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

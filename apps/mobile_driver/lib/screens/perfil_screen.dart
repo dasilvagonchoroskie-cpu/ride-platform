@@ -32,6 +32,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
   Map<String, dynamic>? _motorista;
   String? _erro;
 
+  /// Ultima foto de perfil enviada e se ja existe uma aprovada.
+  Map<String, dynamic>? _ultimaFoto;
+  bool _temFotoAprovada = false;
+  bool _enviandoFoto = false;
+
+  /// Muda quando a foto e trocada: a lista de documentos recarrega.
+  int _versao = 0;
+
   @override
   void initState() {
     super.initState();
@@ -39,12 +47,70 @@ class _PerfilScreenState extends State<PerfilScreen> {
   }
 
   Future<void> _carregar() async {
+    final api = context.read<DriverState>().api;
     try {
-      final r = await context.read<DriverState>().api.request('GET', '/drivers/me') as Map<String, dynamic>;
+      final r = await api.request('GET', '/drivers/me') as Map<String, dynamic>;
       if (mounted) setState(() => _motorista = r);
     } catch (e) {
       if (mounted) setState(() => _erro = e is ApiException ? e.message : '$e');
     }
+    await _carregarFoto();
+  }
+
+  Future<void> _carregarFoto() async {
+    if (!mounted) return;
+    try {
+      final r = await context.read<DriverState>().api.request('GET', '/documents/me') as Map<String, dynamic>;
+      final fotos = [
+        for (final d in (r['documents'] as List? ?? const []).whereType<Map<String, dynamic>>())
+          if (d['type'] == 'PROFILE_PHOTO') d,
+      ];
+      if (!mounted) return;
+      setState(() {
+        _ultimaFoto = fotos.isEmpty ? null : fotos.first;
+        _temFotoAprovada = fotos.any((d) => d['status'] == 'APPROVED');
+      });
+    } catch (_) {
+      // Sem cadastro ainda ou sem rede: fica sem o aviso da foto.
+    }
+  }
+
+  /// Toque na foto: camera ou galeria, e manda para o servidor.
+  Future<void> _trocarFoto() async {
+    final driver = context.read<DriverState>();
+    final foto = await escolherFoto(context, titulo: 'Foto de perfil');
+    if (foto == null || !mounted) return;
+    setState(() => _enviandoFoto = true);
+    try {
+      final aguarda = await driver.trocarFotoDePerfil(mime: foto.mime, base64: foto.base64);
+      avisar(aguarda
+          ? 'Foto enviada. Os passageiros continuam vendo a foto atual até a Central conferir a nova.'
+          : 'Foto enviada. A Central vai conferir.');
+      await _carregarFoto();
+      if (mounted) setState(() => _versao++);
+    } on ApiException catch (e) {
+      avisar(e.message);
+    } catch (_) {
+      avisar('Sem conexão com o servidor.');
+    } finally {
+      if (mounted) setState(() => _enviandoFoto = false);
+    }
+  }
+
+  /// O que mostrar embaixo da foto.
+  (String, Color) _situacaoDaFoto(String? fotoUrl) {
+    final ultima = _ultimaFoto;
+    final status = '${ultima?['status'] ?? ''}';
+    if (status == 'PENDING' && _temFotoAprovada) {
+      return ('Foto nova aguardando a Central conferir. Até lá, os passageiros veem a foto atual.', AppColors.warning);
+    }
+    if (status == 'PENDING') return ('Foto enviada: a Central vai conferir.', AppColors.warning);
+    if (status == 'REJECTED') {
+      final motivo = ultima?['rejectionReason'] as String?;
+      return ('A Central recusou a última foto${motivo == null ? '' : ': $motivo'}. Toque na foto para mandar outra.', AppColors.danger);
+    }
+    if (fotoUrl == null) return ('Toque no círculo para pôr sua foto. O passageiro vê a sua foto para reconhecer você.', AppColors.textMuted);
+    return ('Toque na foto para trocar.', AppColors.textMuted);
   }
 
   Future<void> _trocarSenha() async {
@@ -122,10 +188,42 @@ class _PerfilScreenState extends State<PerfilScreen> {
           children: [
             _Bloco(
               filhos: [
-                Text(p?.name ?? 'Motorista', style: AppText.title),
+                Row(
+                  children: [
+                    _FotoDoPerfil(
+                      fotoUrl: p?.avatarUrl,
+                      iniciais: p?.initials ?? 'M',
+                      enviando: _enviandoFoto,
+                      aoTocar: _trocarFoto,
+                    ),
+                    const SizedBox(width: Spacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(p?.name ?? 'Motorista', style: AppText.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: Spacing.xs),
+                          Text('Telefone: ${p?.phone ?? '-'}', style: AppText.body),
+                          Text('Placa: ${d.vehicle?.plate ?? '-'}', style: AppText.body),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Spacing.sm),
+                Builder(builder: (context) {
+                  final (texto, cor) = _situacaoDaFoto(p?.avatarUrl);
+                  return Text(texto, style: AppText.caption.copyWith(color: cor));
+                }),
                 const SizedBox(height: Spacing.xs),
-                Text('Telefone: ${p?.phone ?? '-'}', style: AppText.body),
-                Text('Placa: ${d.vehicle?.plate ?? '-'}', style: AppText.body),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _enviandoFoto ? null : _trocarFoto,
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    label: Text(p?.avatarUrl == null ? 'Pôr foto de perfil' : 'Trocar foto de perfil'),
+                  ),
+                ),
               ],
             ),
             _Bloco(
@@ -151,7 +249,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ),
               ],
             ),
-            const DocumentosDoMotorista(),
+            DocumentosDoMotorista(key: ValueKey(_versao), aoTrocarFoto: _carregarFoto),
             const SizedBox(height: Spacing.md),
             OutlinedButton.icon(onPressed: _trocarSenha, icon: const Icon(Icons.lock_outline), label: const Text('Alterar senha')),
             const SizedBox(height: Spacing.sm),
@@ -161,6 +259,61 @@ class _PerfilScreenState extends State<PerfilScreen> {
               label: const Text('Sair', style: TextStyle(color: AppColors.danger)),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Foto de perfil redonda com o selo da camera (toque para trocar).
+class _FotoDoPerfil extends StatelessWidget {
+  const _FotoDoPerfil({required this.fotoUrl, required this.iniciais, required this.enviando, required this.aoTocar});
+
+  final String? fotoUrl;
+  final String iniciais;
+  final bool enviando;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final letras = Text(iniciais.isEmpty ? '?' : iniciais, style: AppText.title.copyWith(color: Colors.white, fontSize: 30));
+    return Semantics(
+      button: true,
+      label: 'Trocar foto de perfil',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: enviando ? null : aoTocar,
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: Stack(
+            children: [
+              Container(
+                width: 92,
+                height: 92,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primary),
+                child: fotoUrl != null && fotoUrl!.startsWith('/') ? FotoDoServidor(caminho: fotoUrl!, tamanho: 92, reserva: letras) : letras,
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary,
+                    border: Border.all(color: AppColors.surface, width: 3),
+                  ),
+                  child: enviando
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.photo_camera, size: 17, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -187,7 +340,10 @@ class _Bloco extends StatelessWidget {
 /// Lista dos documentos com a situacao de cada um e o botao de enviar foto.
 /// Usada no Perfil e na tela de cadastro em analise.
 class DocumentosDoMotorista extends StatefulWidget {
-  const DocumentosDoMotorista({super.key});
+  const DocumentosDoMotorista({super.key, this.aoTrocarFoto});
+
+  /// Avisa o Perfil quando a foto de perfil foi trocada pela lista.
+  final VoidCallback? aoTrocarFoto;
 
   @override
   State<DocumentosDoMotorista> createState() => _DocumentosDoMotoristaState();
@@ -195,6 +351,9 @@ class DocumentosDoMotorista extends StatefulWidget {
 
 class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
   Map<String, Map<String, dynamic>> _ultimos = const {};
+
+  /// Tipos que ja tem um aprovado (a troca nao tira o motorista do ar).
+  Set<String> _aprovados = const {};
   String? _enviando;
   bool _carregou = false;
 
@@ -208,12 +367,15 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
     try {
       final r = await context.read<DriverState>().api.request('GET', '/documents/me') as Map<String, dynamic>;
       final mapa = <String, Map<String, dynamic>>{};
+      final aprovados = <String>{};
       for (final d in (r['documents'] as List? ?? const []).whereType<Map<String, dynamic>>()) {
         mapa.putIfAbsent('${d['type']}', () => d);
+        if (d['status'] == 'APPROVED') aprovados.add('${d['type']}');
       }
       if (mounted) {
         setState(() {
           _ultimos = mapa;
+          _aprovados = aprovados;
           _carregou = true;
         });
       }
@@ -226,13 +388,22 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
     final foto = await escolherFoto(context, titulo: nome);
     if (foto == null || !mounted) return;
     setState(() => _enviando = tipo);
+    final driver = context.read<DriverState>();
+    final substitui = _aprovados.contains(tipo);
     try {
-      await context.read<DriverState>().api.request('POST', '/documents/foto', body: {
-        'type': tipo,
-        'mime': foto.mime,
-        'dados': foto.base64,
-      });
-      avisar('$nome enviado. A Central vai conferir.');
+      if (tipo == 'PROFILE_PHOTO') {
+        await driver.trocarFotoDePerfil(mime: foto.mime, base64: foto.base64);
+        widget.aoTrocarFoto?.call();
+      } else {
+        await driver.api.request('POST', '/documents/foto', body: {
+          'type': tipo,
+          'mime': foto.mime,
+          'dados': foto.base64,
+        });
+      }
+      avisar(substitui
+          ? '$nome enviado. O atual continua valendo até a Central conferir o novo.'
+          : '$nome enviado. A Central vai conferir.');
       await _carregar();
     } on ApiException catch (e) {
       avisar(e.message);
@@ -260,6 +431,7 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
               nome: nome,
               icone: icone,
               doc: _ultimos[tipo],
+              temAprovado: _aprovados.contains(tipo),
               enviando: _enviando == tipo,
               aoEnviar: () => _enviar(tipo, nome),
             ),
@@ -270,11 +442,21 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
 }
 
 class _LinhaDocumento extends StatelessWidget {
-  const _LinhaDocumento({required this.nome, required this.icone, required this.doc, required this.enviando, required this.aoEnviar});
+  const _LinhaDocumento({
+    required this.nome,
+    required this.icone,
+    required this.doc,
+    required this.temAprovado,
+    required this.enviando,
+    required this.aoEnviar,
+  });
 
   final String nome;
   final IconData icone;
   final Map<String, dynamic>? doc;
+
+  /// Ja existe um aprovado deste tipo (a ultima pode ser uma troca).
+  final bool temAprovado;
   final bool enviando;
   final VoidCallback aoEnviar;
 
@@ -283,7 +465,9 @@ class _LinhaDocumento extends StatelessWidget {
     final status = '${doc?['status'] ?? ''}';
     final (texto, cor) = switch (status) {
       'APPROVED' => ('Aprovado', AppColors.primary),
+      'REJECTED' when temAprovado => ('Novo recusado (o aprovado continua valendo)', AppColors.danger),
       'REJECTED' => ('Rejeitado', AppColors.danger),
+      'PENDING' when temAprovado => ('Novo enviado: aguardando a Central (o aprovado continua valendo)', AppColors.warning),
       'PENDING' => ('Enviado: aguardando a Central', AppColors.warning),
       _ => ('Não enviado', AppColors.textMuted),
     };
@@ -314,8 +498,10 @@ class _LinhaDocumento extends StatelessWidget {
           enviando
               ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
               : TextButton(
-                  onPressed: status == 'APPROVED' ? null : aoEnviar,
-                  child: Text(status.isEmpty ? 'Enviar' : (status == 'APPROVED' ? 'OK' : 'Trocar')),
+                  // Aprovado tambem pode ser atualizado (CNH renovada, foto
+                  // nova): o atual vale ate a Central conferir o novo.
+                  onPressed: aoEnviar,
+                  child: Text(status.isEmpty ? 'Enviar' : (status == 'APPROVED' ? 'Atualizar' : 'Trocar')),
                 ),
         ],
       ),

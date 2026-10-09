@@ -10,6 +10,10 @@ const TIPOS_DE_IMAGEM: Record<string, (b: Buffer) => boolean> = {
   'image/webp': (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP',
 };
 
+/** So as chaves de fotos guardadas no banco (as antigas do storage nao sao uuid). */
+export const soArquivosDoBanco = (chaves: string[]): string[] =>
+  chaves.filter((k) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(k));
+
 /** Ate 2 MB por foto (o aplicativo reduz antes de mandar). */
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -76,12 +80,66 @@ export class ArquivosService {
     });
     if (velhos.length) {
       await this.prisma.driverDocument.deleteMany({ where: { id: { in: velhos.map((v) => v.id) } } });
-      await this.prisma.arquivo.deleteMany({ where: { id: { in: velhos.map((v) => v.fileKey) } } });
+      await this.prisma.arquivo.deleteMany({ where: { id: { in: soArquivosDoBanco(velhos.map((v) => v.fileKey)) } } });
     }
-    if (tipo === DocumentType.PROFILE_PHOTO) {
+    // Foto de perfil: o passageiro ve o rosto para reconhecer o motorista.
+    // Primeira foto (cadastro): ja aparece. Troca de quem ja tem foto
+    // aprovada: a aprovada continua aparecendo ate a Central conferir a nova.
+    const temAprovada =
+      tipo === DocumentType.PROFILE_PHOTO &&
+      (await this.prisma.driverDocument.count({ where: { driverId, type: tipo, status: DocumentStatus.APPROVED } })) > 0;
+    if (tipo === DocumentType.PROFILE_PHOTO && !temAprovada) {
       await this.prisma.user.update({ where: { id: userId }, data: { avatarUrl: fileUrl } });
     }
-    return { id: doc.id, type: doc.type, status: doc.status, fileUrl, uploadedAt: doc.uploadedAt };
+    return { id: doc.id, type: doc.type, status: doc.status, fileUrl, uploadedAt: doc.uploadedAt, aguardaCentral: temAprovada };
+  }
+
+  /**
+   * A Central poe ou troca a foto do motorista (Evandro, 09/10/2026: "tinha
+   * que ter essa parte na Central tambem"). Tirada pela propria Central:
+   * entra ja aprovada, vira a foto que o passageiro ve e substitui as outras.
+   */
+  async fotoDoMotoristaPelaCentral(driverId: string, adminId: string, mime: string, base64: string) {
+    const motorista = await this.prisma.driver.findUnique({ where: { id: driverId }, select: { id: true, userId: true } });
+    if (!motorista) throw BusinessException.notFound('Motorista não encontrado.');
+    const dados = this.decodificar(mime, base64);
+    const id = await this.guardar(motorista.userId, DocumentType.PROFILE_PHOTO, mime, dados);
+    const fileUrl = `/arquivos/${id}`;
+    const agora = new Date();
+    const antigos = await this.prisma.driverDocument.findMany({
+      where: { driverId, type: DocumentType.PROFILE_PHOTO },
+      select: { id: true, fileKey: true },
+    });
+    const doc = await this.prisma.driverDocument.create({
+      data: {
+        driverId,
+        type: DocumentType.PROFILE_PHOTO,
+        status: DocumentStatus.APPROVED,
+        fileKey: id,
+        fileUrl,
+        mimeType: mime,
+        sizeBytes: dados.length,
+        uploadedAt: agora,
+        reviewedAt: agora,
+        reviewedBy: adminId,
+      },
+    });
+    await this.prisma.user.update({ where: { id: motorista.userId }, data: { avatarUrl: fileUrl } });
+    if (antigos.length) {
+      await this.prisma.driverDocument.deleteMany({ where: { id: { in: antigos.map((a) => a.id) } } });
+      await this.prisma.arquivo.deleteMany({ where: { id: { in: soArquivosDoBanco(antigos.map((a) => a.fileKey)) } } });
+    }
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: UserRole.ADMIN,
+        action: 'DRIVER_PHOTO_BY_CENTRAL',
+        entity: 'Driver',
+        entityId: driverId,
+        after: { fileUrl },
+      },
+    });
+    return { id: doc.id, type: doc.type, status: doc.status, fileUrl, avatarUrl: fileUrl };
   }
 
   /** Le a foto. Documento so o dono e a Central; rosto, qualquer pessoa logada. */

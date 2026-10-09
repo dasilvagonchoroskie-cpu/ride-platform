@@ -504,6 +504,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     ).copyWith(
       approval: _aprovacao(u['driverStatus'] as String?),
       termsAccepted: u['termsAccepted'] as bool? ?? false,
+      avatarUrl: u['avatarUrl'] as String?,
     );
     if (u['driverId'] != null) await sincronizarCadastro();
     await _persistProfile();
@@ -1655,6 +1656,19 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Traz do servidor o cadastro e o veiculo. Sem isto, quem reinstalava o
   /// aplicativo ficava sem veiculo no aparelho e nao conseguia se conectar.
+  /// Troca a foto de perfil (Evandro, 09/10/2026). A primeira foto ja
+  /// aparece; quem ja tem foto aprovada continua com ela para os passageiros
+  /// ate a Central conferir a nova. Devolve true quando a nova espera a Central.
+  Future<bool> trocarFotoDePerfil({required String mime, required String base64}) async {
+    final r = await _client.request('POST', '/documents/foto', body: {
+      'type': 'PROFILE_PHOTO',
+      'mime': mime,
+      'dados': base64,
+    }) as Map<String, dynamic>;
+    await sincronizarCadastro();
+    return r['aguardaCentral'] == true;
+  }
+
   Future<void> sincronizarCadastro() async {
     if (!AppConfig.hasApi || profile == null) return;
     try {
@@ -1672,6 +1686,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         rating: nota,
         totalRides: (d['totalRides'] as num?)?.toInt(),
         acceptanceRate: aceite?.round(),
+        avatarUrl: u?['avatarUrl'] as String?,
       );
       await _persistProfile();
       // O cadastro do servidor tambem diz se a Central ja aprovou.

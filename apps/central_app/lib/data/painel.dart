@@ -24,6 +24,8 @@ class Indicadores {
     this.sosAbertos = 0,
     this.pendentes = 0,
     this.ultimoPendente,
+    this.paraConferir = 0,
+    this.ultimoParaConferir,
   });
 
   final int ativas;
@@ -41,6 +43,11 @@ class Indicadores {
   /// O cadastro pendente mais novo (para avisar quando chega um).
   final MotoristaPendenteResumo? ultimoPendente;
 
+  /// Motoristas ja ativos que trocaram a foto de perfil (ou outro documento)
+  /// e esperam a Central conferir.
+  final int paraConferir;
+  final DocumentoParaConferir? ultimoParaConferir;
+
   factory Indicadores.fromJson(Map<String, dynamic> j) => Indicadores(
         ativas: _int(j['activeRides']),
         concluidasHoje: _int(j['completedToday']),
@@ -54,6 +61,30 @@ class Indicadores {
         ultimoPendente: j['latestPendingDriver'] is Map<String, dynamic>
             ? MotoristaPendenteResumo.fromJson(j['latestPendingDriver'] as Map<String, dynamic>)
             : null,
+        paraConferir: _int(j['documentsToReview']),
+        ultimoParaConferir: j['latestDocumentToReview'] is Map<String, dynamic>
+            ? DocumentoParaConferir.fromJson(j['latestDocumentToReview'] as Map<String, dynamic>)
+            : null,
+      );
+}
+
+/// Documento novo de motorista ativo esperando a Central (ex.: foto de
+/// perfil trocada no aplicativo do motorista).
+class DocumentoParaConferir {
+  const DocumentoParaConferir({required this.id, required this.tipo, required this.motoristaId, required this.nome});
+
+  final String id;
+  final String tipo;
+  final String motoristaId;
+  final String nome;
+
+  bool get ehFotoDePerfil => tipo == 'PROFILE_PHOTO';
+
+  factory DocumentoParaConferir.fromJson(Map<String, dynamic> j) => DocumentoParaConferir(
+        id: j['id'] as String? ?? '',
+        tipo: j['type'] as String? ?? '',
+        motoristaId: j['driverId'] as String? ?? '',
+        nome: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : 'Motorista',
       );
 }
 
@@ -394,6 +425,7 @@ class MotoristaDetalhe {
     required this.corridas,
     this.praca,
     this.pracaNome,
+    this.tiposAprovados = const {},
   });
 
   final MotoristaCadastro base;
@@ -414,6 +446,10 @@ class MotoristaDetalhe {
   /// Cidade onde trabalha (varias cidades na mesma Central).
   final String? praca;
   final String? pracaNome;
+
+  /// Tipos de documento que ja tem um aprovado (a foto nova de quem ja tem
+  /// foto aprovada e uma troca: a aprovada vale ate a Central conferir).
+  final Set<String> tiposAprovados;
 
   factory MotoristaDetalhe.fromJson(Map<String, dynamic> j) {
     final u = j['user'] is Map ? j['user'] as Map : const {};
@@ -442,6 +478,7 @@ class MotoristaDetalhe {
       corridas: _int(j['totalRides']),
       praca: j['praca'] as String?,
       pracaNome: j['pracaNome'] as String?,
+      tiposAprovados: {for (final d in docs) if (d['status'] == 'APPROVED') _txt(d['type'])},
     );
   }
 }
@@ -915,6 +952,13 @@ class PainelApi {
         'reason': motivo,
         if (status == 'APPROVED') 'presentialCheck': true,
       });
+
+  /// A Central poe ou troca a foto do motorista (ja entra aprovada).
+  /// Devolve o endereco da foto nova.
+  Future<String?> fotoDoMotorista(String id, String mime, String base64) async {
+    final r = await _c.request('POST', '/admin/drivers/$id/foto', body: {'mime': mime, 'dados': base64});
+    return r is Map ? r['avatarUrl'] as String? : null;
+  }
 
   Future<void> avaliarDocumento(String documentoId, bool aprovado, String? motivo) =>
       _c.request('PATCH', '/admin/documents/$documentoId/review', body: {

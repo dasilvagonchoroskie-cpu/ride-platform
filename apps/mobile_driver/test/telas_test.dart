@@ -53,6 +53,9 @@ Object? _resposta(String metodo, String caminho) {
       'documents': [
         {'id': 'x1', 'type': 'CNH_FRONT', 'status': 'REJECTED', 'rejectionReason': 'Foto tremida', 'fileUrl': '/arquivos/abc', 'uploadedAt': '2026-10-03T10:00:00.000Z'},
         {'id': 'x2', 'type': 'CRLV', 'status': 'APPROVED', 'rejectionReason': null, 'fileUrl': '/arquivos/def', 'uploadedAt': '2026-10-02T10:00:00.000Z'},
+        // Troca da foto de perfil esperando a Central (a aprovada continua).
+        {'id': 'x3', 'type': 'PROFILE_PHOTO', 'status': 'PENDING', 'rejectionReason': null, 'fileUrl': '/arquivos/f2', 'uploadedAt': '2026-10-09T10:00:00.000Z'},
+        {'id': 'x4', 'type': 'PROFILE_PHOTO', 'status': 'APPROVED', 'rejectionReason': null, 'fileUrl': '/arquivos/f1', 'uploadedAt': '2026-10-01T10:00:00.000Z'},
       ],
       'progress': {},
     };
@@ -176,10 +179,17 @@ void main() {
 
   testWidgets('Perfil e documentos: situacao, motivo, documentos e senha', (tester) async {
     await _abrir(tester, const PerfilScreen());
+    // Foto de perfil no topo, com o aviso da troca esperando a Central.
+    expect(find.bySemanticsLabel('Trocar foto de perfil'), findsOneWidget);
+    expect(find.text('Pôr foto de perfil'), findsOneWidget);
+    expect(find.textContaining('Foto nova aguardando a Central conferir'), findsOneWidget);
     expect(find.text('Rejeitado'), findsWidgets);
     expect(find.textContaining('Foto da CNH ilegível'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Antecedentes criminais'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('CRLV do veículo'), findsOneWidget);
+    // Aprovado tambem pode ser atualizado; a troca aparece como "novo enviado".
+    expect(find.text('Atualizar', skipOffstage: false), findsWidgets);
+    expect(find.text('Novo enviado: aguardando a Central (o aprovado continua valendo)', skipOffstage: false), findsOneWidget);
     expect(find.textContaining('Foto tremida'), findsOneWidget);
     expect(find.text('Foto do carro (de frente, com a placa)', skipOffstage: false), findsOneWidget);
     await tester.fling(find.byType(ListView).first, const Offset(0, -2500), 3000);

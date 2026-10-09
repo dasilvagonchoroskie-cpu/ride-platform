@@ -645,9 +645,16 @@ export class DriversService {
       select: { type: true, status: true, uploadedAt: true },
     });
 
+    // Vale o ultimo enviado de cada tipo — MAS um documento ja aprovado
+    // continua valendo enquanto a troca dele (foto nova, CNH renovada) espera
+    // a Central ou se a troca for recusada. Assim o motorista aprovado que
+    // troca a foto de perfil nao fica impedido de trabalhar (Evandro, 09/10/2026).
     const latestByType = new Map<string, { status: DocumentStatus; uploadedAt: Date | null }>();
     for (const doc of documents) {
       if (!latestByType.has(doc.type)) latestByType.set(doc.type, { status: doc.status, uploadedAt: doc.uploadedAt });
+    }
+    for (const doc of documents) {
+      if (doc.status === DocumentStatus.APPROVED) latestByType.set(doc.type, { status: doc.status, uploadedAt: doc.uploadedAt });
     }
 
     const missing = REQUIRED_DRIVER_DOCUMENTS.filter((type) => !latestByType.has(type));

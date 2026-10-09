@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/fotos.dart';
 import '../core/theme/app_theme.dart';
 
 /// Logo redondo da Fortaleza Mov (icone do motorista).
@@ -65,9 +66,12 @@ class RatingChip extends StatelessWidget {
 
 /// Foto (iniciais) com a nota embaixo, nome e "Fortaleza Mov".
 class DriverHeader extends StatelessWidget {
-  const DriverHeader({super.key, required this.name, required this.initials, required this.rating});
+  const DriverHeader({super.key, required this.name, required this.initials, required this.rating, this.fotoUrl});
 
   final String name;
+
+  /// Foto de perfil aprovada (/arquivos/...). Sem ela, as iniciais.
+  final String? fotoUrl;
   final String initials;
   final double rating;
 
@@ -93,10 +97,19 @@ class DriverHeader extends StatelessWidget {
                     colors: [AppColors.brand, AppColors.brandDark],
                   ),
                 ),
-                child: Text(
-                  initials.isEmpty ? '?' : initials,
-                  style: AppText.title.copyWith(color: Colors.white, fontSize: 28),
-                ),
+                child: fotoUrl != null && fotoUrl!.startsWith('/')
+                    ? FotoDoServidor(
+                        caminho: fotoUrl!,
+                        tamanho: 80,
+                        reserva: Text(
+                          initials.isEmpty ? '?' : initials,
+                          style: AppText.title.copyWith(color: Colors.white, fontSize: 28),
+                        ),
+                      )
+                    : Text(
+                        initials.isEmpty ? '?' : initials,
+                        style: AppText.title.copyWith(color: Colors.white, fontSize: 28),
+                      ),
               ),
               Positioned(left: 2, bottom: 0, child: RatingChip(rating: rating)),
             ],

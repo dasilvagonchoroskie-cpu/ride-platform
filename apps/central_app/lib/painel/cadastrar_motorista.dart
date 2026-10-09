@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/api/api_client.dart';
 import '../core/theme/central_theme.dart';
 import 'comuns.dart';
+import 'foto.dart';
 import 'painel_state.dart';
 
 /// Cadastro de motorista feito pela Central (pedido do Evandro, 08/10/2026):
@@ -85,6 +86,9 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
   bool _enviando = false;
   String? _erro;
 
+  /// Foto do motorista tirada na hora (opcional; vai depois do cadastro).
+  FotoEscolhida? _foto;
+
   static const _categorias = ['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE'];
 
   @override
@@ -155,6 +159,17 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
       });
       final saldo = _centavos(_saldo.text);
       if (saldo > 0) await api.creditarCarteira(r.id, saldo, 'Saldo inicial no cadastro pela Central');
+      // A foto vai depois do cadastro: se falhar, o cadastro ja esta feito e
+      // a foto pode ser posta no cadastro do motorista.
+      var fotoFalhou = false;
+      final foto = _foto;
+      if (foto != null) {
+        try {
+          await api.fotoDoMotorista(r.id, foto.mime, foto.base64);
+        } catch (_) {
+          fotoFalhou = true;
+        }
+      }
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -165,7 +180,8 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
             'O motorista entra no app do motorista com o telefone ${telefoneBonito(telefone)}; '
             'o código de entrada chega no e-mail ${_email.text.trim().toLowerCase()}. O cadastro e o carro já estão prontos'
             '${_aprovar ? ' e aprovados.' : '; falta aprovar em Motoristas → Pendentes.'}'
-            '${saldo > 0 ? '\n\nSaldo inicial: ${reais(saldo)}.' : ''}',
+            '${saldo > 0 ? '\n\nSaldo inicial: ${reais(saldo)}.' : ''}'
+            '${fotoFalhou ? '\n\nA foto não foi enviada (internet). Ponha de novo em Motoristas → cadastro do motorista.' : ''}',
           ),
           actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
         ),
@@ -178,6 +194,11 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
+  }
+
+  Future<void> _escolherFoto() async {
+    final foto = await escolherFoto(context);
+    if (foto != null && mounted) setState(() => _foto = foto);
   }
 
   Widget _campo(
@@ -217,6 +238,26 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
               'O motorista só vai precisar entrar no app do motorista com este telefone e o código. '
               'Fotos de documentos não são obrigatórias quando você confere pessoalmente.',
               style: AppText.caption.copyWith(color: AppColors.textMuted),
+            ),
+            _titulo('Foto do motorista (opcional)'),
+            Row(
+              children: [
+                FotoDoMotorista(
+                  caminho: null,
+                  local: _foto?.bytes,
+                  iniciais: iniciaisDe(_nome.text),
+                  aoTrocar: _escolherFoto,
+                ),
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Text(
+                    _foto == null
+                        ? 'Toque na câmera para tirar a foto do rosto. O passageiro vê esta foto para reconhecer o motorista.'
+                        : 'Foto pronta. Toque na câmera para tirar outra.',
+                    style: AppText.caption.copyWith(color: AppColors.textMuted),
+                  ),
+                ),
+              ],
             ),
             _titulo('Dados'),
             _campo('Nome completo', _nome, maiusculas: TextCapitalization.words),

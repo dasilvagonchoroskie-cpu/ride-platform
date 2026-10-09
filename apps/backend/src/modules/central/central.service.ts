@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { DriverStatus, OfferStatus, PayoutStatus, RideStatus, UserRole, UserStatus } from '@prisma/client';
+import { DocumentStatus, DriverStatus, OfferStatus, PayoutStatus, RideStatus, UserRole, UserStatus } from '@prisma/client';
 import { haversineKm } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
@@ -69,6 +69,21 @@ export class CentralService {
         select: { id: true, createdAt: true, user: { select: { name: true, phone: true } } },
       }),
     ]);
+    // Motorista ja aprovado que trocou a foto de perfil (ou outro documento):
+    // a Central confere (o cadastro novo ja tem o aviso proprio acima).
+    const ondeConferir = {
+      status: DocumentStatus.PENDING,
+      uploadedAt: { not: null },
+      driver: { status: DriverStatus.APPROVED, user: { deletedAt: null }, ...dosMotoristas },
+    };
+    const [paraConferir, ultimoParaConferir] = await Promise.all([
+      this.prisma.driverDocument.count({ where: ondeConferir }),
+      this.prisma.driverDocument.findFirst({
+        where: ondeConferir,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, type: true, driverId: true, createdAt: true, driver: { select: { user: { select: { name: true } } } } },
+      }),
+    ]);
     return {
       activeRides: ativas,
       completedToday: concluidasHoje,
@@ -85,6 +100,16 @@ export class CentralService {
             name: ultimoPendente.user?.name ?? null,
             phone: ultimoPendente.user?.phone ?? null,
             createdAt: ultimoPendente.createdAt,
+          }
+        : null,
+      documentsToReview: paraConferir,
+      latestDocumentToReview: ultimoParaConferir
+        ? {
+            id: ultimoParaConferir.id,
+            type: ultimoParaConferir.type,
+            driverId: ultimoParaConferir.driverId,
+            name: ultimoParaConferir.driver.user?.name ?? null,
+            createdAt: ultimoParaConferir.createdAt,
           }
         : null,
     };
