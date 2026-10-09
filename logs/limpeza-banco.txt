@@ -1,0 +1,39 @@
+Limpeza do banco - 09/10/2026 05:10 UTC - acao: listar
+Antes: {"contasTeste":0,"contas":35,"corridas":8,"movimentos":14,"saques":0,"sos":0,"avaliacoes":1,"cuponsTeste":0,"ultimaCopia":null}
+
+Contas (passageiros e motoristas):
+  APAGA  0 | +5564921310179 | Passageiro 0179 | corridas false | teste false | motorista 
+  APAGA  0 | +5564921310176 | Motorista 0176 | corridas false | teste false | motorista 
+  APAGA  0 | +5564920414479 | Passageiro 4479 | corridas false | teste false | motorista 
+  APAGA  0 | +5564920414476 | Motorista 4476 | corridas false | teste false | motorista 
+  APAGA  0 | +5564920302279 | Passageiro 2279 | corridas false | teste false | motorista 
+  APAGA  0 | +5564920302276 | Motorista 2276 | corridas false | teste false | motorista 
+  APAGA  0 | +5564919551479 | Passageiro 1479 | corridas false | teste false | motorista 
+  APAGA  0 | +5564919551476 | Motorista 1476 | corridas false | teste false | motorista 
+  APAGA  0 | +5564992686631 | Motorista 6631 | corridas false | teste false | motorista 
+  APAGA  0 | +5564917193279 | Passageiro 3279 | corridas false | teste false | motorista 
+  APAGA  0 | +5564917193276 | Motorista 3276 | corridas false | teste false | motorista 
+  APAGA  0 | +5564914490379 | Passageiro 0379 | corridas false | teste false | motorista 
+  APAGA  0 | +5564914490376 | Motorista 0376 | corridas false | teste false | motorista 
+  APAGA  0 | +5564913060179 | Passageiro 0179 | corridas false | teste false | motorista 
+  APAGA  0 | +5564913060176 | Motorista 0176 | corridas false | teste false | motorista 
+  APAGA  0 | +5564912221379 | Passageiro 1379 | corridas false | teste false | motorista 
+  APAGA  0 | +5564911275979 | Passageiro 5979 | corridas false | teste false | motorista 
+  APAGA  0 | +5564911165679 | Passageiro 5679 | corridas false | teste false | motorista 
+  APAGA  0 | +5564917060179 | Passageiro 0179 | corridas false | teste false | motorista 
+  FICA   0 | +5554996421415 | Passageiro 1415 | corridas false | teste false | motorista 
+  APAGA  0 | +5564904264372 | Passageiro 4372 | corridas false | teste true | motorista 
+  APAGA  1 | +5564917352572 | Passageiro 2572 | corridas false | teste true | motorista 
+  APAGA  1 | +5564917352571 | Passageiro 2571 | corridas false | teste false | motorista 
+  APAGA  1 | +5564906085672 | Passageiro 5672 | corridas false | teste true | motorista 
+  APAGA  1 | +5564906085671 | Passageiro 5671 | corridas false | teste false | motorista 
+  APAGA  1 | +5564906043672 | Passageiro 3672 | corridas false | teste true | motorista 
+  APAGA  1 | +5564906043671 | Passageiro 3671 | corridas false | teste false | motorista 
+  APAGA  1 | +5564900472572 | Passageiro 2572 | corridas false | teste true | motorista 
+  APAGA  1 | +5564900472571 | Passageiro 2571 | corridas false | teste false | motorista 
+  APAGA  1 | +5564900413572 | Passageiro 3572 | corridas false | teste true | motorista 
+  APAGA  1 | +5564900413571 | Passageiro 3571 | corridas false | teste false | motorista 
+  APAGA  0 | +5564900260972 | Passageiro 0972 | corridas false | teste true | motorista 
+  APAGA  1 | +5564900260971 | Passageiro 0971 | corridas false | teste false | motorista 
+  FICA   0 | +5564996472794 | Passageiro 2794 | corridas false | teste false | motorista 
+  FICA   Evandro Da Silva gonchoroski | +5564992686632 | dasilvagonchoroskie@gmail.com | corridas 3 | teste false | motorista true
