@@ -232,66 +232,75 @@ export class RidesService {
       return { offered: 0 };
     }
 
-    await this.mudarSituacao(rideId, RideStatus.SEARCHING, null, null);
+    // Velocidade (09/10/2026, "ta demorando para notificar"): o banco fica
+    // em Sao Paulo e o servidor nos EUA, entao cada consulta custa ~0,2 s.
+    // Antes eram ~20 consultas em fila ate o chamado sair; agora as
+    // independentes vao juntas e a busca dos motoristas e uma so.
+    const [, carteira, proprio, favoritos, bloqueados, ofertasAntes, teste] = await Promise.all([
+      this.mudarSituacao(rideId, RideStatus.SEARCHING, null, null),
+      // Carteira pre-paga: com o bloqueio ligado na Central, quem esta abaixo
+      // do saldo minimo nao recebe chamado (a comissao nao teria de onde sair).
+      regrasDaCarteira(this.prisma),
+      // Motorista que pediu corrida como passageiro nao recebe o proprio chamado.
+      this.prisma.driver.findUnique({ where: { userId: corrida.passengerId }, select: { id: true } }),
+      // Motoristas favoritos do passageiro recebem primeiro: na primeira
+      // rodada, se algum favorito estiver livre por perto, so ele e chamado.
+      // Se nao aceitar no prazo, a procura abre para todos.
+      this.favoritosDe(corrida.passengerId),
+      // Motorista bloqueado pelo passageiro nunca recebe as corridas dele.
+      this.bloqueadosDe(corrida.passengerId),
+      // Quem ja foi chamado (ou recusou) esta corrida nao e chamado de novo.
+      this.prisma.rideOffer.findMany({ where: { rideId }, select: { driverId: true } }),
+      this.prisma.contaDeTeste(corrida.passengerId),
+    ]);
+    const primeiraRodada = ofertasAntes.length === 0;
+    const jaChamados = new Set(ofertasAntes.map((o) => o.driverId));
 
-    // Carteira pre-paga: com o bloqueio ligado na Central, quem esta abaixo
-    // do saldo minimo nao recebe chamado (a comissao nao teria de onde sair).
-    const carteira = await regrasDaCarteira(this.prisma);
-
-    // Motorista que pediu corrida como passageiro nao recebe o proprio chamado.
-    const proprio = await this.prisma.driver.findUnique({ where: { userId: corrida.passengerId }, select: { id: true } });
-
-    // Motoristas favoritos do passageiro recebem primeiro: na primeira
-    // rodada, se algum favorito estiver livre por perto, so ele e chamado.
-    // Se nao aceitar no prazo, a procura abre para todos.
-    const favoritos = await this.favoritosDe(corrida.passengerId);
-    // Motorista bloqueado pelo passageiro nunca recebe as corridas dele.
-    const bloqueados = await this.bloqueadosDe(corrida.passengerId);
-    const primeiraRodada = (await this.prisma.rideOffer.count({ where: { rideId } })) === 0;
-    const teste = await this.prisma.contaDeTeste(corrida.passengerId);
+    // Uma busca so, no raio maior; os raios menores saem da mesma lista
+    // (ela vem do mais perto para o mais longe).
+    const achados = await this.prisma.findNearbyDrivers({
+      latitude: corrida.pickupLat,
+      longitude: corrida.pickupLng,
+      radiusMeters: RidesService.RAIOS_METROS[RidesService.RAIOS_METROS.length - 1],
+      limit: 30,
+      category: corrida.category,
+      teste,
+    });
+    let aptos = achados.filter(
+      (m) => !bloqueados.includes(m.driverId) && !jaChamados.has(m.driverId) && !(proprio && m.driverId === proprio.id),
+    );
+    if (carteira.bloquear && aptos.length > 0) {
+      const carteiras = await this.prisma.wallet.findMany({
+        where: { driverId: { in: aptos.map((m) => m.driverId) } },
+        select: { driverId: true, balanceCents: true },
+      });
+      const saldo = new Map(carteiras.map((w) => [w.driverId, w.balanceCents]));
+      aptos = aptos.filter((m) => !semSaldo(saldo.get(m.driverId) ?? 0, carteira.minimoCents));
+    }
 
     for (const raio of RidesService.RAIOS_METROS) {
-      const achados = await this.prisma.findNearbyDrivers({
-        latitude: corrida.pickupLat,
-        longitude: corrida.pickupLng,
-        radiusMeters: raio,
-        limit: 10,
-        category: corrida.category,
-        teste,
-      });
-      const proximos = achados.filter((m) => !bloqueados.includes(m.driverId));
+      const proximos = aptos.filter((m) => m.distanceMeters <= raio).slice(0, 10);
       if (proximos.length === 0) continue;
       const favoritosPerto = primeiraRodada ? proximos.filter((m) => favoritos.includes(m.driverId)) : [];
       const chamar = favoritosPerto.length > 0 ? favoritosPerto : proximos;
 
       const expiraEm = new Date(Date.now() + RidesService.SEGUNDOS_PARA_RESPONDER * 1000);
-      let enviados = 0;
+      await this.prisma.rideOffer.createMany({
+        data: chamar.map((m) => ({
+          rideId,
+          driverId: m.driverId,
+          distanceKm: m.distanceMeters / 1000,
+          etaSeconds: Math.round((m.distanceMeters / 1000 / 25) * 3600),
+          expiresAt: expiraEm,
+        })),
+        skipDuplicates: true,
+      });
       for (const m of chamar) {
-        // Quem ja recusou esta corrida nao e chamado de novo.
-        const jaOfertado = await this.prisma.rideOffer.findUnique({
-          where: { rideId_driverId: { rideId, driverId: m.driverId } },
-        });
-        if (jaOfertado) continue;
-        if (proprio && m.driverId === proprio.id) continue;
-        if (carteira.bloquear) {
-          const w = await this.prisma.wallet.findUnique({ where: { driverId: m.driverId } });
-          if (semSaldo(w?.balanceCents ?? 0, carteira.minimoCents)) continue;
-        }
-        await this.prisma.rideOffer.create({
-          data: {
-            rideId,
-            driverId: m.driverId,
-            distanceKm: m.distanceMeters / 1000,
-            etaSeconds: Math.round((m.distanceMeters / 1000 / 25) * 3600),
-            expiresAt: expiraEm,
-          },
-        });
         avisarOfertaNova(m.driverId);
         // Push (Firebase): acorda o celular mesmo se o Android fechou o app.
         void this.push.chamadoParaMotorista(m.driverId).catch(() => undefined);
-        enviados += 1;
       }
-      if (enviados > 0) return { offered: enviados, radiusMeters: raio };
+      return { offered: chamar.length, radiusMeters: raio };
     }
 
     this.logger.warn(`Corrida ${rideId}: nenhum motorista disponivel.`);
@@ -339,11 +348,20 @@ export class RidesService {
     });
     const abertas = ofertas.filter((o) => o.ride.status === RideStatus.SEARCHING);
     if (abertas.length === 0) return [];
-    // Valor liquido do motorista: depende do modelo financeiro dele.
-    const motorista = await this.prisma.driver.findUnique({
-      where: { id: driverId },
-      select: { financeModel: true, customCommissionPercent: true, fixedFeeCents: true },
-    });
+    // Valor liquido do motorista (depende do modelo financeiro dele) e a
+    // nota do passageiro: as duas consultas juntas (cada uma custa ~0,2 s).
+    const [motorista, notas] = await Promise.all([
+      this.prisma.driver.findUnique({
+        where: { id: driverId },
+        select: { financeModel: true, customCommissionPercent: true, fixedFeeCents: true },
+      }),
+      this.prisma.rating.groupBy({
+        by: ['targetId'],
+        where: { targetId: { in: abertas.map((o) => o.ride.passengerId) }, targetDriverId: null },
+        _avg: { score: true },
+        _count: { _all: true },
+      }),
+    ]);
     const liquido = (valor: number, percentual: number) => {
       if (motorista?.financeModel === 'PERCENTUAL' && motorista.customCommissionPercent != null) {
         return Math.round(valor * (1 - Number(motorista.customCommissionPercent) / 100));
@@ -352,13 +370,6 @@ export class RidesService {
       if (motorista?.financeModel === 'MENSALIDADE') return valor;
       return Math.round(valor * (1 - percentual / 100));
     };
-    // Nota do passageiro: media das avaliacoes que os motoristas deram a ele.
-    const notas = await this.prisma.rating.groupBy({
-      by: ['targetId'],
-      where: { targetId: { in: abertas.map((o) => o.ride.passengerId) }, targetDriverId: null },
-      _avg: { score: true },
-      _count: { _all: true },
-    });
     const notaDe = (id: string) => {
       const n = notas.find((x) => x.targetId === id);
       return n?._avg.score ? Math.round(n._avg.score * 10) / 10 : 5;

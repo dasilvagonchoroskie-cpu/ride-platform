@@ -361,12 +361,14 @@ ESPERA=$(mktemp); INI=$(date +%s%N)
 ( curl -s -m 40 "$API/driver/rides/offers?aguardar=25" -H "Authorization: Bearer $TM" > "$ESPERA"; echo $(( ($(date +%s%N) - INI) / 1000000 )) >> "$ESPERA.ms" ) &
 PID_ESPERA=$!
 sleep 2
+T0=$(date +%s%N)
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"couponCode\":\"$CUP\"}" "$TP")
+MS_PEDIDO=$(( ($(date +%s%N) - T0) / 1000000 ))
 RID=$(echo "$X" | jq -r '.data.ride.id // empty')
-sucesso "$X" && ok "Passageiro: corrida pedida" || falha "Passageiro: pedir corrida" "$X"
-wait $PID_ESPERA; MS=$(cat "$ESPERA.ms" 2>/dev/null)
+sucesso "$X" && ok "Passageiro: corrida pedida (resposta em ${MS_PEDIDO} ms)" || falha "Passageiro: pedir corrida" "$X"
+wait $PID_ESPERA; MS=$(cat "$ESPERA.ms" 2>/dev/null); MS=$(( ${MS:-99999} - 2000 ))
 [ "$(jq -r --arg r "$RID" '[.data[] | select(.rideId==$r)] | length' "$ESPERA" 2>/dev/null)" = "1" ] && [ "${MS:-99999}" -lt 15000 ] 2>/dev/null \
-  && ok "Motorista: chamado chegou NA HORA no celular que estava esperando (${MS} ms desde a pergunta)" || falha "Motorista: chamado na hora (${MS:-?} ms)" "$(head -c 300 "$ESPERA")"
+  && ok "Motorista: chamado chegou NA HORA no celular que estava esperando (${MS} ms depois do passageiro tocar em pedir)" || falha "Motorista: chamado na hora (${MS:-?} ms)" "$(head -c 300 "$ESPERA")"
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Motorista: chamado chegou" || falha "Motorista: chamado chegou" "$X"
 [ "$(echo "$X" | jq -r '.data[0].paymentMethodType' 2>/dev/null)" = "CASH" ] && ok "Motorista: chamado mostra a forma de pagamento (CASH)" || falha "Motorista: forma de pagamento no chamado" "$X"
