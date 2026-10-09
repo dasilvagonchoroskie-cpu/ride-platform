@@ -509,11 +509,14 @@ Y=$(get "/rides/$RIDM" "$TP")
 [ -n "$RIDM" ] && [ "$(echo "$Y" | jq -r '.data.ride.status')" = "DRIVER_WAITING" ] && ok "Motorista: corrida manual aberta no nome do passageiro, ja no local (o passageiro ve no app)" || falha "Motorista: corrida manual com conta" "$X $Y"
 X=$(post "/driver/rides/$RIDM/cancel" '{"reason":"Teste da corrida manual"}' "$TM")
 [ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_DRIVER" ] && ok "Motorista: cancelou a corrida manual de teste" || falha "Motorista: cancelar corrida manual" "$X"
-X=$(post /driver/manual-rides "{\"contato\":\"+55649${SUF}79\",\"pickup\":$EMB}" "$TM")
-echo "$X" | jq -r '.error.message // empty' | grep -qi "nome" && ok "Motorista: corrida manual de quem nao tem conta pede o nome" || falha "Motorista: corrida manual sem nome" "$X"
-X=$(post /driver/manual-rides "{\"contato\":\"+55649${SUF}79\",\"passengerName\":\"Passageiro Rua Teste\",\"pickup\":$EMB}" "$TM"); RIDN=$(echo "$X" | jq -r '.data.rideId // empty')
-[ -n "$RIDN" ] && [ "$(echo "$X" | jq -r '.data.passageiroTinhaConta')" = "false" ] && ok "Motorista: corrida manual de passageiro sem conta (fica pelo telefone)" || falha "Motorista: corrida manual sem conta" "$X"
+# Telefone que ainda nao tem conta (o teste procura um livre).
+FONE_M=""; for f in 60 61 62 63 64 65 66 67 68 69; do X=$(post /driver/manual-rides/buscar-passageiro "{\"contato\":\"+55649${SUF}$f\"}" "$TM"); [ "$(echo "$X" | jq -r '.data.encontrado')" = "false" ] && FONE_M="+55649${SUF}$f" && break; done
+X=$(post /driver/manual-rides "{\"contato\":\"$FONE_M\",\"pickup\":$EMB}" "$TM"); R0=$(echo "$X" | jq -r '.data.rideId // empty')
+[ -n "$R0" ] && post "/driver/rides/$R0/cancel" '{"reason":"Teste da corrida manual"}' "$TM" >/dev/null
+[ -n "$FONE_M" ] && echo "$X" | jq -r '.error.message // empty' | grep -qi "nome" && ok "Motorista: corrida manual de quem nao tem conta pede o nome" || falha "Motorista: corrida manual sem nome" "$X"
+X=$(post /driver/manual-rides "{\"contato\":\"$FONE_M\",\"passengerName\":\"Passageiro Rua Teste\",\"pickup\":$EMB}" "$TM"); RIDN=$(echo "$X" | jq -r '.data.rideId // empty')
 [ -n "$RIDN" ] && post "/driver/rides/$RIDN/cancel" '{"reason":"Teste da corrida manual"}' "$TM" >/dev/null
+[ -n "$RIDN" ] && [ "$(echo "$X" | jq -r '.data.passageiroTinhaConta')" = "false" ] && ok "Motorista: corrida manual de passageiro sem conta (fica pelo telefone)" || falha "Motorista: corrida manual sem conta" "$X"
 
 # ---- Entrar pelo e-mail (conta nova) e o mesmo telefone virar motorista ----
 EM2="passageiro2.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
