@@ -1,9 +1,10 @@
-Ultima mudanca do servidor no GitHub: 2ff127d (Despacho mais rapido: consultas juntas e uma busca so de motoristas; teste mede )
-No ar agora: 65227ab
+Ultima mudanca do servidor no GitHub: fcec390 (Push: confere a chave do Firebase na subida do servidor e mostra no /health)
+No ar agora: fcec390
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 16:09 UTC
+Teste de ponta a ponta - 09/10/2026 16:44 UTC
 
 OK     Servidor, banco e Redis no ar
+OK     Aviso push (Firebase): Google aceitou a chave
 OK     Central: login do administrador pelo codigo do e-mail
 OK     Central carrega /admin/drivers?status=PENDING
 OK     Central carrega /admin/rides/active
@@ -30,7 +31,7 @@ OK     Passageiro: esqueci a senha (codigo do telefone + senha nova)
 OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
-OK     Passageiro: busca de destino real (12 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
+OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
 OK     Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (codigo vai para o e-mail d•••@teste.fortalezamov.com.br)
@@ -44,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST9902)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST0787)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -111,14 +112,14 @@ OK     Central: modo de cobranca em Tarifas (FECHADO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE16095670 criado (R$ 3,00)
+OK     Central: cupom TESTE16442192 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 969 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (987 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1077 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1164 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 1897 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 3076 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
