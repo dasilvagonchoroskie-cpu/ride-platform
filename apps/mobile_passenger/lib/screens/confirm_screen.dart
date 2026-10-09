@@ -101,6 +101,9 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
+        // Largura toda para o mapa (sem isto a pilha do mapa ficava da
+        // largura do botao de voltar e o mapa virava uma fita no meio).
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ---------- 40% superiores: mapa com a rota tracada ----------
           Expanded(

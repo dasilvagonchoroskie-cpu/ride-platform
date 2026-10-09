@@ -3,9 +3,19 @@
 // (zoom fixo). Agora o mapa enquadra embarque, destino e rota inteiros.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:mobile_passenger/core/api/api_client.dart';
 import 'package:mobile_passenger/core/utils/geo.dart';
+import 'package:mobile_passenger/data/repositories/ride_repository.dart';
+import 'package:mobile_passenger/screens/confirm_screen.dart';
+import 'package:mobile_passenger/state/app_state.dart';
+import 'package:mobile_passenger/state/ride_state.dart';
 import 'package:mobile_passenger/widgets/ride_map.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _goiatuba = Coords(-18.0125, -49.3547);
 const _rioVerde = Coords(-17.7923, -50.9192);
@@ -69,5 +79,47 @@ void main() {
   testWidgets('Sem enquadrar (zoom fixo antigo): o destino longe ficava fora', (tester) async {
     await _abrir(tester, enquadrar: const []);
     expect(_pino('assets/markers/pin_dropoff.png'), findsNothing);
+  });
+
+  // Evandro (09/10/2026, 18:13): mesmo depois do enquadramento, o mapa da
+  // "Confirmar viagem" continuava uma FITA no meio da tela. A pilha do mapa
+  // ficava da largura do botao de voltar; agora ocupa a largura toda.
+  testWidgets('Confirmar viagem: o mapa ocupa a largura toda da tela', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final servidor = MockClient((r) async => http.Response('{"success":true,"data":{}}', 200,
+        headers: {'content-type': 'application/json; charset=utf-8'}));
+    final app = AppState(client: ApiClient(client: servidor))..coords = _goiatuba;
+    final corridas = RideState(repository: RideRepository(client: ApiClient(client: servidor)));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppState>.value(value: app),
+          ChangeNotifierProvider<RideState>.value(value: corridas),
+        ],
+        child: const MaterialApp(
+          locale: Locale('pt', 'BR'),
+          supportedLocales: [Locale('pt', 'BR')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: ConfirmScreen(destination: _rioVerde, address: 'Rio Verde - GO'),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    final mapa = tester.getRect(find.byType(RideMap));
+    expect(mapa.width, 360, reason: 'o mapa tem que ter a largura da tela (era uma fita): $mapa');
+    expect(mapa.height, greaterThan(250));
+    expect(_pino('assets/markers/pin_pickup.png'), findsOneWidget);
+    expect(_pino('assets/markers/pin_dropoff.png'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    corridas.dispose();
+    app.dispose();
   });
 }
