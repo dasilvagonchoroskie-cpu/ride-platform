@@ -1,0 +1,55 @@
+name: Migrar o banco (Sao Paulo -> California)
+
+# Rodado uma vez pelo Claude (Evandro aprovou em 09/10/2026). Copia o
+# esquema public do banco antigo para o novo e confere linha por linha.
+# Depois disso o Claude troca o DATABASE_URL do Render.
+on:
+  workflow_dispatch:
+    inputs:
+      sobrescrever:
+        description: 'Apagar o que ja existir no banco novo e copiar de novo (sim/nao)'
+        required: false
+        default: 'nao'
+
+permissions:
+  contents: write
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cliente do Postgres 17
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Copiar o banco
+        id: migrar
+        continue-on-error: true
+        env:
+          ANTIGO: ${{ secrets.DATABASE_URL }}
+          SOBRESCREVER: ${{ inputs.sobrescrever }}
+        run: bash scripts/migrar-banco.sh
+
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          git add logs/migracao-banco.txt
+          git commit -m "relatorio: migracao do banco (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3 4 5; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            sleep 5
+          done
+
+      - name: Falhar se a copia nao passou
+        if: steps.migrar.outcome != 'success'
+        run: exit 1
