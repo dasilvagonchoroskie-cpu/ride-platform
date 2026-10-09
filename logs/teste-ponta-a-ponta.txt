@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: 4e03f59 (Central: o cartao da Visao Geral mostra o ganho da Central (comissao + mensalida)
 No ar agora: 4e03f59
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 19:58 UTC
+Teste de ponta a ponta - 09/10/2026 20:04 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -45,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST8735)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST0476)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -112,99 +112,61 @@ OK     Central: modo de cobranca em Tarifas (FECHADO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE19581995 criado (R$ 3,00)
+OK     Central: cupom TESTE20043632 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-FALHA  Passageiro: pedir corrida
-       resposta: {"success":false,"error":{"code":"CONFLICT","message":"Violacao de chave estrangeira.","details":{"modelName":"Ride","field_name":"rides_passenger_id_fkey (index)"}},"timestamp":"2026-10-09T20:01:17.814Z","path":"/api/rides"}
-FALHA  Motorista: chamado na hora (23305 ms)
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T20:01:40.563Z"}
-FALHA  Motorista: chamado chegou
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T20:01:56.446Z"}
-FALHA  Motorista: forma de pagamento no chamado
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T20:01:56.446Z"}
-FALHA  Motorista: accept com PIN
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//accept"},"timestamp":"2026-10-09T20:01:56.567Z","path":"/api/driver/rides//accept"}
-FALHA  Passageiro: acompanhar a corrida
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-09T20:01:56.662Z","path":"/api/rides/"}
-FALHA  Chat: passageiro manda mensagem
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//messages"},"timestamp":"2026-10-09T20:01:56.759Z","path":"/api/rides//messages"}
-FALHA  Chat: aviso de mensagem ao motorista
-       resposta: {"success":true,"data":{"ride":null},"timestamp":"2026-10-09T20:01:56.921Z"}
-FALHA  Chat: motorista le
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/driver/rides//messages"},"timestamp":"2026-10-09T20:01:57.016Z","path":"/api/driver/rides//messages"}
-FALHA  Chat: motorista responde
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//messages"},"timestamp":"2026-10-09T20:01:57.127Z","path":"/api/driver/rides//messages"}
-FALHA  Passageiro: dados do motorista a caminho
-       resposta: {"n":null,"f":null,"d":null}
-FALHA  Chat: conversa do passageiro
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides//messages"},"timestamp":"2026-10-09T20:01:57.293Z","path":"/api/rides//messages"}
-FALHA  Passageiro: favoritar durante a corrida
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Só dá para favoritar um motorista que já aceitou uma corrida sua."},"timestamp":"2026-10-09T20:01:57.436Z","path":"/api/rides/favoritos/c0025c50-6390-43ed-8cb0-f401bec5828c"}
-FALHA  Motorista: arriving
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//arriving"},"timestamp":"2026-10-09T20:01:57.541Z","path":"/api/driver/rides//arriving"}
-FALHA  Motorista: arrived
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//arrived"},"timestamp":"2026-10-09T20:01:57.621Z","path":"/api/driver/rides//arrived"}
-FALHA  Motorista: start
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//start"},"timestamp":"2026-10-09T20:01:57.720Z","path":"/api/driver/rides//start"}
-FALHA  Taximetro: tabela da corrida
-       resposta: {"tarifa":null,"cobranca":null}
-FALHA  Taximetro: medicao ao vivo
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//taximetro"},"timestamp":"2026-10-09T20:01:57.951Z","path":"/api/driver/rides//taximetro"}
+OK     Passageiro: corrida pedida (resposta em 876 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (875 ms depois do passageiro tocar em pedir)
+OK     Motorista: chamado chegou
+OK     Motorista: chamado mostra a forma de pagamento (CASH)
+OK     Motorista: accept (PIN de embarque 9870 vindo do servidor)
+OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
+OK     Chat: passageiro manda mensagem ao motorista
+OK     Chat: o app do motorista sabe que chegou 1 mensagem
+OK     Chat: motorista le a mensagem
+OK     Chat: motorista responde
+OK     Passageiro: tela do motorista a caminho com foto, foto do carro, favorito e mensagem nova
+OK     Chat: passageiro ve a conversa e que o motorista leu
+OK     Passageiro: favoritou o motorista que esta vindo buscar
+OK     Motorista: arriving
+OK     Motorista: arrived
+OK     Motorista: start
+OK     Taximetro: app do motorista recebe a tabela da corrida (FECHADO)
+OK     Taximetro: motorista manda a medicao ao vivo (1 km)
 OK     Passageiro: corrida com preco fechado (sem taximetro ao vivo)
-FALHA  Motorista: finalizar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//finish"},"timestamp":"2026-10-09T20:01:58.132Z","path":"/api/driver/rides//finish"}
-FALHA  Motorista: valor com cupom
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//finish"},"timestamp":"2026-10-09T20:01:58.132Z","path":"/api/driver/rides//finish"}
-FALHA  Bandeira pela hora de Brasilia (17h deveria ser diurna, 1000 centavos; cobrou 0)
-       resposta: {"success":true,"data":{"diurna":{"flag":"DIURNA","startHour":6,"endHour":22,"baseFareCents":1000,"perKmCents":285,"perMinuteCents":0,"waitingPerMinuteCents":55,"freeDistanceMeters":1500,"freeWaitingSeconds":180,"minFareCents":1000,"cancellationFeeCents":500,"commissionPercent":8,"updatedAt":"2026-10-09T16:47:54.174Z"},"noturna":{"flag":"NOTURNA","startHour":22,"endHour":6,"baseFareCents":2000,"pe
-OK     Central: resumo de hoje com 2 corrida(s)
-FALHA  Motorista: Atividades de hoje
-       resposta: {"success":true,"data":{"period":"day","offset":0,"from":"2026-10-09T03:00:00.000Z","to":"2026-10-10T03:00:00.000Z","earningCents":0,"fareCents":0,"commissionCents":0,"rides":0,"onlineSeconds":53,"workedSeconds":0,"acceptanceRate":100,"buckets":[{"date":"2026-10-09","earningCents":0,"rides":0}],"items":[]},"timestamp":"2026-10-09T20:01:58.784Z"}
+OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
+OK     Bandeira certa pela hora de Brasilia (17h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 3 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 19s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
-FALHA  Motorista: credito do cupom
-       resposta: {"success":true,"data":{"balanceCents":5000,"minimumCents":0,"blocking":false,"blockEnabled":false,"status":"ok","central":{"whatsapp":"5564996472794","pixKey":null,"pixHolder":null},"transactions":[{"id":"181d9d4f-4788-4647-a8ac-93c4435ec802","type":"ADJUSTMENT","kind":"CREDIT","amountCents":5000,"balanceAfterCents":5000,"description":"Recarga PIX inicial (teste)","rideCode":null,"createdAt":"202
-FALHA  Motorista: carteira pre-paga
-       resposta: {"success":true,"data":{"balanceCents":5000,"minimumCents":0,"blocking":false,"blockEnabled":false,"status":"ok","central":{"whatsapp":"5564996472794","pixKey":null,"pixHolder":null},"transactions":[{"id":"181d9d4f-4788-4647-a8ac-93c4435ec802","type":"ADJUSTMENT","kind":"CREDIT","amountCents":5000,"balanceAfterCents":5000,"description":"Recarga PIX inicial (teste)","rideCode":null,"createdAt":"202
-OK     Central: recarga lancada, saldo agora 6000 centavos
+OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
+OK     Motorista: carteira pre-paga so descontou a comissao (saldo 5220 centavos)
+OK     Central: recarga lancada, saldo agora 6220 centavos
 OK     Central: contato de recarga carregado
-FALHA  Passageiro: avaliar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//rate"},"timestamp":"2026-10-09T20:02:00.926Z","path":"/api/rides//rate"}
-FALHA  Passageiro: recibo
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-09T20:02:01.040Z","path":"/api/rides/"}
+OK     Passageiro: avaliou o motorista com 5 estrelas
+OK     Passageiro: recibo da corrida concluida com a nota
 OK     Chat: fecha quando a corrida termina
-FALHA  Motorista: avaliar passageiro
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//rate"},"timestamp":"2026-10-09T20:02:01.232Z","path":"/api/driver/rides//rate"}
-FALHA  Motorista: historico com periodo
-       resposta: {"success":true,"data":{"total":0,"page":1,"pageSize":20,"items":[],"performance":{"offers":0,"accepted":0,"acceptanceRate":100,"cancellations":0,"ratingAvg":5},"summary":{"rides":0,"totalCents":0,"commissionCents":0,"netCents":0}},"timestamp":"2026-10-09T20:02:01.491Z"}
+OK     Motorista: avaliou o passageiro com 4 estrelas
+OK     Motorista: historico de hoje com totais e desempenho (aceitacao 100%, taxa 80)
 OK     Motorista: relatorio de faturamento em PDF
 OK     Central: relatorio da frota toda em PDF
 OK     Central: relatorio de um motorista em PDF
 OK     Seguranca: link de relatorio falso nao abre
-FALHA  Passageiro: favoritar
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Só dá para favoritar um motorista que já aceitou uma corrida sua."},"timestamp":"2026-10-09T20:02:03.632Z","path":"/api/rides/favoritos/c0025c50-6390-43ed-8cb0-f401bec5828c"}
-FALHA  Passageiro: bloquear motorista
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Só dá para bloquear um motorista que já aceitou uma corrida sua."},"timestamp":"2026-10-09T20:02:03.775Z","path":"/api/rides/bloqueados/c0025c50-6390-43ed-8cb0-f401bec5828c"}
+OK     Passageiro: motorista adicionado aos favoritos
+OK     Passageiro: bloqueou o motorista (sai dos favoritos)
 OK     Passageiro: desbloqueou o motorista
-FALHA  Passageiro: foto de perfil
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Registro nao encontrado."},"timestamp":"2026-10-09T20:02:04.259Z","path":"/api/auth/foto"} 404
-FALHA  Passageiro: agendar
-       resposta: {"success":false,"error":{"code":"CONFLICT","message":"Violacao de chave estrangeira.","details":{"modelName":"Ride","field_name":"rides_passenger_id_fkey (index)"}},"timestamp":"2026-10-09T20:02:04.682Z","path":"/api/rides"}
-FALHA  Passageiro: lista de agendadas
-       resposta: {"success":true,"data":{"items":[]},"timestamp":"2026-10-09T20:02:04.823Z"}
+OK     Passageiro: foto de perfil (o motorista consegue ver)
+OK     Passageiro: corrida agendada para daqui a 2 horas
+OK     Passageiro: ve a agendada em Corridas agendadas
 OK     Passageiro: agendamento muito em cima da hora recusado
-FALHA  Passageiro: cancelar agendada
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//cancel"},"timestamp":"2026-10-09T20:02:05.017Z","path":"/api/rides//cancel"}
-FALHA  Motorista: cancelar corrida
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//cancel"},"timestamp":"2026-10-09T20:02:21.703Z","path":"/api/driver/rides//cancel"}
-FALHA  Passageiro: ver cancelamento do motorista
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-09T20:02:21.821Z","path":"/api/rides/"}
-FALHA  Passageiro: cancelar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//cancel"},"timestamp":"2026-10-09T20:02:22.184Z","path":"/api/rides//cancel"}
+OK     Passageiro: cancelou a agendada
+OK     Motorista: cancelou a corrida aceita
+OK     Passageiro: fica sabendo que o motorista cancelou
+OK     Passageiro: cancelou enquanto procurava, sem taxa
 OK     Passageiro: nenhuma corrida aberta depois de cancelar
-FALHA  Motorista: historico de corridas
-       resposta: {"success":true,"data":{"total":0,"page":1,"pageSize":20,"items":[],"performance":null,"summary":{"rides":0,"totalCents":0,"commissionCents":0,"netCents":0}},"timestamp":"2026-10-09T20:02:22.506Z"}
+OK     Motorista: historico de corridas com 2 corrida(s)
 OK     Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)
 OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
@@ -214,61 +176,45 @@ OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
 OK     Carteira: saldo zerado avisa mas nao corta o turno
-FALHA  Carteira: chamado sem saldo
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T20:02:28.394Z"}
-FALHA  Motorista: dados do chamado
-       resposta: null
+OK     Carteira: motorista ja online e sem saldo continua recebendo chamado
+OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passageiro (4)
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 2, online 2, faturamento 69033)
-OK     Central: ganho da Central hoje = comissao (5522) + mensalidades (0) = 5522 (total das corridas: 69033)
-OK     Central: relatorio financeiro com o ganho da Central (5522)
+OK     Central: visao geral (ativas 0, concluidas hoje 3, online 2, faturamento 70033)
+OK     Central: ganho da Central hoje = comissao (5602) + mensalidades (0) = 5602 (total das corridas: 70033)
+OK     Central: relatorio financeiro com o ganho da Central (5602)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
 OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
 OK     Central: categoria do veiculo do motorista
-FALHA  Central: corrida manual
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Dados invalidos na requisicao.","details":[{"path":"passengerPhone","message":"String must contain at least 10 character(s)","code":"too_small"}]},"timestamp":"2026-10-09T20:02:32.252Z","path":"/api/admin/rides"}
+OK     Central: corrida manual criada (pedido por telefone)
 OK     Central: motoristas livres por distancia, com posicao no mapa
-FALHA  Central: atribuir
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/admin/rides//assign"},"timestamp":"2026-10-09T20:02:32.573Z","path":"/api/admin/rides//assign"}
-FALHA  Motorista: chamado da Central
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T20:02:32.714Z"}
-FALHA  Central: cancelar corrida
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/admin/rides//cancel"},"timestamp":"2026-10-09T20:02:32.809Z","path":"/api/admin/rides//cancel"}
+OK     Central: corrida enviada para motorista especifico
+OK     Motorista: recebeu o chamado enviado pela Central
+OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 69033, PIX/app 0, comissao 5522)
-FALHA  Passageiro: gravar contato de emergencia
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Registro nao encontrado."},"timestamp":"2026-10-09T20:02:34.834Z","path":"/api/users/me/contatos-emergencia"}
+OK     Central: relatorio de receitas (dinheiro 69733, PIX/app 0, comissao 5602)
+OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
-FALHA  Passageiro: ler contatos
-       resposta: {"success":true,"data":{"items":[]},"timestamp":"2026-10-09T20:02:35.075Z"}
-FALHA  SOS: acionar
-       resposta: {"success":false,"error":{"code":"CONFLICT","message":"Violacao de chave estrangeira.","details":{"modelName":"SafetyEvent","field_name":"safety_events_user_id_fkey (index)"}},"timestamp":"2026-10-09T20:02:35.375Z","path":"/api/safety/sos"}
-FALHA  Central: alerta de SOS
-       resposta: {"success":true,"data":{"items":[]},"timestamp":"2026-10-09T20:02:35.564Z"}
-FALHA  Central: contato no SOS
-       resposta: 
-FALHA  Central: encerrar SOS
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot PATCH /api/admin/safety//resolve"},"timestamp":"2026-10-09T20:02:35.661Z","path":"/api/admin/safety//resolve"}
-FALHA  Central: busca de passageiro
-       resposta: {"success":true,"data":{"items":[{"id":"9dc89357-e612-4d14-903b-febbe558a59f","name":"Passageiro 1979","phone":"+5564919581979","email":null,"status":"ACTIVE","blockedReason":null,"createdAt":"2026-10-09T20:01:13.561Z","rides":0},{"id":"ceacac82-6cd6-4ffc-a3a1-3725f9512ad0","name":"Natalia Da Silva Gonchoroski","phone":"+5551996124860","email":"dasilvanatalia346@gmail.com","status":"ACTIVE","block
-FALHA  Central: bloquear passageiro
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Validation failed (uuid is expected)"},"timestamp":"2026-10-09T20:02:36.001Z","path":"/api/admin/passengers/null/block"}
-FALHA  Central: historico de bloqueio
-       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Validation failed (uuid is expected)"},"timestamp":"2026-10-09T20:02:36.080Z","path":"/api/admin/passengers/null/block"}
+OK     Passageiro: ve os contatos de emergencia
+OK     Passageiro: SOS acionado
+OK     Central: alerta de SOS com a posicao atualizada
+OK     Central: alerta de SOS mostra o contato de emergencia
+OK     Central: SOS encerrado
+OK     Central: busca de passageiro pelo telefone
+OK     Central: passageiro bloqueado com motivo
+OK     Central: desbloqueado, historico com 2 registros
 OK     Central: motorista offline continua no mapa (cinza, ultima posicao)
 OK     Despacho: so motoristas online
-OK     Central: excluiu 4 motoristas de teste (APAGADO, APAGADO, VIROU_PASSAGEIRO, APAGADO)
+OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSAGEIRO, APAGADO)
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-FALHA  Central: apagar operador
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Operador nao encontrado."},"timestamp":"2026-10-09T20:02:39.393Z","path":"/api/admin/equipe/a30356e8-0c1e-4e36-96ca-99f8444242e1"}
-OK     Limpeza: apagou as 4 contas deste teste e 0 corridas delas
+OK     Central: apagou a conta do operador de teste
+OK     Limpeza: apagou as 6 contas deste teste e 6 corridas delas
 
-Resultado: 54 falha(s).
+Resultado: 0 falha(s).
