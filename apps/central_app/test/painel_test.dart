@@ -548,14 +548,17 @@ void main() {
     await _carregar(tester);
     expect(find.text('Goiatuba - GO'), findsOneWidget);
     expect(find.text('Teutônia - RS'), findsOneWidget);
-    expect(find.text('Sobrinha do Evandro'), findsOneWidget);
-    expect(find.textContaining('Operador · Teutônia'), findsOneWidget);
     await tester.tap(find.text('Abrir cidade'));
     await tester.pumpAndSettle();
     expect(find.text('Abrir cidade nova'), findsOneWidget);
     await tester.tap(find.text('Abrir cidade').last);
     await tester.pumpAndSettle();
     expect(find.textContaining('Busque e toque na cidade'), findsOneWidget);
+    await tester.tap(find.text('Voltar'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Sobrinha do Evandro'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Sobrinha do Evandro'), findsOneWidget);
+    expect(find.textContaining('Operador · Teutônia'), findsOneWidget);
   });
 
   testWidgets('Limpeza de dados: resumo, apagar teste com confirmacao e contas', (tester) async {
@@ -570,6 +573,8 @@ void main() {
     await tester.tap(find.text('Voltar'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Motorista Teste Automatico'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Motorista Teste Automatico'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Motorista Teste Automatico'));
     await tester.pumpAndSettle();
     expect(find.text('Apagar 1 conta(s) marcada(s)'), findsOneWidget);
@@ -695,6 +700,8 @@ void main() {
     await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
     await _carregar(tester);
     await tester.scrollUntilVisible(find.text('Excluir motorista'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Excluir motorista'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Excluir motorista'));
     await tester.pumpAndSettle();
     expect(find.text('Excluir Joao Batista da Silva Pereira Junior?'), findsOneWidget);
