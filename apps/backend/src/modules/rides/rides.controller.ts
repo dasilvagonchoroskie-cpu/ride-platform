@@ -18,7 +18,6 @@ import {
   taximetroSchema,
   listRidesSchema,
   requestRideSchema,
-  rideLocationSchema,
 } from './dto';
 import { z } from 'zod';
 
@@ -32,6 +31,17 @@ const pertoSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
 });
+
+/**
+ * Posicao do motorista nas etapas (a caminho, cheguei, iniciar): opcional.
+ * Evandro, 09/10/2026: aceitou pela tela de chamado com o app fechado e o
+ * "Cheguei ao local" deu erro — a tela nativa manda o "a caminho" sem a
+ * posicao, o servidor recusava e a corrida ficava parada em "aceita".
+ */
+const posicaoOpcional = z
+  .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) })
+  .partial()
+  .transform((p) => (p.latitude != null && p.longitude != null ? { latitude: p.latitude, longitude: p.longitude } : undefined));
 
 const mensagemSchema = z.object({ texto: z.string().trim().min(1, 'Escreva a mensagem.').max(500, 'Mensagem muito longa.') });
 
@@ -210,7 +220,7 @@ export class DriverRidesController {
   arriving(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
-    @Body(new ZodValidationPipe(rideLocationSchema)) body: never,
+    @Body(new ZodValidationPipe(posicaoOpcional)) body: never,
   ) {
     return this.rides.aCaminho(driverId, rideId, body);
   }
@@ -220,7 +230,7 @@ export class DriverRidesController {
   async arrived(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
-    @Body(new ZodValidationPipe(rideLocationSchema)) body: never,
+    @Body(new ZodValidationPipe(posicaoOpcional)) body: never,
   ) {
     const r = await this.rides.cheguei(driverId, rideId, body);
     this.avisar(rideId, 'CHEGOU');
@@ -232,7 +242,7 @@ export class DriverRidesController {
   async start(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
-    @Body(new ZodValidationPipe(rideLocationSchema)) body: never,
+    @Body(new ZodValidationPipe(posicaoOpcional)) body: never,
   ) {
     const r = await this.rides.iniciar(driverId, rideId, body);
     this.avisar(rideId, 'INICIOU');

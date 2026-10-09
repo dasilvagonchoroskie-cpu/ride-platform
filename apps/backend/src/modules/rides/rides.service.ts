@@ -33,7 +33,9 @@ const TRANSICOES: Record<RideStatus, RideStatus[]> = {
   SCHEDULED: ['REQUESTED', 'SEARCHING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_SYSTEM', 'EXPIRED'],
   REQUESTED: ['SEARCHING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_SYSTEM', 'EXPIRED'],
   SEARCHING: ['DRIVER_ASSIGNED', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_SYSTEM', 'EXPIRED'],
-  DRIVER_ASSIGNED: ['DRIVER_ARRIVING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_SYSTEM'],
+  // "Cheguei" direto do aceite tambem vale: se o "a caminho" se perdeu (sem
+  // rede, tela de chamado nativa), o motorista nao fica travado.
+  DRIVER_ASSIGNED: ['DRIVER_ARRIVING', 'DRIVER_WAITING', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER', 'CANCELLED_BY_SYSTEM'],
   DRIVER_ARRIVING: ['DRIVER_WAITING', 'IN_PROGRESS', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER'],
   DRIVER_WAITING: ['IN_PROGRESS', 'CANCELLED_BY_PASSENGER', 'CANCELLED_BY_DRIVER'],
   IN_PROGRESS: ['COMPLETED', 'CANCELLED_BY_SYSTEM'],
@@ -42,6 +44,36 @@ const TRANSICOES: Record<RideStatus, RideStatus[]> = {
   CANCELLED_BY_DRIVER: [],
   CANCELLED_BY_SYSTEM: [],
   EXPIRED: [],
+};
+
+/** Nome de cada situacao para as mensagens que aparecem nos aplicativos. */
+const NOME_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
+  SCHEDULED: 'agendada',
+  REQUESTED: 'pedida',
+  SEARCHING: 'procurando motorista',
+  DRIVER_ASSIGNED: 'aceita',
+  DRIVER_ARRIVING: 'com o motorista a caminho',
+  DRIVER_WAITING: 'com o motorista no local',
+  IN_PROGRESS: 'em viagem',
+  COMPLETED: 'concluída',
+  CANCELLED_BY_PASSENGER: 'cancelada pelo passageiro',
+  CANCELLED_BY_DRIVER: 'cancelada pelo motorista',
+  CANCELLED_BY_SYSTEM: 'cancelada',
+  EXPIRED: 'expirada',
+};
+
+/** O que a pessoa tentou fazer (para a mesma mensagem). */
+const ACAO_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
+  SEARCHING: 'procurar motorista',
+  DRIVER_ASSIGNED: 'aceitar',
+  DRIVER_ARRIVING: 'avisar que está a caminho',
+  DRIVER_WAITING: 'avisar que chegou ao local',
+  IN_PROGRESS: 'iniciar a viagem',
+  COMPLETED: 'finalizar a corrida',
+  CANCELLED_BY_PASSENGER: 'cancelar',
+  CANCELLED_BY_DRIVER: 'cancelar',
+  CANCELLED_BY_SYSTEM: 'cancelar',
+  EXPIRED: 'encerrar',
 };
 
 /** Situacoes em que a corrida ainda ocupa o motorista e o passageiro. */
@@ -1417,9 +1449,10 @@ export class RidesService {
 
   private exigirTransicao(de: RideStatus, para: RideStatus): void {
     if (!TRANSICOES[de]?.includes(para)) {
+      // Mensagem para a pessoa (antes aparecia "DRIVER_ASSIGNED" na tela).
       throw new BusinessException(
         ERROR_CODES.RIDE_INVALID_STATE,
-        `Nao e possivel passar de ${de} para ${para}.`,
+        `Esta corrida está ${NOME_DA_SITUACAO[de] ?? 'em outra etapa'}: não dá para ${ACAO_DA_SITUACAO[para] ?? 'fazer isso'} agora. Atualize a tela.`,
       );
     }
   }

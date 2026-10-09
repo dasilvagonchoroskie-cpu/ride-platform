@@ -418,6 +418,14 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         'IN_PROGRESS' => RidePhase.inProgress,
         _ => RidePhase.toPickup,
       };
+      // Aceita pela tela de chamado (app fechado) e o "a caminho" nao foi:
+      // avisa agora, para o passageiro ver o motorista vindo.
+      if (c['status'] == 'DRIVER_ASSIGNED') {
+        unawaited(_client
+            .request('POST', '/driver/rides/${o.id}/arriving',
+                body: {'latitude': position.latitude, 'longitude': position.longitude})
+            .catchError((_) => null));
+      }
       telefonePassageiro = passageiro?['phone'] as String?;
       chegouEm = DateTime.tryParse(c['arrivedAt'] as String? ?? '')?.toLocal();
       viagemIniciouEm = DateTime.tryParse(c['startedAt'] as String? ?? '')?.toLocal();

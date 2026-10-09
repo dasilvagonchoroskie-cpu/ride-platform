@@ -480,8 +480,15 @@ post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"PIX\"}" "$TP"); RID2=$(echo "$X" | jq -r '.data.ride.id // empty')
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
 post "/driver/rides/$RID2/accept" '{}' "$TM" >/dev/null
+# Evandro (09/10/2026): aceitou pela tela de chamado (app fechado), o "a caminho"
+# nao foi e o "Cheguei ao local" dava "Nao e possivel passar de DRIVER_ASSIGNED
+# para DRIVER_WAITING". Agora: cheguei direto do aceite, mesmo sem a posicao.
+X=$(post "/driver/rides/$RID2/arrived" '{}' "$TM")
+[ "$(echo "$X" | jq -r '.data.ride.status // .data.status')" = "DRIVER_WAITING" ] && ok "Motorista: 'Cheguei ao local' direto do aceite (tela de chamado), sem posicao" || falha "Motorista: cheguei direto do aceite" "$X"
 X=$(post "/driver/rides/$RID2/cancel" '{"reason":"Pneu furado (teste)"}' "$TM")
 [ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_DRIVER" ] && ok "Motorista: cancelou a corrida aceita" || falha "Motorista: cancelar corrida" "$X"
+X=$(post "/driver/rides/$RID2/start" '{}' "$TM"); M=$(echo "$X" | jq -r '.error.message // empty')
+[ -n "$M" ] && ! echo "$M" | grep -q "DRIVER_\|CANCELLED_\|IN_PROGRESS" && ok "Mensagem de etapa errada em portugues: $M" || falha "Mensagem de etapa errada" "$X"
 X=$(get "/rides/$RID2" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "CANCELLED_BY_DRIVER" ] && ok "Passageiro: fica sabendo que o motorista cancelou" || falha "Passageiro: ver cancelamento do motorista" "$X"
 # Terceira: o passageiro cancela enquanto procura (sem multa).
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP"); RID3=$(echo "$X" | jq -r '.data.ride.id // empty')
