@@ -1,43 +1,77 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart
 00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Pede o link do PDF com o periodo e devolve o endereco completo
 00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Cidades da operacao vem da configuracao do servidor
-00:01 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
-00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) km alem do incluso e espera alem da inclusa
-00:01 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) multiplicador dinamico vale sobre o total
-00:01 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS soma o trajeto e ignora tremida parado
-00:01 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS ignora leitura imprecisa e salto impossivel
-00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS guarda e recupera (aplicativo fechado no meio da viagem)
-00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas le os pontos que o servidor manda
-00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas o traco some atras do carro
-00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) km alem do incluso e espera alem da inclusa
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) multiplicador dinamico vale sobre o total
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS soma o trajeto e ignora tremida parado
+00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS ignora leitura imprecisa e salto impossivel
+00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS guarda e recupera (aplicativo fechado no meio da viagem)
+00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas le os pontos que o servidor manda
+00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas o traco some atras do carro
+00:00 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
 00:03 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
 00:03 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
 00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
 00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
 00:04 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
 00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:05 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:05 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
-00:05 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
-00:05 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Historico: filtros, totais, desempenho e taxa por corrida
+00:04 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
+00:04 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
+00:04 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Historico: filtros, totais, desempenho e taxa por corrida
+00:04 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Historico: filtros, totais, desempenho e taxa por corrida
 00:05 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
 00:05 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:06 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:06 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:06 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:06 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:07 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:07 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:08 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Ainda em analise: continua na tela e o perfil fica
-00:08 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
-00:08 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Central suspendeu ou bloqueou: nao fica como "em analise"
-00:08 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
-00:08 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
-00:08 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
-00:08 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
-00:08 +39: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
-00:08 +40: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Boas-vindas: sem modo demonstracao no app de verdade
-00:08 +41: All tests passed!
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _ElementPredicateWidgetFinder:<Found 0 widgets with a semantics label named "Trocar foto
+de perfil": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart:183:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart line 183
+The test description was:
+  Perfil e documentos: situacao, motivo, documentos e senha
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:05 +25 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:05 +25 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha [E]
+  Test failed. See exception logs above.
+  The test description was: Perfil e documentos: situacao, motivo, documentos e senha
+  
+Warning: At least one test in this suite creates an HttpClient. When running a test suite that uses
+TestWidgetsFlutterBinding, all HTTP requests will return status code 400, and no network request
+will actually be made. Any test expecting a real network connection and status code will fail.
+To test code that needs an HttpClient, provide your own HttpClient implementation to the code under
+test, so that your test can consistently provide a testable response to the code under test.
+00:05 +26 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:05 +27 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:06 +28 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:06 +29 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +30 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +31 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Ainda em analise: continua na tela e o perfil fica
+00:07 +32 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
+00:07 +33 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/datas_test.dart: Validade da CNH digitada sem barras e lida certo
+00:07 +34 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/datas_test.dart: Validade da CNH digitada sem barras e lida certo
+00:07 +35 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:07 +36 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:07 +37 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:07 +38 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:07 +39 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Boas-vindas: sem modo demonstracao no app de verdade
+00:07 +40 -1: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
