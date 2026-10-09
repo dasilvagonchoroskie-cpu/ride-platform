@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 6b4d9e9 (Corrida manual lancada pelo motorista (com ou sem conta do passageiro; comissao )
-No ar agora: 6b4d9e9
+Ultima mudanca do servidor no GitHub: d650ed3 (Corrida manual do motorista: acha o cadastro do motorista pela conta (o teste de)
+No ar agora: d650ed3
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 23:15 UTC
+Teste de ponta a ponta - 09/10/2026 23:23 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -45,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST6227)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST4685)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -112,14 +112,14 @@ OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE23155566 criado (R$ 3,00)
+OK     Central: cupom TESTE23234767 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1059 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1116 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 959 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1037 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 3835 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 5068 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -139,7 +139,7 @@ OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (20h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 6 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 22s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 24s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -171,14 +171,12 @@ OK     Passageiro: cancelou enquanto procurava, sem taxa
 OK     Passageiro: nenhuma corrida aberta depois de cancelar
 OK     Motorista: historico de corridas com 2 corrida(s)
 OK     Motorista: corrida manual acha o passageiro pelo telefone e mostra so o primeiro nome (Passageiro)
-FALHA  Motorista: corrida manual com conta
-       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta conta nao tem cadastro de motorista."},"timestamp":"2026-10-09T23:19:15.861Z","path":"/api/driver/manual-rides"} {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-09T23:19:15.978Z","path":"/api/rides/"}
-FALHA  Motorista: cancelar corrida manual
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//cancel"},"timestamp":"2026-10-09T23:19:16.150Z","path":"/api/driver/rides//cancel"}
+OK     Motorista: corrida manual aberta no nome do passageiro, ja no local (o passageiro ve no app)
+OK     Motorista: cancelou a corrida manual de teste
 FALHA  Motorista: corrida manual sem nome
-       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta conta nao tem cadastro de motorista."},"timestamp":"2026-10-09T23:19:16.270Z","path":"/api/driver/manual-rides"}
+       resposta: {"success":true,"data":{"rideId":"baa10959-2b72-4658-9350-fdc5b61965a9","passageiroTinhaConta":true},"timestamp":"2026-10-09T23:27:22.551Z"}
 FALHA  Motorista: corrida manual sem conta
-       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta conta nao tem cadastro de motorista."},"timestamp":"2026-10-09T23:19:16.356Z","path":"/api/driver/manual-rides"}
+       resposta: {"success":false,"error":{"code":"RIDE_INVALID_STATE","message":"Voce ja tem uma corrida em andamento."},"timestamp":"2026-10-09T23:27:22.841Z","path":"/api/driver/manual-rides"}
 OK     Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)
 OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
@@ -188,12 +186,14 @@ OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
 OK     Carteira: saldo zerado avisa mas nao corta o turno
-OK     Carteira: motorista ja online e sem saldo continua recebendo chamado
-OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passageiro (4)
+FALHA  Carteira: chamado sem saldo
+       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T23:27:29.883Z"}
+FALHA  Motorista: dados do chamado
+       resposta: null
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 6, online 2, faturamento 127636)
+OK     Central: visao geral (ativas 1, concluidas hoje 6, online 2, faturamento 127636)
 OK     Central: ganho da Central hoje = comissao (10210) + mensalidades (0) = 10210 (total das corridas: 127636)
 OK     Central: relatorio financeiro com o ganho da Central (10210)
 OK     Central: tarifas por categoria (Carro)
@@ -203,7 +203,8 @@ OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
 OK     Central: categoria do veiculo do motorista
 OK     Central: corrida manual criada (pedido por telefone)
 OK     Central: motoristas livres por distancia, com posicao no mapa
-OK     Central: corrida enviada para motorista especifico
+FALHA  Central: atribuir
+       resposta: {"success":false,"error":{"code":"VALIDATION_ERROR","message":"Motorista Teste Automatico esta em outra corrida."},"timestamp":"2026-10-09T23:27:36.171Z","path":"/api/admin/rides/c8889231-f53a-470c-b113-22864ef7486e/assign"}
 OK     Motorista: recebeu o chamado enviado pela Central
 OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
@@ -222,11 +223,12 @@ OK     Central: passageiro bloqueado com motivo
 OK     Central: desbloqueado, historico com 2 registros
 OK     Central: motorista offline continua no mapa (cinza, ultima posicao)
 OK     Despacho: so motoristas online
-OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSAGEIRO, APAGADO)
+FALHA  Central: excluir motoristas
+       resposta: {"success":true,"data":{"excluidos":3,"itens":[{"id":"6901b3ae-91bb-49f1-8dce-71169b6de4fb","erro":"Este motorista esta numa corrida agora. Espere a corrida terminar para excluir."},{"id":"8c05e7fa-6942-4c04-bb62-8af28e473528","resultado":"APAGADO","corridas":0},{"id":"aa7f6208-01fc-4494-a754-68c5cb441c30","resultado":"VIROU_PASSAGEIRO","corridas":0},{"id":"d9b2dab8-4ee4-42d7-bd45-929e58c289ac","r
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
 OK     Central: apagou a conta do operador de teste
-OK     Limpeza: apagou as 6 contas deste teste e 6 corridas delas
+OK     Limpeza: apagou as 6 contas deste teste e 8 corridas delas
 
-Resultado: 4 falha(s).
+Resultado: 6 falha(s).
