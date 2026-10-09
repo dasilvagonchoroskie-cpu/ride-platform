@@ -16,6 +16,7 @@ import 'package:mobile_driver/screens/perfil_screen.dart';
 import 'package:mobile_driver/screens/ride_screen.dart';
 import 'package:mobile_driver/screens/rides_history_screen.dart';
 import 'package:mobile_driver/screens/sos_screen.dart';
+import 'package:mobile_driver/screens/vehicles_screen.dart';
 import 'package:mobile_driver/state/driver_state.dart';
 import 'package:mobile_driver/widgets/ride_map.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +45,14 @@ Object? _resposta(String metodo, String caminho) {
       'summary': {'rides': 1, 'totalCents': 1850, 'commissionCents': 148, 'netCents': 1702},
       'performance': {'offers': 4, 'accepted': 3, 'acceptanceRate': 75, 'cancellations': 1, 'ratingAvg': 4.9},
     };
+  }
+  if (caminho == '/api/vehicles/me') {
+    // Carro em uso, um guardado (liberado) e um novo esperando a Central.
+    return [
+      {'id': 'v1', 'plate': 'ABC1D23', 'brand': 'Chevrolet', 'model': 'Onix Plus', 'year': 2022, 'color': 'Prata', 'isActive': true, 'situacao': 'EM_USO', 'fotoUrl': null, 'crlvUrl': null, 'motivo': null},
+      {'id': 'v2', 'plate': 'DEF2G34', 'brand': 'Fiat', 'model': 'Mobi', 'year': 2020, 'color': 'Vermelho', 'isActive': false, 'situacao': 'GUARDADO', 'fotoUrl': null, 'crlvUrl': null, 'motivo': null},
+      {'id': 'v3', 'plate': 'XYZ9A88', 'brand': 'Fiat', 'model': 'Argo', 'year': 2024, 'color': 'Branco', 'isActive': false, 'situacao': 'PENDENTE', 'fotoUrl': '/arquivos/carro3', 'crlvUrl': null, 'motivo': null},
+    ];
   }
   if (caminho == '/api/drivers/me') {
     return {'id': 'd1', 'status': 'REJECTED', 'rejectionReason': 'Foto da CNH ilegível'};
@@ -196,6 +205,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Alterar senha'), findsOneWidget);
     expect(find.text('Sair'), findsOneWidget);
+  });
+
+  // Evandro (09/10/2026): cadastrar outro carro, trocar o carro em uso.
+  testWidgets('Meus veiculos: em uso, guardado, carro novo esperando a Central', (tester) async {
+    final d = await _abrir(tester, const VehiclesScreen());
+    expect(find.text('Em uso'), findsOneWidget);
+    expect(find.text('Guardado (liberado)'), findsOneWidget);
+    expect(find.text('Aguardando a Central conferir'), findsOneWidget);
+    expect(find.text('Usar este carro'), findsOneWidget);
+    expect(find.textContaining('Falta mandar'), findsOneWidget);
+    expect(d.vehicle?.plate, 'ABC1D23');
+    await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Cadastrar outro carro'));
+    await tester.pumpAndSettle();
+    expect(find.text('Foto do CRLV'), findsOneWidget);
+    await tester.tap(find.text('Enviar para a Central'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Placa inválida'), findsOneWidget);
   });
 
   testWidgets('SOS: botao de panico e 190/192', (tester) async {

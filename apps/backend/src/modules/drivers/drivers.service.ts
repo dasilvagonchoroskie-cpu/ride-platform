@@ -496,6 +496,7 @@ export class DriversService {
     if (!d) throw BusinessException.notFound('Motorista nao encontrado (ja excluido?).');
     // Fez o cadastro no app do passageiro (nome, e-mail, cidade): e passageiro tambem.
     const cadastroDePassageiro = (d.user.metadata as { cadastroCompleto?: boolean } | null)?.cadastroCompleto === true;
+    const contaDeTeste = (d.user.metadata as { teste?: boolean } | null)?.teste === true;
     if (d.user.role === UserRole.ADMIN) throw BusinessException.validation('A conta da Central nao pode ser excluida aqui.');
     const emCorrida = await this.prisma.ride.count({
       where: { driverId, status: { in: [...ACTIVE_RIDE_STATUSES] } },
@@ -546,7 +547,9 @@ export class DriversService {
               birthDate: null,
               passwordHash: null,
               avatarUrl: null,
-              metadata: {},
+              // Conta do teste automatico continua marcada (a limpeza do
+              // teste apaga o resto); conta de verdade fica sem nada.
+              metadata: contaDeTeste ? { teste: true } : {},
               blockedReason: 'Conta excluida pela Central.',
               deletedAt: new Date(),
             },

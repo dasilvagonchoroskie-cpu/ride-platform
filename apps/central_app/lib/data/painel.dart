@@ -71,21 +71,112 @@ class Indicadores {
 /// Documento novo de motorista ativo esperando a Central (ex.: foto de
 /// perfil trocada no aplicativo do motorista).
 class DocumentoParaConferir {
-  const DocumentoParaConferir({required this.id, required this.tipo, required this.motoristaId, required this.nome});
+  const DocumentoParaConferir({required this.id, required this.tipo, required this.motoristaId, required this.nome, this.placa});
 
   final String id;
   final String tipo;
   final String motoristaId;
   final String nome;
 
+  /// Carro novo para conferir (tipo VEHICLE): a placa.
+  final String? placa;
+
   bool get ehFotoDePerfil => tipo == 'PROFILE_PHOTO';
+  bool get ehCarro => tipo == 'VEHICLE';
 
   factory DocumentoParaConferir.fromJson(Map<String, dynamic> j) => DocumentoParaConferir(
         id: j['id'] as String? ?? '',
         tipo: j['type'] as String? ?? '',
         motoristaId: j['driverId'] as String? ?? '',
         nome: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : 'Motorista',
+        placa: j['plate'] as String?,
       );
+}
+
+/// Carro do motorista com a situacao (09/10/2026): em uso, guardado, para
+/// conferir (carro novo), recusado.
+class CarroDoMotorista {
+  const CarroDoMotorista({
+    required this.id,
+    required this.placa,
+    required this.marca,
+    required this.modelo,
+    required this.ano,
+    required this.cor,
+    required this.categoria,
+    required this.situacao,
+    this.motivo,
+    this.fotoUrl,
+    this.crlvUrl,
+  });
+
+  final String id;
+  final String placa;
+  final String marca;
+  final String modelo;
+  final int ano;
+  final String cor;
+  final String categoria;
+
+  /// EM_USO, GUARDADO, PENDENTE ou RECUSADO.
+  final String situacao;
+  final String? motivo;
+  final String? fotoUrl;
+  final String? crlvUrl;
+
+  bool get emUso => situacao == 'EM_USO';
+  bool get paraConferir => situacao == 'PENDENTE';
+
+  String get nome => [marca, modelo].where((x) => x.isNotEmpty).join(' ');
+
+  String get placaBonita => placa.length == 7 ? '${placa.substring(0, 3)}-${placa.substring(3)}' : placa;
+
+  String get rotuloSituacao => switch (situacao) {
+        'EM_USO' => 'Em uso',
+        'PENDENTE' => 'Carro novo para conferir',
+        'RECUSADO' => 'Recusado',
+        _ => 'Guardado',
+      };
+
+  factory CarroDoMotorista.fromJson(Map<String, dynamic> j) => CarroDoMotorista(
+        id: _txt(j['id']),
+        placa: _txt(j['plate']).toUpperCase(),
+        marca: _txt(j['brand']),
+        modelo: _txt(j['model']),
+        ano: _int(j['year']),
+        cor: _txt(j['color']),
+        categoria: _txt(j['category'], 'CARRO'),
+        situacao: _txt(j['situacao'], j['isActive'] == true ? 'EM_USO' : 'GUARDADO'),
+        motivo: j['motivo'] as String?,
+        fotoUrl: j['fotoUrl'] as String?,
+        crlvUrl: j['crlvUrl'] as String?,
+      );
+}
+
+/// O que aconteceu ao excluir passageiros.
+class ExclusaoDePassageiros {
+  const ExclusaoDePassageiros({required this.excluidos, required this.comHistorico, required this.erros});
+
+  final int excluidos;
+
+  /// Tinham corridas: so os dados pessoais foram apagados.
+  final int comHistorico;
+  final List<String> erros;
+
+  factory ExclusaoDePassageiros.fromJson(Map<String, dynamic> j) {
+    final itens = [for (final i in (j['itens'] as List<dynamic>? ?? const [])) i as Map<String, dynamic>];
+    return ExclusaoDePassageiros(
+      excluidos: _int(j['excluidos']),
+      comHistorico: itens.where((i) => i['resultado'] == 'ANONIMIZADO').length,
+      erros: [for (final i in itens) if (i['erro'] != null) '${i['erro']}'],
+    );
+  }
+
+  String get resumo => [
+        excluidos == 1 ? '1 passageiro excluído.' : '$excluidos passageiros excluídos.',
+        if (comHistorico > 0) '$comHistorico tinha(m) corridas: os dados pessoais foram apagados e as corridas ficam no financeiro.',
+        if (erros.isNotEmpty) 'Não excluído(s): ${erros.toSet().join(' ')}',
+      ].join(' ');
 }
 
 /// Motorista que acabou de se cadastrar e espera aprovacao.
@@ -301,6 +392,8 @@ String nomeDoDocumento(String tipo) {
       return 'Comprovante de residência';
     case 'CRIMINAL_RECORD':
       return 'Antecedentes criminais';
+    case 'VEHICLE':
+      return 'carro novo';
     default:
       return tipo;
   }
@@ -960,6 +1053,29 @@ class PainelApi {
     return r is Map ? r['avatarUrl'] as String? : null;
   }
 
+  // Carros do motorista (09/10/2026)
+  List<CarroDoMotorista> _carros(dynamic r) =>
+      [for (final j in (r is List ? r : const <dynamic>[]).whereType<Map<String, dynamic>>()) CarroDoMotorista.fromJson(j)];
+
+  Future<List<CarroDoMotorista>> carrosDoMotorista(String driverId) async =>
+      _carros(await _c.request('GET', '/admin/drivers/$driverId/vehicles'));
+
+  Future<List<CarroDoMotorista>> cadastrarCarro(String driverId, Map<String, dynamic> dados) async =>
+      _carros(await _c.request('POST', '/admin/drivers/$driverId/vehicles', body: dados));
+
+  Future<List<CarroDoMotorista>> revisarCarro(String id, bool aprovar, [String? motivo]) async => _carros(
+      await _c.request('PATCH', '/admin/vehicles/$id/review', body: {'aprovar': aprovar, if (motivo != null) 'motivo': motivo}));
+
+  Future<List<CarroDoMotorista>> usarCarro(String id) async => _carros(await _c.request('POST', '/admin/vehicles/$id/usar'));
+
+  Future<List<CarroDoMotorista>> editarCarro(String id, Map<String, dynamic> dados) async =>
+      _carros(await _c.request('PATCH', '/admin/vehicles/$id', body: dados));
+
+  Future<List<CarroDoMotorista>> removerCarro(String id) async => _carros(await _c.request('DELETE', '/admin/vehicles/$id'));
+
+  Future<List<CarroDoMotorista>> fotoDoCarro(String id, String tipo, String mime, String base64) async => _carros(
+      await _c.request('POST', '/admin/vehicles/$id/foto', body: {'tipo': tipo, 'mime': mime, 'dados': base64}));
+
   Future<void> avaliarDocumento(String documentoId, bool aprovado, String? motivo) =>
       _c.request('PATCH', '/admin/documents/$documentoId/review', body: {
         'status': aprovado ? 'APPROVED' : 'REJECTED',
@@ -982,6 +1098,11 @@ class PainelApi {
       _c.request('POST', '/admin/drivers/$id/wallet/credit', body: {'amountCents': cents, 'description': descricao});
 
   // Passageiros
+  /// Exclui passageiros (sem historico: sai de vez; com corridas: so os
+  /// dados pessoais). So o dono.
+  Future<ExclusaoDePassageiros> excluirPassageiros(List<String> ids) async => ExclusaoDePassageiros.fromJson(
+      await _c.request('POST', '/admin/passengers/excluir', body: {'ids': ids}) as Map<String, dynamic>);
+
   Future<List<Passageiro>> passageiros(String busca, {bool soBloqueados = false}) async => [
         for (final j in _lista(await _c.request('GET', '/admin/passengers', query: {
           if (busca.trim().isNotEmpty) 'search': busca.trim(),

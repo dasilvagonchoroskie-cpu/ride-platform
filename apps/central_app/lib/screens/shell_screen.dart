@@ -163,12 +163,23 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final ver = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: Icon(doc.ehFotoDePerfil ? Icons.face_retouching_natural : Icons.description_outlined, color: AppColors.primary, size: 36),
-        title: Text(doc.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento para conferir'),
+        icon: Icon(
+          doc.ehCarro
+              ? Icons.directions_car_outlined
+              : (doc.ehFotoDePerfil ? Icons.face_retouching_natural : Icons.description_outlined),
+          color: AppColors.primary,
+          size: 36,
+        ),
+        title: Text(doc.ehCarro
+            ? 'Carro novo para conferir'
+            : (doc.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento para conferir')),
         content: Text(
-          doc.ehFotoDePerfil
-              ? '${doc.nome} trocou a foto de perfil no aplicativo. Os passageiros continuam vendo a foto antiga até você aprovar a nova.'
-              : '${doc.nome} tem ${nomeDoDocumento(doc.tipo)} esperando a Central. Confira e aprove ou recuse.',
+          doc.ehCarro
+              ? '${doc.nome} cadastrou outro carro no aplicativo${doc.placa == null ? '' : ' (placa ${doc.placa})'}. '
+                  'Confira a foto do carro e o CRLV e aprove ou recuse. Até aprovar, ele não roda com esse carro.'
+              : doc.ehFotoDePerfil
+                  ? '${doc.nome} trocou a foto de perfil no aplicativo. Os passageiros continuam vendo a foto antiga até você aprovar a nova.'
+                  : '${doc.nome} tem ${nomeDoDocumento(doc.tipo)} esperando a Central. Confira e aprove ou recuse.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),

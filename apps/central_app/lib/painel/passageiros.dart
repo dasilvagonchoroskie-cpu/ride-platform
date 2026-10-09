@@ -8,7 +8,34 @@ import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 
-/// Gestao de Passageiros: busca por nome ou telefone, bloqueio com motivo.
+/// Confirmacao antes de excluir passageiros: explica o que some e o que fica.
+Future<bool> confirmarExclusaoDePassageiros(BuildContext context, {required int quantos, String? nome}) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      icon: const Icon(Icons.delete_forever, color: AppColors.danger, size: 36),
+      title: Text(nome != null ? 'Excluir $nome?' : (quantos == 1 ? 'Excluir 1 passageiro?' : 'Excluir $quantos passageiros?')),
+      content: const Text(
+        'Quem nunca fez corrida: a conta some de vez.\n\n'
+        'Quem tem corridas: apagamos nome, telefone, e-mail, CPF, foto e endereços; as corridas continuam no financeiro, sem o nome.\n\n'
+        'Se a pessoa voltar, ela cria uma conta nova. Não dá para desfazer.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Excluir'),
+        ),
+      ],
+    ),
+  );
+  return ok ?? false;
+}
+
+/// Gestao de Passageiros: busca por nome ou telefone, bloqueio com motivo e
+/// exclusao (Evandro, 09/10/2026: "nao ficar guardando lista de passageiros
+/// que nao usam mais a plataforma", e os de teste).
 class Passageiros extends StatefulWidget {
   const Passageiros({super.key});
 
@@ -21,6 +48,12 @@ class _PassageirosState extends State<Passageiros> {
   Timer? _espera;
   bool _soBloqueados = false;
   late Future<List<Passageiro>> _lista;
+
+  /// Modo "Selecionar para excluir" e quem esta marcado.
+  bool _selecionando = false;
+  final Set<String> _marcados = {};
+  List<Passageiro> _ultimaLista = const [];
+  bool _excluindo = false;
 
   PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
@@ -38,6 +71,69 @@ class _PassageirosState extends State<Passageiros> {
   }
 
   void _recarregar() => setState(() { _lista = _api.passageiros(_busca.text, soBloqueados: _soBloqueados); });
+
+  void _sairDaSelecao() => setState(() {
+        _selecionando = false;
+        _marcados.clear();
+      });
+
+  Future<void> _excluirMarcados() async {
+    final ids = _marcados.toList();
+    if (ids.isEmpty) return;
+    final ok = await confirmarExclusaoDePassageiros(context, quantos: ids.length);
+    if (!ok || !mounted) return;
+    setState(() => _excluindo = true);
+    try {
+      final r = await _api.excluirPassageiros(ids);
+      if (mounted) avisar(context, r.resumo, erro: r.erros.isNotEmpty);
+    } catch (e) {
+      if (mounted) avisar(context, mensagemDe(e), erro: true);
+    }
+    if (!mounted) return;
+    setState(() => _excluindo = false);
+    _sairDaSelecao();
+    _recarregar();
+  }
+
+  Widget _barraDeSelecao() {
+    final todos = _ultimaLista.isNotEmpty && _ultimaLista.every((p) => _marcados.contains(p.id));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _marcados.isEmpty ? 'Toque nos passageiros que quer excluir.' : '${_marcados.length} selecionado(s)',
+          style: AppText.bodyStrong,
+        ),
+        const SizedBox(height: Spacing.xs),
+        Wrap(
+          spacing: Spacing.sm,
+          runSpacing: Spacing.sm,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton(
+              onPressed: () => setState(() {
+                if (todos) {
+                  _marcados.clear();
+                } else {
+                  _marcados.addAll(_ultimaLista.map((p) => p.id));
+                }
+              }),
+              child: Text(todos ? 'Desmarcar todos' : 'Marcar todos'),
+            ),
+            TextButton(onPressed: _excluindo ? null : _sairDaSelecao, child: const Text('Cancelar')),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: _marcados.isEmpty || _excluindo ? null : _excluirMarcados,
+              icon: _excluindo
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.delete_forever),
+              label: Text('Excluir (${_marcados.length})'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +159,22 @@ class _PassageirosState extends State<Passageiros> {
             _recarregar();
           },
         ),
+        // Excluir passageiro: so o dono (a operadora da cidade nao exclui).
+        if (context.watch<PainelState>().dono)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.sm),
+            child: _selecionando
+                ? _barraDeSelecao()
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                      onPressed: () => setState(() => _selecionando = true),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Selecionar para excluir'),
+                    ),
+                  ),
+          ),
         Expanded(
           child: FutureBuilder<List<Passageiro>>(
             future: _lista,
@@ -70,6 +182,7 @@ class _PassageirosState extends State<Passageiros> {
               if (s.hasError) return Aviso(texto: 'Não foi possível carregar: ${s.error}', tentarDeNovo: _recarregar);
               if (!s.hasData) return const Center(child: CircularProgressIndicator());
               final lista = s.data!;
+              _ultimaLista = lista;
               if (lista.isEmpty) return const Aviso(texto: 'Nenhum passageiro encontrado.');
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.xl),
@@ -81,18 +194,27 @@ class _PassageirosState extends State<Passageiros> {
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(Radii.md),
                     child: ListTile(
-                      leading: Icon(p.bloqueado ? Icons.block : Icons.person, color: p.bloqueado ? AppColors.danger : AppColors.textMuted),
+                      leading: _selecionando
+                          ? Checkbox(
+                              value: _marcados.contains(p.id),
+                              onChanged: (_) => setState(() => _marcados.contains(p.id) ? _marcados.remove(p.id) : _marcados.add(p.id)),
+                            )
+                          : Icon(p.bloqueado ? Icons.block : Icons.person, color: p.bloqueado ? AppColors.danger : AppColors.textMuted),
                       title: Text(p.nome, style: AppText.bodyStrong),
                       subtitle: Text(
                         '${telefoneBonito(p.telefone)} · ${p.corridas} corrida(s)${p.bloqueado ? '\nBloqueado: ${p.motivo ?? ''}' : ''}',
                         style: AppText.caption.copyWith(color: p.bloqueado ? AppColors.danger : AppColors.textMuted),
                       ),
                       onTap: () async {
+                        if (_selecionando) {
+                          setState(() => _marcados.contains(p.id) ? _marcados.remove(p.id) : _marcados.add(p.id));
+                          return;
+                        }
                         await showModalBottomSheet<void>(
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: AppColors.surface,
-                          builder: (_) => _DetalhePassageiro(p: p, api: _api),
+                          builder: (_) => _DetalhePassageiro(p: p, api: _api, dono: context.read<PainelState>().dono),
                         );
                         _recarregar();
                       },
@@ -109,10 +231,13 @@ class _PassageirosState extends State<Passageiros> {
 }
 
 class _DetalhePassageiro extends StatefulWidget {
-  const _DetalhePassageiro({required this.p, required this.api});
+  const _DetalhePassageiro({required this.p, required this.api, this.dono = true});
 
   final Passageiro p;
   final PainelApi api;
+
+  /// So o dono exclui passageiro.
+  final bool dono;
 
   @override
   State<_DetalhePassageiro> createState() => _DetalhePassageiroState();
@@ -141,6 +266,19 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
         _bloqueado = bloquear;
         _historico = widget.api.historicoPassageiro(widget.p.id);
       });
+    }
+  }
+
+  Future<void> _excluir() async {
+    final ok = await confirmarExclusaoDePassageiros(context, quantos: 1, nome: widget.p.nome);
+    if (!ok || !mounted) return;
+    try {
+      final r = await widget.api.excluirPassageiros([widget.p.id]);
+      if (!mounted) return;
+      avisar(context, r.resumo, erro: r.erros.isNotEmpty);
+      if (r.excluidos > 0) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) avisar(context, mensagemDe(e), erro: true);
     }
   }
 
@@ -199,6 +337,15 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
               label: Text(_bloqueado ? 'Desbloquear' : 'Bloquear'),
               onPressed: _alternar,
             ),
+            if (widget.dono) ...[
+              const SizedBox(height: Spacing.sm),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: AppColors.danger)),
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Excluir passageiro'),
+                onPressed: _excluir,
+              ),
+            ],
           ],
         ),
       ),

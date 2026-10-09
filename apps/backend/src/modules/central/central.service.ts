@@ -7,6 +7,11 @@ import { PrismaService } from '../../database/prisma.service';
 import { RidesService } from '../rides/rides.service';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { PracasService } from '../pracas/pracas.service';
+import { VehiclesService } from '../vehicles/vehicles.service';
+
+/** Conta criada pelo teste automatico (marcada no login com a chave de teste). */
+export const eraTeste = (metadata: unknown): boolean =>
+  !!metadata && typeof metadata === 'object' && (metadata as Record<string, unknown>).teste === true;
 
 const HORA = 3_600_000;
 const DIA = 24 * HORA;
@@ -39,6 +44,7 @@ export class CentralService {
     private readonly prisma: PrismaService,
     private readonly rides: RidesService,
     private readonly pracas: PracasService,
+    private readonly vehicles: VehiclesService,
   ) {}
 
   // ================= Visao geral =================
@@ -76,14 +82,24 @@ export class CentralService {
       uploadedAt: { not: null },
       driver: { status: DriverStatus.APPROVED, user: { deletedAt: null }, ...dosMotoristas },
     };
-    const [paraConferir, ultimoParaConferir] = await Promise.all([
+    const [docsParaConferir, ultimoDoc, carrosParaConferir] = await Promise.all([
       this.prisma.driverDocument.count({ where: ondeConferir }),
       this.prisma.driverDocument.findFirst({
         where: ondeConferir,
         orderBy: { createdAt: 'desc' },
         select: { id: true, type: true, driverId: true, createdAt: true, driver: { select: { user: { select: { name: true } } } } },
       }),
+      // Carro novo de motorista aprovado (09/10/2026): a Central confere.
+      this.vehicles.paraConferir(ids),
     ]);
+    const paraConferir = docsParaConferir + carrosParaConferir.length;
+    const carro = carrosParaConferir[0];
+    const ultimoParaConferir =
+      carro && (!ultimoDoc || (carro.createdAt ?? '') > ultimoDoc.createdAt.toISOString())
+        ? { id: carro.id, type: 'VEHICLE', driverId: carro.driverId, createdAt: carro.createdAt, driver: { user: { name: carro.name } }, plate: carro.plate }
+        : ultimoDoc
+          ? { ...ultimoDoc, plate: null as string | null }
+          : null;
     return {
       activeRides: ativas,
       completedToday: concluidasHoje,
@@ -109,6 +125,7 @@ export class CentralService {
             type: ultimoParaConferir.type,
             driverId: ultimoParaConferir.driverId,
             name: ultimoParaConferir.driver.user?.name ?? null,
+            plate: ultimoParaConferir.plate,
             createdAt: ultimoParaConferir.createdAt,
           }
         : null,
@@ -442,6 +459,108 @@ export class CentralService {
       });
     });
     return this.historicoDoUsuario(userId);
+  }
+
+  /**
+   * Excluir passageiro (Evandro, 09/10/2026: "nao ficar guardando lista de
+   * passageiros que nao usam mais a plataforma", e os de teste).
+   *  - sem corridas nem avaliacoes/pagamentos/SOS: a conta sai de vez;
+   *  - com historico: os dados pessoais sao apagados (nome, telefone, e-mail,
+   *    CPF, foto, enderecos) e as corridas continuam no financeiro, sem a pessoa.
+   * Conta que tambem e de motorista sai pela aba Motoristas.
+   */
+  async excluirPassageiros(ids: string[], adminId: string) {
+    const itens: Array<{ id: string; resultado?: 'APAGADO' | 'ANONIMIZADO'; corridas?: number; erro?: string }> = [];
+    for (const id of ids) {
+      try {
+        itens.push(await this.excluirPassageiro(id, adminId));
+      } catch (e) {
+        itens.push({ id, erro: (e as Error).message });
+      }
+    }
+    return { excluidos: itens.filter((i) => !i.erro).length, itens };
+  }
+
+  private async excluirPassageiro(userId: string, adminId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, role: true, deletedAt: true, metadata: true, driver: { select: { id: true } } },
+    });
+    if (!u || u.deletedAt) throw BusinessException.notFound('Passageiro nao encontrado (ja excluido?).');
+    if (u.role === UserRole.ADMIN) throw BusinessException.validation(`${u.name}: conta da Central nao sai aqui.`);
+    if (u.driver) throw BusinessException.validation(`${u.name} tambem e motorista: exclua pela aba Motoristas.`);
+    const emCorrida = await this.prisma.ride.count({
+      where: {
+        passengerId: userId,
+        status: {
+          notIn: [
+            RideStatus.COMPLETED,
+            RideStatus.CANCELLED_BY_PASSENGER,
+            RideStatus.CANCELLED_BY_DRIVER,
+            RideStatus.CANCELLED_BY_SYSTEM,
+            RideStatus.EXPIRED,
+          ],
+        },
+      },
+    });
+    if (emCorrida > 0) throw BusinessException.conflict(`${u.name} tem corrida em andamento ou agendada.`);
+    const [corridas, pagamentos, avaliacoes, alertas] = await Promise.all([
+      this.prisma.ride.count({ where: { passengerId: userId } }),
+      this.prisma.payment.count({ where: { payerId: userId } }),
+      this.prisma.rating.count({ where: { OR: [{ authorId: userId }, { targetId: userId }] } }),
+      this.prisma.safetyEvent.count({ where: { userId } }),
+    ]);
+    let resultado: 'APAGADO' | 'ANONIMIZADO' = 'ANONIMIZADO';
+    if (corridas + pagamentos + avaliacoes + alertas === 0) {
+      try {
+        await this.prisma.withTransaction(async (tx) => {
+          await tx.arquivo.deleteMany({ where: { ownerId: userId } });
+          await tx.user.delete({ where: { id: userId } });
+        });
+        resultado = 'APAGADO';
+      } catch (e) {
+        this.logger.warn(`Passageiro ${userId}: nao saiu de vez (${(e as Error).message}); apagando os dados pessoais.`);
+      }
+    }
+    if (resultado === 'ANONIMIZADO') {
+      await this.prisma.withTransaction(async (tx) => {
+        await tx.arquivo.deleteMany({ where: { ownerId: userId } });
+        await tx.refreshToken.deleteMany({ where: { userId } });
+        await tx.device.deleteMany({ where: { userId } });
+        await tx.userAddress.deleteMany({ where: { userId } });
+        await tx.paymentMethod.deleteMany({ where: { userId } });
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            status: UserStatus.DELETED,
+            name: 'Passageiro excluido',
+            email: null,
+            phone: `excl-${userId.replace(/-/g, '').slice(0, 15)}`,
+            cpf: null,
+            birthDate: null,
+            passwordHash: null,
+            avatarUrl: null,
+            // Conta do teste automatico continua marcada (a limpeza do teste
+            // apaga o resto); conta de verdade fica sem nada.
+            metadata: eraTeste(u.metadata) ? { teste: true } : {},
+            blockedReason: 'Conta excluida pela Central.',
+            deletedAt: new Date(),
+          },
+        });
+      });
+    }
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: UserRole.ADMIN,
+        action: 'PASSENGER_DELETED',
+        entity: 'user',
+        entityId: resultado === 'APAGADO' ? null : userId,
+        after: { resultado, corridas } as never,
+      },
+    });
+    this.logger.log(`Passageiro ${userId} excluido pela Central (${resultado}, ${corridas} corrida(s)) por ${adminId}`);
+    return { id: userId, resultado, corridas };
   }
 
   async historicoDoUsuario(userId: string) {

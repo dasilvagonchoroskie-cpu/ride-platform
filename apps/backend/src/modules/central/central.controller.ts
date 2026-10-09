@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PayoutStatus, UserStatus } from '@prisma/client';
 import { UserRole } from '@ride/shared';
@@ -148,6 +148,17 @@ export class AdminCentralController {
     body: { blocked: boolean; reason: string },
   ) {
     return this.central.bloquearPassageiro(adminId, id, body.blocked, body.reason);
+  }
+
+  @Post('passengers/excluir')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(SoDonoGuard)
+  @ApiOperation({ summary: 'Exclui passageiros (sem historico: some de vez; com corridas: apaga os dados pessoais)' })
+  excluirPassageiros(
+    @CurrentUser('id') adminId: string,
+    @Body(new ZodValidationPipe(z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }))) body: { ids: string[] },
+  ) {
+    return this.central.excluirPassageiros(body.ids, adminId);
   }
 
   @Get('payouts')

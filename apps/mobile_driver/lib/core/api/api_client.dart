@@ -176,6 +176,9 @@ class ApiClient {
       throw ApiException('NETWORK_ERROR', 'Sem conexão com o servidor. ($error)');
     }
 
+    // 204 (ex.: tirar um carro): deu certo e nao tem corpo.
+    if (response.body.isEmpty && response.statusCode >= 200 && response.statusCode < 300) return null;
+
     Map<String, dynamic> decoded;
     try {
       decoded = jsonDecode(response.body) as Map<String, dynamic>;

@@ -1694,11 +1694,24 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (_) {
       // Ainda sem cadastro no servidor, ou sem rede.
     }
+    await carregarCarros();
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // Carros (Evandro, 09/10/2026: "comprou mais um carro ou trocou de
+  // carro, para atualizar os dados"). Carro novo de quem ja e aprovado vai
+  // para a Central conferir (foto e CRLV); um carro em uso por vez.
+  // ------------------------------------------------------------------
+
+  /// Busca os carros no servidor e deixa o carro em uso como o atual.
+  Future<void> carregarCarros() async {
+    if (!AppConfig.hasApi) return;
     try {
       final lista = await _client.request('GET', '/vehicles/me') as List<dynamic>;
       veiculos = [for (final v in lista) v as Map<String, dynamic>];
-      final ativo = veiculos.where((v) => v['isActive'] != false).toList();
-      if (ativo.isNotEmpty && vehicle == null) {
+      final ativo = veiculos.where((v) => v['isActive'] == true).toList();
+      if (ativo.isNotEmpty) {
         final v = ativo.first;
         vehicle = VehicleInfo(
           brand: v['brand'] as String? ?? '',
@@ -1707,9 +1720,48 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           color: v['color'] as String? ?? '',
           plate: v['plate'] as String? ?? '',
         );
+        await AppStorage.write(AppStorage.vehicle, jsonEncode({
+          'brand': vehicle!.brand,
+          'model': vehicle!.model,
+          'year': vehicle!.year,
+          'color': vehicle!.color,
+          'plate': vehicle!.plate,
+        }));
       }
-    } catch (_) {}
-    notifyListeners();
+      notifyListeners();
+    } catch (_) {
+      // Sem cadastro ainda ou sem rede.
+    }
+  }
+
+  /// Cadastra outro carro. Devolve o carro como o servidor guardou
+  /// (situacao PENDENTE = a Central confere antes de usar).
+  Future<Map<String, dynamic>> cadastrarCarro(Map<String, dynamic> dados) async {
+    final r = await _client.request('POST', '/vehicles', body: dados) as Map<String, dynamic>;
+    await carregarCarros();
+    return r;
+  }
+
+  /// Foto do carro (tipo FOTO) ou do CRLV (tipo CRLV) do carro novo.
+  Future<void> fotoDoCarro(String id, String tipo, {required String mime, required String base64}) async {
+    await _client.request('POST', '/vehicles/$id/foto', body: {'tipo': tipo, 'mime': mime, 'dados': base64});
+    await carregarCarros();
+  }
+
+  Future<void> editarCarro(String id, Map<String, dynamic> dados) async {
+    await _client.request('PATCH', '/vehicles/$id', body: dados);
+    await carregarCarros();
+  }
+
+  /// Passa a trabalhar com este carro.
+  Future<void> usarCarro(String id) async {
+    await _client.request('POST', '/vehicles/$id/usar');
+    await carregarCarros();
+  }
+
+  Future<void> tirarCarro(String id) async {
+    await _client.request('DELETE', '/vehicles/$id');
+    await carregarCarros();
   }
 
   /// WhatsApp e chave Pix da Central (vem junto da carteira; se ainda nao

@@ -43,8 +43,9 @@ export class LimpezaService {
         { metadata: { path: ['teste'], equals: true } },
         { email: { endsWith: '@teste.fortalezamov.com.br' } },
         { name: { in: LimpezaService.NOMES_DE_TESTE } },
-        // Restos anonimizados de motoristas de teste ja excluidos.
-        { phone: { startsWith: 'excl-' } },
+        // Contas excluidas (telefone "excl-...") NAO entram aqui: podem ser
+        // clientes de verdade com corridas no financeiro. As do teste
+        // automatico continuam com a marca "teste" e saem pela linha acima.
       ],
     };
   }

@@ -438,8 +438,33 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
   if (caminho == '/api/admin/drivers/$_motoristaId/wallet/credit') {
     return _resposta('POST', '/api/admin/drivers/$_motoristaId/wallet', q);
   }
+  // Carros do motorista (09/10/2026): o em uso e um carro novo para conferir.
+  if (caminho == '/api/admin/drivers/$_motoristaId/vehicles' ||
+      caminho == '/api/admin/vehicles/v2/review' ||
+      caminho == '/api/admin/vehicles/v2/usar') {
+    final aprovado = caminho.endsWith('/review');
+    return [
+      {'id': 'v1', 'plate': 'ABC1D23', 'brand': 'Chevrolet', 'model': 'Onix Plus', 'year': 2022, 'color': 'Prata', 'category': 'CARRO', 'isActive': true, 'situacao': 'EM_USO', 'motivo': null, 'fotoUrl': null, 'crlvUrl': null},
+      {
+        'id': 'v2', 'plate': 'XYZ9A88', 'brand': 'Fiat', 'model': 'Argo', 'year': 2024, 'color': 'Branco', 'category': 'CARRO', 'isActive': false,
+        'situacao': aprovado ? 'GUARDADO' : 'PENDENTE', 'motivo': null, 'fotoUrl': '/arquivos/carro2', 'crlvUrl': '/arquivos/crlv2',
+      },
+    ];
+  }
+  if (caminho == '/api/admin/passengers/excluir') {
+    _passageirosExcluidos.add(_passageiroId);
+    return {
+      'excluidos': 1,
+      'itens': [
+        {'id': _passageiroId, 'resultado': 'ANONIMIZADO', 'corridas': 14},
+      ],
+    };
+  }
   return null;
 }
+
+/// Passageiros que a Central mandou excluir.
+final List<String> _passageirosExcluidos = [];
 
 MockClient _servidor() => MockClient((http.Request r) async {
       if (r.url.path == '/api/admin/drivers/excluir') {
@@ -681,6 +706,17 @@ void main() {
     expect(find.text('Foto do motorista', skipOffstage: false), findsOneWidget);
     expect(find.textContaining('Troca para conferir', skipOffstage: false), findsOneWidget);
     expect(find.text('Rejeitar', skipOffstage: false), findsNWidgets(2));
+    // Carros: o em uso e o carro novo para a Central conferir.
+    await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 300, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Em uso'), findsOneWidget);
+    expect(find.text('Carro novo para conferir'), findsOneWidget);
+    expect(find.text('Aprovar carro', skipOffstage: false), findsOneWidget);
+    await tester.ensureVisible(find.text('Aprovar carro'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Aprovar carro'));
+    await _carregar(tester);
+    expect(find.text('Carro novo para conferir'), findsNothing);
+    expect(find.text('Usar este carro', skipOffstage: false), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Mensalidade (sem comissão)'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Modelo financeiro'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Carteira pré-paga'), 300, scrollable: find.byType(Scrollable).first);
@@ -745,6 +781,29 @@ void main() {
     expect(find.text('Histórico de bloqueios'), findsOneWidget);
     expect(find.textContaining('Bloqueado em'), findsOneWidget);
     expect(find.text('Desbloquear'), findsOneWidget);
+    expect(find.text('Excluir passageiro', skipOffstage: false), findsOneWidget);
+  });
+
+  // Evandro (09/10/2026): excluir passageiros de teste ou que nao usam mais.
+  testWidgets('Passageiros: selecionar e excluir com confirmacao', (tester) async {
+    _passageirosExcluidos.clear();
+    await _abrir(tester, const Passageiros());
+    await _carregar(tester);
+    await tester.tap(find.text('Selecionar para excluir'));
+    await tester.pumpAndSettle();
+    expect(find.text('Toque nos passageiros que quer excluir.'), findsOneWidget);
+    await tester.tap(find.text('Maria Aparecida dos Santos Oliveira'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 selecionado(s)'), findsOneWidget);
+    await tester.tap(find.text('Excluir (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Excluir 1 passageiro?'), findsOneWidget);
+    expect(find.textContaining('as corridas continuam no financeiro'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await _carregar(tester);
+    expect(_passageirosExcluidos, [_passageiroId]);
+    expect(find.textContaining('1 passageiro excluído'), findsOneWidget);
+    expect(find.text('Selecionar para excluir'), findsOneWidget);
   });
 
   testWidgets('Tarifas: categorias, noturna, nova categoria e multiplicador', (tester) async {

@@ -21,19 +21,24 @@ const MAX_BYTES = 2 * 1024 * 1024;
 // Rosto do motorista e foto do carro aparecem para o passageiro da corrida.
 const PUBLICAS = new Set(['AVATAR', 'PROFILE_PHOTO', 'VEHICLE_FRONT']);
 
+/** Confere e decodifica a foto mandada pelo aplicativo (base64). */
+export function decodificarFoto(mime: string, base64: string): Buffer {
+  const confere = TIPOS_DE_IMAGEM[mime];
+  if (!confere) throw BusinessException.validation('Envie uma foto em JPG, PNG ou WEBP.');
+  const limpo = base64.replace(/^data:[^;]+;base64,/, '');
+  const dados = Buffer.from(limpo, 'base64');
+  if (dados.length === 0) throw BusinessException.validation('Foto vazia.');
+  if (dados.length > MAX_BYTES) throw BusinessException.validation('Foto muito grande (até 2 MB).');
+  if (!confere(dados)) throw BusinessException.validation('O arquivo não é uma foto válida.');
+  return dados;
+}
+
 @Injectable()
 export class ArquivosService {
   constructor(private readonly prisma: PrismaService) {}
 
   private decodificar(mime: string, base64: string): Buffer {
-    const confere = TIPOS_DE_IMAGEM[mime];
-    if (!confere) throw BusinessException.validation('Envie uma foto em JPG, PNG ou WEBP.');
-    const limpo = base64.replace(/^data:[^;]+;base64,/, '');
-    const dados = Buffer.from(limpo, 'base64');
-    if (dados.length === 0) throw BusinessException.validation('Foto vazia.');
-    if (dados.length > MAX_BYTES) throw BusinessException.validation('Foto muito grande (até 2 MB).');
-    if (!confere(dados)) throw BusinessException.validation('O arquivo não é uma foto válida.');
-    return dados;
+    return decodificarFoto(mime, base64);
   }
 
   private async guardar(ownerId: string, tipo: string, mime: string, dados: Buffer): Promise<string> {

@@ -259,6 +259,53 @@ X=$(post "/admin/drivers/$DID/foto" "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\
 # PERFIL deste motorista tem que ter saido da fila.)
 X=$(get /admin/overview "$TA"); [ "$(echo "$X" | jq -r --arg d "$DID" 'if .data.latestDocumentToReview == null then "ok" elif .data.latestDocumentToReview.driverId == $d and .data.latestDocumentToReview.type == "PROFILE_PHOTO" then "ainda" else "ok" end')" = "ok" ] \
   && ok "Central: aviso de foto some depois de conferida" || falha "Central: aviso de foto continua" "$(echo "$X" | jq -c '.data.latestDocumentToReview' 2>/dev/null)"
+
+# Carros do motorista (Evandro, 09/10/2026): cadastrar outro carro, a Central
+# confere, trocar o carro em uso, corrigir e tirar.
+X=$(get /vehicles/me "$TM"); VID1=$(echo "$X" | jq -r '.data[0].id // empty')
+[ "$(echo "$X" | jq -r '.data | length')" = "1" ] && [ "$(echo "$X" | jq -r '.data[0].situacao')" = "EM_USO" ] && ok "Motorista: carro do cadastro em uso" || falha "Motorista: lista de carros" "$X"
+PLACA2="TSU$((RANDOM%10))B$(printf '%02d' $((RANDOM%100)))"
+X=$(post /vehicles "{\"plate\":\"$PLACA2\",\"brand\":\"Chevrolet\",\"model\":\"Onix\",\"year\":2023,\"color\":\"Prata\"}" "$TM")
+VID2=$(echo "$X" | jq -r '.data.id // empty')
+[ "$(echo "$X" | jq -r '.data.situacao')" = "PENDENTE" ] && [ "$(echo "$X" | jq -r '.data.isActive')" = "false" ] && ok "Motorista: carro novo vai para a Central conferir" || falha "Motorista: cadastrar outro carro" "$X"
+X=$(post "/vehicles/$VID2/usar" '{}' "$TM"); sucesso "$X" && falha "Motorista usou carro sem a Central conferir" "$X" || ok "Motorista: carro novo so roda depois da Central conferir"
+X=$(post "/vehicles/$VID2/foto" "{\"tipo\":\"FOTO\",\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TM")
+Y=$(post "/vehicles/$VID2/foto" "{\"tipo\":\"CRLV\",\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TM")
+[ -n "$(echo "$Y" | jq -r '.data.fotoUrl // empty')" ] && [ -n "$(echo "$Y" | jq -r '.data.crlvUrl // empty')" ] && ok "Motorista: foto e CRLV do carro novo enviados" || falha "Motorista: fotos do carro novo" "$X $Y"
+X=$(get /admin/overview "$TA")
+[ "$(echo "$X" | jq -r '.data.latestDocumentToReview.type')" = "VEHICLE" ] && [ "$(echo "$X" | jq -r '.data.latestDocumentToReview.id')" = "$VID2" ] \
+  && ok "Central: aviso de carro novo para conferir" || falha "Central: aviso de carro novo" "$(echo "$X" | jq -c '.data.latestDocumentToReview' 2>/dev/null)"
+X=$(get "/admin/drivers/$DID/vehicles" "$TA"); [ "$(echo "$X" | jq -r --arg v "$VID2" '[.data[] | select(.id==$v) | .situacao] | first')" = "PENDENTE" ] && ok "Central: ve os carros do motorista com a situacao" || falha "Central: carros do motorista" "$X"
+X=$(patch "/admin/vehicles/$VID2/review" '{"aprovar":false,"motivo":"CRLV ilegivel"}' "$TA")
+[ "$(echo "$X" | jq -r --arg v "$VID2" '[.data[] | select(.id==$v) | .situacao] | first')" = "RECUSADO" ] && ok "Central: recusa o carro novo com motivo" || falha "Central: recusar carro" "$X"
+X=$(patch "/vehicles/$VID2" '{"color":"Preto"}' "$TM")
+[ "$(echo "$X" | jq -r '.data.situacao')" = "PENDENTE" ] && [ "$(echo "$X" | jq -r '.data.color')" = "Preto" ] && ok "Motorista: corrige o carro recusado e ele volta para a Central" || falha "Motorista: corrigir carro" "$X"
+X=$(patch "/vehicles/$VID2" '{"plate":"ZZZ9Z99"}' "$TM"); sucesso "$X" && falha "Motorista trocou a placa sem a Central" "$X" || ok "Motorista: outra placa so como carro novo"
+X=$(patch "/admin/vehicles/$VID2/review" '{"aprovar":true}' "$TA")
+[ "$(echo "$X" | jq -r --arg v "$VID2" '[.data[] | select(.id==$v) | .situacao] | first')" = "GUARDADO" ] && ok "Central: aprova o carro novo (fica guardado ate ele trocar)" || falha "Central: aprovar carro" "$X"
+X=$(post "/vehicles/$VID2/usar" '{}' "$TM")
+[ "$(echo "$X" | jq -r --arg v "$VID2" '[.data[] | select(.id==$v) | .situacao] | first')" = "EM_USO" ] && [ "$(echo "$X" | jq -r --arg v "$VID1" '[.data[] | select(.id==$v) | .situacao] | first')" = "GUARDADO" ] \
+  && ok "Motorista: troca o carro em uso (um so em uso)" || falha "Motorista: trocar carro" "$X"
+X=$(post "/vehicles/$VID1/usar" '{}' "$TM"); [ "$(echo "$X" | jq -r --arg v "$VID1" '[.data[] | select(.id==$v) | .situacao] | first')" = "EM_USO" ] && ok "Motorista: volta para o primeiro carro" || falha "Motorista: voltar carro" "$X"
+PLACA3="TSV$((RANDOM%10))C$(printf '%02d' $((RANDOM%100)))"
+X=$(post "/admin/drivers/$DID/vehicles" "{\"plate\":\"$PLACA3\",\"brand\":\"Fiat\",\"model\":\"Mobi\",\"year\":2020,\"color\":\"Vermelho\"}" "$TA")
+VID3=$(echo "$X" | jq -r --arg p "$PLACA3" '[.data[] | select(.plate==$p) | .id] | first // empty')
+[ "$(echo "$X" | jq -r --arg p "$PLACA3" '[.data[] | select(.plate==$p) | .situacao] | first')" = "GUARDADO" ] && ok "Central: cadastra outro carro para o motorista (ja conferido)" || falha "Central: cadastrar carro" "$X"
+C=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API/vehicles/$VID3" -H "Authorization: Bearer $TM")
+X=$(curl -s -X DELETE "$API/admin/vehicles/$VID2" -H "Authorization: Bearer $TA")
+N=$(get /vehicles/me "$TM" | jq -r '.data | length')
+[ "$C" = "204" ] && sucesso "$X" && [ "$N" = "1" ] && ok "Motorista e Central tiram carros (fica so o em uso)" || falha "Tirar carros ($C, $N carros)" "$X"
+X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "Motorista: continua aprovado depois das trocas de carro" || falha "Motorista: status depois dos carros" "$(echo "$X" | jq -c '.data.status')"
+
+# Excluir passageiro pela Central (Evandro, 09/10/2026).
+TX=$(entrar "+55649${SUF}75" PASSENGER); PXID=$(get /auth/me "$TX" | jq -r '.data.id // empty')
+X=$(post /admin/passengers/excluir "{\"ids\":[\"$PXID\"]}" "$TA")
+[ "$(echo "$X" | jq -r '.data.excluidos')" = "1" ] && [ "$(echo "$X" | jq -r '.data.itens[0].resultado')" = "APAGADO" ] && ok "Central: exclui passageiro sem corridas (sai de vez)" || falha "Central: excluir passageiro" "$X"
+X=$(get "/admin/passengers?search=${SUF}75" "$TA"); [ "$(echo "$X" | jq -r '.data.items | length')" = "0" ] && ok "Central: passageiro excluido some da lista" || falha "Central: passageiro excluido ainda na lista" "$X"
+MUID=$(get /auth/me "$TM" | jq -r '.data.id // empty')
+X=$(post /admin/passengers/excluir "{\"ids\":[\"$MUID\"]}" "$TA")
+[ "$(echo "$X" | jq -r '.data.excluidos')" = "0" ] && echo "$X" | jq -r '.data.itens[0].erro' | grep -q "motorista" && ok "Central: conta de motorista nao sai pela aba Passageiros" || falha "Central: excluir passageiro que e motorista" "$X"
+X=$(post /admin/passengers/excluir "{\"ids\":[\"$PXID\"]}" "$TM"); sucesso "$X" && falha "Seguranca: motorista excluiu passageiro" "$X" || ok "Seguranca: so a Central exclui passageiro"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Motorista sem saldo nao deveria ficar disponivel" "$X" || ok "Carteira: motorista com saldo zero nao fica disponivel ($(echo "$X" | jq -r '.error.message' | cut -c1-60)...)"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")
 [ "$(echo "$X" | jq -r '.data.balanceCents')" = "5000" ] && ok "Central: recarga de R\$ 50,00 (credito no extrato)" || falha "Central: recarga inicial" "$X"

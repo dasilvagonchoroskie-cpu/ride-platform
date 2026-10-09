@@ -203,10 +203,14 @@ class PainelState extends ChangeNotifier {
     if (ultimo.id == _fotoVista || ultimo.id == fotoNova?.id) return;
     fotoNova = ultimo;
     await Alarme.aviso(
-      ultimo.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento para conferir',
-      ultimo.ehFotoDePerfil
-          ? '${ultimo.nome} trocou a foto de perfil. Toque para aprovar ou recusar.'
-          : '${ultimo.nome} tem ${nomeDoDocumento(ultimo.tipo)} esperando a Central. Toque para conferir.',
+      ultimo.ehCarro
+          ? 'Carro novo para conferir'
+          : (ultimo.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento para conferir'),
+      ultimo.ehCarro
+          ? '${ultimo.nome} cadastrou outro carro${ultimo.placa == null ? '' : ' (${ultimo.placa})'}. Toque para conferir.'
+          : ultimo.ehFotoDePerfil
+              ? '${ultimo.nome} trocou a foto de perfil. Toque para aprovar ou recusar.'
+              : '${ultimo.nome} tem ${nomeDoDocumento(ultimo.tipo)} esperando a Central. Toque para conferir.',
       id: ultimo.id,
     );
   }

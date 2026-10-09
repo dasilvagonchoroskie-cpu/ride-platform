@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../database/prisma.module';
 import { RidesModule } from '../rides/rides.module';
+import { VehiclesModule } from '../vehicles/vehicles.module';
 import { AdminCentralController, DriverPayoutsController, SafetyController } from './central.controller';
 import { CentralService } from './central.service';
 
 @Module({
-  imports: [PrismaModule, RidesModule],
+  imports: [PrismaModule, RidesModule, VehiclesModule],
   controllers: [AdminCentralController, SafetyController, DriverPayoutsController],
   providers: [CentralService],
 })

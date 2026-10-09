@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'cadastrar_motorista.dart';
+import 'carros.dart';
 import 'carteiras.dart';
 import 'comuns.dart';
 import 'foto.dart';
@@ -455,6 +456,12 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                     ),
                   for (final doc in m.documentos)
                     _Documento(doc: doc, api: _api, depois: _recarregar, temAprovado: d.tiposAprovados.contains(doc.tipo)),
+                ],
+              ),
+              _Bloco(
+                titulo: 'Carros',
+                filhos: [
+                  CarrosDoMotorista(driverId: m.id, api: _api, depois: _recarregar),
                 ],
               ),
               _Bloco(

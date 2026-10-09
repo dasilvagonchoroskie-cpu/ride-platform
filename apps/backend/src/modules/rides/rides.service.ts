@@ -12,6 +12,7 @@ import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira'
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
 import { lerCategorias } from './categorias';
 import { distanciaDoTaximetro, lerCobranca } from './cobranca';
+import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -924,7 +925,7 @@ export class RidesService {
         totalRides: true,
         status: true,
         user: { select: { name: true } },
-        vehicles: { select: { brand: true, model: true, color: true, plate: true }, take: 1 },
+        vehicles: { where: { isActive: true }, select: { brand: true, model: true, color: true, plate: true }, take: 1 },
         location: { select: { isOnline: true, isAvailable: true } },
       },
     });
@@ -999,7 +1000,7 @@ export class RidesService {
       select: {
         id: true,
         user: { select: { name: true } },
-        vehicles: { select: { brand: true, model: true, plate: true }, take: 1 },
+        vehicles: { where: { isActive: true }, select: { brand: true, model: true, plate: true }, take: 1 },
       },
     });
     return {
@@ -1253,11 +1254,15 @@ export class RidesService {
         )?.score ?? null)
       : null;
     const { ratings: _notas, ...semNotas } = corrida;
-    // Foto do carro (de frente) que o motorista mandou nos documentos.
+    // Foto do carro (de frente): a do carro desta corrida (carro cadastrado
+    // depois, conferido pela Central) ou a que o motorista mandou nos documentos.
+    const fotoDoCarro = corrida.vehicleId
+      ? lerMapaDeCarros((await this.prisma.setting.findUnique({ where: { key: CHAVE_VEICULOS } }))?.value)[corrida.vehicleId]?.foto
+      : null;
     const driver = corrida.driver
       ? (() => {
           const { documents, ...resto } = corrida.driver;
-          return { ...resto, fotoCarroUrl: documents[0]?.fileUrl ?? null };
+          return { ...resto, fotoCarroUrl: fotoDoCarro ?? documents[0]?.fileUrl ?? null };
         })()
       : null;
     const mensagensNaoLidas = quem
