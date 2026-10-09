@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: 32cb4f1 (Rota pelas ruas, taximetro ao vivo e alarmes reforcados nos tres apps)
 No ar agora: 32cb4f1
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 00:01 UTC
+Teste de ponta a ponta - 09/10/2026 00:11 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -35,7 +35,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST7995)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST1053)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -67,13 +67,13 @@ OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE0001130 criado (R$ 3,00)
+OK     Central: cupom TESTE0011299 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 2993 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 8435 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -91,8 +91,8 @@ OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (21h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 14 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 86s
+OK     Central: resumo de hoje com 15 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 82s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -112,15 +112,11 @@ OK     Passageiro: corrida agendada para daqui a 2 horas
 OK     Passageiro: ve a agendada em Corridas agendadas
 OK     Passageiro: agendamento muito em cima da hora recusado
 OK     Passageiro: cancelou a agendada
-FALHA  Motorista: cancelar corrida
-       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta corrida nao e sua."},"timestamp":"2026-10-09T00:07:41.099Z","path":"/api/driver/rides/09d2ae7b-c550-4275-856e-e8b34d0c05a2/cancel"}
-FALHA  Passageiro: ver cancelamento do motorista
-       resposta: {"success":true,"data":{"ride":{"id":"09d2ae7b-c550-4275-856e-e8b34d0c05a2","code":"240974","passengerId":"60f51953-b031-46ba-82b0-74b4806058e9","driverId":null,"vehicleId":null,"status":"SEARCHING","fareFlag":"DIURNA","pickupAddress":"Praca da Matriz, Goiatuba","pickupLat":-18.0125,"pickupLng":-49.3547,"pickupPlaceId":null,"dropoffAddress":"Rodoviaria de Goiatuba","dropoffLat":-18.005,"dropoffLng
-FALHA  Passageiro: cancelar
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/rides//cancel"},"timestamp":"2026-10-09T00:07:46.925Z","path":"/api/rides//cancel"}
-FALHA  Passageiro: corrida atual
-       resposta: {"success":true,"data":{"ride":{"id":"09d2ae7b-c550-4275-856e-e8b34d0c05a2","code":"240974","passengerId":"60f51953-b031-46ba-82b0-74b4806058e9","driverId":null,"vehicleId":null,"status":"SEARCHING","fareFlag":"DIURNA","pickupAddress":"Praca da Matriz, Goiatuba","pickupLat":-18.0125,"pickupLng":-49.3547,"pickupPlaceId":null,"dropoffAddress":"Rodoviaria de Goiatuba","dropoffLat":-18.005,"dropoffLng
-OK     Motorista: historico de corridas com 1 corrida(s)
+OK     Motorista: cancelou a corrida aceita
+OK     Passageiro: fica sabendo que o motorista cancelou
+OK     Passageiro: cancelou enquanto procurava, sem taxa
+OK     Passageiro: nenhuma corrida aberta depois de cancelar
+OK     Motorista: historico de corridas com 2 corrida(s)
 OK     Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)
 OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
@@ -130,32 +126,26 @@ OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
 OK     Carteira: saldo zerado avisa mas nao corta o turno
-FALHA  Carteira: chamado sem saldo
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T00:08:26.529Z"}
-FALHA  Motorista: dados do chamado
-       resposta: null
+OK     Carteira: motorista ja online e sem saldo continua recebendo chamado
+OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passageiro (4)
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 1, concluidas hoje 14, online 2, faturamento 63497)
+OK     Central: visao geral (ativas 0, concluidas hoje 15, online 2, faturamento 64497)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
 OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
 OK     Central: categoria do veiculo do motorista
-FALHA  Central: corrida manual
-       resposta: {"success":false,"error":{"code":"RIDE_INVALID_STATE","message":"Voce ja tem uma corrida em andamento."},"timestamp":"2026-10-09T00:08:47.354Z","path":"/api/admin/rides"}
+OK     Central: corrida manual criada (pedido por telefone)
 OK     Central: motoristas livres por distancia, com posicao no mapa
-FALHA  Central: atribuir
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/admin/rides//assign"},"timestamp":"2026-10-09T00:08:49.732Z","path":"/api/admin/rides//assign"}
-FALHA  Motorista: chamado da Central
-       resposta: {"success":true,"data":[],"timestamp":"2026-10-09T00:08:50.572Z"}
-FALHA  Central: cancelar corrida
-       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/admin/rides//cancel"},"timestamp":"2026-10-09T00:08:50.688Z","path":"/api/admin/rides//cancel"}
+OK     Central: corrida enviada para motorista especifico
+OK     Motorista: recebeu o chamado enviado pela Central
+OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 59597, PIX/app 0, comissao 5080)
+OK     Central: relatorio de receitas (dinheiro 60297, PIX/app 0, comissao 5160)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -173,4 +163,4 @@ OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
 
-Resultado: 10 falha(s).
+Resultado: 0 falha(s).
