@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 7e0729e (Taximetro: paradas na viagem (1 min ou mais) entram no tempo parado; preco do pe)
-No ar agora: 7e0729e
+Ultima mudanca do servidor no GitHub: 6b4d9e9 (Corrida manual lancada pelo motorista (com ou sem conta do passageiro; comissao )
+No ar agora: 6b4d9e9
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 21:02 UTC
+Teste de ponta a ponta - 09/10/2026 23:15 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -18,7 +18,7 @@ OK     Operador: carteiras / recargas da cidade
 OK     Operador: nao muda tarifas, cupons e comissao (so o dono)
 OK     Operador: nao acessa a limpeza de dados
 OK     Operador: relatorio da frota sai so com a cidade dele
-OK     Central: limpeza de dados (0 contas de teste, 7 corridas)
+OK     Central: limpeza de dados (0 contas de teste, 9 corridas)
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
 OK     App: entrada por codigo no e-mail disponivel (telefone: true)
@@ -45,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST1103)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST6227)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -112,14 +112,14 @@ OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE21025057 criado (R$ 3,00)
+OK     Central: cupom TESTE23155566 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1078 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1098 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1059 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1116 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 0888 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 3835 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -137,9 +137,9 @@ OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (18h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 4 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 23s
+OK     Bandeira certa pela hora de Brasilia (20h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 6 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 22s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -170,6 +170,15 @@ OK     Passageiro: fica sabendo que o motorista cancelou
 OK     Passageiro: cancelou enquanto procurava, sem taxa
 OK     Passageiro: nenhuma corrida aberta depois de cancelar
 OK     Motorista: historico de corridas com 2 corrida(s)
+OK     Motorista: corrida manual acha o passageiro pelo telefone e mostra so o primeiro nome (Passageiro)
+FALHA  Motorista: corrida manual com conta
+       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta conta nao tem cadastro de motorista."},"timestamp":"2026-10-09T23:19:15.861Z","path":"/api/driver/manual-rides"} {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot GET /api/rides/"},"timestamp":"2026-10-09T23:19:15.978Z","path":"/api/rides/"}
+FALHA  Motorista: cancelar corrida manual
+       resposta: {"success":false,"error":{"code":"NOT_FOUND","message":"Cannot POST /api/driver/rides//cancel"},"timestamp":"2026-10-09T23:19:16.150Z","path":"/api/driver/rides//cancel"}
+FALHA  Motorista: corrida manual sem nome
+       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta conta nao tem cadastro de motorista."},"timestamp":"2026-10-09T23:19:16.270Z","path":"/api/driver/manual-rides"}
+FALHA  Motorista: corrida manual sem conta
+       resposta: {"success":false,"error":{"code":"FORBIDDEN","message":"Esta conta nao tem cadastro de motorista."},"timestamp":"2026-10-09T23:19:16.356Z","path":"/api/driver/manual-rides"}
 OK     Passageiro: conta nova pelo codigo do e-mail (telefone pedido no cadastro)
 OK     Passageiro: telefone gravado no cadastro de quem entrou pelo e-mail
 OK     Mesmo telefone abre o app do motorista e vira motorista
@@ -184,9 +193,9 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 4, online 2, faturamento 125636)
-OK     Central: ganho da Central hoje = comissao (10050) + mensalidades (0) = 10050 (total das corridas: 125636)
-OK     Central: relatorio financeiro com o ganho da Central (10050)
+OK     Central: visao geral (ativas 0, concluidas hoje 6, online 2, faturamento 127636)
+OK     Central: ganho da Central hoje = comissao (10210) + mensalidades (0) = 10210 (total das corridas: 127636)
+OK     Central: relatorio financeiro com o ganho da Central (10210)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -200,7 +209,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 125336, PIX/app 0, comissao 10050)
+OK     Central: relatorio de receitas (dinheiro 127336, PIX/app 0, comissao 10210)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -220,4 +229,4 @@ OK     Quem tambem e passageiro continua com a conta de passageiro
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 6 contas deste teste e 6 corridas delas
 
-Resultado: 0 falha(s).
+Resultado: 4 falha(s).
