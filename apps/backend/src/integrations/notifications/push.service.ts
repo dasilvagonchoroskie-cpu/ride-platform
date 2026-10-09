@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { AppConfigService } from '../../config/app-config.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CredencialFcm, enviarFcm } from './fcm';
@@ -14,7 +14,7 @@ import { CredencialFcm, enviarFcm } from './fcm';
  * - Passageiro: aviso de cada etapa da corrida (aceita, chegando, chegou...).
  */
 @Injectable()
-export class PushService {
+export class PushService implements OnApplicationBootstrap {
   private readonly logger = new Logger(PushService.name);
 
   constructor(
@@ -29,6 +29,33 @@ export class PushService {
 
   get ligado(): boolean {
     return this.credencial != null;
+  }
+
+  /** Estado da ultima conferencia com o Google (aparece no /health). */
+  conferencia: 'desligado' | 'conferindo' | 'ok' | 'falhou' = 'desligado';
+
+  /**
+   * Na subida do servidor, confere a chave com o Google mandando para um
+   * endereco que nao existe: "endereco invalido" prova que o Google aceitou
+   * a chave e que o envio de push esta liberado no projeto.
+   */
+  onApplicationBootstrap(): void {
+    const c = this.credencial;
+    if (!c) {
+      this.logger.log('Push (Firebase) desligado: faltam as variaveis FCM_* no Render.');
+      return;
+    }
+    this.conferencia = 'conferindo';
+    void enviarFcm(c, 'conferencia-do-servidor', { data: { tipo: 'conferencia' }, validadeSegundos: 1 })
+      .then((r) => {
+        this.conferencia = r.invalido ? 'ok' : 'falhou';
+        if (r.invalido) this.logger.log(`Push (Firebase) ligado: o Google aceitou a chave do projeto ${c.projectId}.`);
+        else this.logger.warn(`Push (Firebase) com problema: ${r.erro ?? 'resposta inesperada'}`);
+      })
+      .catch((e) => {
+        this.conferencia = 'falhou';
+        this.logger.warn(`Push (Firebase) com problema: ${(e as Error).message}`);
+      });
   }
 
   /** Guarda o endereco de push do aparelho; tira de outra conta que usava o mesmo celular. */

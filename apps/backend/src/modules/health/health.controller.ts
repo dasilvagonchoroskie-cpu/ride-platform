@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../database/redis.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { AppConfigService } from '../../config/app-config.service';
+import { PushService } from '../../integrations/notifications/push.service';
 
 @ApiTags('Health')
 @Controller('health')
@@ -14,6 +15,7 @@ export class HealthController {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly config: AppConfigService,
+    private readonly push: PushService,
   ) {}
 
   @Public()
@@ -36,6 +38,8 @@ export class HealthController {
       dependencies: {
         database: database ? 'up' : 'down',
         redis: cache ? 'up' : 'down',
+        // Push (Firebase): ok = o Google aceitou a chave na subida do servidor.
+        push: this.push.conferencia,
       },
     };
   }

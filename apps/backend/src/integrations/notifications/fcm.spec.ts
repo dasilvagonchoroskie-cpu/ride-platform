@@ -44,4 +44,29 @@ describe('push (Firebase)', () => {
     const r = await enviarFcm(cred, 'velho', { data: { tipo: 'corrida' } });
     expect(r).toMatchObject({ ok: false, invalido: true });
   });
+
+  // Resposta real do Google para um endereco que nunca existiu (e o que a
+  // conferencia da subida do servidor usa para provar que a chave vale).
+  it('endereco que nunca existiu (400) tambem e marcado para apagar', async () => {
+    global.fetch = jest.fn(async (url: string | URL | Request) =>
+      String(url).includes('oauth2')
+        ? new Response(JSON.stringify({ access_token: 'a', expires_in: 3600 }), { status: 200 })
+        : new Response(
+            '{"error":{"code":400,"message":"The registration token is not a valid FCM registration token","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"INVALID_ARGUMENT"}]}}',
+            { status: 400 },
+          ),
+    ) as typeof fetch;
+    const r = await enviarFcm(cred, 'conferencia-do-servidor', { data: { tipo: 'conferencia' } });
+    expect(r).toMatchObject({ ok: false, invalido: true });
+  });
+
+  it('chave recusada (403) nao apaga o endereco do celular', async () => {
+    global.fetch = jest.fn(async (url: string | URL | Request) =>
+      String(url).includes('oauth2')
+        ? new Response(JSON.stringify({ access_token: 'a', expires_in: 3600 }), { status: 200 })
+        : new Response('{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Permission denied"}}', { status: 403 }),
+    ) as typeof fetch;
+    const r = await enviarFcm(cred, 'token-bom', { data: { tipo: 'corrida' } });
+    expect(r).toMatchObject({ ok: false, invalido: false });
+  });
 });

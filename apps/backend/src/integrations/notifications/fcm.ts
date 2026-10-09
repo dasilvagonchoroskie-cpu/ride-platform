@@ -76,6 +76,8 @@ export async function enviarFcm(c: CredencialFcm, token: string, m: MensagemFcm)
   });
   if (r.ok) return { ok: true, invalido: false };
   const texto = await r.text().catch(() => '');
-  const invalido = r.status === 404 || /UNREGISTERED|INVALID_ARGUMENT.*token/i.test(texto);
+  // 404/UNREGISTERED: o app foi desinstalado. 400 com "registration token":
+  // o endereco nunca existiu (ou veio cortado). Os dois saem do banco.
+  const invalido = r.status === 404 || /UNREGISTERED/.test(texto) || (r.status === 400 && /registration token/i.test(texto));
   return { ok: false, invalido, erro: `${r.status} ${texto.slice(0, 200)}` };
 }
