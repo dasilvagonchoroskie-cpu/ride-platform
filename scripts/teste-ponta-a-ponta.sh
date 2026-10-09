@@ -45,6 +45,8 @@ entrar() {
 echo "Teste de ponta a ponta - $(date -u '+%d/%m/%Y %H:%M UTC')" | tee -a "$REL"; echo | tee -a "$REL"
 
 S=$(get /health); echo "$S" | grep -q '"status":"ok"' && ok "Servidor, banco e Redis no ar" || falha "Servidor, banco e Redis" "$S"
+# Push (Firebase) ligado desde 09/10/2026: a chave tem que estar aceita pelo Google.
+echo "$S" | grep -q '"push":"ok"' && ok "Aviso push (Firebase): Google aceitou a chave" || falha "Aviso push (Firebase)" "$S"
 
 P=$(post /auth/otp/request "{\"email\":\"$ADMIN_EMAIL\",\"purpose\":\"LOGIN\"}")
 C=$(echo "$P" | jq -r '.data.debugCode // empty')
