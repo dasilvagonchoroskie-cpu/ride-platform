@@ -43,11 +43,7 @@ export class CorridaDoMotoristaController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post()
   @ApiOperation({ summary: 'Abre a corrida manual ja com este motorista no local de embarque' })
-  criar(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentUser('driverId') driverId: string,
-    @Body(new ZodValidationPipe(corridaSchema)) body: CorridaDoMotorista,
-  ) {
-    return this.central.criarCorridaDoMotorista(user.id, driverId, body);
+  criar(@CurrentUser() user: AuthenticatedUser, @Body(new ZodValidationPipe(corridaSchema)) body: CorridaDoMotorista) {
+    return this.central.criarCorridaDoMotorista(user.id, body);
   }
 }

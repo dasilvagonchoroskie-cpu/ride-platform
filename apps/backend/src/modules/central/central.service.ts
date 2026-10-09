@@ -185,8 +185,10 @@ export class CentralService {
    * passageiro, abre a corrida, entrega so para este motorista e ja marca
    * "cheguei" - falta so deslizar "Iniciar viagem". Comissao igual.
    */
-  async criarCorridaDoMotorista(userId: string, driverId: string, input: CorridaDoMotorista) {
-    if (!driverId) throw BusinessException.forbidden('Esta conta nao tem cadastro de motorista.');
+  async criarCorridaDoMotorista(userId: string, input: CorridaDoMotorista) {
+    const cadastro = await this.prisma.driver.findFirst({ where: { userId }, select: { id: true } });
+    if (!cadastro) throw BusinessException.forbidden('Esta conta nao tem cadastro de motorista.');
+    const driverId = cadastro.id;
     const filtro = this.contatoDoPassageiro(input.contato);
     let passageiro = await this.prisma.user.findFirst({ where: { ...filtro, deletedAt: null } });
     if (passageiro?.status === UserStatus.BLOCKED) {
