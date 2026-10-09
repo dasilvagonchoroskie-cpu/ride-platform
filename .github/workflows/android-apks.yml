@@ -232,6 +232,21 @@ jobs:
           python3 scripts/firebase-config.py infra/firebase-apps.b64
           test -f "apps/${{ matrix.app }}/android/app/src/main/res/values/firebase.xml"
 
+      # Google Maps (Evandro, 09/10/2026): a chave (restrita aos 3 apps e ao
+      # Maps SDK, gratuito no celular) entra no manifesto; o app liga o mapa
+      # do Google. Sem a chave, fica o OpenStreetMap.
+      - name: Chave do Google Maps
+        run: |
+          set -euo pipefail
+          if [ -s infra/mapas.b64 ]; then
+            echo "::add-mask::$(base64 -d infra/mapas.b64)"
+            echo "MAPS_API_KEY=$(base64 -d infra/mapas.b64)" >> "$GITHUB_ENV"
+            echo "MAPA_DEFINE=--dart-define=MAPA_GOOGLE=true" >> "$GITHUB_ENV"
+            echo "Google Maps ligado."
+          else
+            echo "Sem chave: OpenStreetMap."
+          fi
+
       - name: Compilar o APK
         id: compilar
         continue-on-error: true
@@ -252,7 +267,7 @@ jobs:
           # versao, entao ele instala por cima do APK unico antigo.
           # Versao sobe sozinha: 1.0.<numero da montagem> (aparece no app).
           flutter build apk --$BUILD_TYPE --split-per-abi --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} ${MAPA_DEFINE:-} \
             2>&1 | tee "$RUNNER_TEMP/build-${{ matrix.app }}.txt"
 
       # O token normal nao consegue ler o log de uma tarefa pela API.
@@ -317,7 +332,7 @@ jobs:
         run: |
           set -euo pipefail
           flutter build appbundle --release --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} ${MAPA_DEFINE:-} \
             2>&1 | tail -n 30
           AAB="$(find build/app/outputs/bundle/release -name '*.aab' -print -quit)"
           test -n "$AAB" || { echo "::error::AAB nao foi gerado"; exit 1; }

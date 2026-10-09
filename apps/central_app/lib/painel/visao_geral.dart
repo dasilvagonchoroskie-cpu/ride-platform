@@ -39,6 +39,7 @@ class VisaoGeral extends StatefulWidget {
 
 class _VisaoGeralState extends State<VisaoGeral> {
   final _mapa = MapController();
+  late final ControleFlutterMap _controle = ControleFlutterMap(_mapa);
   bool _centralizou = false;
 
   void _enquadrar(PainelState p) {
@@ -199,7 +200,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              BotaoBussola(mapa: _mapa),
+              BotaoBussola(controle: _controle),
               const SizedBox(height: Spacing.sm),
               FloatingActionButton.small(
                 heroTag: 'enquadrar',

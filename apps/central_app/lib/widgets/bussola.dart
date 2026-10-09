@@ -22,6 +22,46 @@ class SensorDeDirecao {
       : const Stream<double>.empty();
 }
 
+/// O que a bussola precisa do mapa: funciona com o OpenStreetMap
+/// (flutter_map) e com o Google Maps (ControleGoogle, em mapa_google.dart).
+abstract class ControleDoMapa {
+  /// Giro do mapa em graus, no sentido do flutter_map (o Google usa o oposto).
+  double get rotacao;
+
+  /// Avisa cada vez que o mapa gira (pelos dedos ou pela bussola).
+  Stream<double> get rotacoes;
+
+  void girar(double graus);
+}
+
+/// Controle do mapa OpenStreetMap (flutter_map).
+class ControleFlutterMap implements ControleDoMapa {
+  ControleFlutterMap(this.mapa);
+
+  final MapController mapa;
+
+  @override
+  double get rotacao {
+    try {
+      return mapa.camera.rotation;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  @override
+  Stream<double> get rotacoes => mapa.mapEventStream.map((e) => e.camera.rotation);
+
+  @override
+  void girar(double graus) {
+    try {
+      mapa.rotate(graus);
+    } catch (_) {
+      // Mapa ainda nao desenhado.
+    }
+  }
+}
+
 /// Botao redondo branco dos mapas (bussola e centralizar).
 class BotaoDoMapa extends StatelessWidget {
   const BotaoDoMapa({super.key, required this.dica, required this.aoTocar, required this.child, this.ativo = false});
@@ -58,9 +98,10 @@ class BotaoDoMapa extends StatelessWidget {
 ///   o norte volta para cima. Com o mapa girado com os dedos, o toque so
 ///   volta o norte para cima.
 class BotaoBussola extends StatefulWidget {
-  const BotaoBussola({super.key, required this.mapa, this.automatico = false, this.aoMudarModo});
+  const BotaoBussola({super.key, required this.controle, this.automatico = false, this.aoMudarModo});
 
-  final MapController mapa;
+  /// O mapa que a bussola gira (OpenStreetMap ou Google).
+  final ControleDoMapa controle;
 
   /// Ja comeca no modo automatico.
   final bool automatico;
@@ -73,7 +114,7 @@ class BotaoBussola extends StatefulWidget {
 }
 
 class _BotaoBussolaState extends State<BotaoBussola> {
-  StreamSubscription<MapEvent>? _eventos;
+  StreamSubscription<double>? _eventos;
   StreamSubscription<double>? _sensor;
   double _rotacao = 0;
   bool _auto = false;
@@ -83,8 +124,8 @@ class _BotaoBussolaState extends State<BotaoBussola> {
   @override
   void initState() {
     super.initState();
-    _eventos = widget.mapa.mapEventStream.listen((e) {
-      if (mounted && (e.camera.rotation - _rotacao).abs() > 0.5) setState(() => _rotacao = e.camera.rotation);
+    _eventos = widget.controle.rotacoes.listen((r) {
+      if (mounted && (r - _rotacao).abs() > 0.5) setState(() => _rotacao = r);
     });
     if (widget.automatico) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -100,13 +141,7 @@ class _BotaoBussolaState extends State<BotaoBussola> {
     super.dispose();
   }
 
-  void _girar(double graus) {
-    try {
-      widget.mapa.rotate(graus);
-    } catch (_) {
-      // Mapa ainda nao desenhado.
-    }
-  }
+  void _girar(double graus) => widget.controle.girar(graus);
 
   void _ligar() {
     _sensor?.cancel();

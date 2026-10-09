@@ -44,6 +44,9 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Chave do Google Maps (Evandro, 09/10/2026). Vem da esteira (infra/mapas.b64);
+        // sem ela o app usa o OpenStreetMap de reserva.
+        manifestPlaceholders["MAPS_API_KEY"] = System.getenv("MAPS_API_KEY") ?: ""
     }
 
     signingConfigs {

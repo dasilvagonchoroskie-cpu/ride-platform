@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,8 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/geo.dart';
 import '../data/models/models.dart';
 import '../state/ride_state.dart';
+import '../widgets/mapa_google.dart';
+import '../widgets/ride_map.dart' show mostrarRuasNoMapa;
 import '../widgets/ui.dart';
 
 /// Escolher o destino arrastando o mapa: o alfinete fica parado no meio e
@@ -79,7 +82,22 @@ class _MapPickScreenState extends State<MapPickScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: FlutterMap(
+            child: usarGoogleMaps && mostrarRuasNoMapa
+                ? gm.GoogleMap(
+                    initialCameraPosition: gm.CameraPosition(target: paraGoogle(widget.inicio), zoom: 16.5),
+                    style: estiloGoogle,
+                    compassEnabled: false,
+                    mapToolbarEnabled: false,
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    tiltGesturesEnabled: false,
+                    onMapCreated: (_) => _agendar(),
+                    onCameraMove: (posicao) {
+                      _centro = doGoogle(posicao.target);
+                      _agendar();
+                    },
+                  )
+                : FlutterMap(
               mapController: _mapa,
               options: MapOptions(
                 initialCenter: LatLng(widget.inicio.latitude, widget.inicio.longitude),

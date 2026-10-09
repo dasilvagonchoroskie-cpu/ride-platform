@@ -17,6 +17,10 @@
         android:label="Fortaleza Mov Central"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Google Maps: chave restrita aos 3 apps (pacote + SHA-1) e ao Maps SDK. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
