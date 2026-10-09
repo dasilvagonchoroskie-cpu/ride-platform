@@ -393,7 +393,29 @@ class _PriceCard extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.md),
 
-          Text(formatMoney(quote.priceCents), style: SheetText.price),
+          // Evandro (09/10/2026): o valor do pedido e so aproximado; quem
+          // fecha a conta e o taximetro do motorista (distancia + tempo parado).
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(formatMoney(quote.priceCents), style: SheetText.price),
+              const SizedBox(width: Spacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: quote.taximetro ? AppColors.brandSoft : AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+                child: Text(
+                  quote.taximetro ? 'APROXIMADO' : 'PREÇO FECHADO',
+                  style: AppText.label.copyWith(
+                    fontSize: 10,
+                    color: quote.taximetro ? AppColors.brand : AppColors.primaryDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: Spacing.xs),
           Text(
             '${formatDistance(quote.distanceMeters.toDouble())} - cerca de '
@@ -412,7 +434,7 @@ class _PriceCard extends StatelessWidget {
           if (!quote.somenteBandeirada) ...[
             const SizedBox(height: Spacing.xs),
             _LinhaConta(
-              rotulo: 'Distância alem da franquia '
+              rotulo: 'Distância além da franquia '
                   '(${formatDistance(quote.chargedDistanceMeters.toDouble())})',
               valor: formatMoney(quote.distanceCents),
             ),
@@ -421,14 +443,14 @@ class _PriceCard extends StatelessWidget {
           const SizedBox(height: Spacing.md),
           Text(
             quote.somenteBandeirada
-                ? 'A viagem cabe na franquia: paga so a bandeirada.'
-                : 'Tempo parado esperando so entra na conta depois de 3 minutos.',
+                ? 'A viagem cabe na franquia: paga só a bandeirada.'
+                : 'Tempo parado (espera no embarque e paradas que você pedir) só entra na conta depois de 3 minutos.',
             style: SheetText.muted,
           ),
           if (quote.taximetro) ...[
             const SizedBox(height: Spacing.xs),
             Text(
-              'Valor estimado. O valor final é o do taxímetro: pelo trajeto feito (km rodado, tempo e espera).',
+              'O valor final é o do taxímetro do motorista, pelo trajeto feito: km rodado e tempo parado.',
               style: SheetText.muted,
             ),
           ],

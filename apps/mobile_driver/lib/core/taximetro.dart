@@ -50,8 +50,8 @@ class TarifaDaCorrida {
       };
 
   /// A mesma conta do servidor (FareService.calcular): bandeirada + km alem
-  /// do incluso + minutos de viagem + espera alem da inclusa; piso do minimo;
-  /// vezes o multiplicador.
+  /// do incluso + minutos de viagem + tempo parado (espera no embarque +
+  /// paradas na viagem) alem do incluso; piso do minimo; vezes o multiplicador.
   int valorCents({required double metros, required int segundosViagem, required int segundosEspera}) {
     final metrosCobrados = (metros - metrosInclusos).clamp(0, double.infinity);
     final esperaCobrada = (segundosEspera - esperaInclusaSegundos).clamp(0, 1 << 30);
@@ -71,16 +71,39 @@ class TarifaDaCorrida {
 /// ponto "impossivel" (5 leituras seguidas), ele passa a valer como novo
 /// ponto de partida, sem somar o salto.
 class Taximetro {
-  Taximetro({this.metros = 0, this.ultimo, this.ultimoEm});
+  Taximetro({this.metros = 0, this.ultimo, this.ultimoEm, this.segundosParado = 0});
 
   double metros;
   Coords? ultimo;
   DateTime? ultimoEm;
   int _recusadas = 0;
 
+  /// Paradas ja encerradas durante a viagem (Evandro, 09/10/2026: "as vezes
+  /// o passageiro quis que aguardasse um pouquinho"). So conta parada de
+  /// [paradaMinimaSegundos] ou mais — sinal fechado e transito nao entram.
+  int segundosParado;
+
   static const double precisaoMaxima = 35;
   static const double tremidaMetros = 8;
   static const double velocidadeMaximaMs = 55;
+
+  /// Parada que conta: 1 minuto ou mais quase sem sair do lugar.
+  static const int paradaMinimaSegundos = 60;
+
+  /// Abaixo disso (5,4 km/h) entre dois pontos e parado, nao andando.
+  static const double velocidadeParadoMs = 1.5;
+
+  /// Parada acontecendo agora (ainda nao somada): o carro esta no mesmo
+  /// lugar ha 1 minuto ou mais.
+  int paradoAgora([DateTime? agora]) {
+    final desde = ultimoEm;
+    if (desde == null) return 0;
+    final s = (agora ?? DateTime.now()).difference(desde).inSeconds;
+    return s >= paradaMinimaSegundos ? s : 0;
+  }
+
+  /// Todo o tempo parado da viagem (as encerradas + a de agora).
+  int paradasAte([DateTime? agora]) => segundosParado + paradoAgora(agora);
 
   /// Soma um ponto do GPS. Devolve true se a distancia mudou.
   bool adicionar(Coords p, {double? precisao, DateTime? em}) {
@@ -105,6 +128,10 @@ class Taximetro {
       return false;
     }
     _recusadas = 0;
+    // Saiu do lugar depois de um tempo quase parado: foi uma parada.
+    if (segundos >= paradaMinimaSegundos && d / segundos < velocidadeParadoMs) {
+      segundosParado += segundos.round();
+    }
     metros += d;
     ultimo = p;
     ultimoEm = agora;
@@ -113,6 +140,7 @@ class Taximetro {
 
   Map<String, dynamic> toJson() => {
         'metros': metros,
+        'parado': segundosParado,
         if (ultimo != null) 'lat': ultimo!.latitude,
         if (ultimo != null) 'lng': ultimo!.longitude,
         if (ultimoEm != null) 'em': ultimoEm!.toIso8601String(),
@@ -120,6 +148,7 @@ class Taximetro {
 
   static Taximetro deJson(Map<String, dynamic> j) => Taximetro(
         metros: (j['metros'] as num?)?.toDouble() ?? 0,
+        segundosParado: (j['parado'] as num?)?.toInt() ?? 0,
         ultimo: j['lat'] is num && j['lng'] is num ? Coords((j['lat'] as num).toDouble(), (j['lng'] as num).toDouble()) : null,
         ultimoEm: DateTime.tryParse(j['em'] as String? ?? ''),
       );

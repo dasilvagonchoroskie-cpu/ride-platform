@@ -224,6 +224,12 @@ class _ValorDaCorridaState extends State<_ValorDaCorrida> {
                 '${formatDistance(d.taximetro.metros)} · $tempo',
                 style: AppText.caption.copyWith(color: AppColors.textMuted),
               ),
+            // Paradas que o passageiro pediu (1 min ou mais parado) entram na conta.
+            if (correndo && d.paradasValendo > 0)
+              Text(
+                'Parado ${(d.paradasValendo / 60).floor()} min',
+                style: AppText.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.w600),
+              ),
           ],
         ),
       ),

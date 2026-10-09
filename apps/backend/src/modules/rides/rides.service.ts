@@ -11,7 +11,7 @@ import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
 import { lerCategorias } from './categorias';
-import { distanciaDoTaximetro, lerCobranca } from './cobranca';
+import { distanciaDoTaximetro, lerCobranca, paradasQueValem } from './cobranca';
 import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
 import { PushService } from '../../integrations/notifications/push.service';
@@ -589,12 +589,16 @@ export class RidesService {
    * memoria: serve para o passageiro acompanhar o valor; no fim, o celular
    * manda a medicao de novo.
    */
-  private readonly taximetros = new Map<string, { distanceMeters: number; em: number }>();
+  private readonly taximetros = new Map<string, { distanceMeters: number; stoppedSeconds?: number; em: number }>();
 
-  async registrarTaximetro(driverId: string, rideId: string, distanceMeters: number) {
+  async registrarTaximetro(driverId: string, rideId: string, distanceMeters: number, stoppedSeconds?: number) {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     if (corrida.status !== RideStatus.IN_PROGRESS) return { ok: false };
-    this.taximetros.set(rideId, { distanceMeters: Math.round(distanceMeters), em: Date.now() });
+    this.taximetros.set(rideId, {
+      distanceMeters: Math.round(distanceMeters),
+      stoppedSeconds: stoppedSeconds != null ? Math.round(stoppedSeconds) : undefined,
+      em: Date.now(),
+    });
     if (this.taximetros.size > 500) {
       const velho = Date.now() - 6 * 3_600_000;
       for (const [id, t] of this.taximetros) if (t.em < velho) this.taximetros.delete(id);
@@ -611,7 +615,7 @@ export class RidesService {
   private async medicaoFinal(corrida: Ride, input: FinishRideInput) {
     const modo = await lerCobranca(this.prisma);
     if (modo === 'FECHADO') {
-      return { modo, distanceMeters: corrida.distanceMeters, durationSeconds: corrida.durationSeconds, waitingSeconds: 0 };
+      return { modo, distanceMeters: corrida.distanceMeters, durationSeconds: corrida.durationSeconds, waitingSeconds: 0, paradasSeconds: 0 };
     }
     const agora = Date.now();
     const durationSeconds = corrida.startedAt
@@ -635,7 +639,14 @@ export class RidesService {
       estimadaMetros: corrida.distanceMeters,
       porRuaAte: async (ate) => (await this.medirRota(embarque, ate)).distanceMeters,
     });
-    return { modo, distanceMeters, durationSeconds, waitingSeconds };
+    // Paradas no meio da viagem (passageiro pediu para esperar) somam com a
+    // espera no embarque: a mesma tarifa de minuto parado e a mesma franquia.
+    const paradasSeconds = paradasQueValem(
+      input.stoppedSeconds ?? this.taximetros.get(corrida.id)?.stoppedSeconds,
+      durationSeconds,
+      distanceMeters,
+    );
+    return { modo, distanceMeters, durationSeconds, waitingSeconds: waitingSeconds + paradasSeconds, paradasSeconds };
   }
 
   /**
@@ -665,6 +676,7 @@ export class RidesService {
       distanceMeters: number;
       durationSeconds: number;
       waitingSeconds: number;
+      paradasSeconds: number;
       valorCents: number;
       atualizadoEm: string | null;
     } | null = null;
@@ -675,10 +687,11 @@ export class RidesService {
         ? Math.max(0, Math.round((corrida.startedAt.getTime() - corrida.arrivedAt.getTime()) / 1000))
         : 0;
       const distanceMeters = medida?.distanceMeters ?? 0;
+      const paradasSeconds = paradasQueValem(medida?.stoppedSeconds, durationSeconds, distanceMeters);
       const o = await this.fare.calcular({
         distanceMeters,
         durationSeconds,
-        waitingSeconds,
+        waitingSeconds: waitingSeconds + paradasSeconds,
         flag: corrida.fareFlag,
         category: corrida.category,
         multiplier: Number(corrida.multiplier),
@@ -687,6 +700,7 @@ export class RidesService {
         distanceMeters,
         durationSeconds,
         waitingSeconds,
+        paradasSeconds,
         valorCents: o.totalCents,
         atualizadoEm: medida ? new Date(medida.em).toISOString() : null,
       };
@@ -814,6 +828,9 @@ export class RidesService {
         driverEarningCents: orcamento.driverEarningCents,
         distanceMeters: distancia,
         durationSeconds: duracao,
+        /** Tempo parado que entrou na conta: espera no embarque + paradas. */
+        waitingSeconds: medida.waitingSeconds,
+        paradasSeconds: medida.paradasSeconds,
         minFareApplied: orcamento.minFareApplied,
       };
     });

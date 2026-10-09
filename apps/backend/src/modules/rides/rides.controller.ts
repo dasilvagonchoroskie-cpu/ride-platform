@@ -266,9 +266,9 @@ export class DriverRidesController {
   taximetro(
     @CurrentUser('driverId') driverId: string,
     @Param('id', new ParseUUIDPipe()) rideId: string,
-    @Body(new ZodValidationPipe(taximetroSchema)) body: { distanceMeters: number },
+    @Body(new ZodValidationPipe(taximetroSchema)) body: { distanceMeters: number; stoppedSeconds?: number },
   ) {
-    return this.rides.registrarTaximetro(driverId, rideId, body.distanceMeters);
+    return this.rides.registrarTaximetro(driverId, rideId, body.distanceMeters, body.stoppedSeconds);
   }
 
   @Post(':id/cancel')

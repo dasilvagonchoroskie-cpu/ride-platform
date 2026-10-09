@@ -406,8 +406,11 @@ if [ "$(echo "$X" | jq -r '.data.ride.cobranca')" = "TAXIMETRO" ]; then
 else
   ok "Passageiro: corrida com preco fechado (sem taximetro ao vivo)"
 fi
-X=$(post "/driver/rides/$RID/finish" '{"distanceMeters":1000,"latitude":-18.0126,"longitude":-49.3548}' "$TM")
+# Paradas (09/10/2026): o celular informa 5 min parado, mas a viagem do teste
+# dura segundos — o servidor nao aceita parada maior que a propria viagem.
+X=$(post "/driver/rides/$RID/finish" '{"distanceMeters":1000,"stoppedSeconds":300,"latitude":-18.0126,"longitude":-49.3548}' "$TM")
 sucesso "$X" && ok "Motorista: corrida finalizada, valor $(echo "$X" | jq -r '.data.finalFareCents // "?"') centavos" || falha "Motorista: finalizar" "$X"
+[ "$(echo "$X" | jq -r '.data.paradasSeconds // empty')" = "0" ] && ok "Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)" || falha "Taximetro: parada impossivel" "$(echo "$X" | jq -c '{paradasSeconds: .data.paradasSeconds, waitingSeconds: .data.waitingSeconds}' 2>/dev/null)"
 [ "$(echo "$X" | jq -r '.data.discountCents')" = "300" ] && [ "$(echo "$X" | jq -r '.data.toCollectCents')" = "$(( $(echo "$X" | jq -r '.data.finalFareCents') - 300 ))" ] \
   && ok "Motorista: sabe quanto cobrar com o cupom ($(echo "$X" | jq -r '.data.toCollectCents') centavos)" || falha "Motorista: valor com cupom" "$X"
 VAL=$(echo "$X" | jq -r '.data.finalFareCents // 0')

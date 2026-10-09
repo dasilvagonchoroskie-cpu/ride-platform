@@ -58,3 +58,17 @@ export async function distanciaDoTaximetro(params: {
   if (medida != null) return Math.round(Math.max(medida, reta));
   return estimadaMetros;
 }
+
+/**
+ * Paradas da viagem que valem (Evandro, 09/10/2026: "se teve tempo parado,
+ * as vezes o passageiro quis que aguardasse um pouquinho"). O celular do
+ * motorista conta cada parada de 1 minuto ou mais; o servidor so aceita o
+ * que cabe: nunca mais que o tempo da viagem menos o minimo para rodar a
+ * distancia (a 80 km/h), nem mais que 4 horas.
+ */
+export function paradasQueValem(informadas: number | null | undefined, duracaoSegundos: number, distanciaMetros: number): number {
+  if (!informadas || informadas <= 0) return 0;
+  const minimoRodando = distanciaMetros / 22.2;
+  const cabe = Math.max(0, Math.floor(duracaoSegundos - minimoRodando));
+  return Math.max(0, Math.min(Math.round(informadas), cabe, 4 * 3600));
+}

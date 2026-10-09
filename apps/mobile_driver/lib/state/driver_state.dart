@@ -124,7 +124,21 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (ride == null) return 0;
     final t = tarifa;
     if (precoFechado || t == null || ride.phase != RidePhase.inProgress) return ride.offer.fareCents;
-    return t.valorCents(metros: taximetro.metros, segundosViagem: segundosDeViagem, segundosEspera: segundosDeEspera);
+    return t.valorCents(
+      metros: taximetro.metros,
+      segundosViagem: segundosDeViagem,
+      // Tempo parado: espera no embarque + paradas na viagem (a mesma conta do servidor).
+      segundosEspera: segundosDeEspera + paradasValendo,
+    );
+  }
+
+  /// Paradas da viagem que entram na conta (a mesma regra do servidor: nunca
+  /// mais que o tempo de viagem menos o minimo para rodar a distancia).
+  int get paradasValendo {
+    final informadas = taximetro.paradasAte();
+    if (informadas <= 0) return 0;
+    final cabe = (segundosDeViagem - taximetro.metros / 22.2).floor();
+    return informadas.clamp(0, cabe < 0 ? 0 : cabe).clamp(0, 4 * 3600);
   }
 
   // ---- Painel (dados reais do servidor) ----
@@ -1414,7 +1428,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _taximetroEnviadoEm = agora;
     try {
       await _client.request('POST', '/driver/rides/${ride.offer.id}/taximetro',
-          body: {'distanceMeters': taximetro.metros.round()});
+          body: {'distanceMeters': taximetro.metros.round(), 'stoppedSeconds': taximetro.paradasAte()});
     } catch (_) {
       // Sem rede agora: manda na proxima volta.
     }
@@ -1630,6 +1644,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         // terminou) e conta o tempo e a espera pelo relogio dele.
         final r = await _client.request('POST', '/driver/rides/${ride.offer.id}/finish', body: {
           if (ride.phase == RidePhase.inProgress && viagemIniciouEm != null) 'distanceMeters': taximetro.metros.round(),
+          if (ride.phase == RidePhase.inProgress && viagemIniciouEm != null) 'stoppedSeconds': taximetro.paradasAte(),
           if (posicaoReal) 'latitude': position.latitude,
           if (posicaoReal) 'longitude': position.longitude,
         });

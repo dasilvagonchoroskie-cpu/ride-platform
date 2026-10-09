@@ -1,4 +1,4 @@
-import { distanciaDoTaximetro } from './cobranca';
+import { distanciaDoTaximetro, paradasQueValem } from './cobranca';
 
 // Praca da Matriz de Goiatuba e um ponto ~1,1 km dali.
 const embarque = { latitude: -18.0125, longitude: -49.3547 };
@@ -30,5 +30,25 @@ describe('Taximetro: distancia que vale no fim', () => {
   it('sem medicao e sem saber onde terminou: a estimativa do pedido', async () => {
     const d = await distanciaDoTaximetro({ medida: undefined, embarque, fim: null, estimadaMetros: 5000, porRuaAte: porRua(0) });
     expect(d).toBe(5000);
+  });
+});
+
+describe('paradas na viagem (Evandro, 09/10/2026)', () => {
+  it('parada de 5 minutos numa viagem de 20 minutos vale inteira', () => {
+    expect(paradasQueValem(300, 20 * 60, 8000)).toBe(300);
+  });
+
+  it('nunca passa do tempo da viagem menos o minimo para rodar a distancia', () => {
+    // 10 km em 10 minutos: o carro rodou quase o tempo todo (minimo ~450 s).
+    expect(paradasQueValem(600, 600, 10000)).toBe(149);
+  });
+
+  it('viagem de segundos nao aceita parada inventada', () => {
+    expect(paradasQueValem(300, 10, 1000)).toBe(0);
+  });
+
+  it('sem parada informada, zero', () => {
+    expect(paradasQueValem(undefined, 900, 3000)).toBe(0);
+    expect(paradasQueValem(0, 900, 3000)).toBe(0);
   });
 });
