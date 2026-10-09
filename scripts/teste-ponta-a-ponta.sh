@@ -298,10 +298,10 @@ N=$(get /vehicles/me "$TM" | jq -r '.data | length')
 X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "Motorista: continua aprovado depois das trocas de carro" || falha "Motorista: status depois dos carros" "$(echo "$X" | jq -c '.data.status')"
 
 # Excluir passageiro pela Central (Evandro, 09/10/2026).
-TX=$(entrar "+55649${SUF}75" PASSENGER); PXID=$(get /auth/me "$TX" | jq -r '.data.id // empty')
+TX=$(entrar "+55649${SUF}83" PASSENGER); PXID=$(get /auth/me "$TX" | jq -r '.data.id // empty')
 X=$(post /admin/passengers/excluir "{\"ids\":[\"$PXID\"]}" "$TA")
 [ "$(echo "$X" | jq -r '.data.excluidos')" = "1" ] && [ "$(echo "$X" | jq -r '.data.itens[0].resultado')" = "APAGADO" ] && ok "Central: exclui passageiro sem corridas (sai de vez)" || falha "Central: excluir passageiro" "$X"
-X=$(get "/admin/passengers?search=${SUF}75" "$TA"); [ "$(echo "$X" | jq -r '.data.items | length')" = "0" ] && ok "Central: passageiro excluido some da lista" || falha "Central: passageiro excluido ainda na lista" "$X"
+X=$(get "/admin/passengers?search=${SUF}83" "$TA"); [ "$(echo "$X" | jq -r '.data.items | length')" = "0" ] && ok "Central: passageiro excluido some da lista" || falha "Central: passageiro excluido ainda na lista" "$X"
 MUID=$(get /auth/me "$TM" | jq -r '.data.id // empty')
 X=$(post /admin/passengers/excluir "{\"ids\":[\"$MUID\"]}" "$TA")
 [ "$(echo "$X" | jq -r '.data.excluidos')" = "0" ] && echo "$X" | jq -r '.data.itens[0].erro' | grep -q "motorista" && ok "Central: conta de motorista nao sai pela aba Passageiros" || falha "Central: excluir passageiro que e motorista" "$X"
