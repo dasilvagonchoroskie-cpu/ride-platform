@@ -21,11 +21,10 @@ class PermissionsScreen extends StatefulWidget {
 }
 
 class _Item {
-  const _Item(this.chave, this.titulo, this.porque, {this.essencial = true});
+  const _Item(this.chave, this.titulo, this.porque);
   final String chave;
   final String titulo;
   final String porque;
-  final bool essencial;
 }
 
 const _itens = [
@@ -169,7 +168,7 @@ class _Linha extends StatelessWidget {
   Widget build(BuildContext context) {
     final cor = liberada
         ? AppColors.primary
-        : (item.essencial ? AppColors.danger : AppColors.warning);
+        : AppColors.danger;
 
     return Container(
       padding: const EdgeInsets.all(Spacing.lg),
@@ -187,7 +186,7 @@ class _Linha extends StatelessWidget {
               const SizedBox(width: Spacing.sm),
               Expanded(child: Text(item.titulo, style: AppText.heading)),
               Text(
-                liberada ? 'liberada' : (item.essencial ? 'obrigatória' : 'recomendada'),
+                liberada ? 'liberada' : 'obrigatória',
                 style: AppText.body.copyWith(color: cor),
               ),
             ],
