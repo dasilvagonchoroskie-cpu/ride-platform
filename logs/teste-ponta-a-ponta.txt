@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: c141201 (Corrige 'Cheguei ao local' depois de aceitar pela tela de chamado (DRIVER_ASSIGN)
-No ar agora: c141201
+Ultima mudanca do servidor no GitHub: 7e0729e (Taximetro: paradas na viagem (1 min ou mais) entram no tempo parado; preco do pe)
+No ar agora: 7e0729e
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 20:20 UTC
+Teste de ponta a ponta - 09/10/2026 21:02 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -18,7 +18,7 @@ OK     Operador: carteiras / recargas da cidade
 OK     Operador: nao muda tarifas, cupons e comissao (so o dono)
 OK     Operador: nao acessa a limpeza de dados
 OK     Operador: relatorio da frota sai so com a cidade dele
-OK     Central: limpeza de dados (0 contas de teste, 6 corridas)
+OK     Central: limpeza de dados (0 contas de teste, 7 corridas)
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
 OK     App: entrada por codigo no e-mail disponivel (telefone: true)
@@ -45,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST4612)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST1103)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -108,18 +108,18 @@ OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (30 pontos, 1442 m)
 OK     Passageiro: tempo de viagem pela estrada (Goiania: 129 min, antes dava 479)
-OK     Central: modo de cobranca em Tarifas (FECHADO)
+OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE20201192 criado (R$ 3,00)
+OK     Central: cupom TESTE21025057 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 992 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1001 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1078 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1098 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 5628 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 0888 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -131,14 +131,15 @@ OK     Passageiro: favoritou o motorista que esta vindo buscar
 OK     Motorista: arriving
 OK     Motorista: arrived
 OK     Motorista: start
-OK     Taximetro: app do motorista recebe a tabela da corrida (FECHADO)
+OK     Taximetro: app do motorista recebe a tabela da corrida (TAXIMETRO)
 OK     Taximetro: motorista manda a medicao ao vivo (1 km)
-OK     Passageiro: corrida com preco fechado (sem taximetro ao vivo)
+OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (17h, diurna: 1000 centavos)
-OK     Central: resumo de hoje com 3 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 26s
+OK     Bandeira certa pela hora de Brasilia (18h, diurna: 1000 centavos)
+OK     Central: resumo de hoje com 4 corrida(s)
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 23s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -183,9 +184,9 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 3, online 2, faturamento 70033)
-OK     Central: ganho da Central hoje = comissao (5602) + mensalidades (0) = 5602 (total das corridas: 70033)
-OK     Central: relatorio financeiro com o ganho da Central (5602)
+OK     Central: visao geral (ativas 0, concluidas hoje 4, online 2, faturamento 125636)
+OK     Central: ganho da Central hoje = comissao (10050) + mensalidades (0) = 10050 (total das corridas: 125636)
+OK     Central: relatorio financeiro com o ganho da Central (10050)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -199,7 +200,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 69733, PIX/app 0, comissao 5602)
+OK     Central: relatorio de receitas (dinheiro 125336, PIX/app 0, comissao 10050)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
