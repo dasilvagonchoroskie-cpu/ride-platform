@@ -130,15 +130,19 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
     super.didChangeDependencies();
     if (_google && _bitmaps == null) {
       final cfg = createLocalImageConfiguration(context);
-      _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-            MarkerKind.pickup: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_pickup.png', width: 34, height: 34),
-            MarkerKind.dropoff: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_dropoff.png', width: 34, height: 34),
-            MarkerKind.car: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/car_black.png', width: 40, height: 40),
-          }();
+      _icones ??= _carregarIcones(cfg);
       _icones!.then((m) {
         if (mounted) setState(() => _bitmaps = m);
       }).catchError((_) {});
     }
+  }
+
+  static Future<Map<MarkerKind, gm.BitmapDescriptor>> _carregarIcones(ImageConfiguration cfg) async {
+    return <MarkerKind, gm.BitmapDescriptor>{
+      MarkerKind.pickup: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_pickup.png', width: 34, height: 34),
+      MarkerKind.dropoff: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_dropoff.png', width: 34, height: 34),
+      MarkerKind.car: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/car_black.png', width: 40, height: 40),
+    };
   }
 
   void _aoAnimar() {

@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/gestures.dart' show EagerGestureRecognizer, OneSequenceGestureRecognizer;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../core/alarme.dart';
 import '../core/theme/central_theme.dart';
+import '../core/utils/geo.dart';
+import '../widgets/mapa_google.dart';
 import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
@@ -110,7 +115,28 @@ class TelaSos extends StatefulWidget {
 
 class _TelaSosState extends State<TelaSos> {
   final _mapa = MapController();
+  final ControleGoogle _controleGoogle = ControleGoogle();
+  gm.BitmapDescriptor? _pinoSos;
   LatLng? _ultima;
+
+  /// Mapa do Google nesta montagem (nos testes, sempre o OpenStreetMap).
+  bool get _google => usarGoogleMaps && mostrarRuasNoMapa;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_google) {
+      pinoGoogle(AppColors.danger, Icons.sos, tamanho: 52).then((b) {
+        if (mounted) setState(() => _pinoSos = b);
+      }).catchError((_) {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _controleGoogle.fechar();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +152,12 @@ class _TelaSosState extends State<TelaSos> {
     final pos = a.posicao == null ? null : LatLng(a.posicao!.latitude, a.posicao!.longitude);
     if (pos != null && _ultima != null && pos != _ultima) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _mapa.move(pos, _mapa.camera.zoom);
+        if (!mounted) return;
+        if (_google) {
+          _controleGoogle.mover(Coords(pos.latitude, pos.longitude));
+        } else {
+          _mapa.move(pos, _mapa.camera.zoom);
+        }
       });
     }
     _ultima = pos;
@@ -153,6 +184,27 @@ class _TelaSosState extends State<TelaSos> {
             height: 260,
             child: pos == null
                 ? const Aviso(texto: 'Sem posição do aparelho.')
+                : _google
+                ? gm.GoogleMap(
+                    initialCameraPosition: gm.CameraPosition(target: gm.LatLng(pos.latitude, pos.longitude), zoom: 16),
+                    style: estiloGoogle,
+                    compassEnabled: false,
+                    mapToolbarEnabled: false,
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    // Dentro da lista: o dedo no mapa mexe o mapa, nao a tela.
+                    gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new)},
+                    onMapCreated: (c) => _controleGoogle.mapa = c,
+                    onCameraMove: _controleGoogle.aoMover,
+                    markers: {
+                      gm.Marker(
+                        markerId: const gm.MarkerId('sos'),
+                        position: gm.LatLng(pos.latitude, pos.longitude),
+                        icon: _pinoSos ?? gm.BitmapDescriptor.defaultMarker,
+                        anchor: const Offset(0.5, 0.5),
+                      ),
+                    },
+                  )
                 : FlutterMap(
                     mapController: _mapa,
                     options: MapOptions(initialCenter: pos, initialZoom: 16),

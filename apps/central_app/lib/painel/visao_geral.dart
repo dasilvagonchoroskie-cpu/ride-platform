@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +8,7 @@ import '../core/theme/central_theme.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
 import '../widgets/bussola.dart';
+import '../widgets/mapa_google.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 
@@ -39,8 +41,33 @@ class VisaoGeral extends StatefulWidget {
 
 class _VisaoGeralState extends State<VisaoGeral> {
   final _mapa = MapController();
-  late final ControleFlutterMap _controle = ControleFlutterMap(_mapa);
+  late final ControleFlutterMap _controleOsm = ControleFlutterMap(_mapa);
+  final ControleGoogle _controleGoogle = ControleGoogle();
   bool _centralizou = false;
+
+  /// Mapa do Google nesta montagem (nos testes, sempre o OpenStreetMap).
+  bool get _google => usarGoogleMaps && mostrarRuasNoMapa;
+
+  ControleDoMapa get _controle => _google ? _controleGoogle : _controleOsm;
+
+  /// Pinos desenhados para o Google (cor + icone), prontos para o mapa.
+  final Map<String, gm.BitmapDescriptor> _pinos = {};
+
+  gm.BitmapDescriptor _pino(Color cor, IconData icone, double tamanho) {
+    final chave = '${cor.toARGB32()}|${icone.codePoint}|$tamanho';
+    final pronto = _pinos[chave];
+    if (pronto != null) return pronto;
+    pinoGoogle(cor, icone, tamanho: tamanho).then((b) {
+      if (mounted) setState(() => _pinos[chave] = b);
+    }).catchError((_) {});
+    return gm.BitmapDescriptor.defaultMarker;
+  }
+
+  @override
+  void dispose() {
+    _controleGoogle.fechar();
+    super.dispose();
+  }
 
   void _enquadrar(PainelState p) {
     final pontos = <LatLng>[
@@ -50,6 +77,14 @@ class _VisaoGeralState extends State<VisaoGeral> {
       for (final a in p.alertas)
         if (a.posicao != null) _ll(a.posicao!),
     ];
+    if (_google) {
+      if (pontos.length >= 2) {
+        _controleGoogle.enquadrar([for (final l in pontos) Coords(l.latitude, l.longitude)], animar: true);
+      } else {
+        _controleGoogle.mover(pontos.isEmpty ? p.centro : Coords(pontos.first.latitude, pontos.first.longitude), zoom: 14);
+      }
+      return;
+    }
     if (pontos.length >= 2) {
       _mapa.fitCamera(CameraFit.coordinates(coordinates: pontos, padding: const EdgeInsets.fromLTRB(40, 170, 40, 60), maxZoom: 16));
     } else {
@@ -105,7 +140,59 @@ class _VisaoGeralState extends State<VisaoGeral> {
     return Stack(
       children: [
         Positioned.fill(
-          child: FlutterMap(
+          child: _google
+              ? gm.GoogleMap(
+                  initialCameraPosition: gm.CameraPosition(target: paraGoogle(p.centro), zoom: 14),
+                  style: estiloGoogle,
+                  // Indicadores em cima e legenda embaixo ficam fora da area do mapa
+                  // (o logo do Google continua visivel).
+                  padding: const EdgeInsets.fromLTRB(8, 150, 8, 130),
+                  compassEnabled: false,
+                  mapToolbarEnabled: false,
+                  zoomControlsEnabled: false,
+                  myLocationButtonEnabled: false,
+                  tiltGesturesEnabled: false,
+                  onMapCreated: (c) {
+                    _controleGoogle.mapa = c;
+                    if (p.atualizadoEm != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _enquadrar(p);
+                      });
+                    }
+                  },
+                  onCameraMove: _controleGoogle.aoMover,
+                  markers: {
+                    for (final c in p.corridas.where((c) => c.naFila && c.status != 'SCHEDULED'))
+                      gm.Marker(
+                        markerId: gm.MarkerId('corrida-${c.id}'),
+                        position: paraGoogle(c.embarque),
+                        icon: _pino(AppColors.primary, Icons.person_pin_circle, 44),
+                        anchor: const Offset(0.5, 0.5),
+                        consumeTapEvents: true,
+                        onTap: () => _mostrarCorrida(context, c),
+                      ),
+                    for (final m in p.motoristas)
+                      if (m.posicao != null)
+                        gm.Marker(
+                          markerId: gm.MarkerId('motorista-${m.id}'),
+                          position: paraGoogle(m.posicao!),
+                          icon: _pino(!m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success), Icons.local_taxi, 40),
+                          anchor: const Offset(0.5, 0.5),
+                          consumeTapEvents: true,
+                          onTap: () => _mostrarMotorista(context, m, p),
+                        ),
+                    for (final a in p.alertas)
+                      if (a.posicao != null)
+                        gm.Marker(
+                          markerId: gm.MarkerId('sos-${a.id}'),
+                          position: paraGoogle(a.posicao!),
+                          icon: _pino(AppColors.danger, Icons.sos, 52),
+                          anchor: const Offset(0.5, 0.5),
+                          consumeTapEvents: true,
+                        ),
+                  },
+                )
+              : FlutterMap(
             mapController: _mapa,
             options: MapOptions(initialCenter: _ll(p.centro), initialZoom: 14),
             children: [
