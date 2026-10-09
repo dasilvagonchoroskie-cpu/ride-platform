@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
+import '../widgets/ui.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 import 'relatorio_pdf.dart';
@@ -192,14 +193,30 @@ class _ReceitasState extends State<_Receitas> {
             if (s.hasError) return Aviso(texto: 'Não foi possível carregar: ${s.error}', tentarDeNovo: () => _periodo(_dias));
             if (!s.hasData) return const Padding(padding: EdgeInsets.all(Spacing.xl), child: Center(child: CircularProgressIndicator()));
             final r = s.data!;
+            final periodo = _dias == 1 ? 'hoje' : 'nos últimos $_dias dias';
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // O que e da Central (Evandro, 09/10/2026): comissao de cada
+                // corrida + mensalidades. O total das corridas e dos motoristas.
+                MetricCard(
+                  label: 'Ganho da Central $periodo',
+                  value: reais(r.ganhoCentralCents),
+                  icon: Icons.account_balance,
+                  highlight: true,
+                  helper: 'Comissão das corridas ${reais(r.comissaoCents)}'
+                      '${r.mensalidadesCents > 0 ? ' + mensalidades ${reais(r.mensalidadesCents)}' : ''}',
+                ),
+                const SizedBox(height: Spacing.sm),
                 Row(
                   children: [
-                    _Cartao(rotulo: 'Pago em dinheiro\n(em mãos do motorista)', valor: reais(r.dinheiroCents), cor: AppColors.warning),
+                    _Cartao(rotulo: 'Total das corridas (${r.corridas})', valor: reais(r.totalCents), cor: AppColors.text),
                     const SizedBox(width: Spacing.sm),
-                    _Cartao(rotulo: 'Pago via PIX / cartão / app', valor: reais(r.pixAppCents), cor: AppColors.primary),
+                    _Cartao(
+                      rotulo: 'Parte dos motoristas',
+                      valor: reais(r.totalCents > r.comissaoCents ? r.totalCents - r.comissaoCents : 0),
+                      cor: AppColors.text,
+                    ),
                   ],
                 ),
                 const SizedBox(height: Spacing.sm),
@@ -207,9 +224,18 @@ class _ReceitasState extends State<_Receitas> {
                   children: [
                     _Cartao(rotulo: 'Comissão da Central', valor: reais(r.comissaoCents), cor: AppColors.success),
                     const SizedBox(width: Spacing.sm),
-                    _Cartao(rotulo: 'Total das corridas (${r.corridas})', valor: reais(r.totalCents), cor: AppColors.text),
+                    _Cartao(rotulo: 'Mensalidades cobradas', valor: reais(r.mensalidadesCents), cor: AppColors.success),
                   ],
                 ),
+                const SizedBox(height: Spacing.sm),
+                Row(
+                  children: [
+                    _Cartao(rotulo: 'Pago em dinheiro\n(em mãos do motorista)', valor: reais(r.dinheiroCents), cor: AppColors.warning),
+                    const SizedBox(width: Spacing.sm),
+                    _Cartao(rotulo: 'Pago via PIX / cartão / app', valor: reais(r.pixAppCents), cor: AppColors.primary),
+                  ],
+                ),
+
                 const SizedBox(height: Spacing.sm),
                 Row(
                   children: [
@@ -255,7 +281,11 @@ class _Cartao extends StatelessWidget {
   Widget build(BuildContext context) {
     final caixa = Container(
       padding: const EdgeInsets.all(Spacing.md),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.md)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(Radii.md),
+        boxShadow: AppColors.sombra,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

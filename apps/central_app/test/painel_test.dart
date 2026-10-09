@@ -145,6 +145,8 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       'driversFree': 8,
       'revenueTodayCents': 123456,
       'commissionTodayCents': 24690,
+      'monthlyFeesTodayCents': 15000,
+      'centralRevenueTodayCents': 39690,
       'sosActive': 0,
       'driversPending': _comPendente ? 2 : 0,
       'latestPendingDriver': _comPendente
@@ -376,6 +378,8 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       'pixAndAppCents': 12000,
       'totalCents': 37000,
       'commissionCents': 7400,
+      'monthlyFeesCents': 15000,
+      'centralRevenueCents': 22400,
       'couponCents': 300,
       'rides': 15,
       'payoutsPaidCents': 4500,
@@ -648,7 +652,18 @@ void main() {
     expect(find.text('Corridas ativas'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('12 / 4'), findsOneWidget);
+    // Evandro (09/10/2026): o cartao mostra o ganho da Central (comissao +
+    // mensalidades), nao o total das corridas dos motoristas.
+    expect(find.text('Ganho da Central hoje'), findsOneWidget);
+    expect(find.textContaining('396,90'), findsOneWidget);
+    expect(find.textContaining('1.234,56'), findsNothing);
+    await tester.tap(find.text('Ganho da Central hoje'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('1.234,56'), findsOneWidget);
+    expect(find.textContaining('mensalidades R\$'), findsOneWidget);
+    expect(find.text('Parte dos motoristas'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
     // Online (verde) e offline (cinza, na ultima posicao).
     expect(find.byIcon(Icons.local_taxi), findsNWidgets(2));
     expect(find.byIcon(Icons.sos), findsNothing);
@@ -866,6 +881,8 @@ void main() {
     await tester.tap(find.text('30 dias'));
     await _carregar(tester);
     expect(find.textContaining('Comissão da Central'), findsOneWidget);
+    expect(find.textContaining('224,00'), findsOneWidget);
+    expect(find.text('Mensalidades cobradas'), findsOneWidget);
   });
 
   testWidgets('Alertas: SOS aberto, janela fixa e encerrados', (tester) async {

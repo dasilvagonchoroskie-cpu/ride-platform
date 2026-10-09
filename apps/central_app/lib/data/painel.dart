@@ -21,6 +21,8 @@ class Indicadores {
     this.livres = 0,
     this.faturamentoHojeCents = 0,
     this.comissaoHojeCents = 0,
+    this.mensalidadesHojeCents = 0,
+    this.ganhoCentralHojeCents = 0,
     this.sosAbertos = 0,
     this.pendentes = 0,
     this.ultimoPendente,
@@ -33,8 +35,15 @@ class Indicadores {
   final int online;
   final int ocupados;
   final int livres;
+  /// Total das corridas concluidas hoje (o que os passageiros pagaram).
   final int faturamentoHojeCents;
   final int comissaoHojeCents;
+
+  /// Mensalidades descontadas das carteiras hoje.
+  final int mensalidadesHojeCents;
+
+  /// Ganho da Central hoje: comissao + mensalidades (Evandro, 09/10/2026).
+  final int ganhoCentralHojeCents;
   final int sosAbertos;
 
   /// Cadastros de motorista esperando a Central aprovar.
@@ -56,6 +65,9 @@ class Indicadores {
         livres: _int(j['driversFree']),
         faturamentoHojeCents: _int(j['revenueTodayCents']),
         comissaoHojeCents: _int(j['commissionTodayCents']),
+        mensalidadesHojeCents: _int(j['monthlyFeesTodayCents']),
+        // Servidor antigo (sem o campo): pelo menos a comissao.
+        ganhoCentralHojeCents: j['centralRevenueTodayCents'] == null ? _int(j['commissionTodayCents']) : _int(j['centralRevenueTodayCents']),
         sosAbertos: _int(j['sosActive']),
         pendentes: _int(j['driversPending']),
         ultimoPendente: j['latestPendingDriver'] is Map<String, dynamic>
@@ -786,6 +798,8 @@ class Receitas {
     required this.pixAppCents,
     required this.totalCents,
     required this.comissaoCents,
+    this.mensalidadesCents = 0,
+    this.ganhoCentralCents = 0,
     required this.cuponsCents,
     required this.corridas,
     required this.saquesPagosCents,
@@ -797,6 +811,12 @@ class Receitas {
   final int pixAppCents;
   final int totalCents;
   final int comissaoCents;
+
+  /// Mensalidades descontadas das carteiras no periodo.
+  final int mensalidadesCents;
+
+  /// Ganho da Central no periodo: comissoes + mensalidades.
+  final int ganhoCentralCents;
   final int cuponsCents;
   final int corridas;
   final int saquesPagosCents;
@@ -808,6 +828,8 @@ class Receitas {
         pixAppCents: _int(j['pixAndAppCents']),
         totalCents: _int(j['totalCents']),
         comissaoCents: _int(j['commissionCents']),
+        mensalidadesCents: _int(j['monthlyFeesCents']),
+        ganhoCentralCents: j['centralRevenueCents'] == null ? _int(j['commissionCents']) : _int(j['centralRevenueCents']),
         cuponsCents: _int(j['couponCents']),
         corridas: _int(j['rides']),
         saquesPagosCents: _int(j['payoutsPaidCents']),

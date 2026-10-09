@@ -96,6 +96,12 @@ export class CentralService {
       this.vehicles.paraConferir(ids),
     ]);
     const paraConferir = docsParaConferir + carrosParaConferir.length;
+    // Ganho da Central hoje (Evandro, 09/10/2026: "ali tinha que aparecer o
+    // faturamento da central, a comissao"): comissao das corridas + as
+    // mensalidades cobradas hoje. O total das corridas (dos motoristas)
+    // continua em revenueTodayCents.
+    const mensalidadesHoje = await this.mensalidadesCobradas(hoje, ids);
+    const comissaoHoje = soma._sum.commissionCents ?? 0;
     const carro = carrosParaConferir[0];
     const ultimoParaConferir =
       carro && (!ultimoDoc || (carro.createdAt ?? '') > ultimoDoc.createdAt.toISOString())
@@ -110,7 +116,9 @@ export class CentralService {
       driversBusy: Math.min(ocupados, online),
       driversFree: Math.max(online - ocupados, 0),
       revenueTodayCents: soma._sum.finalFareCents ?? 0,
-      commissionTodayCents: soma._sum.commissionCents ?? 0,
+      commissionTodayCents: comissaoHoje,
+      monthlyFeesTodayCents: mensalidadesHoje,
+      centralRevenueTodayCents: comissaoHoje + mensalidadesHoje,
       sosActive: sos,
       driversPending: pendentes,
       latestPendingDriver: ultimoPendente
@@ -361,6 +369,25 @@ export class CentralService {
     const r = await this.prisma.vehicle.updateMany({ where: { driverId, isActive: true }, data: { category: categoria } });
     if (r.count === 0) throw BusinessException.validation('Este motorista nao tem veiculo ativo.');
     return { ok: true, category: categoria };
+  }
+
+  /**
+   * Mensalidades descontadas das carteiras desde [desde] (motoristas da
+   * cidade, quando [ids] vem). A cobranca grava um ajuste negativo com a
+   * descricao "Mensalidade ate ...".
+   */
+  private async mensalidadesCobradas(desde: Date, ids: string[] | null): Promise<number> {
+    const r = await this.prisma.walletTransaction.aggregate({
+      where: {
+        createdAt: { gte: desde },
+        type: 'ADJUSTMENT',
+        amountCents: { lt: 0 },
+        description: { startsWith: 'Mensalidade' },
+        ...(ids ? { wallet: { driverId: { in: ids } } } : {}),
+      },
+      _sum: { amountCents: true },
+    });
+    return Math.abs(r._sum.amountCents ?? 0);
   }
 
   /** Mensalidade: a cada hora confere quem venceu e desconta da carteira. */
@@ -694,6 +721,7 @@ export class CentralService {
       },
       _sum: { amountCents: true },
     });
+    const mensalidades = await this.mensalidadesCobradas(desde, ids);
     const porForma = concluidas.map((c) => ({
       paymentMethodType: c.paymentMethodType,
       rides: c._count._all,
@@ -709,6 +737,9 @@ export class CentralService {
       pixAndAppCents: soma((x) => (x.paymentMethodType !== 'CASH' ? x.totalCents : 0)),
       totalCents: soma((x) => x.totalCents),
       commissionCents: soma((x) => x.commissionCents),
+      monthlyFeesCents: mensalidades,
+      // Ganho da Central no periodo: comissoes + mensalidades.
+      centralRevenueCents: soma((x) => x.commissionCents) + mensalidades,
       couponCents: soma((x) => x.couponCents),
       rides: soma((x) => x.rides),
       payoutsPaidCents: pagos._sum.amountCents ?? 0,

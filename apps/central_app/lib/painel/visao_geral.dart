@@ -141,7 +141,14 @@ class _VisaoGeralState extends State<VisaoGeral> {
                     cor: AppColors.warning,
                   ),
                   const SizedBox(width: Spacing.xs),
-                  _Indicador(rotulo: 'Faturamento hoje', valor: reais(p.indicadores.faturamentoHojeCents), cor: AppColors.brandDark),
+                  // Ganho da Central (comissao + mensalidades), nao o total
+                  // das corridas dos motoristas. Toque: o detalhe do dia.
+                  _Indicador(
+                    rotulo: 'Ganho da Central hoje',
+                    valor: reais(p.indicadores.ganhoCentralHojeCents),
+                    cor: AppColors.brandDark,
+                    onTap: () => _mostrarGanhoDoDia(context, p.indicadores),
+                  ),
                 ],
               ),
               if (p.erro != null) ...[
@@ -205,6 +212,54 @@ class _VisaoGeralState extends State<VisaoGeral> {
           ),
         ),
       ],
+    );
+  }
+
+  /// O dia em numeros: quanto rodou no total e quanto ficou para a Central.
+  void _mostrarGanhoDoDia(BuildContext context, Indicadores i) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Hoje', style: AppText.heading.copyWith(fontSize: 20)),
+              const SizedBox(height: Spacing.md),
+              Container(
+                padding: const EdgeInsets.all(Spacing.lg),
+                decoration: BoxDecoration(gradient: AppColors.degradeMarca, borderRadius: BorderRadius.circular(Radii.md)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('GANHO DA CENTRAL', style: AppText.label.copyWith(color: AppColors.gold, fontSize: 11)),
+                    const SizedBox(height: Spacing.xs),
+                    Text(reais(i.ganhoCentralHojeCents), style: AppText.metric.copyWith(color: AppColors.onPrimary)),
+                    Text(
+                      'Comissão das corridas ${reais(i.comissaoHojeCents)}'
+                      '${i.mensalidadesHojeCents > 0 ? ' + mensalidades ${reais(i.mensalidadesHojeCents)}' : ''}',
+                      style: AppText.caption.copyWith(color: AppColors.onPrimary.withValues(alpha: 0.85)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: Spacing.md),
+              Linha('Total das corridas (${i.concluidasHoje})', reais(i.faturamentoHojeCents), destaque: true),
+              Linha('Parte dos motoristas', reais(i.faturamentoHojeCents > i.comissaoHojeCents ? i.faturamentoHojeCents - i.comissaoHojeCents : 0)),
+              Linha('Comissão da Central', reais(i.comissaoHojeCents)),
+              if (i.mensalidadesHojeCents > 0) Linha('Mensalidades cobradas', reais(i.mensalidadesHojeCents)),
+              const SizedBox(height: Spacing.sm),
+              Text(
+                'O ganho de cada motorista fica no cadastro dele e no relatório em PDF (aba Financeiro).',
+                style: AppText.caption.copyWith(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

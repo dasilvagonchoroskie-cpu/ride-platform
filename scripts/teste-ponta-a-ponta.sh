@@ -543,6 +543,15 @@ X=$(get /admin/overview "$TA")
 sucesso "$X" && [ "$(echo "$X" | jq -r '.data.driversOnline')" -ge 1 ] 2>/dev/null \
   && ok "Central: visao geral (ativas $(echo "$X" | jq -r '.data.activeRides'), concluidas hoje $(echo "$X" | jq -r '.data.completedToday'), online $(echo "$X" | jq -r '.data.driversOnline'), faturamento $(echo "$X" | jq -r '.data.revenueTodayCents'))" \
   || falha "Central: visao geral" "$X"
+# Ganho da Central (09/10/2026): comissao + mensalidades, separado do total das corridas.
+GC=$(echo "$X" | jq -r '.data.centralRevenueTodayCents'); CO=$(echo "$X" | jq -r '.data.commissionTodayCents'); ME=$(echo "$X" | jq -r '.data.monthlyFeesTodayCents')
+[ "$GC" != "null" ] && [ "$GC" -eq $((CO + ME)) ] 2>/dev/null \
+  && ok "Central: ganho da Central hoje = comissao ($CO) + mensalidades ($ME) = $GC (total das corridas: $(echo "$X" | jq -r '.data.revenueTodayCents'))" \
+  || falha "Central: ganho da Central hoje" "$X"
+X=$(get "/admin/reports/finance?days=1" "$TA")
+[ "$(echo "$X" | jq -r '.data.centralRevenueCents')" = "$(echo "$X" | jq -r '(.data.commissionCents + .data.monthlyFeesCents)')" ] 2>/dev/null \
+  && ok "Central: relatorio financeiro com o ganho da Central ($(echo "$X" | jq -r '.data.centralRevenueCents'))" \
+  || falha "Central: ganho da Central no relatorio" "$X"
 X=$(get /admin/tariffs "$TA")
 [ "$(echo "$X" | jq -r '.data.categorias | length')" -ge 1 ] 2>/dev/null && ok "Central: tarifas por categoria ($(echo "$X" | jq -r '[.data.categorias[].nome] | join(", ")'))" || falha "Central: tarifas por categoria" "$X"
 CARRO=$(echo "$X" | jq -c '.data.categorias[] | select(.codigo=="CARRO") | {nome, ativa, diurna: (.diurna | del(.flag, .updatedAt)), noturna: (.noturna | del(.flag, .updatedAt))}')
