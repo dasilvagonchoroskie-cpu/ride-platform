@@ -49,3 +49,8 @@ Thumbs.db
 
 # Uploads locais
 uploads/
+
+# Firebase (gerado na esteira a partir de infra/firebase-apps.b64)
+apps/*/android/app/src/main/res/values/firebase.xml
+apps/*/android/app/src/main/res/raw/keep.xml
+google-services.json

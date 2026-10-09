@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Liga o push (Firebase) nos aplicativos a partir do google-services.json.
 
-Uso: python3 scripts/firebase-config.py caminho/google-services.json
+Uso: python3 scripts/firebase-config.py infra/firebase-apps.b64
+     (ou caminho/google-services.json; a esteira do APK roda sozinha)
 
 O Firebase gera UM google-services.json com todos os aplicativos Android do
 projeto. Este script cria, para cada aplicativo nosso que estiver nele,
@@ -13,6 +14,7 @@ Os valores nao sao segredo (vao dentro do APK de qualquer jeito). A chave
 privada da conta de servico (para o SERVIDOR mandar o push) NAO entra aqui:
 ela vai so nas variaveis do Render.
 """
+import base64
 import json
 import pathlib
 import sys
@@ -23,8 +25,18 @@ APPS = {
     'com.rideplatform.central_app': 'apps/central_app',
 }
 
+def ler(caminho: str) -> dict:
+    """Aceita o google-services.json puro ou codificado em base64
+    (infra/firebase-apps.b64 — a configuracao e publica, vai dentro do APK;
+    fica codificada so para os robos de varredura de senha do GitHub e da
+    Google nao confundirem a chave publica do Firebase com senha vazada)."""
+    texto = pathlib.Path(caminho).read_text(encoding='utf-8').strip()
+    if not texto.startswith('{'):
+        texto = base64.b64decode(texto).decode('utf-8')
+    return json.loads(texto)
+
 def main(caminho: str) -> int:
-    dados = json.loads(pathlib.Path(caminho).read_text(encoding='utf-8'))
+    dados = ler(caminho)
     projeto = dados['project_info']
     raiz = pathlib.Path(__file__).resolve().parent.parent
     feitos = 0

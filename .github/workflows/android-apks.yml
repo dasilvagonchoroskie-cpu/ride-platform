@@ -222,6 +222,16 @@ jobs:
             > "apps/${{ matrix.app }}/android/key.properties"
           echo "key.properties criado para ${{ matrix.app }}"
 
+      # Push (Firebase) do passageiro e do motorista (Evandro criou o projeto
+      # fortaleza-mov em 09/10/2026). Gera res/values/firebase.xml; sem ele o
+      # aplicativo segue so com o vigia proprio.
+      - name: Ligar o aviso push (Firebase)
+        if: matrix.app == 'mobile_driver' || matrix.app == 'mobile_passenger'
+        run: |
+          set -euo pipefail
+          python3 scripts/firebase-config.py infra/firebase-apps.b64
+          test -f "apps/${{ matrix.app }}/android/app/src/main/res/values/firebase.xml"
+
       - name: Compilar o APK
         id: compilar
         continue-on-error: true
