@@ -255,7 +255,9 @@ N=$(get "/admin/drivers/$DID" "$TA" | jq -r '[.data.documents[] | select(.type==
   && ok "Central: poe a foto do motorista (ja aprovada)" || falha "Central: por a foto do motorista" "$X"
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$F4" -H "Authorization: Bearer $TP"); [ "$C" = "200" ] && ok "Passageiro: ve a foto do motorista" || falha "Passageiro: foto do motorista" "$C"
 X=$(post "/admin/drivers/$DID/foto" "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TP"); sucesso "$X" && falha "Seguranca: passageiro trocou foto de motorista" "$X" || ok "Seguranca: so a Central troca a foto do motorista"
-X=$(get /admin/overview "$TA"); [ "$(echo "$X" | jq -r --arg d "$DID" 'if .data.latestDocumentToReview == null then "ok" elif .data.latestDocumentToReview.driverId == $d then "ainda" else "ok" end')" = "ok" ] \
+# (A foto da CNH enviada no cadastro continua para conferir: so a FOTO DE
+# PERFIL deste motorista tem que ter saido da fila.)
+X=$(get /admin/overview "$TA"); [ "$(echo "$X" | jq -r --arg d "$DID" 'if .data.latestDocumentToReview == null then "ok" elif .data.latestDocumentToReview.driverId == $d and .data.latestDocumentToReview.type == "PROFILE_PHOTO" then "ainda" else "ok" end')" = "ok" ] \
   && ok "Central: aviso de foto some depois de conferida" || falha "Central: aviso de foto continua" "$(echo "$X" | jq -c '.data.latestDocumentToReview' 2>/dev/null)"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Motorista sem saldo nao deveria ficar disponivel" "$X" || ok "Carteira: motorista com saldo zero nao fica disponivel ($(echo "$X" | jq -r '.error.message' | cut -c1-60)...)"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")

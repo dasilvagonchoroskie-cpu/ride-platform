@@ -164,11 +164,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       context: context,
       builder: (ctx) => AlertDialog(
         icon: Icon(doc.ehFotoDePerfil ? Icons.face_retouching_natural : Icons.description_outlined, color: AppColors.primary, size: 36),
-        title: Text(doc.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento novo para conferir'),
+        title: Text(doc.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento para conferir'),
         content: Text(
           doc.ehFotoDePerfil
               ? '${doc.nome} trocou a foto de perfil no aplicativo. Os passageiros continuam vendo a foto antiga até você aprovar a nova.'
-              : '${doc.nome} mandou ${nomeDoDocumento(doc.tipo)} novo. O aprovado continua valendo até você conferir.',
+              : '${doc.nome} tem ${nomeDoDocumento(doc.tipo)} esperando a Central. Confira e aprove ou recuse.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),
