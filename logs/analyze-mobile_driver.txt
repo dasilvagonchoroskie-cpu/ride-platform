@@ -1,5 +1,2 @@
 Analyzing mobile_driver...                                      
-
-warning • A value for optional parameter 'essencial' isn't ever given. Try removing the unused parameter • lib/screens/permissions_screen.dart:24:59 • unused_element_parameter
-
-1 issue found. (ran in 8.2s)
+No issues found! (ran in 9.5s)
