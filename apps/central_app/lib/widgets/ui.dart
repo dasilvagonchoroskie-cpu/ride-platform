@@ -474,3 +474,40 @@ class BrandLogo extends StatelessWidget {
     );
   }
 }
+
+/// Cartao branco de lista (motoristas, passageiros, tarifas, carteiras):
+/// cantos de 12 e a mesma sombra leve dos aplicativos, com o toque
+/// (ondinha) respeitando os cantos.
+class CartaoDeLista extends StatelessWidget {
+  const CartaoDeLista({super.key, required this.child, this.destaque});
+
+  final Widget child;
+
+  /// Cor da barrinha na esquerda (ex.: vermelho para bloqueado). Sem cor, sem barrinha.
+  final Color? destaque;
+
+  @override
+  Widget build(BuildContext context) {
+    final corpo = destaque == null
+        ? child
+        : Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: destaque),
+              Expanded(child: child),
+            ],
+          );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Radii.md),
+        boxShadow: AppColors.sombra,
+      ),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(Radii.md),
+        clipBehavior: Clip.antiAlias,
+        child: destaque == null ? corpo : IntrinsicHeight(child: corpo),
+      ),
+    );
+  }
+}

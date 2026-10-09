@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'cadastrar_motorista.dart';
 import 'carros.dart';
@@ -153,9 +154,8 @@ class _MotoristasState extends State<Motoristas> {
           padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.sm),
           child: _selecionando
               ? _barraDeSelecao()
-              : Wrap(
-                  spacing: Spacing.sm,
-                  runSpacing: Spacing.sm,
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FilledButton.icon(
                       onPressed: () async {
@@ -171,11 +171,14 @@ class _MotoristasState extends State<Motoristas> {
                       icon: const Icon(Icons.person_add_alt_1),
                       label: const Text('Cadastrar motorista'),
                     ),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                      onPressed: () => setState(() => _selecionando = true),
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Selecionar para excluir'),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                        onPressed: () => setState(() => _selecionando = true),
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        label: const Text('Selecionar para excluir'),
+                      ),
                     ),
                   ],
                 ),
@@ -198,16 +201,34 @@ class _MotoristasState extends State<Motoristas> {
                   itemBuilder: (context, i) {
                     final m = lista[i];
                     final pendentes = m.documentos.where((d) => d.status == 'PENDING').length;
-                    return Material(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(Radii.md),
+                    return CartaoDeLista(
                       child: ListTile(
+                        contentPadding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.xs, Spacing.sm, Spacing.xs),
                         leading: _selecionando
                             ? Checkbox(
                                 value: _marcados.contains(m.id),
                                 onChanged: (_) => setState(() => _marcados.contains(m.id) ? _marcados.remove(m.id) : _marcados.add(m.id)),
                               )
-                            : null,
+                            : Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  AppAvatar(initials: iniciaisDe(m.nome), size: 44),
+                                  if (m.online)
+                                    Positioned(
+                                      right: -1,
+                                      bottom: -1,
+                                      child: Container(
+                                        width: 14,
+                                        height: 14,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.success,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: AppColors.surface, width: 2),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                         title: Text(m.nome, style: AppText.bodyStrong),
                         subtitle: Text(
                           '${telefoneBonito(m.telefone)}\n${m.veiculo.isEmpty ? 'Sem veículo' : '${m.veiculo} · ${m.placa}'} · ${m.categoria}'
@@ -215,7 +236,7 @@ class _MotoristasState extends State<Motoristas> {
                           style: AppText.caption.copyWith(color: AppColors.textMuted),
                         ),
                         isThreeLine: true,
-                        trailing: m.online ? const Icon(Icons.circle, color: AppColors.success, size: 12) : null,
+                        trailing: _selecionando ? null : const Icon(Icons.chevron_right, color: AppColors.textFaint),
                         onTap: () async {
                           if (_selecionando) {
                             setState(() => _marcados.contains(m.id) ? _marcados.remove(m.id) : _marcados.add(m.id));
@@ -384,46 +405,69 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
           return ListView(
             padding: const EdgeInsets.all(Spacing.lg),
             children: [
-              Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: Spacing.md),
-                    child: FotoDoMotorista(
-                      caminho: d.avatarUrl,
-                      iniciais: iniciaisDe(m.nome),
-                      enviando: _enviandoFoto,
-                      aoTrocar: () => _trocarFoto(d),
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // Cabecalho em cartao branco, como o perfil no app do motorista.
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(m.nome, style: AppText.title),
-                        Text(
-                          '${nomeDoStatusMotorista(m.status)}${m.online ? ' · online' : ''} · nota ${d.nota.toStringAsFixed(1)} · ${d.corridas} corridas',
-                          style: AppText.caption.copyWith(color: AppColors.textMuted),
+                        Padding(
+                          padding: const EdgeInsets.only(right: Spacing.md),
+                          child: FotoDoMotorista(
+                            caminho: d.avatarUrl,
+                            iniciais: iniciaisDe(m.nome),
+                            enviando: _enviandoFoto,
+                            aoTrocar: () => _trocarFoto(d),
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                m.nome,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.title.copyWith(fontSize: 20, height: 1.2),
+                              ),
+                              const SizedBox(height: Spacing.xs),
+                              Wrap(
+                                spacing: Spacing.xs,
+                                runSpacing: Spacing.xs,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  AppBadge(
+                                    text: nomeDoStatusMotorista(m.status).toUpperCase(),
+                                    tone: switch (m.status) {
+                                      'APPROVED' => AppBadgeTone.success,
+                                      'PENDING' => AppBadgeTone.warning,
+                                      'REJECTED' || 'BLOCKED' || 'SUSPENDED' => AppBadgeTone.danger,
+                                      _ => AppBadgeTone.neutral,
+                                    },
+                                  ),
+                                  if (m.online) const AppBadge(text: 'ONLINE', tone: AppBadgeTone.success),
+                                ],
+                              ),
+                              const SizedBox(height: Spacing.xs),
+                              Text(
+                                '★ ${d.nota.toStringAsFixed(1)} · ${d.corridas} corridas',
+                                style: AppText.caption.copyWith(color: AppColors.textMuted),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  BotoesContato(telefone: m.telefone),
-                ],
+                    const SizedBox(height: Spacing.sm),
+                    Align(alignment: Alignment.centerLeft, child: BotoesContato(telefone: m.telefone)),
+                    if (d.avatarUrl == null)
+                      const _AvisoLaranja('Sem foto de perfil: toque na câmera para tirar ou escolher a foto do motorista.'),
+                    if (m.motivo != null && m.status != 'APPROVED') _AvisoLaranja('Motivo: ${m.motivo}'),
+                  ],
+                ),
               ),
-              if (d.avatarUrl == null)
-                Padding(
-                  padding: const EdgeInsets.only(top: Spacing.sm),
-                  child: Text(
-                    'Sem foto de perfil: toque na câmera para tirar ou escolher a foto do motorista.',
-                    style: AppText.caption.copyWith(color: AppColors.warning),
-                  ),
-                ),
-              if (m.motivo != null && m.status != 'APPROVED')
-                Padding(
-                  padding: const EdgeInsets.only(top: Spacing.sm),
-                  child: Text('Motivo: ${m.motivo}', style: AppText.caption.copyWith(color: AppColors.warning)),
-                ),
-              const SizedBox(height: Spacing.lg),
+              const SizedBox(height: Spacing.md),
               _Bloco(
                 titulo: 'Dados',
                 filhos: [
@@ -537,6 +581,31 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
   }
 }
 
+/// Aviso em faixa laranja clara (falta foto, motivo da recusa).
+class _AvisoLaranja extends StatelessWidget {
+  const _AvisoLaranja(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: Spacing.sm),
+      padding: const EdgeInsets.all(Spacing.sm),
+      decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(Radii.sm)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: AppColors.warning, size: 18),
+          const SizedBox(width: Spacing.sm),
+          Expanded(child: Text(texto, style: AppText.caption.copyWith(color: const Color(0xFF9A4A06)))),
+        ],
+      ),
+    );
+  }
+}
+
 class _Bloco extends StatelessWidget {
   const _Bloco({required this.titulo, required this.filhos});
 
@@ -548,7 +617,11 @@ class _Bloco extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: Spacing.md),
       padding: const EdgeInsets.all(Spacing.md),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(Radii.md)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(Radii.md),
+        boxShadow: AppColors.sombra,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [Text(titulo, style: AppText.heading), const SizedBox(height: Spacing.sm), ...filhos],

@@ -116,8 +116,15 @@ class FotoDoMotorista extends StatelessWidget {
       width: tamanho,
       height: tamanho,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.primarySoft),
-      child: Text(iniciais.isEmpty ? '?' : iniciais, style: AppText.title.copyWith(color: AppColors.primary)),
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brand, AppColors.brandDark],
+        ),
+      ),
+      child: Text(iniciais.isEmpty ? '?' : iniciais, style: AppText.title.copyWith(color: AppColors.onPrimary)),
     );
     final Widget foto;
     if (local != null) {
@@ -138,7 +145,7 @@ class FotoDoMotorista extends StatelessWidget {
             bottom: 0,
             child: Material(
               color: AppColors.primary,
-              shape: const CircleBorder(side: BorderSide(color: AppColors.background, width: 3)),
+              shape: const CircleBorder(side: BorderSide(color: AppColors.surface, width: 3)),
               child: InkWell(
                 customBorder: const CircleBorder(),
                 onTap: enviando ? null : aoTrocar,

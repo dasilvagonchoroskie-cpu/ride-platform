@@ -257,18 +257,28 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         CheckedPopupMenuItem(value: 'todas', checked: p.pracaEscolhida == null, child: const Text('Todas as cidades')),
         for (final c in e.pracas) CheckedPopupMenuItem(value: c.id, checked: p.pracaEscolhida == c.id, child: Text(c.rotulo)),
       ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: Spacing.xs),
+        padding: const EdgeInsets.fromLTRB(Spacing.sm, 4, 2, 4),
+        decoration: BoxDecoration(
+          color: AppColors.brandSoft,
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.location_city, size: 20),
+            const Icon(Icons.location_city, size: 18, color: AppColors.brand),
             const SizedBox(width: 4),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 72),
-              child: Text(p.pracaEscolhida == null ? 'Todas' : p.nomeDaCidadeNaTela, overflow: TextOverflow.ellipsis, maxLines: 1, style: AppText.caption),
+              constraints: const BoxConstraints(maxWidth: 64),
+              child: Text(
+                p.pracaEscolhida == null ? 'Todas' : p.nomeDaCidadeNaTela,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                style: AppText.caption.copyWith(color: AppColors.brand, fontWeight: FontWeight.w600),
+              ),
             ),
-            const Icon(Icons.arrow_drop_down),
+            const Icon(Icons.arrow_drop_down, color: AppColors.brand, size: 20),
           ],
         ),
       ),
@@ -313,12 +323,28 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           },
           icon: const Icon(Icons.refresh),
         ),
+        // Ao vivo: bolinha verde (vermelha sem sinal) — ocupa pouco espaco
+        // e deixa o nome da aba aparecer inteiro no celular.
         Padding(
-          padding: const EdgeInsets.only(right: Spacing.md),
-          child: Center(
-            child: AppBadge(
-              text: p.erro == null ? 'AO VIVO' : 'SEM SINAL',
-              tone: p.erro == null ? AppBadgeTone.success : AppBadgeTone.danger,
+          padding: const EdgeInsets.only(right: Spacing.md, left: Spacing.xs),
+          child: Tooltip(
+            message: p.erro == null ? 'Ao vivo: atualiza a cada 5 segundos' : 'Sem sinal do servidor',
+            child: Center(
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: p.erro == null ? AppColors.success : AppColors.danger,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (p.erro == null ? AppColors.success : AppColors.danger).withValues(alpha: 0.35),
+                      blurRadius: 0,
+                      spreadRadius: 3,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

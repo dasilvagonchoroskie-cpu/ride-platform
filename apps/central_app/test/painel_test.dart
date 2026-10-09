@@ -1089,6 +1089,8 @@ void main() {
   testWidgets('Fotos das telas da Central', skip: !_fotos, (tester) async {
     _comSos = false;
     await tester.runAsync(_fontes);
+    // Sombras de verdade nas fotos (o teste troca por contorno preto).
+    debugDisableShadows = false;
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1161,7 +1163,7 @@ void main() {
         await _foto(tester, '${(n++).toString().padLeft(2, '0')}-motorista-cadastro');
         await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 300, scrollable: find.byType(Scrollable).first);
         await _foto(tester, '${(n++).toString().padLeft(2, '0')}-motorista-carros');
-        await tester.pageBack();
+        Navigator.of(tester.element(find.text('Cadastrar outro carro'))).pop();
         await _carregar(tester);
       }
       if (aba == 'Financeiro') {
@@ -1175,5 +1177,6 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
+    debugDisableShadows = true;
   });
 }

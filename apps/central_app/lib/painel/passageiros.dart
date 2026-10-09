@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
+import 'foto.dart';
 import 'painel_state.dart';
 
 /// Confirmacao antes de excluir passageiros: explica o que some e o que fica.
@@ -166,11 +168,11 @@ class _PassageirosState extends State<Passageiros> {
             child: _selecionando
                 ? _barraDeSelecao()
                 : Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(foregroundColor: AppColors.danger),
                       onPressed: () => setState(() => _selecionando = true),
-                      icon: const Icon(Icons.delete_outline),
+                      icon: const Icon(Icons.delete_outline, size: 20),
                       label: const Text('Selecionar para excluir'),
                     ),
                   ),
@@ -190,16 +192,24 @@ class _PassageirosState extends State<Passageiros> {
                 separatorBuilder: (context, index) => const SizedBox(height: Spacing.xs),
                 itemBuilder: (context, i) {
                   final p = lista[i];
-                  return Material(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(Radii.md),
+                  return CartaoDeLista(
                     child: ListTile(
                       leading: _selecionando
                           ? Checkbox(
                               value: _marcados.contains(p.id),
                               onChanged: (_) => setState(() => _marcados.contains(p.id) ? _marcados.remove(p.id) : _marcados.add(p.id)),
                             )
-                          : Icon(p.bloqueado ? Icons.block : Icons.person, color: p.bloqueado ? AppColors.danger : AppColors.textMuted),
+                          : p.bloqueado
+                              ? Container(
+                                  width: 44,
+                                  height: 44,
+                                  alignment: Alignment.center,
+                                  decoration: const BoxDecoration(color: AppColors.dangerSoft, shape: BoxShape.circle),
+                                  child: const Icon(Icons.block, color: AppColors.danger),
+                                )
+                              : AppAvatar(initials: iniciaisDe(p.nome), size: 44),
+                      contentPadding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.xs, Spacing.sm, Spacing.xs),
+                      trailing: _selecionando ? null : const Icon(Icons.chevron_right, color: AppColors.textFaint),
                       title: Text(p.nome, style: AppText.bodyStrong),
                       subtitle: Text(
                         '${telefoneBonito(p.telefone)} · ${p.corridas} corrida(s)${p.bloqueado ? '\nBloqueado: ${p.motivo ?? ''}' : ''}',

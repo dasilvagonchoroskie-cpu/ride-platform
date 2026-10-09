@@ -112,7 +112,13 @@ class ResponsiveShell extends StatelessWidget {
       backgroundColor: AppColors.background,
       drawer: tablet ? null : drawer,
       appBar: AppBar(
-        title: Text(title),
+        titleSpacing: tablet ? null : 0,
+        // Nome da aba inteiro: diminui a letra se nao couber (nao corta).
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(title),
+        ),
         leading: tablet ? null : const _MenuButton(),
         automaticallyImplyLeading: false,
         actions: actions,

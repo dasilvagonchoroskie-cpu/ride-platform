@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
@@ -113,9 +114,7 @@ class _TarifasTelaState extends State<TarifasTela> {
           ],
         ),
         const SizedBox(height: Spacing.md),
-        Material(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(Radii.md),
+        CartaoDeLista(
           child: Padding(
           padding: const EdgeInsets.all(Spacing.md),
           child: Column(
@@ -248,9 +247,7 @@ class _CobrancaState extends State<_Cobranca> {
   @override
   Widget build(BuildContext context) {
     final taximetro = widget.t.cobranca == 'TAXIMETRO';
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(Radii.md),
+    return CartaoDeLista(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
@@ -397,9 +394,7 @@ class _MultiplicadorState extends State<_Multiplicador> {
   Widget build(BuildContext context) {
     // Material (e nao Container colorido): o toque nas linhas da lista
     // precisa aparecer.
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(Radii.md),
+    return CartaoDeLista(
       child: Padding(
       padding: const EdgeInsets.all(Spacing.md),
       child: Column(

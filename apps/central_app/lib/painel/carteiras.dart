@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/api/api_client.dart';
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 
@@ -199,9 +200,7 @@ class _CarteirasTelaState extends State<CarteirasTela> {
               for (final m in lista)
                 Padding(
                   padding: const EdgeInsets.only(bottom: Spacing.xs),
-                  child: Material(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(Radii.md),
+                  child: CartaoDeLista(
                     child: ListTile(
                       leading: Icon(
                         semSaldo(m) ? Icons.money_off : Icons.account_balance_wallet_outlined,
@@ -304,9 +303,7 @@ class _RegrasState extends State<_Regras> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(Radii.md),
+    return CartaoDeLista(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
@@ -464,9 +461,7 @@ class _CarteiraMotoristaTelaState extends State<CarteiraMotoristaTela> {
                     padding: const EdgeInsets.all(Spacing.md),
                     children: [
                       // 1. Saldo
-                      Material(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(Radii.md),
+                      CartaoDeLista(
                         child: Padding(
                           padding: const EdgeInsets.all(Spacing.lg),
                           child: Column(
@@ -492,9 +487,7 @@ class _CarteiraMotoristaTelaState extends State<CarteiraMotoristaTela> {
                       ),
                       const SizedBox(height: Spacing.md),
                       // 2. Recarga manual
-                      Material(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(Radii.md),
+                      CartaoDeLista(
                         child: Padding(
                           padding: const EdgeInsets.all(Spacing.md),
                           child: Column(
