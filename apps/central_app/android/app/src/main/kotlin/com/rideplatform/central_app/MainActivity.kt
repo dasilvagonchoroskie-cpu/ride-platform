@@ -137,9 +137,14 @@ class MainActivity : FlutterActivity() {
 
     private fun tocar() {
         if (toque?.isPlaying == true) return
-        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-        toque = RingtoneManager.getRingtone(applicationContext, uri)?.apply {
+        // Som proprio (alerta de SOS da plataforma), igual em qualquer celular.
+        val uri = Uri.parse("android.resource://$packageName/${R.raw.alerta}")
+        toque = (RingtoneManager.getRingtone(applicationContext, uri)
+            ?: RingtoneManager.getRingtone(
+                applicationContext,
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+            ))?.apply {
             audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -163,8 +168,11 @@ class MainActivity : FlutterActivity() {
      */
     private fun aviso(titulo: String, texto: String) {
         try {
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            RingtoneManager.getRingtone(applicationContext, uri)?.play()
+            // Assobio curto da plataforma (cadastro novo esperando aprovacao).
+            val uri = Uri.parse("android.resource://$packageName/${R.raw.aviso}")
+            (RingtoneManager.getRingtone(applicationContext, uri)
+                ?: RingtoneManager.getRingtone(applicationContext, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)))
+                ?.play()
         } catch (e: Exception) {}
         if (Build.VERSION.SDK_INT >= 26) {
             vibrador()?.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))

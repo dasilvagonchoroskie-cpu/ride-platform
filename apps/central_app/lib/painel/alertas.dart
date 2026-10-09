@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../core/alarme.dart';
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
@@ -32,10 +33,23 @@ class _AlertasState extends State<Alertas> {
     return ListView(
       padding: const EdgeInsets.all(Spacing.md),
       children: [
-        Text('Abertos agora (${p.alertas.length})', style: AppText.heading),
-        const SizedBox(height: Spacing.sm),
+        SectionTitle(text: 'Abertos agora (${p.alertas.length})'),
         if (p.alertas.isEmpty)
-          Text('Nenhum SOS aberto.', style: AppText.body.copyWith(color: AppColors.textMuted)),
+          AppCard(
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(color: AppColors.successSoft, shape: BoxShape.circle),
+                  child: const Icon(Icons.verified_user_outlined, color: AppColors.success),
+                ),
+                const SizedBox(width: Spacing.md),
+                Expanded(child: Text('Nenhum SOS aberto.', style: AppText.body.copyWith(color: AppColors.textMuted))),
+              ],
+            ),
+          ),
         for (final a in p.alertas)
           Card(
             color: AppColors.dangerSoft,
@@ -48,7 +62,7 @@ class _AlertasState extends State<Alertas> {
             ),
           ),
         const SizedBox(height: Spacing.lg),
-        const Text('Encerrados', style: AppText.heading),
+        const SectionTitle(text: 'Encerrados'),
         FutureBuilder<List<AlertaSos>>(
           future: _resolvidos,
           builder: (context, s) {
@@ -58,11 +72,15 @@ class _AlertasState extends State<Alertas> {
             return Column(
               children: [
                 for (final a in s.data!)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.check_circle_outline, color: AppColors.success),
-                    title: Text('${a.papelNome}: ${a.quem} · ${dataHora(a.criadoEm)}', style: AppText.body),
-                    subtitle: Text(a.nota ?? '', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Spacing.sm),
+                    child: CartaoDeLista(
+                      child: ListTile(
+                        leading: const Icon(Icons.check_circle_outline, color: AppColors.success),
+                        title: Text('${a.papelNome}: ${a.quem} · ${dataHora(a.criadoEm)}', style: AppText.body),
+                        subtitle: Text(a.nota ?? '', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                      ),
+                    ),
                   ),
               ],
             );

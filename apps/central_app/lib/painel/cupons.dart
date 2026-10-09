@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
@@ -32,7 +33,7 @@ class _CuponsTelaState extends State<CuponsTela> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Cupons de desconto')),
+      // Sem barra propria: a barra de cima da Central ja diz "Cupons".
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'novo-cupom',
         icon: const Icon(Icons.add),
@@ -52,19 +53,31 @@ class _CuponsTelaState extends State<CuponsTela> {
             padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.md, Spacing.md, 96),
             children: [
               for (final c in s.data!)
-                SwitchListTile(
-                  value: c.ativo,
-                  title: Text('${c.codigo} · ${c.percentual ? '${c.valor}%' : reais(c.valor)}', style: AppText.bodyStrong),
-                  subtitle: Text(
-                    '${c.descricao.isEmpty ? '' : '${c.descricao}\n'}Usado ${c.usados} de ${c.limite} · ${c.porPessoa} por pessoa'
-                    '${c.minimoCents > 0 ? ' · mínimo ${reais(c.minimoCents)}' : ''}'
-                    '${c.validoAte != null ? ' · até ${dataHora(c.validoAte)}' : ''}',
-                    style: AppText.caption.copyWith(color: AppColors.textMuted),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.sm),
+                  child: CartaoDeLista(
+                    child: SwitchListTile(
+                      secondary: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(color: AppColors.goldSoft, shape: BoxShape.circle),
+                        child: const Icon(Icons.local_offer_outlined, color: Color(0xFFB7860B)),
+                      ),
+                      value: c.ativo,
+                      title: Text('${c.codigo} · ${c.percentual ? '${c.valor}%' : reais(c.valor)}', style: AppText.bodyStrong),
+                      subtitle: Text(
+                        '${c.descricao.isEmpty ? '' : '${c.descricao}\n'}Usado ${c.usados} de ${c.limite} · ${c.porPessoa} por pessoa'
+                        '${c.minimoCents > 0 ? ' · mínimo ${reais(c.minimoCents)}' : ''}'
+                        '${c.validoAte != null ? ' · até ${dataHora(c.validoAte)}' : ''}',
+                        style: AppText.caption.copyWith(color: AppColors.textMuted),
+                      ),
+                      onChanged: (v) async {
+                        final ok = await tentar(context, () => _api.ligarCupom(c.id, v), sucesso: v ? 'Cupom ligado.' : 'Cupom desligado.');
+                        if (ok) _recarregar();
+                      },
+                    ),
                   ),
-                  onChanged: (v) async {
-                    final ok = await tentar(context, () => _api.ligarCupom(c.id, v), sucesso: v ? 'Cupom ligado.' : 'Cupom desligado.');
-                    if (ok) _recarregar();
-                  },
                 ),
             ],
           );

@@ -23,6 +23,9 @@ import java.util.TimeZone;
  * Alarme de corrida nova (Evandro, 08/10/2026: "reforcar os alarmes, os
  * aplicativos nao estao alarmando").
  *
+ * - Som: o assobio proprio da plataforma (09/10/2026), nao o alarme do
+ *   Android — o mesmo som em qualquer marca de celular.
+ *
  * - Toca pelo canal de ALARME (passa pelo modo silencioso e vibrar) e sobe
  *   o volume do alarme ao maximo enquanto toca; depois devolve o volume
  *   que estava.
@@ -91,7 +94,11 @@ public final class Sirene {
         } catch (Exception ignored) {
             // Alguns aparelhos no "Nao perturbe" total recusam: toca no volume que estiver.
         }
+        // Som proprio da Fortaleza Mov (assobio de chamado, res/raw/chamado.ogg):
+        // toca igual em qualquer celular (Evandro, 09/10/2026). O toque de
+        // alarme do aparelho fica so de reserva.
         Uri[] sons = {
+                Uri.parse("android.resource://" + app.getPackageName() + "/" + R.raw.chamado),
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),

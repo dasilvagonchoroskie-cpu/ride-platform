@@ -344,11 +344,21 @@ public class CorridaService extends Service {
     private void tocarPorUnsSegundos() {
         pararToque();
         try {
-            Uri som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-            if (som == null) som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            if (som == null) return;
+            // Assobio curto proprio da plataforma (res/raw/aviso.ogg): igual em
+            // qualquer celular. O toque do aparelho fica so de reserva.
             MediaPlayer m = new MediaPlayer();
-            m.setDataSource(this, som);
+            try {
+                m.setDataSource(this, Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.aviso));
+            } catch (Exception e) {
+                Uri som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                if (som == null) som = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                if (som == null) {
+                    m.release();
+                    return;
+                }
+                m.reset();
+                m.setDataSource(this, som);
+            }
             m.setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
