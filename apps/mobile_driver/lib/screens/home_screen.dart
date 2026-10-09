@@ -11,6 +11,7 @@ import '../widgets/painel_ui.dart';
 import '../widgets/ride_map.dart';
 import 'activity_screen.dart';
 import 'avisos_screen.dart';
+import 'corrida_manual_screen.dart';
 import 'menu_screen.dart';
 import 'rides_history_screen.dart';
 import 'sos_screen.dart';
@@ -411,6 +412,16 @@ class _PainelInferior extends StatelessWidget {
                 Text(
                   'Conecte-se para receber corridas.',
                   style: AppText.body.copyWith(color: AppColors.textMuted),
+                ),
+              ],
+              if (online) ...[
+                const SizedBox(height: Spacing.md),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const CorridaManualScreen()),
+                  ),
+                  icon: const Icon(Icons.add_road),
+                  label: const Text('Lançar corrida manual'),
                 ),
               ],
               if (onSimular != null)

@@ -27,6 +27,13 @@ function inicioDeHoje(): Date {
 const EM_ANDAMENTO: RideStatus[] = ['DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'];
 const ABERTAS: RideStatus[] = ['SCHEDULED', 'REQUESTED', 'SEARCHING', ...EM_ANDAMENTO];
 
+export interface CorridaDoMotorista {
+  contato: string;
+  passengerName?: string;
+  pickup: { address: string; latitude: number; longitude: number };
+  dropoff?: { address: string; latitude: number; longitude: number };
+}
+
 export interface CorridaManual {
   passengerName: string;
   passengerPhone: string;
@@ -151,6 +158,85 @@ export class CentralService {
   }
 
   // ================= Despacho =================
+
+  /** Telefone (com DDD) ou e-mail -> filtro de busca da conta. */
+  private contatoDoPassageiro(contato: string): { phone: string } | { email: string } {
+    const c = contato.trim();
+    if (c.includes('@')) return { email: c.toLowerCase() };
+    const telefone = '+55' + c.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+    if (!/^\+55\d{10,11}$/.test(telefone)) {
+      throw BusinessException.validation('Telefone invalido: use DDD + numero (ou o e-mail do passageiro).');
+    }
+    return { phone: telefone };
+  }
+
+  /** Motorista conferindo o passageiro: so o primeiro nome (nunca telefone ou e-mail). */
+  async buscarPassageiroParaMotorista(contato: string) {
+    const conta = await this.prisma.user.findFirst({ where: { ...this.contatoDoPassageiro(contato), deletedAt: null } });
+    if (!conta) return { encontrado: false };
+    if (conta.status === UserStatus.BLOCKED) {
+      throw BusinessException.validation('Este passageiro esta bloqueado. Fale com a Central.');
+    }
+    return { encontrado: true, primeiroNome: (conta.name ?? '').trim().split(/\s+/)[0] || 'Passageiro' };
+  }
+
+  /**
+   * Corrida lancada pelo motorista: acha (ou cria pelo telefone) o
+   * passageiro, abre a corrida, entrega so para este motorista e ja marca
+   * "cheguei" - falta so deslizar "Iniciar viagem". Comissao igual.
+   */
+  async criarCorridaDoMotorista(userId: string, driverId: string, input: CorridaDoMotorista) {
+    if (!driverId) throw BusinessException.forbidden('Esta conta nao tem cadastro de motorista.');
+    const filtro = this.contatoDoPassageiro(input.contato);
+    let passageiro = await this.prisma.user.findFirst({ where: { ...filtro, deletedAt: null } });
+    if (passageiro?.status === UserStatus.BLOCKED) {
+      throw BusinessException.validation('Este passageiro esta bloqueado. Fale com a Central.');
+    }
+    if (passageiro?.id === userId) {
+      throw BusinessException.validation('Use o telefone ou o e-mail do passageiro, nao o seu.');
+    }
+    const tinhaConta = !!passageiro;
+    if (!passageiro) {
+      if (!('phone' in filtro)) {
+        throw BusinessException.validation('Nao achamos conta com este e-mail. Use o telefone do passageiro.');
+      }
+      const nome = input.passengerName?.trim() ?? '';
+      if (nome.length < 2) throw BusinessException.validation('Informe o nome do passageiro.');
+      passageiro = await this.prisma.user.create({
+        data: {
+          name: nome,
+          phone: filtro.phone,
+          role: UserRole.PASSENGER,
+          status: UserStatus.ACTIVE,
+          phoneVerifiedAt: null,
+          metadata: { criadoPeloMotorista: driverId } as never,
+        },
+      });
+    }
+
+    const criada = await this.rides.pedir(passageiro.id, {
+      pickup: input.pickup,
+      dropoff: input.dropoff ?? input.pickup,
+      paymentMethodType: 'CASH',
+    } as never);
+    const rideId = (criada as { ride: { id: string } }).ride.id;
+    await this.prisma.rideStatusHistory.create({
+      data: { rideId, status: RideStatus.REQUESTED, actorId: userId, actorRole: UserRole.DRIVER, note: 'Corrida manual lancada pelo motorista.' },
+    });
+    try {
+      await this.atribuir(userId, rideId, driverId);
+      await this.rides.aceitar(driverId, rideId);
+      await this.rides.cheguei(driverId, rideId, { latitude: input.pickup.latitude, longitude: input.pickup.longitude });
+    } catch (erro) {
+      // Nao deixa a corrida solta procurando outro motorista.
+      await this.prisma.ride.update({
+        where: { id: rideId },
+        data: { status: RideStatus.CANCELLED_BY_SYSTEM, cancelledAt: new Date(), driverId: null, vehicleId: null },
+      });
+      throw erro;
+    }
+    return { rideId, passageiroTinhaConta: tinhaConta };
+  }
 
   /** Corrida pedida por telefone: a Central preenche e a procura comeca. */
   async criarCorridaManual(adminId: string, input: CorridaManual) {

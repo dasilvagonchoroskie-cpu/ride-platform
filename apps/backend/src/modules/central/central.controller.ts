@@ -13,7 +13,7 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CentralService } from './central.service';
 import type { CorridaManual } from './central.service';
 
-const ponto = z.object({
+export const ponto = z.object({
   address: z.string().trim().min(3).max(300),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),

@@ -396,6 +396,31 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// Corrida aceita fora desta tela (tela de chamado nativa com o app
   /// fechado): o servidor diz qual e a corrida em andamento e o aplicativo
   /// abre direto nela.
+  /// Corrida manual (Evandro, 09/10/2026): confere se o telefone ou e-mail
+  /// tem conta. O servidor devolve so o primeiro nome.
+  Future<({bool encontrado, String? primeiroNome})> buscarPassageiro(String contato) async {
+    final r = await _client.request('POST', '/driver/manual-rides/buscar-passageiro', body: {'contato': contato.trim()})
+        as Map<String, dynamic>;
+    return (encontrado: r['encontrado'] == true, primeiroNome: r['primeiroNome'] as String?);
+  }
+
+  /// Abre a corrida manual ja com "cheguei" no lugar onde o motorista esta;
+  /// a tela da corrida assume (falta so deslizar "Iniciar viagem").
+  Future<void> lancarCorridaManual({required String contato, String? nome}) async {
+    final p = position;
+    await _client.request('POST', '/driver/manual-rides', body: {
+      'contato': contato.trim(),
+      if (nome != null && nome.trim().length >= 2) 'passengerName': nome.trim(),
+      'pickup': {
+        'address': 'Corrida manual - embarque no local do motorista',
+        'latitude': p.latitude,
+        'longitude': p.longitude,
+      },
+    });
+    await retomarCorridaDoServidor();
+    await conferirCorrida();
+  }
+
   Future<void> retomarCorridaDoServidor() async {
     if (!AppConfig.hasApi || activeRide != null || _retomando) return;
     _retomando = true;
