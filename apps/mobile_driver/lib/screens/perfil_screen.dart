@@ -278,6 +278,7 @@ class _FotoDoPerfil extends StatelessWidget {
   Widget build(BuildContext context) {
     final letras = Text(iniciais.isEmpty ? '?' : iniciais, style: AppText.title.copyWith(color: Colors.white, fontSize: 30));
     return Semantics(
+      container: true,
       button: true,
       label: 'Trocar foto de perfil',
       excludeSemantics: true,

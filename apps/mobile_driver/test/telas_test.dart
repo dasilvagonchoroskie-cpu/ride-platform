@@ -180,7 +180,7 @@ void main() {
   testWidgets('Perfil e documentos: situacao, motivo, documentos e senha', (tester) async {
     await _abrir(tester, const PerfilScreen());
     // Foto de perfil no topo, com o aviso da troca esperando a Central.
-    expect(find.bySemanticsLabel('Trocar foto de perfil'), findsOneWidget);
+    expect(find.byIcon(Icons.photo_camera), findsOneWidget);
     expect(find.text('Pôr foto de perfil'), findsOneWidget);
     expect(find.textContaining('Foto nova aguardando a Central conferir'), findsOneWidget);
     expect(find.text('Rejeitado'), findsWidgets);

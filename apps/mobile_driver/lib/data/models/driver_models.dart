@@ -73,7 +73,7 @@ class DriverProfile {
   /// — inclusive antes do cadastro do veiculo.
   final bool termsAccepted;
 
-  /// Foto de perfil aprovada (a que o passageiro ve). Ex.: /arquivos/<id>.
+  /// Foto de perfil aprovada (a que o passageiro ve), no formato /arquivos/ID.
   final String? avatarUrl;
 
   bool get isOnboarded => cpf != null && cnhNumber != null;
