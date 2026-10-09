@@ -99,82 +99,90 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: Spacing.xl),
-                  Container(
-                    height: 64,
-                    width: 64,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      border: Border.all(color: AppColors.primary),
-                      borderRadius: BorderRadius.circular(Radii.lg),
-                    ),
-                    child: const Icon(Icons.monitor, color: AppColors.primary, size: 32),
-                  ),
+                  const Center(child: BrandLogo(size: 92)),
                   const SizedBox(height: Spacing.lg),
-                  Text('Fortaleza Mov', style: AppText.title),
-                  const SizedBox(height: Spacing.xs),
-                  Text('Central administradora', style: AppText.body.copyWith(color: AppColors.textMuted)),
-                  const SizedBox(height: Spacing.xl),
-                  AppField(
-                    label: 'E-mail da Central',
-                    hint: 'seuemail@gmail.com',
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    prefixIcon: Icons.alternate_email,
-                    enabled: !_codigoEnviado || !porCodigo,
-                    onChanged: (_) => setState(() => _error = null),
+                  Text(
+                    'Fortaleza',
+                    textAlign: TextAlign.center,
+                    style: AppText.display.copyWith(fontSize: 40, letterSpacing: -1.2),
                   ),
-                  const SizedBox(height: Spacing.md),
-                  if (porCodigo) ...[
-                    if (_codigoEnviado) ...[
-                      Text(
-                        'Enviamos um código de 6 números para ${_email.text.trim()}.',
-                        style: AppText.body.copyWith(color: AppColors.textMuted),
-                      ),
-                      const SizedBox(height: Spacing.md),
-                      TextField(
-                        controller: _codigo,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        style: AppText.title.copyWith(letterSpacing: 8),
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          counterText: '',
-                          hintText: '000000',
-                          filled: true,
-                          fillColor: AppColors.surfaceElevated,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+                  Text(
+                    'MOV  -  CENTRAL',
+                    textAlign: TextAlign.center,
+                    style: AppText.label.copyWith(color: AppColors.brand, fontSize: 13, letterSpacing: 3, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: Spacing.xs),
+                  Text(
+                    'Painel de operação da plataforma',
+                    textAlign: TextAlign.center,
+                    style: AppText.body.copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: Spacing.xl),
+                  AppCard(
+                    padding: const EdgeInsets.all(Spacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppField(
+                          label: 'E-mail da Central',
+                          hint: 'seuemail@gmail.com',
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          prefixIcon: Icons.alternate_email,
+                          enabled: !_codigoEnviado || !porCodigo,
+                          onChanged: (_) => setState(() => _error = null),
                         ),
-                        onChanged: (v) {
-                          setState(() => _error = null);
-                          if (v.length == 6) _entrarComCodigo();
-                        },
-                      ),
-                      const SizedBox(height: Spacing.lg),
-                      AppButton(label: 'Entrar na Central', loading: central.loading, onPressed: _entrarComCodigo),
-                      TextButton(
-                        onPressed: _enviando ? null : _pedirCodigo,
-                        child: const Text('Mandar outro código'),
-                      ),
-                    ] else
-                      AppButton(label: 'Receber código no e-mail', loading: _enviando, onPressed: _pedirCodigo),
-                  ] else ...[
-                    AppField(
-                      label: 'Senha',
-                      hint: 'Sua senha',
-                      controller: _senha,
-                      obscure: true,
-                      prefixIcon: Icons.lock_outline,
-                      onChanged: (_) => setState(() => _error = null),
+                        const SizedBox(height: Spacing.md),
+                        if (porCodigo) ...[
+                          if (_codigoEnviado) ...[
+                            Text(
+                              'Enviamos um código de 6 números para ${_email.text.trim()}.',
+                              style: AppText.body.copyWith(color: AppColors.textMuted),
+                            ),
+                            const SizedBox(height: Spacing.md),
+                            TextField(
+                              controller: _codigo,
+                              keyboardType: TextInputType.number,
+                              maxLength: 6,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              style: AppText.title.copyWith(letterSpacing: 8),
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                counterText: '',
+                                hintText: '000000',
+                              ),
+                              onChanged: (v) {
+                                setState(() => _error = null);
+                                if (v.length == 6) _entrarComCodigo();
+                              },
+                            ),
+                            const SizedBox(height: Spacing.lg),
+                            AppButton(label: 'Entrar na Central', loading: central.loading, onPressed: _entrarComCodigo),
+                            TextButton(
+                              onPressed: _enviando ? null : _pedirCodigo,
+                              child: const Text('Mandar outro código'),
+                            ),
+                          ] else
+                            AppButton(label: 'Receber código no e-mail', loading: _enviando, onPressed: _pedirCodigo),
+                        ] else ...[
+                          AppField(
+                            label: 'Senha',
+                            hint: 'Sua senha',
+                            controller: _senha,
+                            obscure: true,
+                            prefixIcon: Icons.lock_outline,
+                            onChanged: (_) => setState(() => _error = null),
+                          ),
+                          const SizedBox(height: Spacing.lg),
+                          AppButton(label: 'Entrar na Central', loading: central.loading, onPressed: _entrarComSenha),
+                        ],
+                        if (erro != null) ...[
+                          const SizedBox(height: Spacing.sm),
+                          Text(erro, style: AppText.caption.copyWith(color: AppColors.danger)),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: Spacing.lg),
-                    AppButton(label: 'Entrar na Central', loading: central.loading, onPressed: _entrarComSenha),
-                  ],
-                  if (erro != null) ...[
-                    const SizedBox(height: Spacing.sm),
-                    Text(erro, style: AppText.caption.copyWith(color: AppColors.danger)),
-                  ],
+                  ),
                   const SizedBox(height: Spacing.md),
                   if (central.codigoPorEmail)
                     TextButton(

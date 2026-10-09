@@ -37,7 +37,7 @@ Future<void> _abrir(WidgetTester tester) async {
     ChangeNotifierProvider<PainelState>.value(
       value: PainelState(PainelApi(ApiClient(client: _servidor()))),
       child: MaterialApp(
-        theme: CentralTheme.dark,
+        theme: CentralTheme.light,
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,

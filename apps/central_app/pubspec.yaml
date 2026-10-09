@@ -33,6 +33,7 @@ flutter:
   assets:
     - assets/map_styles/
     - assets/markers/
+    - assets/brand/
 
   fonts:
     - family: Inter

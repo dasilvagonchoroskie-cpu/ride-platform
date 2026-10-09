@@ -141,7 +141,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
                     cor: AppColors.warning,
                   ),
                   const SizedBox(width: Spacing.xs),
-                  _Indicador(rotulo: 'Faturamento hoje', valor: reais(p.indicadores.faturamentoHojeCents), cor: AppColors.text),
+                  _Indicador(rotulo: 'Faturamento hoje', valor: reais(p.indicadores.faturamentoHojeCents), cor: AppColors.brandDark),
                 ],
               ),
               if (p.erro != null) ...[
@@ -169,8 +169,9 @@ class _VisaoGeralState extends State<VisaoGeral> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: Spacing.xs),
             decoration: BoxDecoration(
-              color: AppColors.background.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(Radii.sm),
+              color: AppColors.surface.withValues(alpha: 0.94),
+              borderRadius: BorderRadius.circular(Radii.md),
+              boxShadow: AppColors.sombraFlutuante,
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,7 +196,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
               const SizedBox(height: Spacing.sm),
               FloatingActionButton.small(
                 heroTag: 'enquadrar',
-                backgroundColor: AppColors.surfaceElevated,
+                backgroundColor: AppColors.surface,
                 tooltip: 'Mostrar todos os carros',
                 onPressed: () => _enquadrar(p),
                 child: const Icon(Icons.center_focus_strong, color: AppColors.text),
@@ -307,7 +308,7 @@ class _Pino extends StatelessWidget {
         color: cor,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
-        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6)],
+        boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 6, offset: Offset(0, 2))],
       ),
       alignment: Alignment.center,
       child: Icon(icone, color: Colors.white, size: grande ? 28 : 20),
@@ -329,17 +330,30 @@ class _Indicador extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+          padding: const EdgeInsets.fromLTRB(Spacing.sm, Spacing.sm, Spacing.md, Spacing.sm),
           decoration: BoxDecoration(
-            color: AppColors.background.withValues(alpha: 0.88),
+            color: AppColors.surface.withValues(alpha: 0.96),
             borderRadius: BorderRadius.circular(Radii.md),
-            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.sombraFlutuante,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Text(rotulo, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption.copyWith(color: AppColors.textMuted)),
-              Text(valor, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.heading.copyWith(color: cor)),
+              // Barrinha colorida na esquerda: a cor do numero (igual a legenda).
+              Container(
+                width: 4,
+                height: 34,
+                decoration: BoxDecoration(color: cor, borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(rotulo, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+                    Text(valor, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.heading.copyWith(color: cor, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
             ],
           ),
         ),

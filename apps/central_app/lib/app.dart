@@ -24,13 +24,13 @@ class CentralApp extends StatelessWidget {
       // (voltar/inicio). Sem isto o botao "Confirmar corrida" ficava atras
       // dela. A margem de baixo vale para TODAS as telas de uma vez.
       builder: (context, child) => ColoredBox(
-        color: Colors.black,
+        color: AppColors.background,
         child: SafeArea(top: false, left: false, right: false, child: child ?? const SizedBox.shrink()),
       ),
       scaffoldMessengerKey: avisos,
       title: 'Fortaleza Mov Central',
       debugShowCheckedModeBanner: false,
-      theme: CentralTheme.dark,
+      theme: CentralTheme.light,
       // Logo ao instalar: autorizacoes antes de qualquer outra tela.
       home: const PortaoPermissoes(
         itens: [

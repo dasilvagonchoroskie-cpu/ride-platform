@@ -33,19 +33,15 @@ class AppButton extends StatelessWidget {
     final (Color background, Color foreground, BorderSide side) = switch (variant) {
       AppButtonVariant.primary ||
       AppButtonVariant.approve =>
-        (AppColors.primary, AppColors.text, BorderSide.none),
-      AppButtonVariant.success => (AppColors.success, AppColors.text, BorderSide.none),
+        (AppColors.primary, AppColors.onPrimary, BorderSide.none),
+      AppButtonVariant.success => (AppColors.success, AppColors.onPrimary, BorderSide.none),
       AppButtonVariant.secondary => (
-          AppColors.surfaceElevated,
+          AppColors.surface,
           AppColors.text,
-          const BorderSide(color: AppColors.border),
+          const BorderSide(color: Color(0xFFC9CED6)),
         ),
       AppButtonVariant.ghost => (Colors.transparent, AppColors.textMuted, BorderSide.none),
-      AppButtonVariant.danger => (
-          AppColors.dangerSoft,
-          AppColors.danger,
-          const BorderSide(color: AppColors.danger),
-        ),
+      AppButtonVariant.danger => (AppColors.danger, AppColors.onPrimary, BorderSide.none),
     };
 
     return Padding(
@@ -62,6 +58,7 @@ class AppButton extends StatelessWidget {
             disabledForegroundColor: foreground.withValues(alpha: 0.6),
             side: side,
             elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
           ),
           child: loading
@@ -77,7 +74,14 @@ class AppButton extends StatelessWidget {
                       Icon(icon, size: 20, color: foreground),
                       const SizedBox(width: Spacing.sm),
                     ],
-                    Text(label, style: AppText.button.copyWith(color: foreground)),
+                    // Texto longo ou letra grande do celular: diminui para
+                    // caber, em vez de estourar o botao.
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(label, maxLines: 1, style: AppText.button.copyWith(color: foreground)),
+                      ),
+                    ),
                   ],
                 ),
         ),
@@ -99,8 +103,8 @@ class AppCard extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(Spacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(Radii.lg),
+        borderRadius: BorderRadius.circular(Radii.md),
+        boxShadow: AppColors.sombra,
       ),
       child: child,
     );
@@ -126,12 +130,15 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final corRotulo = highlight ? AppColors.onPrimary.withValues(alpha: 0.85) : AppColors.textMuted;
+    final corValor = highlight ? AppColors.onPrimary : AppColors.text;
     return Container(
       padding: const EdgeInsets.all(Spacing.lg),
       decoration: BoxDecoration(
-        color: highlight ? AppColors.primarySoft : AppColors.surface,
-        border: Border.all(color: highlight ? AppColors.primary : AppColors.border),
-        borderRadius: BorderRadius.circular(Radii.lg),
+        color: highlight ? null : AppColors.surface,
+        gradient: highlight ? AppColors.degradeMarca : null,
+        borderRadius: BorderRadius.circular(Radii.md),
+        boxShadow: AppColors.sombra,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,10 +146,15 @@ class MetricCard extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 16,
-                  color: highlight ? AppColors.primary : AppColors.textMuted,
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: highlight ? AppColors.onPrimary.withValues(alpha: 0.18) : AppColors.brandSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 16, color: highlight ? AppColors.gold : AppColors.brand),
                 ),
                 const SizedBox(width: Spacing.sm),
               ],
@@ -151,9 +163,7 @@ class MetricCard extends StatelessWidget {
                   label.toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.label.copyWith(
-                    color: highlight ? AppColors.primary : AppColors.textFaint,
-                  ),
+                  style: AppText.label.copyWith(color: corRotulo, fontSize: 11),
                 ),
               ),
             ],
@@ -162,16 +172,11 @@ class MetricCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: AppText.metric.copyWith(
-                color: highlight ? AppColors.primary : AppColors.text,
-              ),
-            ),
+            child: Text(value, style: AppText.metric.copyWith(color: corValor)),
           ),
           if (helper != null) ...[
             const SizedBox(height: Spacing.xs),
-            Text(helper!, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+            Text(helper!, style: AppText.caption.copyWith(color: corRotulo)),
           ],
         ],
       ),
@@ -215,8 +220,8 @@ class AppField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) ...[
-          Text(label!.toUpperCase(), style: AppText.label.copyWith(color: AppColors.textMuted)),
-          const SizedBox(height: Spacing.xs),
+          Text(label!, style: AppText.caption.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
         ],
         TextField(
           controller: controller,
@@ -227,7 +232,7 @@ class AppField extends StatelessWidget {
           obscureText: obscure,
           enableSuggestions: !obscure,
           autocorrect: !obscure,
-          style: AppText.body.copyWith(fontSize: 16),
+          style: AppText.body.copyWith(fontSize: 16, color: AppColors.text),
           decoration: InputDecoration(
             hintText: hint,
             counterText: '',
@@ -235,15 +240,19 @@ class AppField extends StatelessWidget {
             helperText: helper,
             helperStyle: AppText.caption.copyWith(color: AppColors.textFaint),
             filled: true,
-            fillColor: AppColors.surfaceElevated,
+            fillColor: enabled ? AppColors.surface : AppColors.surfaceElevated,
             prefixIcon: prefixIcon == null ? null : Icon(prefixIcon, color: AppColors.textMuted, size: 20),
             hintStyle: AppText.body.copyWith(color: AppColors.textFaint),
             contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: const BorderSide(color: Color(0xFFC9CED6)),
             ),
             enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(Radii.sm),
+              borderSide: const BorderSide(color: Color(0xFFC9CED6)),
+            ),
+            disabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(Radii.sm),
               borderSide: const BorderSide(color: AppColors.border),
             ),
@@ -302,15 +311,18 @@ class AppAvatar extends StatelessWidget {
       height: size,
       width: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        border: Border.all(color: AppColors.primaryDark),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brand, AppColors.brandDark],
+        ),
         shape: BoxShape.circle,
       ),
       child: Text(
         initials.isEmpty ? '?' : initials,
         style: AppText.heading.copyWith(
-          color: AppColors.primary,
+          color: AppColors.onPrimary,
           fontSize: size * 0.34,
           fontWeight: FontWeight.w700,
         ),
@@ -331,6 +343,12 @@ class SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: Spacing.md),
       child: Row(
         children: [
+          Container(
+            width: 4,
+            height: 18,
+            margin: const EdgeInsets.only(right: Spacing.sm),
+            decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(2)),
+          ),
           Expanded(child: Text(text, style: AppText.heading)),
           if (action != null) action!,
         ],
@@ -363,7 +381,13 @@ class EmptyState extends StatelessWidget {
       child: Column(
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 44, color: AppColors.textFaint),
+            Container(
+              width: 72,
+              height: 72,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: AppColors.brandSoft, shape: BoxShape.circle),
+              child: Icon(icon, size: 36, color: AppColors.brand),
+            ),
             const SizedBox(height: Spacing.md),
           ],
           Text(title, style: AppText.heading),
@@ -413,6 +437,39 @@ class HourlyBarChart extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Logo redondo da Fortaleza Mov (icone da Central), com o aro azul e
+/// dourado igual ao dos aplicativos do passageiro e do motorista.
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key, this.size = 44});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: SweepGradient(colors: [AppColors.brand, AppColors.gold, AppColors.brandDark, AppColors.brand]),
+        boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      padding: EdgeInsets.all(size < 60 ? 2.5 : 3.5),
+      child: ClipOval(
+        child: Image.asset(
+          'assets/brand/logo_redondo.png',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.brandDark,
+            alignment: Alignment.center,
+            child: Icon(Icons.monitor, color: AppColors.gold, size: size * 0.5),
+          ),
+        ),
       ),
     );
   }

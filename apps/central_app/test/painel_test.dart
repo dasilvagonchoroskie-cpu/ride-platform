@@ -24,7 +24,9 @@ import 'package:central_app/painel/tarifas.dart';
 import 'package:central_app/painel/visao_geral.dart';
 import 'package:central_app/screens/shell_screen.dart';
 import 'package:central_app/state/central_state.dart';
+import 'package:central_app/screens/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -508,7 +510,7 @@ Future<PainelState> _abrir(WidgetTester tester, Widget tela) async {
     ChangeNotifierProvider<PainelState>.value(
       value: painel,
       child: MaterialApp(
-        theme: CentralTheme.dark,
+        theme: CentralTheme.light,
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -527,6 +529,26 @@ Future<void> _carregar(WidgetTester tester) async {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
     await tester.pumpAndSettle();
   }
+}
+
+/// Fotos das telas (Evandro, 09/10/2026: "dá uma polida no visual da
+/// Central"). So rodam com --dart-define=FOTOS=true --update-goldens (esteira
+/// "Fotos da Central"); no teste normal ficam de fora.
+const bool _fotos = bool.fromEnvironment('FOTOS');
+
+Future<void> _fontes() async {
+  final inter = FontLoader('Inter');
+  for (final peso in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+    inter.addFont(rootBundle.load('assets/fonts/Inter-$peso.ttf'));
+  }
+  await inter.load();
+  final icones = FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+  await icones.load();
+}
+
+Future<void> _foto(WidgetTester tester, String nome) async {
+  await tester.pumpAndSettle();
+  await expectLater(find.byType(MaterialApp).first, matchesGoldenFile('fotos/$nome.png'));
 }
 
 void main() {
@@ -559,7 +581,7 @@ void main() {
           ChangeNotifierProvider<PainelState>.value(value: painel),
         ],
         child: MaterialApp(
-          theme: CentralTheme.dark,
+          theme: CentralTheme.light,
           locale: const Locale('pt', 'BR'),
           supportedLocales: const [Locale('pt', 'BR')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -888,7 +910,7 @@ void main() {
           ChangeNotifierProvider<PainelState>.value(value: painel),
         ],
         child: MaterialApp(
-          theme: CentralTheme.dark,
+          theme: CentralTheme.light,
           locale: const Locale('pt', 'BR'),
           supportedLocales: const [Locale('pt', 'BR')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -974,7 +996,7 @@ void main() {
               ChangeNotifierProvider<PainelState>.value(value: painel),
             ],
             child: MaterialApp(
-              theme: CentralTheme.dark,
+              theme: CentralTheme.light,
               locale: const Locale('pt', 'BR'),
               supportedLocales: const [Locale('pt', 'BR')],
               localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -1025,7 +1047,7 @@ void main() {
           ChangeNotifierProvider<PainelState>.value(value: painel),
         ],
         child: MaterialApp(
-          theme: CentralTheme.dark,
+          theme: CentralTheme.light,
           locale: const Locale('pt', 'BR'),
           supportedLocales: const [Locale('pt', 'BR')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -1062,5 +1084,96 @@ void main() {
     expect(t.categorias.length, 2);
     expect(t.zonas.first.multiplicador, 1.5);
     expect(t.categorias.first.diurna.toJson()['perKmCents'], 285);
+  });
+
+  testWidgets('Fotos das telas da Central', skip: !_fotos, (tester) async {
+    _comSos = false;
+    await tester.runAsync(_fontes);
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    Widget app(Widget home, PainelState painel) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider<CentralState>(
+              create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+            ),
+            ChangeNotifierProvider<PainelState>.value(value: painel),
+          ],
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: CentralTheme.light,
+            locale: const Locale('pt', 'BR'),
+            supportedLocales: const [Locale('pt', 'BR')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: home,
+          ),
+        );
+
+    Future<void> logo() async {
+      final ctx = tester.element(find.byType(Scaffold).first);
+      await tester.runAsync(() => precacheImage(const AssetImage('assets/brand/logo_redondo.png'), ctx));
+      await tester.pumpAndSettle();
+    }
+
+    // Entrada.
+    await tester.pumpWidget(app(const LoginScreen(), PainelState(PainelApi(ApiClient(client: _servidor())))));
+    await _carregar(tester);
+    await logo();
+    await _foto(tester, '00-entrada');
+
+    // Casca com cada aba.
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.pumpWidget(app(const ShellScreen(), painel));
+    await _carregar(tester);
+    await _foto(tester, '01-visao-geral');
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    await logo();
+    await _foto(tester, '02-menu');
+    await tester.tapAt(const Offset(350, 400));
+    await tester.pumpAndSettle();
+
+    var n = 3;
+    for (final aba in [
+      'Despacho',
+      'Motoristas',
+      'Passageiros',
+      'Tarifas',
+      'Financeiro',
+      'Alertas',
+      'Cupons',
+      'Carteiras / Recargas',
+      'Cidades e equipe',
+      'Limpeza de dados',
+      'Configurações',
+    ]) {
+      await tester.tap(find.byIcon(Icons.menu));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(aba).last);
+      await _carregar(tester);
+      final nome = aba.toLowerCase().replaceAll(' / ', '-').replaceAll(' ', '-');
+      await _foto(tester, '${(n++).toString().padLeft(2, '0')}-$nome');
+      if (aba == 'Motoristas') {
+        await tester.tap(find.text('Joao Batista da Silva Pereira Junior').first);
+        await _carregar(tester);
+        await _foto(tester, '${(n++).toString().padLeft(2, '0')}-motorista-cadastro');
+        await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 300, scrollable: find.byType(Scrollable).first);
+        await _foto(tester, '${(n++).toString().padLeft(2, '0')}-motorista-carros');
+        await tester.pageBack();
+        await _carregar(tester);
+      }
+      if (aba == 'Financeiro') {
+        await tester.tap(find.text('Já fiz o PIX').first);
+        await tester.pumpAndSettle();
+        await _foto(tester, '${(n++).toString().padLeft(2, '0')}-janela-confirmar');
+        await tester.tap(find.text('Ainda não'));
+        await tester.pumpAndSettle();
+      }
+    }
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
   });
 }

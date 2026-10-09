@@ -42,8 +42,14 @@ void avisar(BuildContext context, String texto, {bool erro = false}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: Text(texto),
-      backgroundColor: erro ? AppColors.danger : AppColors.surfaceElevated,
+      content: Row(
+        children: [
+          Icon(erro ? Icons.error_outline : Icons.check_circle_outline, color: AppColors.onPrimary, size: 20),
+          const SizedBox(width: Spacing.sm),
+          Expanded(child: Text(texto, style: AppText.body.copyWith(color: AppColors.onPrimary))),
+        ],
+      ),
+      backgroundColor: erro ? AppColors.danger : AppColors.text,
     ));
 }
 
@@ -114,8 +120,7 @@ class _DialogoTextoState extends State<_DialogoTexto> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.surface,
-      title: Text(widget.titulo, style: AppText.heading),
+      title: Text(widget.titulo),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +225,11 @@ class FotoDoServidor extends StatelessWidget {
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
             builder: (_) => Scaffold(
               backgroundColor: Colors.black,
-              appBar: AppBar(backgroundColor: Colors.black),
+              appBar: AppBar(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                iconTheme: const IconThemeData(color: Colors.white),
+              ),
               body: InteractiveViewer(
                 maxScale: 6,
                 child: Center(child: _imagem(caminho, t.data!, fit: BoxFit.contain)),

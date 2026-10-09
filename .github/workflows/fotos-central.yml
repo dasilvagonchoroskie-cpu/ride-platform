@@ -1,0 +1,58 @@
+name: Fotos da Central
+
+# Tira foto de cada tela da Central (teste com servidor de mentira e as
+# fontes de verdade) e guarda no ramo "fotos-central", para conferir o
+# visual sem precisar de um celular. Rodado pelo Claude quando mexe no
+# visual (Evandro, 09/10/2026: "da uma polida no visual da central").
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+
+      - name: Tirar as fotos
+        id: fotos
+        continue-on-error: true
+        working-directory: apps/central_app
+        run: |
+          set -o pipefail
+          flutter pub get
+          flutter analyze 2>&1 | tee "$RUNNER_TEMP/analise.txt" || true
+          flutter test test/painel_test.dart --plain-name 'Fotos das telas' --update-goldens --dart-define=FOTOS=true 2>&1 | tee "$RUNNER_TEMP/fotos.txt"
+
+      - name: Guardar as fotos no ramo fotos-central
+        if: always()
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SAIDA="$RUNNER_TEMP/saida"
+          mkdir -p "$SAIDA"
+          cp -r apps/central_app/test/fotos/. "$SAIDA/" 2>/dev/null || true
+          tail -c 60000 "$RUNNER_TEMP/fotos.txt" > "$SAIDA/relatorio.txt" 2>/dev/null || echo "sem relatorio" > "$SAIDA/relatorio.txt"
+          cp "$RUNNER_TEMP/analise.txt" "$SAIDA/analise.txt" 2>/dev/null || true
+          echo "${{ github.sha }}" > "$SAIDA/commit.txt"
+          cd "$SAIDA"
+          git init -q -b fotos-central
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          git add -A
+          git commit -q -m "fotos da Central (execucao ${{ github.run_number }})"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" fotos-central
+
+      - name: Falhar se as fotos nao sairam
+        if: steps.fotos.outcome != 'success'
+        run: exit 1

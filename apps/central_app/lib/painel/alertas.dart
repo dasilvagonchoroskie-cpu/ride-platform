@@ -117,6 +117,9 @@ class _TelaSosState extends State<TelaSos> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.danger,
+        foregroundColor: AppColors.onPrimary,
+        iconTheme: const IconThemeData(color: AppColors.onPrimary),
+        titleTextStyle: AppText.heading.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700),
         title: Text('SOS - ${a.papelNome}'),
         actions: [
           TextButton.icon(

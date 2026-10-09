@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/central_theme.dart';
+import '../widgets/ui.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -13,6 +14,8 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            BrandLogo(size: 92),
+            SizedBox(height: Spacing.lg),
             Text(
               'Fortaleza',
               style: TextStyle(
@@ -28,7 +31,7 @@ class SplashScreen extends StatelessWidget {
               'MOV  -  CENTRAL',
               style: TextStyle(
                 fontFamily: AppText.family,
-                color: AppColors.primary,
+                color: AppColors.brand,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 3,
@@ -38,7 +41,7 @@ class SplashScreen extends StatelessWidget {
             SizedBox(
               height: 22,
               width: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.brand),
             ),
           ],
         ),

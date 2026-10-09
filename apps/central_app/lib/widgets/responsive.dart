@@ -34,10 +34,10 @@ class ResponsiveShell extends StatelessWidget {
       selectedIndex: destinationIndex,
       onDestinationSelected: onDestinationSelected,
       labelType: NavigationRailLabelType.all,
-      indicatorColor: AppColors.primarySoft,
-      selectedIconTheme: const IconThemeData(color: AppColors.primary),
+      indicatorColor: AppColors.brandSoft,
+      selectedIconTheme: const IconThemeData(color: AppColors.brand),
       unselectedIconTheme: const IconThemeData(color: AppColors.textMuted),
-      selectedLabelTextStyle: AppText.label.copyWith(color: AppColors.primary),
+      selectedLabelTextStyle: AppText.label.copyWith(color: AppColors.brand),
       unselectedLabelTextStyle: AppText.label.copyWith(color: AppColors.textMuted),
       destinations: [
         for (final destination in destinations)
@@ -49,43 +49,62 @@ class ResponsiveShell extends StatelessWidget {
     );
 
     final drawer = Drawer(
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const _DrawerHeader(),
-            const Divider(height: 1, color: AppColors.border),
-            Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _DrawerHeader(),
+          Expanded(
+            child: SafeArea(
+              top: false,
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+                padding: const EdgeInsets.fromLTRB(Spacing.sm, Spacing.md, Spacing.sm, Spacing.md),
                 children: [
                   for (var i = 0; i < destinations.length; i++)
-                    ListTile(
-                      leading: Icon(
-                        destinations[i].icon,
-                        color: i == destinationIndex ? AppColors.primary : AppColors.textMuted,
-                      ),
-                      title: Text(
-                        destinations[i].label,
-                        style: AppText.bodyStrong.copyWith(
-                          color: i == destinationIndex ? AppColors.primary : AppColors.text,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: ListTile(
+                        dense: false,
+                        visualDensity: const VisualDensity(vertical: -1),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+                        leading: Icon(
+                          destinations[i].icon,
+                          color: i == destinationIndex ? AppColors.brand : AppColors.textMuted,
                         ),
+                        title: Text(
+                          destinations[i].label,
+                          style: AppText.body.copyWith(
+                            fontSize: 16,
+                            fontWeight: i == destinationIndex ? FontWeight.w700 : FontWeight.w500,
+                            color: i == destinationIndex ? AppColors.brand : AppColors.text,
+                          ),
+                        ),
+                        trailing: destinations[i].badge == null
+                            ? null
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.danger,
+                                  borderRadius: BorderRadius.circular(Radii.pill),
+                                ),
+                                child: Text(
+                                  '${destinations[i].badge}',
+                                  style: AppText.caption.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                        selected: i == destinationIndex,
+                        selectedTileColor: AppColors.brandSoft,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md)),
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onDestinationSelected(i);
+                        },
                       ),
-                      trailing: destinations[i].badge == null
-                          ? null
-                          : AppBadge(text: '${destinations[i].badge}'),
-                      selected: i == destinationIndex,
-                      selectedTileColor: AppColors.primarySoft,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        onDestinationSelected(i);
-                      },
                     ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
 
@@ -144,29 +163,29 @@ class _DrawerHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(Spacing.lg),
+    final topo = MediaQuery.of(context).padding.top;
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppColors.degradeMarca,
+        borderRadius: BorderRadius.only(topRight: Radius.circular(Radii.lg)),
+      ),
+      padding: EdgeInsets.fromLTRB(Spacing.lg, topo + Spacing.lg, Spacing.lg, Spacing.lg),
       child: Row(
         children: [
-          Container(
-            height: 42,
-            width: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft,
-              border: Border.all(color: AppColors.primary),
-              borderRadius: BorderRadius.circular(Radii.md),
-            ),
-            child: const Icon(Icons.monitor, color: AppColors.primary, size: 22),
-          ),
+          const BrandLogo(size: 52),
           const SizedBox(width: Spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fortaleza', style: AppText.bodyStrong.copyWith(fontSize: 16)),
+                Text(
+                  'Fortaleza',
+                  style: AppText.title.copyWith(color: AppColors.onPrimary, fontSize: 22, height: 1.1),
+                ),
+                const SizedBox(height: 2),
                 Text(
                   'MOV  -  CENTRAL',
-                  style: AppText.label.copyWith(color: AppColors.primary, fontSize: 10, letterSpacing: 2),
+                  style: AppText.label.copyWith(color: AppColors.gold, fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
