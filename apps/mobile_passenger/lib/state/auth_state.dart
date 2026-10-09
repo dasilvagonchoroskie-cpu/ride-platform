@@ -7,6 +7,7 @@ import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import '../core/config/app_config.dart';
 import '../core/storage/app_storage.dart';
+import '../core/vigia_corrida.dart';
 import '../core/legal/legal_content.dart';
 import '../data/models/models.dart';
 
@@ -21,11 +22,28 @@ class AuthState extends ChangeNotifier {
     ApiClient.aoSessaoExpirar = () {
       if (user == null) return;
       avisar('Sua sessão expirou. Entre de novo.');
+      _tokenPush = null; // sem login valido, nao da para avisar o servidor
       unawaited(logout());
     };
   }
 
   final ApiClient _client;
+
+  /// O que guarda dados de UMA conta (historico, corrida, destinos
+  /// recentes) se limpa aqui ao sair ou ao entrar com OUTRA conta (Evandro,
+  /// 09/10/2026: saiu da conta dele, entrou na da mae e o historico dele
+  /// continuava aparecendo).
+  static final List<Future<void> Function()> aoTrocarDeConta = [];
+
+  static Future<void> _limparDadosDaConta() async {
+    for (final limpar in List.of(aoTrocarDeConta)) {
+      try {
+        await limpar();
+      } catch (_) {
+        // Uma parte falhar nao impede as outras de limparem.
+      }
+    }
+  }
 
   UserProfile? user;
 
@@ -69,7 +87,25 @@ class AuthState extends ChangeNotifier {
 
     // Os dados guardados no aparelho podem estar velhos (cadastro feito em
     // outro celular, termos aceitos, nome trocado). Confere com o servidor.
-    if (user != null && AppConfig.hasApi && !isDemoSession) await sincronizar();
+    if (user != null && AppConfig.hasApi && !isDemoSession) {
+      unawaited(registrarPush());
+      await sincronizar();
+    }
+  }
+
+  /// Push (Firebase): os avisos da corrida chegam com o app fechado.
+  String? _tokenPush;
+
+  Future<void> registrarPush() async {
+    if (!AppConfig.hasApi) return;
+    final t = await VigiaCorrida.tokenPush();
+    if (t == null || t.isEmpty) return;
+    _tokenPush = t;
+    try {
+      await _client.request('POST', '/conta/push', body: {'token': t});
+    } catch (_) {
+      // Sem rede: tenta de novo na proxima abertura.
+    }
   }
 
   /// Busca o retrato atual do usuario no servidor.
@@ -162,7 +198,13 @@ class AuthState extends ChangeNotifier {
         await AppStorage.write(AppStorage.refreshToken, refreshToken);
       }
       cidadeEscolhida = null;
+      // Entrou com outra conta (sem ter saido da anterior, ex.: sessao
+      // vencida): nada da conta anterior fica na tela.
+      final anterior = await AppStorage.read(AppStorage.donoDosDados);
+      if (anterior != null && anterior != profile.id) await _limparDadosDaConta();
+      await AppStorage.write(AppStorage.donoDosDados, profile.id);
       await _guardarUsuario(profile);
+      unawaited(registrarPush());
     } on ApiException catch (exception) {
       error = exception.message;
       rethrow;
@@ -244,6 +286,24 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  /// Exclui a propria conta (exigencia da Google Play). Deu certo: sai da
+  /// conta e limpa tudo do aparelho. Devolve false se nao deu (o motivo ja
+  /// apareceu na tela).
+  Future<bool> excluirConta() async {
+    try {
+      await _client.request('POST', '/conta/excluir', body: {'confirmacao': 'EXCLUIR'});
+    } on ApiException {
+      return false;
+    } catch (_) {
+      avisar('Sem conexão. A conta não foi excluída.');
+      return false;
+    }
+    // A conta ja nao existe: nada de avisar o servidor na saida.
+    _tokenPush = null;
+    await logout();
+    return true;
+  }
+
   Future<void> trocarSenha(String atual, String nova) async {
     await _client.request('PATCH', '/auth/password', body: {'currentPassword': atual, 'newPassword': nova});
   }
@@ -271,11 +331,20 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Este celular para de receber os avisos desta conta.
+    final t = _tokenPush;
+    _tokenPush = null;
+    if (t != null && AppConfig.hasApi && user != null) {
+      try {
+        await _client.request('POST', '/conta/push/sair', body: {'token': t});
+      } catch (_) {}
+    }
     await AppStorage.clearSession();
     user = null;
     accessToken = null;
     cidadeEscolhida = null;
     notifyListeners();
+    await _limparDadosDaConta();
   }
 
   Future<void> _guardarUsuario(UserProfile profile) async {

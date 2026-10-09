@@ -8,6 +8,8 @@ import { RidesService } from '../rides/rides.service';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { PracasService } from '../pracas/pracas.service';
 import { VehiclesService } from '../vehicles/vehicles.service';
+import { avisarOfertaNova } from '../rides/ofertas-ao-vivo';
+import { PushService } from '../../integrations/notifications/push.service';
 
 /** Conta criada pelo teste automatico (marcada no login com a chave de teste). */
 export const eraTeste = (metadata: unknown): boolean =>
@@ -45,6 +47,7 @@ export class CentralService {
     private readonly rides: RidesService,
     private readonly pracas: PracasService,
     private readonly vehicles: VehiclesService,
+    private readonly push: PushService,
   ) {}
 
   // ================= Visao geral =================
@@ -252,6 +255,9 @@ export class CentralService {
         },
       });
     });
+    // O celular do motorista que esta esperando recebe na hora.
+    avisarOfertaNova(driverId);
+    void this.push.chamadoParaMotorista(driverId).catch(() => undefined);
     return { ok: true, driverName: motorista.user.name };
   }
 
@@ -481,7 +487,7 @@ export class CentralService {
     return { excluidos: itens.filter((i) => !i.erro).length, itens };
   }
 
-  private async excluirPassageiro(userId: string, adminId: string) {
+  async excluirPassageiro(userId: string, adminId: string, papel: UserRole = UserRole.ADMIN) {
     const u = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, role: true, deletedAt: true, metadata: true, driver: { select: { id: true } } },
@@ -551,8 +557,8 @@ export class CentralService {
     }
     await this.prisma.auditLog.create({
       data: {
-        actorId: adminId,
-        actorRole: UserRole.ADMIN,
+        actorId: papel === UserRole.ADMIN ? adminId : null,
+        actorRole: papel,
         action: 'PASSENGER_DELETED',
         entity: 'user',
         entityId: resultado === 'APAGADO' ? null : userId,

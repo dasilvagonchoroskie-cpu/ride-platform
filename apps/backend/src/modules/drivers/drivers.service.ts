@@ -488,6 +488,8 @@ export class DriversService {
   async adminDelete(
     driverId: string,
     adminId: string,
+    /** Quem pediu: a Central (ADMIN) ou o proprio motorista (DRIVER). */
+    papel: UserRole = UserRole.ADMIN,
   ): Promise<{ id: string; resultado: 'APAGADO' | 'ANONIMIZADO' | 'VIROU_PASSAGEIRO'; corridas: number }> {
     const d = await this.prisma.driver.findUnique({
       where: { id: driverId },
@@ -559,8 +561,9 @@ export class DriversService {
 
         await tx.auditLog.create({
           data: {
-            actorId: adminId,
-            actorRole: 'ADMIN',
+            // Conta apagada pela propria pessoa: o registro fica sem autor (a conta some).
+            actorId: papel === UserRole.ADMIN ? adminId : null,
+            actorRole: papel,
             action: 'DRIVER_DELETED',
             entity: 'Driver',
             entityId: driverId,

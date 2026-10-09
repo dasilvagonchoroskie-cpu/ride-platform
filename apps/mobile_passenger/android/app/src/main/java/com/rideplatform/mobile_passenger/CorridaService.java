@@ -58,6 +58,9 @@ public class CorridaService extends Service {
     private static final String PREFS = "fortaleza_corrida";
 
     private volatile boolean rodando = false;
+
+    /** Vigia de pe: os avisos da corrida saem por ele (o push nao repete). */
+    public static volatile boolean ativo = false;
     private Thread vigia;
     private String api = "";
     private String token = "";
@@ -73,6 +76,7 @@ public class CorridaService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        ativo = true;
         criarCanais();
     }
 
@@ -129,6 +133,7 @@ public class CorridaService extends Service {
 
     @Override
     public void onDestroy() {
+        ativo = false;
         encerrar();
         super.onDestroy();
     }

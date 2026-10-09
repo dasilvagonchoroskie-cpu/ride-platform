@@ -21,6 +21,17 @@ class VigiaCorrida {
     }
   }
 
+  /// Endereco de push (Firebase) deste celular. null enquanto o Firebase
+  /// nao estiver configurado no aplicativo.
+  static Future<String?> tokenPush() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await _canal.invokeMethod<String>('tokenPush').timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> parar() async {
     if (!Platform.isAndroid) return;
     try {

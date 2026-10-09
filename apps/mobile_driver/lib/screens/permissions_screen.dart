@@ -40,8 +40,7 @@ const _itens = [
   _Item('bateria', 'Sem restrição de bateria',
       'Para o Android não desligar o aplicativo com o celular no bolso.'),
   _Item('telaCheia', 'Tela cheia com o celular bloqueado',
-      'Para a chamada acender e cobrir a tela bloqueada. Recomendada.',
-      essencial: false),
+      'Para a chamada acender a tela e abrir em tela cheia, com o botão de deslizar para aceitar, mesmo com o celular bloqueado.'),
 ];
 
 class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindingObserver {
@@ -115,6 +114,38 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
                 const SnackBar(content: Text('Tocando por 5 segundos no volume máximo. É assim que a corrida nova toca.')),
               );
             },
+          ),
+          const SizedBox(height: Spacing.sm),
+          // Evandro, 09/10/2026: "com o telefone parado e a tela desligada,
+          // tem que abrir a tela cheia com o chamado". Toque, bloqueie o
+          // celular e espere: em 5 s a tela de chamado tem que acender.
+          AppButton(
+            label: 'Testar a tela de chamado (em 5 s)',
+            icon: Icons.phone_in_talk,
+            variant: AppButtonVariant.secondary,
+            onPressed: () {
+              CorridasNativo.testarChamado();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Bloqueie o celular agora. Em 5 segundos a tela de chamado tem que acender sozinha.')),
+              );
+            },
+          ),
+          const SizedBox(height: Spacing.sm),
+          // Xiaomi, Oppo, Vivo, Samsung: sem isto o aparelho fecha o
+          // aplicativo em segundo plano e o chamado nao chega.
+          AppButton(
+            label: 'Deixar o aplicativo iniciar sozinho',
+            icon: Icons.play_circle_outline,
+            variant: AppButtonVariant.secondary,
+            onPressed: () => CorridasNativo.pedir('iniciarSozinho'),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: Spacing.xs),
+            child: Text(
+              'Em celulares Xiaomi, Redmi, Poco, Oppo, Vivo e Samsung: ligue o Fortaleza Mov em "Início automático" '
+              'e deixe a bateria em "Sem restrições". Sem isso o aparelho fecha o aplicativo e o chamado não chega.',
+              style: AppText.caption.copyWith(color: AppColors.textMuted),
+            ),
           ),
           const SizedBox(height: Spacing.sm),
           AppButton(

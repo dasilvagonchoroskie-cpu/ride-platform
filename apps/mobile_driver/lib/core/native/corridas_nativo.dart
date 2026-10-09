@@ -15,7 +15,36 @@ class CorridasNativo {
 
   /// Sem estas, o alarme pode falhar. O motorista so fica disponivel com
   /// todas liberadas.
-  static const List<String> essenciais = ['localizacao', 'gps', 'notificacao', 'sobrepor', 'bateria'];
+  static const List<String> essenciais = ['localizacao', 'gps', 'notificacao', 'sobrepor', 'bateria', 'telaCheia'];
+
+  /// Recados do Android: chamado novo (o vigia achou antes do app) e corrida
+  /// aceita na tela de chamado nativa (o app traz a corrida do servidor).
+  static void ouvir({required void Function() chamadoNovo, required void Function() corridaAceita}) {
+    if (!Platform.isAndroid) return;
+    _canal.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'chamadoNovo':
+          chamadoNovo();
+        case 'corridaAceita':
+          corridaAceita();
+      }
+      return null;
+    });
+  }
+
+  /// Em 5 s abre a tela de chamado de teste (da tempo de bloquear o celular).
+  static Future<void> testarChamado() => _chamar('testarChamado');
+
+  /// Endereco de push (Firebase) deste celular. null enquanto o Firebase
+  /// nao estiver configurado no aplicativo.
+  static Future<String?> tokenPush() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await _canal.invokeMethod<String>('tokenPush').timeout(const Duration(seconds: 15));
+    } catch (_) {
+      return null;
+    }
+  }
 
   static Future<void> iniciar(String api, String token) =>
       _chamar('iniciar', {'api': api, 'token': token});
@@ -40,7 +69,7 @@ class CorridasNativo {
   /// considera tudo liberado para nao travar o aplicativo.
   static Future<Map<String, bool>> permissoes() async {
     if (!Platform.isAndroid) {
-      return {for (final k in [...essenciais, 'telaCheia']) k: true};
+      return {for (final k in essenciais) k: true};
     }
     try {
       final r = await _canal.invokeMethod<Map<dynamic, dynamic>>('permissoes');

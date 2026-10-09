@@ -13,6 +13,8 @@ import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
 import { lerCategorias } from './categorias';
 import { distanciaDoTaximetro, lerCobranca } from './cobranca';
 import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
+import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
+import { PushService } from '../../integrations/notifications/push.service';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -54,7 +56,7 @@ export class RidesService {
   // Quanto tempo o motorista tem para responder ao chamado antes de
   // passar para o proximo.
   /** Tempo do motorista responder ao chamado (especificacao: 15 a 20 s). */
-  private static readonly SEGUNDOS_PARA_RESPONDER = 20;
+  private static readonly SEGUNDOS_PARA_RESPONDER = 25;
 
   // Raio de busca. Comeca perto e vai abrindo: assim o mais proximo tem
   // preferencia, em vez de sortear qualquer um da cidade.
@@ -64,6 +66,7 @@ export class RidesService {
     private readonly prisma: PrismaService,
     private readonly fare: FareService,
     private readonly geo: GeoService,
+    private readonly push: PushService,
   ) {}
 
   /**
@@ -283,6 +286,9 @@ export class RidesService {
             expiresAt: expiraEm,
           },
         });
+        avisarOfertaNova(m.driverId);
+        // Push (Firebase): acorda o celular mesmo se o Android fechou o app.
+        void this.push.chamadoParaMotorista(m.driverId).catch(() => undefined);
         enviados += 1;
       }
       if (enviados > 0) return { offered: enviados, radiusMeters: raio };
@@ -296,11 +302,35 @@ export class RidesService {
   // Motorista responde
   // ------------------------------------------------------------------
 
-  /** Chamados abertos para este motorista, ainda dentro do prazo. */
-  async chamados(driverId: string) {
+  /** Ultima vez que a pergunta por chamados marcou o motorista como vivo. */
+  private readonly vivoEm = new Map<string, number>();
+
+  /**
+   * Chamados abertos para este motorista. Com [aguardarSegundos], se nao ha
+   * nenhum agora, espera ate esse tempo por um novo (resposta na hora em que
+   * a corrida e oferecida).
+   */
+  async chamados(driverId: string, aguardarSegundos = 0) {
+    const lista = await this.chamadosAgora(driverId);
+    if (lista.length > 0 || aguardarSegundos <= 0) return lista;
+    await esperarOferta(driverId, Math.min(aguardarSegundos, 25) * 1000);
+    return this.chamadosAgora(driverId);
+  }
+
+  private async chamadosAgora(driverId: string) {
     const agora = new Date();
     // Enquanto o aparelho pergunta por chamados, ele esta online.
     await tocarJornada(this.prisma, driverId).catch(() => undefined);
+    // E continua valendo para receber corrida mesmo PARADO: a posicao so era
+    // renovada quando o GPS andava 20 m, e o motorista parado no ponto saia
+    // da busca em 2 minutos (o chamado so chegava quando ele se mexia).
+    const ultimo = this.vivoEm.get(driverId) ?? 0;
+    if (agora.getTime() - ultimo > 30_000) {
+      this.vivoEm.set(driverId, agora.getTime());
+      await this.prisma.driverLocation
+        .updateMany({ where: { driverId, isOnline: true }, data: { lastSeenAt: agora } })
+        .catch(() => undefined);
+    }
     const ofertas: Array<RideOffer & { ride: Ride & { passenger: { name: string } } }> =
       await this.prisma.rideOffer.findMany({
       where: { driverId, status: OfferStatus.PENDING, expiresAt: { gt: agora } },

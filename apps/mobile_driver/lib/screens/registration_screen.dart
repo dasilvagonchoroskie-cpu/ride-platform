@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/avisos.dart';
 import '../core/central.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
@@ -28,33 +29,50 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   void _ir(Widget tela) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => tela));
 
+  /// Excluir a propria conta na hora (exigencia da Google Play; antes so
+  /// mandava um pedido pelo WhatsApp). Pede para escrever EXCLUIR.
   Future<void> _excluirConta() async {
+    final driver = context.read<DriverState>();
+    final saldo = driver.carteira?.balanceCents ?? 0;
+    final escrito = TextEditingController();
     final confirmou = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Excluir conta'),
-        content: const Text(
-          'O pedido vai para a Central pelo WhatsApp. Depois da exclusão você '
-          'não recebe mais corridas e seus dados pessoais são apagados; o '
-          'histórico das corridas fica guardado só pelo tempo que a lei exige.',
+        title: const Text('Excluir minha conta'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Apaga seu cadastro de motorista: dados pessoais, CNH, fotos dos documentos, carros, '
+                'carteira e extrato. As corridas já feitas ficam guardadas sem o seu nome (obrigação fiscal).'
+                '${saldo > 0 ? '\n\nVocê tem ${dinheiro(saldo)} na carteira: esse saldo é perdido. Peça o saque antes, se quiser.' : ''}'
+                '\n\nNão dá para desfazer.',
+              ),
+              const SizedBox(height: Spacing.md),
+              const Text('Escreva EXCLUIR para confirmar'),
+              TextField(controller: escrito, textCapitalization: TextCapitalization.characters),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Pedir exclusão', style: TextStyle(color: AppColors.danger)),
+            onPressed: () => Navigator.of(ctx).pop(escrito.text.trim().toUpperCase() == 'EXCLUIR'),
+            child: const Text('Excluir conta', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
     );
-    if (confirmou != true || !mounted) return;
-    final driver = context.read<DriverState>();
-    final contato = await driver.contatoCentral();
-    await abrirWhatsApp(
-      contato?.whatsapp,
-      'Olá! Quero excluir minha conta de motorista da Fortaleza Mov. '
-      'Nome: ${driver.profile?.name ?? ''}. Telefone: ${driver.profile?.phone ?? ''}.',
-    );
+    if (confirmou != true || !mounted) {
+      if (confirmou == false && escrito.text.isNotEmpty) avisar('Não excluiu: escreva EXCLUIR para confirmar.');
+      return;
+    }
+    final ok = await driver.excluirConta();
+    if (!mounted || !ok) return;
+    avisar('Sua conta foi excluída.');
+    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   @override

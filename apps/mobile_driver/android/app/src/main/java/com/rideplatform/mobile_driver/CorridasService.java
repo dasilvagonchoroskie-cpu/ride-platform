@@ -46,11 +46,15 @@ import java.nio.charset.StandardCharsets;
  * proprio Android exige.
  *
  * Faz tres coisas:
- *  1. Consulta o servidor a cada 4 s atras de chamado novo.
- *  2. Manda a posicao do motorista, para o servidor saber quem esta perto.
+ *  1. Pergunta ao servidor por chamado novo e o servidor SEGURA a pergunta
+ *     por ate 25 s: o chamado chega na hora em que e oferecido (09/10/2026,
+ *     "ta demorando para notificar").
+ *  2. Manda a posicao do motorista, para o servidor saber quem esta perto —
+ *     inclusive PARADO (antes, parado no ponto, ele saia da busca em 2 min).
  *  3. Quando chega chamado: toca como ALARME (passa pelo modo silencioso),
- *     vibra e abre a tela de chamada POR CIMA de qualquer coisa — outro
- *     aplicativo, tela inicial ou tela bloqueada.
+ *     vibra e abre a TELA DE CHAMADO nativa (ChamadoActivity) por cima de
+ *     qualquer coisa — outro aplicativo, tela inicial ou tela bloqueada —
+ *     com o botao de deslizar para aceitar.
  *
  * De brinde, cada motorista disponivel mantem o servidor acordado.
  */
@@ -64,13 +68,17 @@ public class CorridasService extends Service {
     private static final String CANAL_CHAMADA = "motorista_chamada_v1";
     private static final String CANAL_CARTEIRA = "motorista_carteira_v1";
     private static final int ID_CARTEIRA = 5103;
-    // Carteira: confere a cada 5 voltas (cerca de 20 s).
-    private static final int VOLTAS_CARTEIRA = 5;
     private static final int ID_FIXO = 5101;
-    private static final int ID_CHAMADA = 5102;
+    public static final int ID_CHAMADA = 5102;
 
+    /** Pausa entre perguntas quando a anterior falhou (sem rede). */
     private static final long INTERVALO_MS = 4000;
+    /** Quanto o servidor segura a pergunta esperando chamado. */
+    private static final int ESPERA_SERVIDOR_S = 25;
     private static final long POSICAO_MIN_MS = 10000;
+    /** Parado: manda a ultima posicao pelo menos a cada 45 s. */
+    private static final long POSICAO_MAX_MS = 45000;
+    private static final long CARTEIRA_MS = 20000;
     private static final int ID_SESSAO = 5104;
 
     private static final String PREFS = "fortaleza_corridas";
@@ -92,7 +100,7 @@ public class CorridasService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        criarCanais();
+        criarCanais(this);
     }
 
     @Override
@@ -175,45 +183,56 @@ public class CorridasService extends Service {
     // Consulta de chamados
     // ------------------------------------------------------------------
 
-    private int voltas = 0;
+    private long carteiraEm = 0;
+
+    /** Resultado de uma pergunta: falhou, sem chamado novo, chamado aberto. */
+    private static final int FALHOU = -1, NADA = 0, TEM = 1;
 
     private void laco() {
         while (rodando) {
+            int r;
             try {
-                conferirChamados();
-            } catch (Exception ignored) {
-                // Rede caiu: tenta de novo na proxima volta.
+                r = conferirChamados();
+            } catch (Exception e) {
+                r = FALHOU;
             }
-            if (voltas++ % VOLTAS_CARTEIRA == 0) {
+            long agora = System.currentTimeMillis();
+            if (agora - carteiraEm >= CARTEIRA_MS) {
+                carteiraEm = agora;
                 try {
                     conferirCarteira();
                 } catch (Exception ignored) { }
             }
+            posicaoParado();
             segurarProcessador();
             try {
-                Thread.sleep(INTERVALO_MS);
+                // Sem chamado: o servidor ja esperou; pergunta de novo logo.
+                // Chamado aberto (ja mostrado): pergunta devagar ate ele sair.
+                // Falha de rede: espera um pouco antes de tentar de novo.
+                Thread.sleep(r == NADA ? 300 : (r == TEM ? 2500 : INTERVALO_MS));
             } catch (InterruptedException e) {
                 return;
             }
         }
     }
 
-    private void conferirChamados() throws Exception {
-        JSONObject corpo = requisitar("GET", "/api/driver/rides/offers", null);
-        if (corpo == null || !corpo.optBoolean("success", false)) return;
+    private int conferirChamados() throws Exception {
+        // Ja ha chamado na tela: nao segura a pergunta (so confere se continua).
+        boolean mostrando = ChamadoActivity.aberta != null;
+        JSONObject corpo = requisitar("GET", "/api/driver/rides/offers" + (mostrando ? "" : "?aguardar=" + ESPERA_SERVIDOR_S), null);
+        if (corpo == null || !corpo.optBoolean("success", false)) return FALHOU;
         JSONArray lista = corpo.optJSONArray("data");
-        if (lista == null || lista.length() == 0) return;
+        if (lista == null || lista.length() == 0) return NADA;
 
         JSONObject oferta = lista.getJSONObject(0);
         String id = oferta.optString("rideId", "");
         String expira = oferta.optString("expiresAt", "");
         // Corrida + prazo: a Central reenviando a mesma corrida toca de novo.
-        if (id.isEmpty() || !Sirene.primeiraVez(id + "|" + expira)) return;
+        if (id.isEmpty() || !Sirene.primeiraVez(id + "|" + expira)) return TEM;
 
-        String embarque = oferta.optString("pickupAddress", "");
-        String destino = oferta.optString("dropoffAddress", "");
         long duracao = Sirene.duracaoAte(expira);
-        principal.post(() -> chamar(embarque, destino, duracao));
+        principal.post(() -> chamar(oferta, duracao));
+        return TEM;
     }
 
     /**
@@ -306,7 +325,8 @@ public class CorridasService extends Service {
         HttpURLConnection c = (HttpURLConnection) new URL(api + caminho).openConnection();
         c.setRequestMethod(metodo);
         c.setConnectTimeout(15000);
-        c.setReadTimeout(15000);
+        // A pergunta por chamado fica ate 25 s no servidor esperando.
+        c.setReadTimeout(caminho.contains("aguardar=") ? 40000 : 15000);
         c.setRequestProperty("Authorization", "Bearer " + token);
         c.setRequestProperty("Content-Type", "application/json");
         try {
@@ -373,18 +393,36 @@ public class CorridasService extends Service {
         });
     }
 
-    private void chamar(String embarque, String destino, long duracao) {
-        Intent abrir = new Intent(this, MainActivity.class);
-        abrir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        abrir.putExtra("chamada", true);
+    private void chamar(JSONObject oferta, long duracao) {
+        // Aplicativo aberto na frente: ele mostra a propria tela de chamado
+        // (com o mapa) — so avisa para buscar agora e toca.
+        if (MainActivity.visivel) {
+            MainActivity.avisarFlutter("chamadoNovo", oferta.optString("rideId", ""));
+            Sirene.tocar(this, duracao);
+            return;
+        }
+        abrirChamado(this, oferta, duracao);
+    }
+
+    /**
+     * Toca o alarme e abre a tela de chamado nativa (tambem usado pelo botao
+     * "Testar a tela de chamado"). O aviso de tela cheia acende e cobre a
+     * tela bloqueada; com "sobrepor a outros apps" liberado, a tela abre por
+     * cima de qualquer coisa tambem com o celular desbloqueado.
+     */
+    public static void abrirChamado(Context c, JSONObject oferta, long duracao) {
+        criarCanais(c);
+        String embarque = oferta.optString("pickupAddress", "");
+        String destino = oferta.optString("dropoffAddress", "");
+
+        Intent abrir = new Intent(c, ChamadoActivity.class);
+        abrir.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        abrir.putExtra(ChamadoActivity.EXTRA_OFERTA, oferta.toString());
 
         int marcas = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent telaCheia = PendingIntent.getActivity(this, 7, abrir, marcas);
+        PendingIntent telaCheia = PendingIntent.getActivity(c, 7, abrir, marcas);
 
-        // Aviso de tela cheia: e o que acende e cobre a TELA BLOQUEADA.
-        Notification aviso = new NotificationCompat.Builder(this, CANAL_CHAMADA)
+        Notification aviso = new NotificationCompat.Builder(c, CANAL_CHAMADA)
                 .setSmallIcon(android.R.drawable.ic_dialog_map)
                 .setContentTitle("Corrida nova!")
                 .setContentText(embarque.isEmpty() ? "Toque para ver." : "Buscar em: " + embarque)
@@ -399,18 +437,35 @@ public class CorridasService extends Service {
                 .setTimeoutAfter(duracao)
                 .build();
         try {
-            NotificationManagerCompat.from(this).notify(ID_CHAMADA, aviso);
+            NotificationManagerCompat.from(c).notify(ID_CHAMADA, aviso);
         } catch (SecurityException ignored) { }
 
-        Sirene.tocar(this, duracao);
+        Sirene.tocar(c, duracao);
 
-        // Por cima de OUTRO aplicativo aberto: so o Android permite trazer a
-        // tela para a frente se o motorista liberou "sobrepor a outros apps".
         try {
-            if (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this)) {
-                startActivity(abrir);
+            if (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c)) {
+                c.startActivity(abrir);
             }
         } catch (Exception ignored) { }
+    }
+
+    /**
+     * Motorista parado (GPS nao manda posicao se ele nao anda 20 m): a cada
+     * 45 s manda a ultima posicao conhecida, para continuar na busca.
+     */
+    private void posicaoParado() {
+        if (System.currentTimeMillis() - ultimaPosicaoMs < POSICAO_MAX_MS) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) return;
+        try {
+            if (gps == null) gps = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            Location melhor = null;
+            for (String fonte : new String[] { LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER }) {
+                Location l = gps.getLastKnownLocation(fonte);
+                if (l != null && (melhor == null || l.getTime() > melhor.getTime())) melhor = l;
+            }
+            if (melhor != null) enviarPosicao(melhor);
+        } catch (SecurityException ignored) { }
     }
 
     private void pararAlarme() {
@@ -488,9 +543,9 @@ public class CorridasService extends Service {
         try { if (trava != null && trava.isHeld()) trava.release(); } catch (Exception ignored) { }
     }
 
-    private void criarCanais() {
+    static void criarCanais(Context c) {
         if (Build.VERSION.SDK_INT < 26) return;
-        NotificationManager g = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager g = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         if (g == null) return;
         if (g.getNotificationChannel(CANAL_FIXO) == null) {
             NotificationChannel fixo = new NotificationChannel(

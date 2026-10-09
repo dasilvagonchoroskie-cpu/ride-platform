@@ -57,6 +57,49 @@ class AccountScreen extends StatelessWidget {
     await corridas.limpar();
   }
 
+  /// Excluir a propria conta (Google Play exige). Pede para escrever
+  /// EXCLUIR, para ninguem apagar sem querer.
+  Future<void> _excluirConta(BuildContext context) async {
+    final escrito = TextEditingController();
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Excluir minha conta', style: AppText.heading),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Apaga seu nome, telefone, e-mail, CPF, foto, endereços e contatos de emergência. '
+                'As corridas já feitas ficam guardadas sem o seu nome (obrigação fiscal). '
+                'Não dá para desfazer: para voltar, você cria uma conta nova.',
+                style: AppText.body,
+              ),
+              const SizedBox(height: Spacing.md),
+              Text('Escreva EXCLUIR para confirmar', style: AppText.label),
+              TextField(controller: escrito, textCapitalization: TextCapitalization.characters),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(escrito.text.trim().toUpperCase() == 'EXCLUIR'),
+            child: const Text('Excluir conta', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true || !context.mounted) {
+      if (confirmou == false && escrito.text.isNotEmpty) avisar('Não excluiu: escreva EXCLUIR para confirmar.');
+      return;
+    }
+    final ok = await context.read<AuthState>().excluirConta();
+    if (ok) avisar('Sua conta foi excluída.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthState>().user;
@@ -221,6 +264,7 @@ class AccountScreen extends StatelessWidget {
             ),
             faixa,
             MenuLinha(titulo: 'Sair da conta', cor: AppColors.danger, onTap: () => _sair(context)),
+            MenuLinha(titulo: 'Excluir minha conta', cor: AppColors.danger, onTap: () => _excluirConta(context)),
             Padding(
               padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
               child: Text(

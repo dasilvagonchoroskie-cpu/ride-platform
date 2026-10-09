@@ -297,12 +297,33 @@ jobs:
           echo "sha256=$(sha256sum "$FINAL" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           ls -la "$FINAL"
 
+      # Pacote da loja (AAB) para a Google Play (Evandro aprovou em
+      # 09/10/2026). So passageiro e motorista: a Central fica fora da loja
+      # (so a equipe usa). Mesma assinatura do APK = chave de envio da Play.
+      - name: Compilar o pacote da loja (AAB)
+        id: aab
+        if: (matrix.app == 'mobile_passenger' || matrix.app == 'mobile_driver') && (inputs.build_type || 'release') == 'release'
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          set -euo pipefail
+          flutter build appbundle --release --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} \
+            2>&1 | tail -n 30
+          AAB="$(find build/app/outputs/bundle/release -name '*.aab' -print -quit)"
+          test -n "$AAB" || { echo "::error::AAB nao foi gerado"; exit 1; }
+          FINAL="$GITHUB_WORKSPACE/dist/${{ matrix.apk_name }}-${{ github.run_number }}.aab"
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp "$AAB" "$FINAL"
+          echo "path=$FINAL" >> "$GITHUB_OUTPUT"
+          ls -la "$FINAL"
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
             ${{ steps.apk.outputs.path }}
             ${{ steps.apk.outputs.path32 }}
+            ${{ steps.aab.outputs.path }}
           if-no-files-found: error
           retention-days: 30
 
@@ -326,6 +347,10 @@ jobs:
           # ultimo enviado e sempre o principal.
           if [ -n "${{ steps.apk.outputs.path32 }}" ]; then
             gh release upload "$TAG" "${{ steps.apk.outputs.path32 }}" \
+              --repo "${{ github.repository }}" --clobber
+          fi
+          if [ -n "${{ steps.aab.outputs.path }}" ]; then
+            gh release upload "$TAG" "${{ steps.aab.outputs.path }}" \
               --repo "${{ github.repository }}" --clobber
           fi
           gh release upload "$TAG" "${{ steps.apk.outputs.path }}" \

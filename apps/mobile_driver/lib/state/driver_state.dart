@@ -180,6 +180,14 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     if (activeRide != null) await _lerTaximetro();
 
     WidgetsBinding.instance.addObserver(this);
+    // Recados do vigia nativo: chamado novo (busca agora) e corrida aceita
+    // na tela de chamado em tela cheia (traz a corrida do servidor).
+    CorridasNativo.ouvir(
+      chamadoNovo: () {
+        if (isOnline && offer == null && activeRide == null && AppConfig.hasApi) _buscarChamados();
+      },
+      corridaAceita: () => unawaited(retomarCorridaDoServidor()),
+    );
     await checarPermissoes();
     ready = true;
     notifyListeners();
@@ -187,6 +195,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     // Aberto de novo ainda "em analise": pergunta ja, sem esperar 20 s.
     if (profile != null && !isApproved) unawaited(refreshFromServer());
     if (profile != null && isApproved) unawaited(atualizarPainel());
+    // Corrida aceita pela tela de chamado nativa (app fechado): abre nela.
+    if (profile != null && isApproved && activeRide == null) unawaited(retomarCorridaDoServidor());
+    if (profile != null) unawaited(registrarPush());
     // Reabriu o aplicativo ja disponivel: religa tudo, senao ele ficaria
     // "disponivel" sem estar ouvindo chamado nenhum.
     if (isOnline) {
@@ -362,6 +373,73 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
     // Garante o vigia de chamados de pe (o Android pode ter derrubado).
     if (isOnline) unawaited(_ligarServicoNativo());
+    // Aceitou na tela de chamado nativa e voltou para o app: abre na corrida.
+    if (activeRide == null && profile != null && isApproved) unawaited(retomarCorridaDoServidor());
+  }
+
+  bool _retomando = false;
+
+  /// Corrida aceita fora desta tela (tela de chamado nativa com o app
+  /// fechado): o servidor diz qual e a corrida em andamento e o aplicativo
+  /// abre direto nela.
+  Future<void> retomarCorridaDoServidor() async {
+    if (!AppConfig.hasApi || activeRide != null || _retomando) return;
+    _retomando = true;
+    try {
+      final r = await _client.request('GET', '/driver/rides/current') as Map<String, dynamic>;
+      final c = r['ride'] as Map<String, dynamic>?;
+      if (c == null || activeRide != null) return;
+      final passageiro = c['passenger'] as Map<String, dynamic>?;
+      final tarifa = (c['estimatedFareCents'] as num?)?.toInt() ?? 0;
+      final comissao = double.tryParse('${c['commissionPercent'] ?? ''}') ?? 8;
+      double numero(Object? v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+      final o = RideOffer(
+        id: c['id'] as String,
+        code: c['code'] as String? ?? '',
+        passengerName: passageiro?['name'] as String? ?? 'Passageiro',
+        passengerRating: 5,
+        pickupAddress: c['pickupAddress'] as String? ?? '',
+        pickupCoords: Coords(numero(c['pickupLat']), numero(c['pickupLng'])),
+        dropoffAddress: c['dropoffAddress'] as String? ?? '',
+        dropoffCoords: Coords(numero(c['dropoffLat']), numero(c['dropoffLng'])),
+        distanceToPickupMeters: 0,
+        tripDistanceMeters: (c['distanceMeters'] as num?)?.toInt() ?? 0,
+        durationSeconds: (c['durationSeconds'] as num?)?.toInt() ?? 0,
+        fareCents: tarifa,
+        earningCents: (tarifa * (100 - comissao) / 100).round(),
+        paymentMethod: switch (c['paymentMethodType'] as String?) {
+          'PIX' => 'Pix',
+          'CREDIT_CARD' || 'DEBIT_CARD' => 'Cartão (maquininha)',
+          _ => 'Dinheiro',
+        },
+      );
+      final fase = switch (c['status'] as String?) {
+        'DRIVER_WAITING' => RidePhase.waitingPassenger,
+        'IN_PROGRESS' => RidePhase.inProgress,
+        _ => RidePhase.toPickup,
+      };
+      telefonePassageiro = passageiro?['phone'] as String?;
+      chegouEm = DateTime.tryParse(c['arrivedAt'] as String? ?? '')?.toLocal();
+      viagemIniciouEm = DateTime.tryParse(c['startedAt'] as String? ?? '')?.toLocal();
+      activeRide = DriverRide(
+        offer: o,
+        phase: fase,
+        pin: c['pin'] as String? ?? '',
+        startedAt: (c['acceptedAt'] as String?) ?? DateTime.now().toIso8601String(),
+      );
+      routeToPickup = [position, o.pickupCoords];
+      tripRoute = [o.pickupCoords, o.dropoffCoords];
+      _clearOffer();
+      await _persistRide();
+      notifyListeners();
+      _vigiarCorrida();
+      unawaited(_buscarRotas(forcar: true));
+      if (!isOnline) unawaited(_iniciarGps());
+    } catch (_) {
+      // Sem corrida aberta ou sem rede: segue como esta.
+    } finally {
+      _retomando = false;
+    }
   }
 
   // ------------------------------------------------------------------
@@ -510,6 +588,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     await _persistProfile();
     notifyListeners();
     _vigiarAprovacao();
+    unawaited(registrarPush());
   }
 
   // ------------------------------------------------------------------
@@ -1783,7 +1862,52 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Exclui a propria conta (Google Play exige). Deu certo: desliga tudo e
+  /// sai. false = nao deu (o motivo ja apareceu na tela).
+  Future<bool> excluirConta() async {
+    if (!AppConfig.hasApi) {
+      await logout();
+      return true;
+    }
+    try {
+      await _client.request('POST', '/conta/excluir', body: {'confirmacao': 'EXCLUIR'});
+    } on ApiException {
+      return false;
+    } catch (_) {
+      avisar('Sem conexão. A conta não foi excluída.');
+      return false;
+    }
+    // A conta ja nao existe: nada de avisar o servidor na saida.
+    _tokenPush = null;
+    await logout();
+    return true;
+  }
+
+  /// Push (Firebase): guarda no servidor o endereco deste celular, para o
+  /// chamado chegar mesmo se o Android fechar o aplicativo.
+  String? _tokenPush;
+
+  Future<void> registrarPush() async {
+    if (!AppConfig.hasApi) return;
+    final t = await CorridasNativo.tokenPush();
+    if (t == null || t.isEmpty) return;
+    _tokenPush = t;
+    try {
+      await _client.request('POST', '/conta/push', body: {'token': t});
+    } catch (_) {
+      // Sem rede: tenta de novo na proxima abertura.
+    }
+  }
+
   Future<void> logout() async {
+    // Este celular para de receber os avisos desta conta.
+    final t = _tokenPush;
+    if (t != null && AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/conta/push/sair', body: {'token': t});
+      } catch (_) {}
+      _tokenPush = null;
+    }
     _stopHeartbeat();
     _pararGps();
     _statusTimer?.cancel();

@@ -6,6 +6,7 @@ import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
+import '../widgets/deslizar.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -271,10 +272,12 @@ class OfferScreen extends StatelessWidget {
 
                   const Spacer(),
 
-                  AppButton(
-                    label: 'Aceitar corrida',
-                    variant: AppButtonVariant.accent,
-                    onPressed: () => context.read<DriverState>().acceptOffer(),
+                  // Deslizar para aceitar (Evandro, 09/10/2026): toque sem
+                  // querer no bolso nao aceita corrida.
+                  Deslizar(
+                    texto: 'DESLIZE PARA ACEITAR',
+                    cor: AppColors.accent,
+                    aoConfirmar: () => context.read<DriverState>().acceptOffer(),
                   ),
                   const SizedBox(height: Spacing.sm),
                   AppButton(

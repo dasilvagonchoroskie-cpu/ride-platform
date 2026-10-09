@@ -33,6 +33,7 @@ import { CentralModule } from './modules/central/central.module';
 import { PracasModule } from './modules/pracas/pracas.module';
 import { LimpezaModule } from './modules/limpeza/limpeza.module';
 import { RelatoriosModule } from './modules/relatorios/relatorios.module';
+import { ContaModule } from './modules/conta/conta.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { RelatoriosModule } from './modules/relatorios/relatorios.module';
     PracasModule,
     LimpezaModule,
     RelatoriosModule,
+    ContaModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis

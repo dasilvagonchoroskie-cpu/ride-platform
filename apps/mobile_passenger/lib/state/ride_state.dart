@@ -12,10 +12,13 @@ import '../data/models/models.dart';
 import '../data/repositories/ride_repository.dart';
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
+import 'auth_state.dart';
 
 /// Ciclo de vida da corrida: estimativa, pareamento, viagem, recibo e historico.
 class RideState extends ChangeNotifier {
-  RideState({RideRepository? repository}) : _repository = repository ?? RideRepository();
+  RideState({RideRepository? repository}) : _repository = repository ?? RideRepository() {
+    AuthState.aoTrocarDeConta.add(limpar);
+  }
 
   final RideRepository _repository;
 
@@ -604,13 +607,9 @@ class RideState extends ChangeNotifier {
 
   Future<void> loadHistory(Coords origin) async {
     final loaded = await _repository.history(origin);
-
-    final merged = <Ride>[...history];
-    for (final item in loaded) {
-      if (!merged.any((entry) => entry.id == item.id)) merged.add(item);
-    }
-
-    history = merged;
+    // O servidor e quem sabe as corridas DESTA conta: a lista e a dele (antes
+    // misturava com o que ja estava na memoria — inclusive de outra conta).
+    history = loaded;
     notifyListeners();
   }
 
@@ -669,6 +668,7 @@ class RideState extends ChangeNotifier {
 
   @override
   void dispose() {
+    AuthState.aoTrocarDeConta.remove(limpar);
     _pararDeAcompanhar();
     super.dispose();
   }

@@ -40,6 +40,14 @@
             android:name=".CorridaService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <!-- Notificacao push (Firebase): chega com o aplicativo fechado. -->
+        <service
+            android:name=".MensagensService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

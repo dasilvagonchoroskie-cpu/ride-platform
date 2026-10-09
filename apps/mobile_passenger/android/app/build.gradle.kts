@@ -30,8 +30,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.rideplatform.mobile_passenger"
+        // Nome definitivo na Google Play (aprovado pelo Evandro em 09/10/2026).
+        // Depois de publicado NAO muda nunca. O codigo continua no pacote
+        // com.rideplatform.mobile_passenger (namespace acima), que nao aparece para ninguem.
+        applicationId = "br.com.fortalezamov.passageiro"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -92,6 +94,11 @@ flutter {
 }
 
 dependencies {
+    // Notificacao push (Firebase Cloud Messaging). Liga quando os dados do
+    // projeto Firebase estiverem em res/values/firebase.xml (gerado por
+    // scripts/firebase-config.py a partir do google-services.json).
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
     // ContextCompat/ActivityCompat das autorizacoes pedidas na primeira abertura.
     implementation("androidx.core:core-ktx:1.13.1")
 }

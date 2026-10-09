@@ -179,7 +179,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             if (mostrarRuasNoMapa)
               TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.rideplatform.mobile_passenger',
+              userAgentPackageName: 'br.com.fortalezamov.passageiro',
               maxZoom: 19,
               tileProvider: NetworkTileProvider(),
               errorTileCallback: (tile, error, stackTrace) {

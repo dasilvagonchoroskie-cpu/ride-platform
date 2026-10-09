@@ -8,6 +8,7 @@ import '../core/config/app_config.dart';
 import '../core/api/api_client.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
+import 'auth_state.dart';
 import '../data/models/models.dart';
 
 enum DataSource { api, demo, unknown }
@@ -30,7 +31,9 @@ class LocationResult {
 
 /// Estado global: modo de dados (API ou demonstracao), posicao e recentes.
 class AppState extends ChangeNotifier {
-  AppState({ApiClient? client}) : _client = client ?? ApiClient();
+  AppState({ApiClient? client}) : _client = client ?? ApiClient() {
+    AuthState.aoTrocarDeConta.add(limparDaConta);
+  }
 
   final ApiClient _client;
 
@@ -103,6 +106,15 @@ class AppState extends ChangeNotifier {
   void forceDemo() {
     if (dataSource == DataSource.demo) return;
     dataSource = DataSource.demo;
+    notifyListeners();
+  }
+
+  /// Saiu da conta (ou entrou com outra): destinos recentes sao da pessoa.
+  Future<void> limparDaConta() async {
+    recentPlaces = [];
+    destinosRecentes = [];
+    await AppStorage.remove(AppStorage.recentPlaces);
+    await AppStorage.remove(AppStorage.recentDestinations);
     notifyListeners();
   }
 
@@ -200,6 +212,7 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    AuthState.aoTrocarDeConta.remove(limparDaConta);
     _vigia?.cancel();
     super.dispose();
   }

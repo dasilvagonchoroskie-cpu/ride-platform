@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 import { Roles } from '../../common/decorators/roles.decorator';
 import { DriverApprovedGuard } from '../../common/guards/driver-approved.guard';
 import { RidesService } from './rides.service';
+import { PushService } from '../../integrations/notifications/push.service';
 import { PrismaService } from '../../database/prisma.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import {
@@ -173,18 +174,29 @@ export class RidesController {
 @UseGuards(DriverApprovedGuard)
 @Controller('driver/rides')
 export class DriverRidesController {
-  constructor(private readonly rides: RidesService) {}
+  constructor(
+    private readonly rides: RidesService,
+    private readonly push: PushService,
+  ) {}
+
+  /** Avisa o passageiro por push (Firebase) depois que deu certo. */
+  private avisar(rideId: string, evento: Parameters<PushService['etapaParaPassageiro']>[1]) {
+    void this.push.etapaParaPassageiro(rideId, evento).catch(() => undefined);
+  }
 
   @Get('offers')
-  @ApiOperation({ summary: 'Chamados abertos para este motorista' })
-  offers(@CurrentUser('driverId') driverId: string) {
-    return this.rides.chamados(driverId);
+  @ApiOperation({ summary: 'Chamados abertos para este motorista (aguardar=25: espera ate 25 s por um novo)' })
+  offers(@CurrentUser('driverId') driverId: string, @Query('aguardar') aguardar?: string) {
+    const s = Math.max(0, Math.min(Number(aguardar) || 0, 25));
+    return this.rides.chamados(driverId, s);
   }
 
   @Post(':id/accept')
   @ApiOperation({ summary: 'Aceita o chamado (o primeiro a aceitar leva)' })
-  accept(@CurrentUser('driverId') driverId: string, @Param('id') rideId: string) {
-    return this.rides.aceitar(driverId, rideId);
+  async accept(@CurrentUser('driverId') driverId: string, @Param('id') rideId: string) {
+    const r = await this.rides.aceitar(driverId, rideId);
+    this.avisar(rideId, 'ACEITA');
+    return r;
   }
 
   @Post(':id/decline')
@@ -205,32 +217,38 @@ export class DriverRidesController {
 
   @Post(':id/arrived')
   @ApiOperation({ summary: 'Avisa que chegou no ponto de embarque' })
-  arrived(
+  async arrived(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
     @Body(new ZodValidationPipe(rideLocationSchema)) body: never,
   ) {
-    return this.rides.cheguei(driverId, rideId, body);
+    const r = await this.rides.cheguei(driverId, rideId, body);
+    this.avisar(rideId, 'CHEGOU');
+    return r;
   }
 
   @Post(':id/start')
   @ApiOperation({ summary: 'Inicia a viagem com o passageiro a bordo' })
-  start(
+  async start(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
     @Body(new ZodValidationPipe(rideLocationSchema)) body: never,
   ) {
-    return this.rides.iniciar(driverId, rideId, body);
+    const r = await this.rides.iniciar(driverId, rideId, body);
+    this.avisar(rideId, 'INICIOU');
+    return r;
   }
 
   @Post(':id/finish')
   @ApiOperation({ summary: 'Encerra a corrida; o servidor recalcula o valor e lanca na carteira' })
-  finish(
+  async finish(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
     @Body(new ZodValidationPipe(finishRideSchema)) body: never,
   ) {
-    return this.rides.finalizar(driverId, rideId, body);
+    const r = await this.rides.finalizar(driverId, rideId, body);
+    this.avisar(rideId, 'TERMINOU');
+    return r;
   }
 
   @Post(':id/taximetro')
@@ -245,12 +263,14 @@ export class DriverRidesController {
 
   @Post(':id/cancel')
   @ApiOperation({ summary: 'Cancela a corrida que havia aceitado' })
-  cancel(
+  async cancel(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) rideId: string,
     @Body(new ZodValidationPipe(cancelRideSchema)) body: never,
   ) {
-    return this.rides.cancelar(user.id, UserRole.DRIVER, rideId, body, user.driverId);
+    const r = await this.rides.cancelar(user.id, UserRole.DRIVER, rideId, body, user.driverId);
+    this.avisar(rideId, 'CANCELADA');
+    return r;
   }
 
   @Get('current')

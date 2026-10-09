@@ -13,6 +13,9 @@ class AppStorage {
   static const String configApp = 'ride.configApp';
   static const String avisoVisto = 'ride.avisoVisto';
 
+  /// Conta dona dos dados guardados no aparelho (historico, destinos).
+  static const String donoDosDados = 'ride.donoDosDados';
+
   static Future<void> write(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
@@ -34,5 +37,9 @@ class AppStorage {
     await prefs.remove(refreshToken);
     await prefs.remove(user);
     await prefs.remove(activeRide);
+    // Destinos e lugares recentes sao da pessoa: a proxima conta comeca limpa.
+    await prefs.remove(recentPlaces);
+    await prefs.remove(recentDestinations);
+    await prefs.remove(donoDosDados);
   }
 }

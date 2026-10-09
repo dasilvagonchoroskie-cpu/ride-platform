@@ -307,6 +307,15 @@ MUID=$(get /auth/me "$TM" | jq -r '.data.id // empty')
 X=$(post /admin/passengers/excluir "{\"ids\":[\"$MUID\"]}" "$TA")
 [ "$(echo "$X" | jq -r '.data.excluidos')" = "0" ] && echo "$X" | jq -r '.data.itens[0].erro' | grep -q "motorista" && ok "Central: conta de motorista nao sai pela aba Passageiros" || falha "Central: excluir passageiro que e motorista" "$X"
 X=$(post /admin/passengers/excluir "{\"ids\":[\"$PXID\"]}" "$TM"); sucesso "$X" && falha "Seguranca: motorista excluiu passageiro" "$X" || ok "Seguranca: so a Central exclui passageiro"
+
+# Excluir a propria conta (exigencia da Google Play, 09/10/2026).
+X=$(curl -s -m 60 "$API/conta/exclusao"); echo "$X" | grep -q "Excluir sua conta da Fortaleza Mov" && echo "$X" | grep -q '<form method="post"' && ok "Pagina publica de exclusao de conta no ar" || falha "Pagina de exclusao de conta" "$(echo "$X" | head -c 200)"
+X=$(curl -s -m 60 "$API/legal/privacidade"); echo "$X" | grep -q "<h1>" && echo "$X" | grep -qi "LGPD" && ok "Politica de privacidade em pagina de internet" || falha "Pagina da politica de privacidade" "$(echo "$X" | head -c 200)"
+TXX=$(entrar "+55649${SUF}84" PASSENGER)
+X=$(post /conta/excluir '{}' "$TXX"); sucesso "$X" && falha "Excluir conta sem confirmar deveria ser recusado" "$X" || ok "Seguranca: exclusao da conta pede confirmacao"
+X=$(post /conta/excluir '{"confirmacao":"EXCLUIR"}' "$TXX")
+[ "$(echo "$X" | jq -r '.data.ok')" = "true" ] && ok "Passageiro: exclui a propria conta pelo app ($(echo "$X" | jq -r '.data.resultado'))" || falha "Passageiro: excluir a propria conta" "$X"
+X=$(get /auth/me "$TXX"); sucesso "$X" && falha "Conta excluida ainda entra" "$X" || ok "Conta excluida nao entra mais"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Motorista sem saldo nao deveria ficar disponivel" "$X" || ok "Carteira: motorista com saldo zero nao fica disponivel ($(echo "$X" | jq -r '.error.message' | cut -c1-60)...)"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")
 [ "$(echo "$X" | jq -r '.data.balanceCents')" = "5000" ] && ok "Central: recarga de R\$ 50,00 (credito no extrato)" || falha "Central: recarga inicial" "$X"
@@ -346,9 +355,18 @@ sucesso "$X" && ok "Central: cupom $CUP criado (R\$ 3,00)" || falha "Central: cr
 X=$(get /rides/coupons "$TP"); [ "$(echo "$X" | jq -r --arg c "$CUP" '[.data[] | select(.code==$c)] | length')" = "1" ] && ok "Passageiro: ve o cupom na tela Cupons" || falha "Passageiro: lista de cupons" "$X"
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"couponCode\":\"$CUP\"}" "$TP")
 [ "$(echo "$X" | jq -r '.data.discountCents')" = "300" ] && ok "Passageiro: estimativa ja mostra o desconto do cupom" || falha "Passageiro: estimativa com cupom" "$X"
+# Chamado na hora (09/10/2026): o celular do motorista pergunta e o
+# servidor segura a pergunta ate a corrida ser oferecida.
+ESPERA=$(mktemp); INI=$(date +%s%N)
+( curl -s -m 40 "$API/driver/rides/offers?aguardar=25" -H "Authorization: Bearer $TM" > "$ESPERA"; echo $(( ($(date +%s%N) - INI) / 1000000 )) >> "$ESPERA.ms" ) &
+PID_ESPERA=$!
+sleep 2
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"couponCode\":\"$CUP\"}" "$TP")
 RID=$(echo "$X" | jq -r '.data.ride.id // empty')
 sucesso "$X" && ok "Passageiro: corrida pedida" || falha "Passageiro: pedir corrida" "$X"
+wait $PID_ESPERA; MS=$(cat "$ESPERA.ms" 2>/dev/null)
+[ "$(jq -r --arg r "$RID" '[.data[] | select(.rideId==$r)] | length' "$ESPERA" 2>/dev/null)" = "1" ] && [ "${MS:-99999}" -lt 15000 ] 2>/dev/null \
+  && ok "Motorista: chamado chegou NA HORA no celular que estava esperando (${MS} ms desde a pergunta)" || falha "Motorista: chamado na hora (${MS:-?} ms)" "$(head -c 300 "$ESPERA")"
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Motorista: chamado chegou" || falha "Motorista: chamado chegou" "$X"
 [ "$(echo "$X" | jq -r '.data[0].paymentMethodType' 2>/dev/null)" = "CASH" ] && ok "Motorista: chamado mostra a forma de pagamento (CASH)" || falha "Motorista: forma de pagamento no chamado" "$X"

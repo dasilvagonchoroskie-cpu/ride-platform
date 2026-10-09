@@ -94,7 +94,7 @@ class _MapPickScreenState extends State<MapPickScreen> {
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.rideplatform.mobile_passenger',
+                  userAgentPackageName: 'br.com.fortalezamov.passageiro',
                   maxZoom: 19,
                 ),
               ],

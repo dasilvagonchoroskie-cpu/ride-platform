@@ -9,5 +9,6 @@ import { CentralService } from './central.service';
   imports: [PrismaModule, RidesModule, VehiclesModule],
   controllers: [AdminCentralController, SafetyController, DriverPayoutsController],
   providers: [CentralService],
+  exports: [CentralService],
 })
 export class CentralModule {}

@@ -46,10 +46,30 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Tela de chamado em tela cheia (abre por cima da tela bloqueada,
+             com deslizar para aceitar). Tarefa propria: nao traz o resto do
+             aplicativo junto e nao aparece nos recentes. -->
+        <activity
+            android:name=".ChamadoActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity=".chamado"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
         <service
             android:name=".CorridasService"
             android:exported="false"
             android:foregroundServiceType="location" />
+        <!-- Notificacao push (Firebase): chega com o aplicativo fechado. -->
+        <service
+            android:name=".MensagensService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

@@ -38,6 +38,8 @@ class MainActivity : FlutterActivity() {
                             ContextCompat.startForegroundService(this, i)
                             result.success(true)
                         }
+                        // Endereco de push (Firebase) deste celular; null sem Firebase.
+                        "tokenPush" -> Push.token(this) { t -> result.success(t) }
                         "parar" -> {
                             try {
                                 startService(Intent(this, CorridaService::class.java).setAction(CorridaService.ACAO_PARAR))
