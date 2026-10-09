@@ -62,6 +62,22 @@ class CentralRepository {
     await _client.request('POST', '/auth/otp/request', body: {'email': email, 'purpose': 'LOGIN'});
   }
 
+  /// Esqueci a senha: codigo de 6 numeros no e-mail da Central.
+  Future<void> pedirCodigoSenhaNova(String email) async {
+    await _client.request('POST', '/auth/otp/request', body: {'email': email, 'purpose': 'PASSWORD_RESET'});
+  }
+
+  /// Codigo do e-mail + senha nova. O servidor troca a senha e ja entra.
+  Future<AdminUser> redefinirSenha(String email, String codigo, String senhaNova) async {
+    final data = await _client.request('POST', '/auth/password/reset', body: {
+      'email': email,
+      'code': codigo,
+      'newPassword': senhaNova,
+      'device': {'deviceId': 'flutter-android-central', 'platform': 'ANDROID'},
+    }) as Map<String, dynamic>;
+    return _sessaoDaCentral(data, email);
+  }
+
   Future<AdminUser> entrarComCodigo(String email, String codigo) async {
     final data = await _client.request('POST', '/auth/otp/verify', body: {
       'email': email,

@@ -109,6 +109,45 @@ class CentralState extends ChangeNotifier {
     notifyListeners();
     await loadAll();
   }
+  /// Esqueci a senha (Evandro, 09/10/2026): codigo no e-mail + senha nova;
+  /// ja entra na Central. Devolve o erro (ou nulo se deu certo).
+  Future<String?> pedirCodigoSenhaNova(String email) async {
+    try {
+      await _repository.pedirCodigoSenhaNova(email.trim().toLowerCase());
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'Sem conexão com o servidor. Confira a internet e tente de novo.';
+    }
+  }
+  Future<String?> redefinirSenha(String email, String codigo, String senhaNova) async {
+    await _entrarComSenhaNova(email, codigo, senhaNova);
+    return admin == null ? (error ?? 'Não deu para trocar a senha. Tente de novo.') : null;
+  }
+
+  Future<void> _entrarComSenhaNova(String email, String codigo, String senhaNova) async {
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      admin = await _repository.redefinirSenha(email.trim().toLowerCase(), codigo, senhaNova);
+    } on ApiException catch (e) {
+      error = e.message;
+      loading = false;
+      notifyListeners();
+      return;
+    } catch (_) {
+      error = 'Sem conexão com o servidor. Confira a internet e tente de novo.';
+      loading = false;
+      notifyListeners();
+      return;
+    }
+    await AppStorage.write(AppStorage.adminUser, jsonEncode(admin!.toJson()));
+    loading = false;
+    notifyListeners();
+    await loadAll();
+  }
 
   Future<void> login(String email, String password) async {
     loading = true;

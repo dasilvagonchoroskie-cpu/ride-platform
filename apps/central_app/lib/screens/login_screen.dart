@@ -175,6 +175,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: Spacing.lg),
                           AppButton(label: 'Entrar na Central', loading: central.loading, onPressed: _entrarComSenha),
+                          if (central.codigoPorEmail)
+                            TextButton(
+                              onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (_) => _EsqueciSenha(central: central, email: _email.text.trim()),
+                              ),
+                              child: const Text('Esqueci a senha'),
+                            ),
                         ],
                         if (erro != null) ...[
                           const SizedBox(height: Spacing.sm),
@@ -204,6 +212,148 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Esqueci a senha da Central (Evandro, 09/10/2026: "tem que ter como
+/// recuperar a senha"): codigo de 6 numeros no e-mail e a senha nova.
+class _EsqueciSenha extends StatefulWidget {
+  const _EsqueciSenha({required this.central, required this.email});
+
+  final CentralState central;
+  final String email;
+
+  @override
+  State<_EsqueciSenha> createState() => _EsqueciSenhaState();
+}
+
+class _EsqueciSenhaState extends State<_EsqueciSenha> {
+  late final TextEditingController _email = TextEditingController(text: widget.email);
+  final TextEditingController _codigo = TextEditingController();
+  final TextEditingController _senha = TextEditingController();
+  bool _enviado = false;
+  bool _ocupado = false;
+  bool _oculta = true;
+  String? _erro;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _codigo.dispose();
+    _senha.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pedir() async {
+    final email = _email.text.trim();
+    if (!email.contains('@') || !email.contains('.')) {
+      setState(() => _erro = 'Informe o e-mail da Central.');
+      return;
+    }
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    final erro = await widget.central.pedirCodigoSenhaNova(email);
+    if (!mounted) return;
+    setState(() {
+      _ocupado = false;
+      _erro = erro;
+      _enviado = erro == null;
+    });
+  }
+
+  String? _problema() {
+    if (_codigo.text.trim().length != 6) return 'O código tem 6 números.';
+    final s = _senha.text;
+    if (s.length < 8) return 'A senha nova precisa ter pelo menos 8 caracteres.';
+    if (!RegExp(r'[A-Za-z]').hasMatch(s) || !RegExp(r'\d').hasMatch(s)) return 'Use letras e números na senha nova.';
+    return null;
+  }
+
+  Future<void> _salvar() async {
+    final problema = _problema();
+    if (problema != null) {
+      setState(() => _erro = problema);
+      return;
+    }
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    final erro = await widget.central.redefinirSenha(_email.text.trim(), _codigo.text.trim(), _senha.text);
+    if (!mounted) return;
+    if (erro == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _ocupado = false;
+      _erro = erro;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Esqueci a senha'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _enviado
+                  ? 'Enviamos um código de 6 números para ${_email.text.trim()}. Digite o código e a senha nova.'
+                  : 'Vamos mandar um código de 6 números para o e-mail da Central.',
+              style: AppText.caption.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: Spacing.md),
+            TextField(
+              controller: _email,
+              enabled: !_enviado,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'E-mail da Central'),
+            ),
+            if (_enviado) ...[
+              const SizedBox(height: Spacing.sm),
+              TextField(
+                controller: _codigo,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(labelText: 'Código do e-mail', counterText: ''),
+              ),
+              const SizedBox(height: Spacing.sm),
+              TextField(
+                controller: _senha,
+                obscureText: _oculta,
+                decoration: InputDecoration(
+                  labelText: 'Senha nova (letras e números)',
+                  suffixIcon: IconButton(
+                    tooltip: _oculta ? 'Mostrar senha' : 'Esconder senha',
+                    icon: Icon(_oculta ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () => setState(() => _oculta = !_oculta),
+                  ),
+                ),
+              ),
+            ],
+            if (_erro != null) ...[
+              const SizedBox(height: Spacing.sm),
+              Text(_erro!, style: AppText.caption.copyWith(color: AppColors.danger)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _ocupado ? null : () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        if (_enviado) TextButton(onPressed: _ocupado ? null : _pedir, child: const Text('Outro código')),
+        FilledButton(
+          onPressed: _ocupado ? null : (_enviado ? _salvar : _pedir),
+          child: Text(_enviado ? 'Salvar e entrar' : 'Receber código'),
+        ),
+      ],
     );
   }
 }
