@@ -20,25 +20,25 @@
 00:04 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
 00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
 00:04 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:05 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
-00:05 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
-00:05 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Historico: filtros, totais, desempenho e taxa por corrida
+00:04 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
+00:04 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
+00:04 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Historico: filtros, totais, desempenho e taxa por corrida
 00:05 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
 00:05 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:06 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:06 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:05 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:05 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:06 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:06 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:07 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero digitado errado (6631): avisa "Conta nova" e desfaz
-00:07 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:07 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:08 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:08 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:08 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:08 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:08 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Ainda em analise: continua na tela e o perfil fica
-00:08 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
-00:08 +39: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Central suspendeu ou bloqueou: nao fica como "em analise"
-00:08 +40: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
-00:08 +41: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Boas-vindas: sem modo demonstracao no app de verdade
-00:08 +42: All tests passed!
+00:06 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero digitado errado (6631): avisa "Conta nova" e desfaz
+00:06 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Conta nova de verdade: "Esta certo" segue para o cadastro
+00:06 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:07 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Ainda em analise: continua na tela e o perfil fica
+00:07 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
+00:07 +39: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Central suspendeu ou bloqueou: nao fica como "em analise"
+00:07 +40: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:07 +41: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Boas-vindas: sem modo demonstracao no app de verdade
+00:07 +42: All tests passed!
