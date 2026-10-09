@@ -1,2 +1,6 @@
 Analyzing mobile_driver...                                      
-No issues found! (ran in 10.3s)
+
+  error • A value of type 'Future<InvalidType> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'. Try changing the type of the variable, or casting the right-hand type to 'Future<Map<MarkerKind, BitmapDescriptor>>?' • lib/widgets/ride_map.dart:133:19 • invalid_assignment
+  error • The expression doesn't evaluate to a function, so it can't be invoked • lib/widgets/ride_map.dart:133:31 • invocation_of_non_function_expression
+
+2 issues found. (ran in 10.6s)
