@@ -17,7 +17,7 @@ Script executed successfully.
 Semeando banco...
   bandeira DIURNA: R$ 10,00 das 6h as 22h
   bandeira NOTURNA: R$ 20,00 das 22h as 6h
-  admin ok: fortalezadigitalsecurity@gmail.com (senha: Admin@123)
+  admin ok: fortalezadigitalsecurity@gmail.com (senha omitida)
   cupom ok: PRIMEIRACORRIDA
 Seed concluido.
 
