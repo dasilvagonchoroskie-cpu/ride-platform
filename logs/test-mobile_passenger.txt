@@ -1,194 +1,39 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart
-lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'call'.
-          }();
-           ^
-lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
- - 'Future' is from 'dart:async'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-      _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                  ^
-00:00 +0 -1: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart [E]
-  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart":
-  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'call'.
-            }();
-             ^
-  lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
-   - 'Future' is from 'dart:async'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-        _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                    ^
-  .
-  Error: The Dart compiler exited unexpectedly.
-  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
-  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
-  dart:async/zone_root.dart 48:47                  _rootRunUnary
-  dart:async/zone.dart 816:35                      _CustomZone.runUnary
-  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
-  dart:async/future_impl.dart 977:13               Future._propagateToListeners
-  dart:async/future_impl.dart 862:9                Future._propagateToListeners
-  dart:async/future_impl.dart 720:5                Future._completeWithValue
-  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
-  dart:async/zone_root.dart 35:13                  _rootRun
-  dart:async/zone.dart 810:35                      _CustomZone.run
-  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
-  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
-  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
-  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
-  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
-  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
-  
-lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'call'.
-          }();
-           ^
-lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
- - 'Future' is from 'dart:async'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-      _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                  ^
-00:00 +0 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:00 +0 -2: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart [E]
-  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart":
-  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'call'.
-            }();
-             ^
-  lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
-   - 'Future' is from 'dart:async'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-        _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                    ^
-  .
-00:00 +0 -2: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart [E]
-  Error: The Dart compiler exited unexpectedly.
-  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
-  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
-  dart:async/zone_root.dart 48:47                  _rootRunUnary
-  dart:async/zone.dart 816:35                      _CustomZone.runUnary
-  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
-  dart:async/future_impl.dart 977:13               Future._propagateToListeners
-  dart:async/future_impl.dart 862:9                Future._propagateToListeners
-  dart:async/future_impl.dart 720:5                Future._completeWithValue
-  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
-  dart:async/zone_root.dart 35:13                  _rootRun
-  dart:async/zone.dart 810:35                      _CustomZone.run
-  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
-  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
-  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
-  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
-  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
-  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
-  
-00:01 +1 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Cadastro ja vem com o telefone digitado antes
-lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'call'.
-          }();
-           ^
-lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
- - 'Future' is from 'dart:async'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-      _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                  ^
-00:01 +2 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/troca_de_conta_test.dart: Sair da conta limpa historico, destinos e lugares recentes
-00:02 +3 -3: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart [E]
-  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart":
-  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'call'.
-            }();
-             ^
-  lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
-   - 'Future' is from 'dart:async'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-        _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                    ^
-  .
-00:02 +3 -3: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart [E]
-  Error: The Dart compiler exited unexpectedly.
-  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
-  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
-  dart:async/zone_root.dart 48:47                  _rootRunUnary
-  dart:async/zone.dart 816:35                      _CustomZone.runUnary
-  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
-  dart:async/future_impl.dart 977:13               Future._propagateToListeners
-  dart:async/future_impl.dart 862:9                Future._propagateToListeners
-  dart:async/future_impl.dart 720:5                Future._completeWithValue
-  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
-  dart:async/zone_root.dart 35:13                  _rootRun
-  dart:async/zone.dart 810:35                      _CustomZone.run
-  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
-  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
-  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
-  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
-  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
-  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
-  
-lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'call'.
-          }();
-           ^
-lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
- - 'Future' is from 'dart:async'.
- - 'Map' is from 'dart:core'.
- - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
- - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-      _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                  ^
-00:04 +3 -4: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart [E]
-  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart":
-  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: lib/widgets/ride_map.dart:137:12: Error: The method 'call' isn't defined for the type 'Map<MarkerKind, BitmapDescriptor>'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'call'.
-            }();
-             ^
-  lib/widgets/ride_map.dart:133:19: Error: A value of type 'Future<dynamic> Function()' can't be assigned to a variable of type 'Future<Map<MarkerKind, BitmapDescriptor>>?'.
-   - 'Future' is from 'dart:async'.
-   - 'Map' is from 'dart:core'.
-   - 'MarkerKind' is from 'package:mobile_passenger/widgets/ride_map.dart' ('lib/widgets/ride_map.dart').
-   - 'BitmapDescriptor' is from 'package:google_maps_flutter_platform_interface/src/types/bitmap.dart' ('../../../../../.pub-cache/hosted/pub.dev/google_maps_flutter_platform_interface-2.17.0/lib/src/types/bitmap.dart').
-        _icones ??= () async => <MarkerKind, gm.BitmapDescriptor>{
-                    ^
-  .
-00:04 +3 -4: Some tests failed.
-
-Failing tests:
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart
+00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF aceita CPF valido com ou sem pontuacao
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF recusa digito errado, numeros repetidos e tamanho errado
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF mascara enquanto digita
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: senha segue a mesma regra do servidor
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: nome e sobrenome
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: e-mail
+00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: busca de cidade ignora acento e maiuscula
+00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: telefone legivel
+00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: saudacao pela hora
+00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: perfil antigo guardado no aparelho pede o cadastro
+00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
+00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Cadastro ja vem com o telefone digitado antes
+00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista chegou: faixa verde
+00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
+00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: taximetro correndo no canto da tela
+00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
+00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
+00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
+00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
+00:03 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
+00:04 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
+00:04 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
+00:04 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
+00:05 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:05 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:05 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:05 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
+00:06 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Corridas agendadas: horario, endereco, valor e cancelar sem multa
+00:06 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
+00:06 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS: panico manda a posicao e a corrida; avisar contatos; 190 e 192
+00:06 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS sem contatos: botao para cadastrar
+00:06 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
+00:07 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: telefone incompleto nao salva
+00:07 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Conta: foto com lapis, agendadas e contatos de emergencia
+00:07 +37: All tests passed!
