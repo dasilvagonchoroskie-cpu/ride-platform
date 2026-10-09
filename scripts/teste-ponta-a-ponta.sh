@@ -335,6 +335,9 @@ X=$(get /rides/scheduled "$TP"); [ "$(echo "$X" | jq -r --arg r "$RIDA" '[.data.
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"scheduledFor\":\"$(date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ)\"}" "$TP"); sucesso "$X" && falha "Agendar com menos de 30 min deveria ser recusado" "$X" || ok "Passageiro: agendamento muito em cima da hora recusado"
 X=$(post "/rides/$RIDA/cancel" '{"reason":"Teste"}' "$TP"); [ "$(echo "$X" | jq -r '.data.status')" = "CANCELLED_BY_PASSENGER" ] && ok "Passageiro: cancelou a agendada" || falha "Passageiro: cancelar agendada" "$X"
 # Segunda corrida: o motorista cancela depois de aceitar e o passageiro fica sabendo.
+# O app do motorista manda a posicao o tempo todo; aqui o teste manda de novo
+# (o servidor so chama quem deu sinal nos ultimos 2 minutos).
+post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"PIX\"}" "$TP"); RID2=$(echo "$X" | jq -r '.data.ride.id // empty')
 N=0; for t in 1 2 3 4 5; do sleep 3; X=$(get /driver/rides/offers "$TM"); N=$(echo "$X" | jq -r '.data | length' 2>/dev/null); [ "${N:-0}" -ge 1 ] 2>/dev/null && break; done
 post "/driver/rides/$RID2/accept" '{}' "$TM" >/dev/null
