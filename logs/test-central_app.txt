@@ -1,23 +1,23 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
 00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
 00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:01 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
 00:01 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
 00:01 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:02 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:01 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
 00:02 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
 00:03 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:04 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
+00:03 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
 00:04 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
 00:04 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
-00:05 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:04 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
 00:05 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:06 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:06 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
+00:05 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
+00:05 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
 00:06 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:07 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:08 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:08 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:08 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:08 +21: All tests passed!
+00:06 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:07 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
+00:07 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
+00:07 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
+00:07 +21: All tests passed!
