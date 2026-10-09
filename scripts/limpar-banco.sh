@@ -31,12 +31,12 @@ log "Antes: $(resumo)"
 
 manter() {
   local tel="$1" email="$2"
-  [[ ",$MANTER," == *",$tel,"* ]] && [ -n "$tel" ] && return 0
-  [[ ",$MANTER_EMAILS," == *",$email,"* ]] && [ -n "$email" ] && return 0
+  [ "$tel" != "-" ] && [[ ",$MANTER," == *",$tel,"* ]] && return 0
+  [ "$email" != "-" ] && [[ ",$MANTER_EMAILS," == *",$email,"* ]] && return 0
   return 1
 }
 
-contas() { get /admin/limpeza/contas "$TA" | jq -r '.data.items[] | [.id, .phone, (.email // ""), .name, (.corridas|tostring), (.teste|tostring), (.motorista|tostring)] | @tsv'; }
+contas() { get /admin/limpeza/contas "$TA" | jq -r '.data.items[] | [.id, (if .phone == "" then "-" else .phone end), (.email // "-"), .name, (.corridas|tostring), (.teste|tostring), (.motorista|tostring)] | @tsv'; }
 log ""
 log "Contas (passageiros e motoristas):"
 while IFS=$'\t' read -r id tel email nome corridas teste motorista; do
