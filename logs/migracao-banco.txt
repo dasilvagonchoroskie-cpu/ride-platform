@@ -1,0 +1,36 @@
+Banco antigo (Sao Paulo) responde.
+Banco novo (California) responde em aws-0-us-west-1.pooler.supabase.com
+Copia do banco antigo: 520K em 25 s.
+Restauracao no banco novo em 1 s; erros fora do esperado: 1.
+pg_restore: error: could not execute query: ERROR:  permission denied for database postgres
+OK     arquivos: 3
+OK     audit_logs: 430
+OK     coupons: 1
+OK     devices: 6
+OK     driver_documents: 1
+OK     driver_locations: 1
+OK     driver_online_sessions: 2
+OK     drivers: 1
+OK     fare_configs: 2
+OK     notifications: 0
+OK     otp_codes: 408
+OK     payment_methods: 0
+OK     payments: 0
+OK     payouts: 0
+OK     ratings: 2
+OK     refresh_tokens: 63
+OK     ride_messages: 2
+OK     ride_offers: 2
+OK     ride_status_history: 48
+OK     ride_stops: 0
+OK     rides: 3
+OK     safety_events: 0
+OK     settings: 6
+OK     user_addresses: 0
+OK     users: 5
+OK     vehicles: 1
+OK     wallet_transactions: 4
+OK     wallets: 1
+Funcao set_updated_at no banco novo: 1
+Indices espaciais (GiST) no banco novo: 1
+RESULTADO: COM PROBLEMAS (0 tabela(s) diferentes).
