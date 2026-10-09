@@ -43,6 +43,9 @@ class RideMap extends StatefulWidget {
     this.minhaPosicao,
     this.bussolaAutomatica = false,
     this.controlesAlinhamento = const Alignment(1, -0.25),
+    this.enquadrar = const [],
+    this.enquadrarChave,
+    this.enquadrarMargem = const EdgeInsets.fromLTRB(40, 72, 40, 40),
   });
 
   /// Posicao do motorista: com ela o mapa mostra a bussola e o botao de
@@ -54,6 +57,18 @@ class RideMap extends StatefulWidget {
 
   /// Onde ficam a bussola e o centralizar (fora do caminho dos paineis).
   final Alignment controlesAlinhamento;
+
+  /// Pontos que tem que caber INTEIROS na tela (embarque, destino, carro,
+  /// rota). Com eles o mapa abre o suficiente para mostrar a viagem toda —
+  /// antes o zoom era fixo e uma corrida longa (Goiatuba → Rio Verde, 193 km)
+  /// mostrava so um pedaco vazio no meio do caminho (Evandro, 09/10/2026).
+  final List<Coords> enquadrar;
+
+  /// Mude para o mapa enquadrar de novo (ex.: chegou a rota, mudou a etapa).
+  final Object? enquadrarChave;
+
+  /// Espaco livre nas bordas (botoes em cima, painel embaixo).
+  final EdgeInsets enquadrarMargem;
 
   final Coords center;
   final List<MapMarker> markers;
@@ -73,6 +88,9 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   final Map<String, Coords> _animated = {};
   final Map<String, Coords> _targets = {};
   final MapController _mapa = MapController();
+
+  /// Ultimo tamanho do mapa na tela (para a folga caber).
+  Size? _tamanho;
 
   /// Bussola no automatico: o mapa acompanha o carro.
   bool _seguir = false;
@@ -97,6 +115,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant RideMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.enquadrarChave != oldWidget.enquadrarChave) _enquadrarDeNovo();
     final antes = oldWidget.minhaPosicao;
     final agora = widget.minhaPosicao;
     if (_seguir && agora != null && (antes == null || antes.latitude != agora.latitude || antes.longitude != agora.longitude)) {
@@ -156,6 +175,45 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
 
   LatLng _latLng(Coords coords) => LatLng(coords.latitude, coords.longitude);
 
+  /// Enquadramento da viagem inteira (null = usa centro e zoom fixos).
+  CameraFit? _ajuste() {
+    final pontos = <LatLng>[
+      for (final c in widget.enquadrar)
+        if (c.latitude != 0 || c.longitude != 0) _latLng(c),
+    ];
+    if (pontos.length < 2) return null;
+    // Folga maior que o mapa (tela pequena, celular deitado) quebraria a
+    // conta do zoom: limita a no maximo 70% da largura e da altura.
+    var folga = widget.enquadrarMargem;
+    final t = _tamanho;
+    if (t != null && t.width > 0 && t.height > 0) {
+      final fx = (folga.horizontal > t.width * 0.7) ? t.width * 0.7 / folga.horizontal : 1.0;
+      final fy = (folga.vertical > t.height * 0.7) ? t.height * 0.7 / folga.vertical : 1.0;
+      if (fx < 1 || fy < 1) {
+        folga = EdgeInsets.fromLTRB(folga.left * fx, folga.top * fy, folga.right * fx, folga.bottom * fy);
+      }
+    }
+    return CameraFit.coordinates(
+      coordinates: pontos,
+      padding: folga,
+      maxZoom: 16.5,
+      minZoom: 3,
+    );
+  }
+
+  void _enquadrarDeNovo() {
+    final ajuste = _ajuste();
+    if (ajuste == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        _mapa.fitCamera(ajuste);
+      } catch (_) {
+        // Mapa ainda nao desenhado: o enquadramento inicial ja cuida.
+      }
+    });
+  }
+
   double get _zoom {
     final span = widget.span;
     if (span <= 0.01) return 16;
@@ -167,7 +225,10 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final map = Stack(
+    // Tamanho do mapa: a folga do enquadramento nunca passa dele.
+    final map = LayoutBuilder(builder: (context, limites) {
+      _tamanho = limites.biggest;
+      return Stack(
       fit: StackFit.expand,
       children: [
         FlutterMap(
@@ -175,6 +236,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
           options: MapOptions(
             initialCenter: _latLng(widget.center),
             initialZoom: _zoom,
+            initialCameraFit: _ajuste(),
             interactionOptions: InteractionOptions(
               flags: widget.interactive ? InteractiveFlag.all : InteractiveFlag.none,
             ),
@@ -275,6 +337,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
         ),
       ],
     );
+    });
 
     final content = widget.height == null
         ? map

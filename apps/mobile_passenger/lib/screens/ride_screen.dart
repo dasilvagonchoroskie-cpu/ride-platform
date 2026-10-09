@@ -74,6 +74,10 @@ class RideScreen extends StatelessWidget {
               center: centro,
               span: 0.03,
               rounded: false,
+              // Comeca mostrando o carro e o destino inteiros na tela.
+              enquadrar: [centro, corrida.dropoff.coords],
+              enquadrarChave: corrida.id,
+              enquadrarMargem: EdgeInsets.fromLTRB(56, 110, 56, MediaQuery.sizeOf(context).height * 0.45),
               // Bussola e centralizar (no carro, ou no embarque enquanto ele nao aparece).
               minhaPosicao: centro,
               markers: [

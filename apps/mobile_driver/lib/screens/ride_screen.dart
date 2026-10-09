@@ -54,6 +54,10 @@ class RideScreen extends StatelessWidget {
                     center: indoBuscar ? offer.pickupCoords : offer.dropoffCoords,
                     span: 0.04,
                     rounded: false,
+                    // A cada etapa: o carro e para onde ele vai, inteiros na tela.
+                    enquadrar: [d.position, indoBuscar ? offer.pickupCoords : offer.dropoffCoords],
+                    enquadrarChave: fase,
+                    enquadrarMargem: const EdgeInsets.fromLTRB(56, 150, 56, 56),
                     route: viagem,
                     driverRoute: ateEmbarque,
                     minhaPosicao: d.position,

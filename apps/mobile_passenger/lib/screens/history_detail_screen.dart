@@ -47,6 +47,8 @@ class HistoryDetailScreen extends StatelessWidget {
                 center: center,
                 height: 210,
                 span: 0.09,
+                enquadrar: [ride.pickup.coords, ride.dropoff.coords],
+                enquadrarMargem: const EdgeInsets.all(36),
                 markers: [
                   MapMarker(id: 'pickup', coords: ride.pickup.coords, kind: MarkerKind.pickup),
                   MapMarker(id: 'dropoff', coords: ride.dropoff.coords, kind: MarkerKind.dropoff),

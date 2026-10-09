@@ -144,6 +144,11 @@ class _SearchingScreenState extends State<SearchingScreen> {
               center: centro,
               span: 0.02,
               rounded: false,
+              // O carro e voce na mesma tela (enquadra quando o carro aparece
+              // e a cada etapa: a caminho, chegou).
+              enquadrar: [if (motorista.posicaoReal) motorista.position, corrida.pickup.coords],
+              enquadrarChave: '${corrida.status}|${motorista.posicaoReal}',
+              enquadrarMargem: EdgeInsets.fromLTRB(56, 96, 56, altura * 0.45),
               markers: [
                 MapMarker(id: 'pickup', coords: corrida.pickup.coords, kind: MarkerKind.pickup),
                 if (motorista.posicaoReal) MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),

@@ -112,6 +112,11 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                     center: center,
                     span: 0.075,
                     rounded: false,
+                    // A viagem inteira na tela, perto ou longe (antes o zoom era
+                    // fixo e Goiatuba → Rio Verde mostrava um pedaco vazio).
+                    enquadrar: [app.coords, widget.destination, ...ride.rotaPrevia],
+                    enquadrarChave: ride.rotaPrevia.length,
+                    enquadrarMargem: const EdgeInsets.fromLTRB(40, 72, 40, 36),
                     // Pelas ruas (aparece assim que o servidor responde).
                     route: ride.rotaPrevia,
                     markers: [

@@ -66,6 +66,17 @@ class OfferScreen extends StatelessWidget {
               center: _enquadrar(driver.position, offer),
               span: _abertura(driver.position, offer),
               rounded: false,
+              // Carro, embarque, destino e as rotas inteiros na tela, perto
+              // ou longe (o zoom fixo cortava as corridas longas).
+              enquadrar: [
+                driver.position,
+                offer.pickupCoords,
+                offer.dropoffCoords,
+                ...driver.rotaOfertaAteEmbarque,
+                ...driver.rotaOfertaViagem,
+              ],
+              enquadrarChave: '${driver.rotaOfertaAteEmbarque.length}|${driver.rotaOfertaViagem.length}',
+              enquadrarMargem: const EdgeInsets.fromLTRB(40, 56, 40, 32),
               // Pelas ruas (ate o embarque em azul, a viagem em verde). Sem a
               // rota ainda (ou sem rede), so os pontos aparecem.
               driverRoute: driver.rotaOfertaAteEmbarque,
