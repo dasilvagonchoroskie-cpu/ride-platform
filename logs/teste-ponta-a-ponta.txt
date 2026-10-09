@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: bfb08f9 (Carros do motorista (outro carro, trocar, corrigir, tirar) e excluir passageiros)
 No ar agora: bfb08f9
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 14:19 UTC
+Teste de ponta a ponta - 09/10/2026 14:32 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Central: login do administrador pelo codigo do e-mail
@@ -44,7 +44,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST4343)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST1256)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -69,8 +69,7 @@ OK     Central: aviso de foto nova para conferir
 OK     Motorista: continua aprovado enquanto a foto nova espera
 OK     Central: recusa a foto nova e a aprovada continua
 OK     Central: aprova a foto nova; ela passa a aparecer e a antiga sai
-FALHA  Central: por a foto do motorista
-       resposta: {"success":true,"data":{"id":"1a97440b-647b-4346-874b-dce7955e7f91","type":"PROFILE_PHOTO","status":"APPROVED","fileUrl":"/arquivos/b51f6bd6-1e6c-4765-98c3-bfce6afcce03","avatarUrl":"/arquivos/b51f6bd6-1e6c-4765-98c3-bfce6afcce03"},"timestamp":"2026-10-09T14:24:24.814Z"}
+OK     Central: poe a foto do motorista (ja aprovada)
 OK     Passageiro: ve a foto do motorista
 OK     Seguranca: so a Central troca a foto do motorista
 OK     Central: aviso de foto some depois de conferida
@@ -107,13 +106,13 @@ OK     Central: modo de cobranca em Tarifas (FECHADO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE14200127 criado (R$ 3,00)
+OK     Central: cupom TESTE14330650 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
 OK     Passageiro: corrida pedida
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 0561 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 2536 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -132,7 +131,7 @@ OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (11h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 3 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 79s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 86s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -209,4 +208,4 @@ OK     Quem tambem e passageiro continua com a conta de passageiro
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 6 contas deste teste e 6 corridas delas
 
-Resultado: 1 falha(s).
+Resultado: 0 falha(s).
