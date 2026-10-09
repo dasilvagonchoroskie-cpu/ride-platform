@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 4e03f59 (Central: o cartao da Visao Geral mostra o ganho da Central (comissao + mensalida)
-No ar agora: 4e03f59
+Ultima mudanca do servidor no GitHub: c141201 (Corrige 'Cheguei ao local' depois de aceitar pela tela de chamado (DRIVER_ASSIGN)
+No ar agora: c141201
 OK: servidor em dia.
-Teste de ponta a ponta - 09/10/2026 20:04 UTC
+Teste de ponta a ponta - 09/10/2026 20:20 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -31,7 +31,7 @@ OK     Passageiro: esqueci a senha (codigo do telefone + senha nova)
 OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
-OK     Passageiro: busca de destino real (12 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
+OK     Passageiro: busca de destino real (7 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Passageiro: endereco do embarque pelo GPS (Avenida Minas Gerais)
 OK     Motorista: login pelo codigo de teste
 OK     Motorista: mesmo e-mail/CPF da conta de passageiro reconhecido (codigo vai para o e-mail d•••@teste.fortalezamov.com.br)
@@ -45,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST0476)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST4612)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -112,14 +112,14 @@ OK     Central: modo de cobranca em Tarifas (FECHADO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE20043632 criado (R$ 3,00)
+OK     Central: cupom TESTE20201192 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 876 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (875 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 992 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1001 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 9870 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 5628 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -138,7 +138,7 @@ OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (17h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 3 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 19s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 26s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -162,7 +162,9 @@ OK     Passageiro: corrida agendada para daqui a 2 horas
 OK     Passageiro: ve a agendada em Corridas agendadas
 OK     Passageiro: agendamento muito em cima da hora recusado
 OK     Passageiro: cancelou a agendada
+OK     Motorista: 'Cheguei ao local' direto do aceite (tela de chamado), sem posicao
 OK     Motorista: cancelou a corrida aceita
+OK     Mensagem de etapa errada em portugues: Esta corrida está cancelada pelo motorista: não dá para iniciar a viagem agora. Atualize a tela.
 OK     Passageiro: fica sabendo que o motorista cancelou
 OK     Passageiro: cancelou enquanto procurava, sem taxa
 OK     Passageiro: nenhuma corrida aberta depois de cancelar
