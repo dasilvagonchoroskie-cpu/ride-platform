@@ -5,6 +5,7 @@ import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
+import 'relatorio_pdf.dart';
 
 /// Financeiro: saques PIX dos motoristas e relatorio de receitas.
 class Financeiro extends StatelessWidget {
@@ -167,6 +168,14 @@ class _ReceitasState extends State<_Receitas> {
     return ListView(
       padding: const EdgeInsets.all(Spacing.md),
       children: [
+        // Evandro, 08/10/2026: "gerar o relatorio em PDF, por motorista e da frota toda".
+        OutlinedButton.icon(
+          onPressed: () => abrirRelatorioPdf(context),
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: const Text('Relatório em PDF (frota, cidade ou motorista)'),
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+        ),
+        const SizedBox(height: Spacing.md),
         SegmentedButton<int>(
           segments: const [
             ButtonSegment(value: 1, label: Text('Hoje')),

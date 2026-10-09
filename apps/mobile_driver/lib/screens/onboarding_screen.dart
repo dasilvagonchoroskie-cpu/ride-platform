@@ -31,6 +31,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _cnhExpiry = TextEditingController();
   String _cnhCategory = 'B';
 
+  /// Cidade onde vai trabalhar (so pergunta se a operacao tiver mais de uma).
+  String? _praca;
+
   // Sem exemplos preenchidos: antes vinha "Toyota Corolla ABC1D23" e um
   // motorista com pressa podia mandar o carro errado para a Central.
   final _brand = TextEditingController();
@@ -61,6 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (cpfConta != null && cpfConta.length == 11) {
       _cpf.text = '${cpfConta.substring(0, 3)}.${cpfConta.substring(3, 6)}.${cpfConta.substring(6, 9)}-${cpfConta.substring(9)}';
     }
+    driver.carregarPracas();
   }
 
   @override
@@ -95,6 +99,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     if (onlyDigits(_cnh.text).length != 11) {
       setState(() => _error = 'O número da CNH tem 11 dígitos.');
+      return;
+    }
+    if (context.read<DriverState>().pracas.length > 1 && _praca == null) {
+      setState(() => _error = 'Escolha a cidade onde vai trabalhar.');
       return;
     }
 
@@ -183,6 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         cnhNumber: onlyDigits(_cnh.text),
         cnhCategory: _cnhCategory,
         cnhExpiresAt: _cnhExpiry.text,
+        praca: _praca,
       );
     } finally {
       if (mounted) setState(() => _enviando = false);
@@ -425,6 +434,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: Spacing.md),
         AppField(label: 'Validade da CNH', hint: 'DD/MM/AAAA', controller: _cnhExpiry, keyboardType: TextInputType.number, inputFormatters: [MascaraData()], onChanged: (_) => setState(() {})),
+        // Varias cidades (ex.: Goiatuba e Teutonia): o motorista escolhe onde
+        // vai trabalhar; a Central daquela cidade e quem aprova.
+        if (context.watch<DriverState>().pracas.length > 1) ...[
+          const SizedBox(height: Spacing.md),
+          Text('CIDADE ONDE VAI TRABALHAR', style: AppText.label.copyWith(color: AppColors.textMuted)),
+          const SizedBox(height: Spacing.sm),
+          Wrap(
+            spacing: Spacing.sm,
+            runSpacing: Spacing.sm,
+            children: [
+              for (final p in context.watch<DriverState>().pracas)
+                ChoiceChip(
+                  label: Text(p.nome),
+                  selected: _praca == p.id,
+                  onSelected: (_) => setState(() => _praca = p.id),
+                ),
+            ],
+          ),
+        ],
         if (_error != null) ...[
           const SizedBox(height: Spacing.sm),
           Text(_error!, style: AppText.caption.copyWith(color: AppColors.danger)),

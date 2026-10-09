@@ -7,6 +7,7 @@ import 'cadastrar_motorista.dart';
 import 'carteiras.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
+import 'relatorio_pdf.dart';
 
 /// Gestao de Motoristas: Pendente, Ativo, Suspenso, Bloqueado.
 class Motoristas extends StatefulWidget {
@@ -304,6 +305,27 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
     if (ok) _recarregar();
   }
 
+  /// Dono com varias cidades: troca a cidade em que o motorista trabalha.
+  Future<void> _mudarCidade(MotoristaDetalhe d) async {
+    final cidades = context.read<PainelState>().eu?.pracas ?? const <Praca>[];
+    final escolhida = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text('Cidade de ${d.base.nome}'),
+        children: [
+          for (final c in cidades)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(c.id),
+              child: Text(c.id == d.praca ? '${c.rotulo} (atual)' : c.rotulo),
+            ),
+        ],
+      ),
+    );
+    if (escolhida == null || escolhida == d.praca || !mounted) return;
+    final ok = await tentar(context, () => _api.mudarPracaDoMotorista(d.base.id, escolhida), sucesso: 'Cidade alterada.');
+    if (ok) _recarregar();
+  }
+
   Future<void> _excluir(MotoristaDetalhe d) async {
     final ok = await confirmarExclusaoDeMotoristas(
       context,
@@ -375,7 +397,17 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                   Linha('CNH', '${d.cnh} · categoria ${d.categoriaCnh}'),
                   Linha('Validade da CNH', d.validadeCnh == null ? '-' : '${d.validadeCnh!.day.toString().padLeft(2, '0')}/${d.validadeCnh!.month.toString().padLeft(2, '0')}/${d.validadeCnh!.year}'),
                   Linha('Veículo', m.veiculo.isEmpty ? '-' : '${m.veiculo} · ${m.placa}'),
+                  Linha('Cidade', d.pracaNome ?? 'Ainda sem cidade (aparece quando ele ficar online)'),
                   Linha('Cadastro', dataHora(m.cadastradoEm)),
+                  if (context.watch<PainelState>().dono && (context.watch<PainelState>().eu?.pracas.length ?? 0) > 1)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.location_city_outlined),
+                        label: const Text('Mudar a cidade'),
+                        onPressed: () => _mudarCidade(d),
+                      ),
+                    ),
                 ],
               ),
               _Bloco(
@@ -440,6 +472,11 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                       onPressed: () => _mudarStatus(d, 'BLOCKED', 'Bloquear', 'Bloqueio por falta grave. Ele não recebe corridas.'),
                       child: const Text('Bloquear'),
                     ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: const Text('Relatório em PDF'),
+                    onPressed: () => abrirRelatorioPdf(context, driverId: m.id, nomeMotorista: m.nome),
+                  ),
                   FilledButton.icon(
                     style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
                     icon: const Icon(Icons.delete_forever),

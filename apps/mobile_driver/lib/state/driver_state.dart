@@ -410,6 +410,46 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// E-mail da conta (preenche o cadastro).
   String? email;
 
+  /// Cidades da operacao (Goiatuba, Teutonia...). Com mais de uma, o
+  /// cadastro pergunta onde o motorista vai trabalhar.
+  List<({String id, String nome})> pracas = const [];
+
+  Future<void> carregarPracas() async {
+    if (!AppConfig.hasApi) return;
+    try {
+      final data = await _client.request('GET', '/app/config') as Map<String, dynamic>;
+      pracas = [
+        for (final p in (data['pracas'] as List? ?? const []).whereType<Map>())
+          (id: p['id']?.toString() ?? '', nome: '${p['nome'] ?? ''} - ${p['uf'] ?? ''}'),
+      ].where((p) => p.id.isNotEmpty).toList();
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: o servidor decide a cidade pela posicao do motorista.
+    }
+  }
+
+  /// Link do relatorio de faturamento em PDF do periodo (Evandro, 08/10/2026:
+  /// "o motorista gerar o relatorio dele, se precisar contabilizar").
+  /// Devolve o endereco completo para abrir no navegador, ou null.
+  Future<String?> linkDoRelatorio(DateTime de, DateTime ate) async {
+    if (!AppConfig.hasApi) {
+      _avisar('O relatório em PDF precisa de conexão com o servidor.');
+      return null;
+    }
+    String dia(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    try {
+      final r = await _client.request('GET', '/driver/relatorio', query: {'de': dia(de), 'ate': dia(ate)}) as Map<String, dynamic>;
+      final caminho = r['caminho'] as String?;
+      return caminho == null ? null : '${AppConfig.apiUrl}$caminho';
+    } on ApiException catch (e) {
+      _avisar(e.message);
+      return null;
+    } catch (_) {
+      _avisar('Sem conexão com o servidor. Tente de novo.');
+      return null;
+    }
+  }
+
   /// Entra com o codigo. Devolve true quando o servidor acabou de CRIAR a
   /// conta (numero que nunca tinha entrado): a tela pergunta se o numero
   /// esta certo — um digito errado abria um cadastro vazio (08/10/2026).
@@ -711,6 +751,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     required String cnhCategory,
     required String cnhExpiresAt,
     String? birthDate,
+    String? praca,
   }) async {
     final current = profile;
     if (current == null) return ResultadoCadastro.erro;
@@ -745,6 +786,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'cnhNumber': cnhNumber.replaceAll(RegExp(r'\D'), ''),
           'cnhCategory': cnhCategory,
           'cnhExpiresAt': _paraIso(cnhExpiresAt),
+          if (praca != null && praca.isNotEmpty) 'praca': praca,
         });
       } on ApiException catch (e) {
         // So "motorista ja cadastrado" (reinstalou o app) nao e erro. Antes

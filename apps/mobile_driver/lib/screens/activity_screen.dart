@@ -6,6 +6,7 @@ import '../core/utils/formatters.dart';
 import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
 import '../widgets/painel_ui.dart';
+import '../widgets/relatorio_pdf.dart';
 import 'earnings_history_screen.dart';
 import 'wallet_screen.dart';
 
@@ -104,6 +105,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
         title: const Text('Atividades'),
         actions: [
           IconButton(
+            tooltip: 'Relatório em PDF',
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 26),
+            onPressed: () => gerarRelatorioPdf(context, driver),
+          ),
+          IconButton(
             tooltip: oculto ? 'Mostrar valores' : 'Esconder valores',
             icon: Icon(oculto ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 28),
             onPressed: driver.alternarValores,
@@ -122,6 +128,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
               name: perfil?.name ?? 'Motorista',
               initials: perfil?.initials ?? 'M',
               rating: perfil?.rating ?? 5,
+            ),
+            const SizedBox(height: Spacing.md),
+            OutlinedButton.icon(
+              onPressed: () => gerarRelatorioPdf(context, driver),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Gerar relatório em PDF'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
             ),
             const SizedBox(height: Spacing.lg),
             AppCardSemBorda(

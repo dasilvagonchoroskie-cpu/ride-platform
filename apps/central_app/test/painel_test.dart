@@ -11,6 +11,8 @@ import 'package:central_app/data/painel.dart';
 import 'package:central_app/data/repositories/central_repository.dart';
 import 'package:central_app/painel/alertas.dart';
 import 'package:central_app/painel/carteiras.dart';
+import 'package:central_app/painel/cidades_equipe.dart';
+import 'package:central_app/painel/limpeza.dart';
 import 'package:central_app/painel/comuns.dart';
 import 'package:central_app/painel/cupons.dart';
 import 'package:central_app/painel/despacho.dart';
@@ -95,7 +97,40 @@ final List<String> _pedidosDeExclusao = [];
 bool _comSos = true;
 bool _comPendente = false;
 
+/// Conta de operador de uma cidade (Teutonia), e nao o dono.
+bool _operador = false;
+
+final _pracasTeste = [
+  {'id': 'goiatuba', 'nome': 'Goiatuba', 'uf': 'GO', 'latitude': -18.0125, 'longitude': -49.3547, 'raioKm': 60, 'ativa': true, 'whatsapp': null},
+  {'id': 'teutonia-rs', 'nome': 'Teutônia', 'uf': 'RS', 'latitude': -29.448, 'longitude': -51.806, 'raioKm': 30, 'ativa': true, 'whatsapp': '5551999990000'},
+];
+
 Object? _resposta(String metodo, String caminho, Map<String, String> q) {
+  if (caminho == '/api/admin/eu') {
+    return _operador
+        ? {'dono': false, 'praca': 'teutonia-rs', 'pracaNome': 'Teutônia', 'pracas': [_pracasTeste[1]]}
+        : {'dono': true, 'praca': null, 'pracaNome': null, 'pracas': _pracasTeste};
+  }
+  if (caminho == '/api/admin/pracas') return {'items': _pracasTeste};
+  if (caminho == '/api/admin/equipe') {
+    return {
+      'items': [
+        {'id': 'a1', 'name': 'Evandro da Silva', 'email': 'fortalezadigitalsecurity@gmail.com', 'phone': '+5564992686632', 'ativo': true, 'dono': true, 'praca': null, 'pracaNome': null},
+        {'id': 'a2', 'name': 'Sobrinha do Evandro', 'email': 'sobrinha@exemplo.com', 'phone': '+5551999990000', 'ativo': true, 'dono': false, 'praca': 'teutonia-rs', 'pracaNome': 'Teutônia'},
+      ],
+    };
+  }
+  if (caminho == '/api/admin/limpeza') {
+    return {'contasTeste': 120, 'contas': 126, 'corridas': 140, 'movimentos': 148, 'saques': 15, 'sos': 21, 'avaliacoes': 42, 'cuponsTeste': 22, 'ultimaCopia': null};
+  }
+  if (caminho == '/api/admin/limpeza/contas') {
+    return {
+      'items': [
+        {'id': 'u1', 'name': 'Evandro Da Silva gonchoroski', 'phone': '+5564992686632', 'email': 'dasilvagonchoroskie@gmail.com', 'motorista': true, 'corridas': 3, 'teste': false},
+        {'id': 'u2', 'name': 'Motorista Teste Automatico', 'phone': '+5564919551472', 'email': null, 'motorista': true, 'corridas': 9, 'teste': true},
+      ],
+    };
+  }
   if (caminho == '/api/admin/overview') {
     return {
       'activeRides': 3,
@@ -462,7 +497,82 @@ void main() {
     mostrarRuasNoMapa = false;
     _comSos = true;
     _comPendente = false;
+    _operador = false;
     _pedidosDeExclusao.clear();
+  });
+
+  // Evandro (08/10/2026): "se eu abrir em Goiatuba e a minha sobrinha cuidar
+  // de Teutonia, como fica a Central?" — a mesma Central, so a cidade dela.
+  testWidgets('Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono', (tester) async {
+    _comSos = false;
+    _operador = true;
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<CentralState>(
+            create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+          ),
+          ChangeNotifierProvider<PainelState>.value(value: painel),
+        ],
+        child: MaterialApp(
+          theme: CentralTheme.dark,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const ShellScreen(),
+        ),
+      ),
+    );
+    await _carregar(tester);
+    expect(painel.dono, isFalse);
+    expect(find.text('TEUTÔNIA'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.menu));
+    await tester.pumpAndSettle();
+    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Financeiro', 'Carteiras / Recargas']) {
+      expect(find.text(aba), findsWidgets, reason: 'aba $aba no menu do operador');
+    }
+    for (final aba in ['Tarifas', 'Cupons', 'Passageiros', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
+      expect(find.text(aba), findsNothing, reason: 'aba $aba e so do dono');
+    }
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Cidades e equipe: cidades, operador da cidade e nova cidade', (tester) async {
+    await _abrir(tester, const CidadesEquipeTela());
+    await _carregar(tester);
+    expect(find.text('Goiatuba - GO'), findsOneWidget);
+    expect(find.text('Teutônia - RS'), findsOneWidget);
+    expect(find.text('Sobrinha do Evandro'), findsOneWidget);
+    expect(find.textContaining('Operador · Teutônia'), findsOneWidget);
+    await tester.tap(find.text('Abrir cidade'));
+    await tester.pumpAndSettle();
+    expect(find.text('Abrir cidade nova'), findsOneWidget);
+    await tester.tap(find.text('Abrir cidade').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Busque e toque na cidade'), findsOneWidget);
+  });
+
+  testWidgets('Limpeza de dados: resumo, apagar teste com confirmacao e contas', (tester) async {
+    await _abrir(tester, const LimpezaTela());
+    await _carregar(tester);
+    expect(find.text('Apagar dados de teste (120)'), findsOneWidget);
+    expect(find.text('Zerar a operação (começar do zero)'), findsOneWidget);
+    expect(find.text('TESTE'), findsOneWidget);
+    await tester.tap(find.text('Apagar dados de teste (120)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Apagar os dados de teste?'), findsOneWidget);
+    await tester.tap(find.text('Voltar'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Motorista Teste Automatico'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Motorista Teste Automatico'));
+    await tester.pumpAndSettle();
+    expect(find.text('Apagar 1 conta(s) marcada(s)'), findsOneWidget);
   });
 
   testWidgets('Visao Geral: indicadores em cima do mapa e toque no carro', (tester) async {
@@ -711,7 +821,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Configurações']) {
+    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
       expect(find.text(aba), findsWidgets, reason: 'aba $aba no menu');
     }
     await tester.tap(find.text('Financeiro').last);

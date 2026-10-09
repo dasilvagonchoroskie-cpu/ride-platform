@@ -53,8 +53,64 @@ class PainelState extends ChangeNotifier {
 
   void iniciar() {
     _vigia?.cancel();
+    unawaited(carregarEu());
     atualizar();
     _vigia = Timer.periodic(const Duration(seconds: 5), (_) => atualizar());
+  }
+
+  // ------------------------------------------------------------------
+  // Cidades (Evandro, 08/10/2026): uma Central so; o dono ve todas e
+  // escolhe a cidade no topo; o operador de uma cidade ve so a dele.
+  // ------------------------------------------------------------------
+
+  /// Quem esta na Central. null = ainda nao sabe (trata como dono; quem
+  /// decide o que cada conta ve e o servidor).
+  QuemSouEu? eu;
+
+  bool get dono => eu?.dono ?? true;
+
+  /// Cidade escolhida pelo dono (null = todas as cidades).
+  String? get pracaEscolhida => api.praca;
+
+  static const String _chavePraca = 'central.praca';
+
+  Future<void> carregarEu() async {
+    try {
+      eu = await api.eu();
+      if (eu!.dono) {
+        final guardada = await AppStorage.read(_chavePraca);
+        api.praca = guardada != null && eu!.pracas.any((p) => p.id == guardada) ? guardada : null;
+      } else {
+        api.praca = null; // o servidor ja filtra pela cidade do operador
+      }
+      notifyListeners();
+    } catch (_) {
+      // Servidor antigo ou sem rede: segue como dono, sem filtro.
+    }
+  }
+
+  /// O dono troca a cidade do topo (null = todas). Tudo recarrega.
+  Future<void> escolherPraca(String? id) async {
+    api.praca = id;
+    try {
+      if (id == null) {
+        await AppStorage.remove(_chavePraca);
+      } else {
+        await AppStorage.write(_chavePraca, id);
+      }
+    } catch (_) {}
+    notifyListeners();
+    await atualizar();
+  }
+
+  /// Nome da cidade que esta na tela (para o topo e os relatorios).
+  String get nomeDaCidadeNaTela {
+    final e = eu;
+    if (e == null) return 'Todas as cidades';
+    if (!e.dono) return e.pracaNome ?? 'Minha cidade';
+    final id = api.praca;
+    if (id == null) return e.pracas.length > 1 ? 'Todas as cidades' : (e.pracas.isEmpty ? 'Todas as cidades' : e.pracas.first.rotulo);
+    return e.pracas.where((p) => p.id == id).map((p) => p.rotulo).firstOrNull ?? 'Todas as cidades';
   }
 
   void parar() {

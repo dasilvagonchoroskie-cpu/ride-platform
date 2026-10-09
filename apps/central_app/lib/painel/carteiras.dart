@@ -100,12 +100,15 @@ class Carteira {
 }
 
 class _CarteiraApi {
-  _CarteiraApi(this._c);
+  _CarteiraApi(this._c, this._praca);
 
   final ApiClient _c;
 
+  /// Cidade escolhida pelo dono no topo (null = todas).
+  final String? _praca;
+
   Future<(List<SaldoMotorista>, int, bool)> todas() async {
-    final r = await _c.request('GET', '/admin/wallets') as Map<String, dynamic>;
+    final r = await _c.request('GET', '/admin/wallets', query: _praca == null ? null : {'praca': _praca}) as Map<String, dynamic>;
     return (
       [for (final j in (r['items'] as List? ?? const []).whereType<Map<String, dynamic>>()) SaldoMotorista.fromJson(j)],
       _int(r['minimumCents']),
@@ -129,7 +132,10 @@ class _CarteiraApi {
       await _c.request('PUT', '/admin/settings/central', body: dados) as Map<String, dynamic>;
 }
 
-_CarteiraApi _api(BuildContext context) => _CarteiraApi(Provider.of<PainelState>(context, listen: false).api.cliente);
+_CarteiraApi _api(BuildContext context) {
+  final api = Provider.of<PainelState>(context, listen: false).api;
+  return _CarteiraApi(api.cliente, api.praca);
+}
 
 // ---------------------------------------------------------------------------
 // Aba "Carteiras / Recargas": regras + lista de motoristas com o saldo

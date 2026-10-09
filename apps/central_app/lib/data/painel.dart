@@ -392,6 +392,8 @@ class MotoristaDetalhe {
     required this.avatarUrl,
     required this.nota,
     required this.corridas,
+    this.praca,
+    this.pracaNome,
   });
 
   final MotoristaCadastro base;
@@ -408,6 +410,10 @@ class MotoristaDetalhe {
   final String? avatarUrl;
   final double nota;
   final int corridas;
+
+  /// Cidade onde trabalha (varias cidades na mesma Central).
+  final String? praca;
+  final String? pracaNome;
 
   factory MotoristaDetalhe.fromJson(Map<String, dynamic> j) {
     final u = j['user'] is Map ? j['user'] as Map : const {};
@@ -434,6 +440,8 @@ class MotoristaDetalhe {
       avatarUrl: u['avatarUrl'] as String?,
       nota: _num(j['ratingAvg']) ?? 5,
       corridas: _int(j['totalRides']),
+      praca: j['praca'] as String?,
+      pracaNome: j['pracaNome'] as String?,
     );
   }
 }
@@ -837,6 +845,12 @@ class PainelApi {
 
   final ApiClient _c;
 
+  /// Cidade escolhida pelo dono no topo da Central (null = todas). O
+  /// operador de uma cidade nao escolhe: o servidor mostra so a dele.
+  String? praca;
+
+  Map<String, String> get _naPraca => praca == null ? const {} : {'praca': praca!};
+
   /// Cliente do servidor (usado tambem pela tela de carteiras).
   ApiClient get cliente => _c;
 
@@ -848,10 +862,10 @@ class PainelApi {
 
   // Visao geral e despacho
   Future<Indicadores> indicadores() async =>
-      Indicadores.fromJson(await _c.request('GET', '/admin/overview') as Map<String, dynamic>);
+      Indicadores.fromJson(await _c.request('GET', '/admin/overview', query: _naPraca) as Map<String, dynamic>);
 
   Future<List<CorridaAtiva>> corridas() async =>
-      [for (final j in _lista(await _c.request('GET', '/admin/rides/active'))) CorridaAtiva.fromJson(j)];
+      [for (final j in _lista(await _c.request('GET', '/admin/rides/active', query: _naPraca))) CorridaAtiva.fromJson(j)];
 
   /// Motoristas online do mais perto ao mais longe. [todos]: tambem os
   /// offline (mapa da Central, cinza na ultima posicao).
@@ -860,6 +874,7 @@ class PainelApi {
           'lat': '${perto.latitude}',
           'lng': '${perto.longitude}',
           if (todos) 'todos': '1',
+          ..._naPraca,
         })))
           MotoristaOnline.fromJson(j),
       ];
@@ -883,7 +898,7 @@ class PainelApi {
 
   // Motoristas
   Future<List<MotoristaCadastro>> motoristas(String status) async => [
-        for (final j in _lista(await _c.request('GET', '/admin/drivers', query: {'status': status, 'limit': '100'})))
+        for (final j in _lista(await _c.request('GET', '/admin/drivers', query: {'status': status, 'limit': '100', ..._naPraca})))
           MotoristaCadastro.fromJson(j),
       ];
 
@@ -958,17 +973,18 @@ class PainelApi {
       ) as Map<String, dynamic>);
 
   // Financeiro
-  Future<List<Saque>> saques() async => [for (final j in _lista(await _c.request('GET', '/admin/payouts'))) Saque.fromJson(j)];
+  Future<List<Saque>> saques() async =>
+      [for (final j in _lista(await _c.request('GET', '/admin/payouts', query: _naPraca))) Saque.fromJson(j)];
 
   Future<void> decidirSaque(String id, bool pago, [String? motivo]) =>
       _c.request('PATCH', '/admin/payouts/$id', body: {'paid': pago, if (motivo != null) 'reason': motivo});
 
   Future<Receitas> receitas(int dias) async =>
-      Receitas.fromJson(await _c.request('GET', '/admin/reports/finance', query: {'days': '$dias'}) as Map<String, dynamic>);
+      Receitas.fromJson(await _c.request('GET', '/admin/reports/finance', query: {'days': '$dias', ..._naPraca}) as Map<String, dynamic>);
 
   // SOS
   Future<List<AlertaSos>> alertas({bool resolvidos = false}) async => [
-        for (final j in _lista(await _c.request('GET', '/admin/safety', query: {'resolved': '$resolvidos'})))
+        for (final j in _lista(await _c.request('GET', '/admin/safety', query: {'resolved': '$resolvidos', ..._naPraca})))
           AlertaSos.fromJson(j),
       ];
 
@@ -981,4 +997,220 @@ class PainelApi {
   Future<void> criarCupom(Map<String, dynamic> dados) => _c.request('POST', '/admin/coupons', body: dados);
 
   Future<void> ligarCupom(String id, bool ativo) => _c.request('PATCH', '/admin/coupons/$id', body: {'isActive': ativo});
+
+  // ------------------------------------------------------------------
+  // Cidades e equipe (Evandro, 08/10/2026: "se eu abrir em Goiatuba e a
+  // minha sobrinha cuidar de Teutonia, como fica a Central?")
+  // ------------------------------------------------------------------
+
+  /// Quem esta na Central: dono (todas as cidades) ou operador de uma.
+  Future<QuemSouEu> eu() async => QuemSouEu.fromJson(await _c.request('GET', '/admin/eu') as Map<String, dynamic>);
+
+  Future<List<Praca>> pracas() async => [for (final j in _lista(await _c.request('GET', '/admin/pracas'))) Praca.fromJson(j)];
+
+  Future<List<Praca>> criarPraca(Map<String, dynamic> dados) async =>
+      [for (final j in _lista(await _c.request('POST', '/admin/pracas', body: dados))) Praca.fromJson(j)];
+
+  Future<List<Praca>> alterarPraca(String id, Map<String, dynamic> dados) async =>
+      [for (final j in _lista(await _c.request('PATCH', '/admin/pracas/$id', body: dados))) Praca.fromJson(j)];
+
+  Future<void> mudarPracaDoMotorista(String driverId, String praca) =>
+      _c.request('PATCH', '/admin/drivers/$driverId/praca', body: {'praca': praca});
+
+  Future<List<ContaDaEquipe>> equipe() async =>
+      [for (final j in _lista(await _c.request('GET', '/admin/equipe'))) ContaDaEquipe.fromJson(j)];
+
+  Future<void> criarOperador(Map<String, dynamic> dados) => _c.request('POST', '/admin/equipe', body: dados);
+
+  Future<List<ContaDaEquipe>> mudarOperador(String id, Map<String, dynamic> dados) async =>
+      [for (final j in _lista(await _c.request('PATCH', '/admin/equipe/$id', body: dados))) ContaDaEquipe.fromJson(j)];
+
+  Future<List<ContaDaEquipe>> apagarOperador(String id) async =>
+      [for (final j in _lista(await _c.request('DELETE', '/admin/equipe/$id'))) ContaDaEquipe.fromJson(j)];
+
+  // ------------------------------------------------------------------
+  // Limpeza de dados (so o dono)
+  // ------------------------------------------------------------------
+
+  Future<ResumoLimpeza> resumoLimpeza() async =>
+      ResumoLimpeza.fromJson(await _c.request('GET', '/admin/limpeza') as Map<String, dynamic>);
+
+  Future<Map<String, dynamic>> apagarDadosDeTeste() async =>
+      await _c.request('POST', '/admin/limpeza/teste', body: const <String, dynamic>{}) as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> zerarOperacao() async =>
+      await _c.request('POST', '/admin/limpeza/zerar', body: {'confirmacao': 'ZERAR'}) as Map<String, dynamic>;
+
+  Future<List<ContaParaLimpar>> contasParaLimpar(String busca) async => [
+        for (final j in _lista(await _c.request('GET', '/admin/limpeza/contas', query: {if (busca.trim().isNotEmpty) 'busca': busca.trim()})))
+          ContaParaLimpar.fromJson(j),
+      ];
+
+  Future<Map<String, dynamic>> apagarContas(List<String> ids) async =>
+      await _c.request('POST', '/admin/limpeza/contas/apagar', body: {'ids': ids}) as Map<String, dynamic>;
+
+  // ------------------------------------------------------------------
+  // Relatorio de faturamento em PDF
+  // ------------------------------------------------------------------
+
+  /// Link do PDF (vale 15 minutos). [tipo]: frota, praca ou motorista.
+  Future<String> linkDoRelatorio({required String tipo, String? driverId, String? pracaId, required DateTime de, required DateTime ate}) async {
+    String dia(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final r = await _c.request('GET', '/admin/relatorio', query: {
+      'tipo': tipo,
+      if (driverId != null) 'driverId': driverId,
+      if (pracaId != null) 'praca': pracaId,
+      'de': dia(de),
+      'ate': dia(ate),
+    }) as Map<String, dynamic>;
+    return _txt(r['caminho']);
+  }
+}
+
+/// Cidade atendida (praca).
+class Praca {
+  const Praca({required this.id, required this.nome, required this.uf, required this.posicao, required this.raioKm, required this.ativa, this.whatsapp});
+
+  final String id;
+  final String nome;
+  final String uf;
+  final Coords posicao;
+  final double raioKm;
+  final bool ativa;
+  final String? whatsapp;
+
+  String get rotulo => uf.isEmpty ? nome : '$nome - $uf';
+
+  factory Praca.fromJson(Map<String, dynamic> j) => Praca(
+        id: _txt(j['id']),
+        nome: _txt(j['nome'], 'Cidade'),
+        uf: _txt(j['uf']),
+        posicao: Coords(_num(j['latitude']) ?? 0, _num(j['longitude']) ?? 0),
+        raioKm: _num(j['raioKm']) ?? 60,
+        ativa: j['ativa'] != false,
+        whatsapp: j['whatsapp'] as String?,
+      );
+}
+
+/// Quem esta na Central.
+class QuemSouEu {
+  const QuemSouEu({required this.dono, required this.praca, required this.pracaNome, required this.pracas});
+
+  /// Dono: ve todas as cidades. Operador: so [praca].
+  final bool dono;
+  final String? praca;
+  final String? pracaNome;
+  final List<Praca> pracas;
+
+  factory QuemSouEu.fromJson(Map<String, dynamic> j) => QuemSouEu(
+        dono: j['dono'] != false,
+        praca: j['praca'] as String?,
+        pracaNome: j['pracaNome'] as String?,
+        pracas: [for (final p in (j['pracas'] as List? ?? const []).whereType<Map<String, dynamic>>()) Praca.fromJson(p)],
+      );
+}
+
+/// Conta da Central (dono ou operador de uma cidade).
+class ContaDaEquipe {
+  const ContaDaEquipe({
+    required this.id,
+    required this.nome,
+    required this.email,
+    required this.telefone,
+    required this.ativo,
+    required this.dono,
+    required this.praca,
+    required this.pracaNome,
+    required this.ultimoAcesso,
+  });
+
+  final String id;
+  final String nome;
+  final String email;
+  final String telefone;
+  final bool ativo;
+  final bool dono;
+  final String? praca;
+  final String? pracaNome;
+  final DateTime? ultimoAcesso;
+
+  factory ContaDaEquipe.fromJson(Map<String, dynamic> j) => ContaDaEquipe(
+        id: _txt(j['id']),
+        nome: _txt(j['name'], 'Conta da Central'),
+        email: _txt(j['email']),
+        telefone: _txt(j['phone']),
+        ativo: j['ativo'] != false,
+        dono: j['dono'] == true,
+        praca: j['praca'] as String?,
+        pracaNome: j['pracaNome'] as String?,
+        ultimoAcesso: _data(j['lastLoginAt']),
+      );
+}
+
+/// Quanto ha de cada coisa no banco (tela Limpeza de dados).
+class ResumoLimpeza {
+  const ResumoLimpeza({
+    required this.contasTeste,
+    required this.contas,
+    required this.corridas,
+    required this.movimentos,
+    required this.saques,
+    required this.sos,
+    required this.avaliacoes,
+    required this.cuponsTeste,
+    required this.ultimaCopia,
+  });
+
+  final int contasTeste;
+  final int contas;
+  final int corridas;
+  final int movimentos;
+  final int saques;
+  final int sos;
+  final int avaliacoes;
+  final int cuponsTeste;
+  final String? ultimaCopia;
+
+  factory ResumoLimpeza.fromJson(Map<String, dynamic> j) => ResumoLimpeza(
+        contasTeste: _int(j['contasTeste']),
+        contas: _int(j['contas']),
+        corridas: _int(j['corridas']),
+        movimentos: _int(j['movimentos']),
+        saques: _int(j['saques']),
+        sos: _int(j['sos']),
+        avaliacoes: _int(j['avaliacoes']),
+        cuponsTeste: _int(j['cuponsTeste']),
+        ultimaCopia: j['ultimaCopia'] as String?,
+      );
+}
+
+/// Conta de passageiro ou motorista na tela Limpeza de dados.
+class ContaParaLimpar {
+  const ContaParaLimpar({
+    required this.id,
+    required this.nome,
+    required this.telefone,
+    required this.email,
+    required this.motorista,
+    required this.corridas,
+    required this.teste,
+  });
+
+  final String id;
+  final String nome;
+  final String telefone;
+  final String email;
+  final bool motorista;
+  final int corridas;
+  final bool teste;
+
+  factory ContaParaLimpar.fromJson(Map<String, dynamic> j) => ContaParaLimpar(
+        id: _txt(j['id']),
+        nome: _txt(j['name'], 'Sem nome'),
+        telefone: _txt(j['phone']),
+        email: _txt(j['email']),
+        motorista: j['motorista'] == true,
+        corridas: _int(j['corridas']),
+        teste: j['teste'] == true,
+      );
 }

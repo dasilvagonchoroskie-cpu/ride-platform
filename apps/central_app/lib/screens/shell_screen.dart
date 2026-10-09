@@ -7,6 +7,8 @@ import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import '../painel/alertas.dart';
 import '../painel/carteiras.dart';
+import '../painel/cidades_equipe.dart';
+import '../painel/limpeza.dart';
 import '../painel/comuns.dart';
 import '../painel/cupons.dart';
 import '../painel/despacho.dart';
@@ -34,7 +36,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   int _index = 0;
 
   /// Abas ja abertas: so carregam quando a pessoa entra nelas.
-  final Set<int> _abertas = {0};
+  final Set<String> _abertas = {'mapa'};
 
   /// Alertas que ja abriram a janela de SOS sozinhos.
   final Set<String> _abertosAutomatico = {};
@@ -44,18 +46,25 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   late final PainelState _painel;
 
-  static const _titulos = [
-    'Visão Geral',
-    'Despacho',
-    'Motoristas',
-    'Passageiros',
-    'Tarifas',
-    'Financeiro',
-    'Alertas e Segurança',
-    'Cupons',
-    'Carteiras / Recargas',
-    'Configurações',
+  /// Abas da Central. As marcadas [soDono] somem para o operador de uma
+  /// cidade (Evandro, 08/10/2026: a sobrinha em Teutonia cuida da operacao
+  /// e das recargas; tarifas, cupons, comissao, cidades e limpeza so ele).
+  static const _todas = <_Aba>[
+    _Aba('mapa', 'Visão Geral', Icons.map_outlined),
+    _Aba('despacho', 'Despacho', Icons.support_agent),
+    _Aba('motoristas', 'Motoristas', Icons.badge_outlined),
+    _Aba('passageiros', 'Passageiros', Icons.people_outline, soDono: true),
+    _Aba('tarifas', 'Tarifas', Icons.price_change_outlined, soDono: true),
+    _Aba('financeiro', 'Financeiro', Icons.payments_outlined),
+    _Aba('alertas', 'Alertas e Segurança', Icons.sos_outlined, menu: 'Alertas'),
+    _Aba('cupons', 'Cupons', Icons.local_offer_outlined, soDono: true),
+    _Aba('carteiras', 'Carteiras / Recargas', Icons.account_balance_wallet_outlined),
+    _Aba('cidades', 'Cidades e equipe', Icons.location_city_outlined, soDono: true),
+    _Aba('limpeza', 'Limpeza de dados', Icons.cleaning_services_outlined, soDono: true),
+    _Aba('config', 'Configurações', Icons.settings_outlined, soDono: true),
   ];
+
+  List<_Aba> _abas(PainelState p) => [for (final a in _todas) if (!a.soDono || p.dono) a];
 
   @override
   void initState() {
@@ -128,40 +137,89 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _avisoPendenteAberto = null;
     await _painel.marcarPendenteVisto();
     if (ver != true || !mounted) return;
-    _ir(2);
+    _irPara('motoristas');
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DetalheMotorista(id: novo.id)));
     if (mounted) await context.read<CentralState>().loadAll();
   }
 
-  void _ir(int i) => setState(() {
-        _index = i;
-        _abertas.add(i);
+  /// Aba aberta, pelo codigo (a lista muda conforme quem esta na Central).
+  String _atual = 'mapa';
+
+  void _ir(int i) {
+    final abas = _abas(_painel);
+    if (i < 0 || i >= abas.length) return;
+    _irPara(abas[i].id);
+  }
+
+  void _irPara(String id) => setState(() {
+        _atual = id;
+        _abertas.add(id);
       });
 
-  Widget _aba(int i) {
-    if (!_abertas.contains(i)) return const SizedBox.shrink();
-    switch (i) {
-      case 0:
-        return VisaoGeral(abrirDespacho: () => _ir(1));
-      case 1:
+  Widget _aba(String id) {
+    if (!_abertas.contains(id)) return const SizedBox.shrink();
+    switch (id) {
+      case 'mapa':
+        return VisaoGeral(abrirDespacho: () => _irPara('despacho'));
+      case 'despacho':
         return const Despacho();
-      case 2:
+      case 'motoristas':
         return const Motoristas();
-      case 3:
+      case 'passageiros':
         return const Passageiros();
-      case 4:
+      case 'tarifas':
         return const TarifasTela();
-      case 5:
+      case 'financeiro':
         return const Financeiro();
-      case 6:
+      case 'alertas':
         return const Alertas();
-      case 7:
+      case 'cupons':
         return const CuponsTela();
-      case 8:
+      case 'carteiras':
         return const CarteirasTela();
+      case 'cidades':
+        return const CidadesEquipeTela();
+      case 'limpeza':
+        return const LimpezaTela();
       default:
         return const SettingsScreen();
     }
+  }
+
+  /// Dono: escolhe a cidade no topo (todas, Goiatuba, Teutonia...).
+  /// Operador: ve o nome da cidade dele, sem escolher.
+  Widget _cidade(PainelState p) {
+    final e = p.eu;
+    if (e == null || (e.dono && e.pracas.length < 2)) return const SizedBox.shrink();
+    if (!e.dono) {
+      return Padding(
+        padding: const EdgeInsets.only(right: Spacing.sm),
+        child: Center(child: AppBadge(text: (e.pracaNome ?? 'Minha cidade').toUpperCase(), tone: AppBadgeTone.info)),
+      );
+    }
+    return PopupMenuButton<String>(
+      tooltip: 'Escolher a cidade',
+      onSelected: (id) => p.escolherPraca(id == 'todas' ? null : id),
+      itemBuilder: (_) => [
+        CheckedPopupMenuItem(value: 'todas', checked: p.pracaEscolhida == null, child: const Text('Todas as cidades')),
+        for (final c in e.pracas) CheckedPopupMenuItem(value: c.id, checked: p.pracaEscolhida == c.id, child: Text(c.rotulo)),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.location_city, size: 20),
+            const SizedBox(width: 4),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 72),
+              child: Text(p.pracaEscolhida == null ? 'Todas' : p.nomeDaCidadeNaTela, overflow: TextOverflow.ellipsis, maxLines: 1, style: AppText.caption),
+            ),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+    );
   }
 
   int _pendentes(PainelState p, CentralState c) => p.atualizadoEm == null ? c.pendingCount : p.indicadores.pendentes;
@@ -172,30 +230,28 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final central = context.watch<CentralState>();
     final fila = p.corridas.where((c) => c.naFila).length;
 
+    final abas = _abas(p);
+    // A aba aberta sumiu (ex.: a conta e de operador): volta para o mapa.
+    if (!abas.any((a) => a.id == _atual)) _atual = 'mapa';
+    _index = abas.indexWhere((a) => a.id == _atual);
+    int? badge(String id) => switch (id) {
+          'despacho' => fila == 0 ? null : fila,
+          // Ao vivo (a cada 5 s), nao so quando a Central abre.
+          'motoristas' => _pendentes(p, central) == 0 ? null : _pendentes(p, central),
+          'alertas' => p.alertas.isEmpty ? null : p.alertas.length,
+          _ => null,
+        };
     final destinos = <ShellDestination>[
-      const ShellDestination(icon: Icons.map_outlined, label: 'Visão Geral'),
-      ShellDestination(icon: Icons.support_agent, label: 'Despacho', badge: fila == 0 ? null : fila),
-      ShellDestination(
-        icon: Icons.badge_outlined,
-        label: 'Motoristas',
-        // Ao vivo (a cada 5 s), nao so quando a Central abre.
-        badge: _pendentes(p, central) == 0 ? null : _pendentes(p, central),
-      ),
-      const ShellDestination(icon: Icons.people_outline, label: 'Passageiros'),
-      const ShellDestination(icon: Icons.price_change_outlined, label: 'Tarifas'),
-      const ShellDestination(icon: Icons.payments_outlined, label: 'Financeiro'),
-      ShellDestination(icon: Icons.sos_outlined, label: 'Alertas', badge: p.alertas.isEmpty ? null : p.alertas.length),
-      const ShellDestination(icon: Icons.local_offer_outlined, label: 'Cupons'),
-      const ShellDestination(icon: Icons.account_balance_wallet_outlined, label: 'Carteiras / Recargas'),
-      const ShellDestination(icon: Icons.settings_outlined, label: 'Configurações'),
+      for (final a in abas) ShellDestination(icon: a.icone, label: a.menu ?? a.titulo, badge: badge(a.id)),
     ];
 
     return ResponsiveShell(
-      title: _titulos[_index],
+      title: abas[_index].titulo,
       destinationIndex: _index,
       onDestinationSelected: _ir,
       destinations: destinos,
       actions: [
+        _cidade(p),
         IconButton(
           tooltip: 'Atualizar',
           onPressed: () {
@@ -219,7 +275,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           Positioned.fill(
             child: IndexedStack(
               index: _index,
-              children: [for (var i = 0; i < _titulos.length; i++) _aba(i)],
+              // Trocou a cidade no topo: cada aba recarrega do zero, ja filtrada.
+              children: [for (final a in abas) KeyedSubtree(key: ValueKey('${a.id}|${p.pracaEscolhida}'), child: _aba(a.id))],
             ),
           ),
           if (p.alertas.isNotEmpty)
@@ -256,4 +313,18 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+class _Aba {
+  const _Aba(this.id, this.titulo, this.icone, {this.soDono = false, this.menu});
+
+  final String id;
+  final String titulo;
+  final IconData icone;
+
+  /// So o dono da Central ve esta aba.
+  final bool soDono;
+
+  /// Nome mais curto no menu (ex.: "Alertas").
+  final String? menu;
 }
