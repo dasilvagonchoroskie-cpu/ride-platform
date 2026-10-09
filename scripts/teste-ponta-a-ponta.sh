@@ -251,8 +251,9 @@ sucesso "$X" && [ "$(avatar_de "$TM")" = "$F3" ] && [ "$N" = "1" ] && ok "Centra
 X=$(post "/admin/drivers/$DID/foto" "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TA")
 F4=$(echo "$X" | jq -r '.data.avatarUrl // empty')
 N=$(get "/admin/drivers/$DID" "$TA" | jq -r '[.data.documents[] | select(.type=="PROFILE_PHOTO")] | length')
-[ -n "$F4" ] && [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && [ "$(avatar_de "$TM")" = "$F4" ] && [ "$N" = "1" ] \
-  && ok "Central: poe a foto do motorista (ja aprovada)" || falha "Central: por a foto do motorista" "$X"
+AV4=$(avatar_de "$TM"); [ -z "$AV4" ] && { sleep 5; AV4=$(avatar_de "$TM"); }
+[ -n "$F4" ] && [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && [ "$AV4" = "$F4" ] && [ "$N" = "1" ] \
+  && ok "Central: poe a foto do motorista (ja aprovada)" || falha "Central: por a foto do motorista (no perfil: ${AV4:-vazio}; fotos de perfil: $N)" "$X"
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$F4" -H "Authorization: Bearer $TP"); [ "$C" = "200" ] && ok "Passageiro: ve a foto do motorista" || falha "Passageiro: foto do motorista" "$C"
 X=$(post "/admin/drivers/$DID/foto" "{\"mime\":\"image/jpeg\",\"dados\":\"$FOTO\"}" "$TP"); sucesso "$X" && falha "Seguranca: passageiro trocou foto de motorista" "$X" || ok "Seguranca: so a Central troca a foto do motorista"
 # (A foto da CNH enviada no cadastro continua para conferir: so a FOTO DE
