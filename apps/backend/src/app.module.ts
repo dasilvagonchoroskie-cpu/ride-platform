@@ -30,6 +30,9 @@ import { GeoModule } from './modules/geo/geo.module';
 import { OperacaoModule } from './modules/operacao/operacao.module';
 import { ArquivosModule } from './modules/arquivos/arquivos.module';
 import { CentralModule } from './modules/central/central.module';
+import { PracasModule } from './modules/pracas/pracas.module';
+import { LimpezaModule } from './modules/limpeza/limpeza.module';
+import { RelatoriosModule } from './modules/relatorios/relatorios.module';
 
 @Module({
   imports: [
@@ -55,6 +58,9 @@ import { CentralModule } from './modules/central/central.module';
     OperacaoModule,
     ArquivosModule,
     CentralModule,
+    PracasModule,
+    LimpezaModule,
+    RelatoriosModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis

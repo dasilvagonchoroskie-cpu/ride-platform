@@ -3,6 +3,7 @@ import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira'
 import { Injectable, Logger } from '@nestjs/common';
 import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
+import { PracasService } from '../pracas/pracas.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { acharContaComOsMesmosDados, erroContaExistente } from '../auth/conta-existente';
@@ -31,6 +32,7 @@ export class DriversService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly notifications: NotificationService,
+    private readonly pracas: PracasService,
   ) {}
 
   /** Onboarding do motorista: cria o registro e a carteira virtual. */
@@ -89,6 +91,12 @@ export class DriversService {
 
       return created;
     });
+
+    // Cidade onde vai trabalhar: a escolhida no cadastro (varias cidades) ou,
+    // com uma so, ela mesma. Sem escolha, a primeira posicao do GPS decide.
+    const pracas = await this.pracas.listar();
+    const escolhida = input.praca ? pracas.find((p) => p.id === input.praca) : pracas.length === 1 ? pracas[0] : undefined;
+    if (escolhida) await this.pracas.definirPracaDoMotorista(userId, escolhida.id);
 
     // Avisa a Central por e-mail (quando o e-mail estiver ligado): com o
     // aplicativo da Central fechado ninguem ficava sabendo do cadastro novo.
@@ -239,18 +247,31 @@ export class DriversService {
       isAvailable: driver.isOnline && activeRide === 0,
     });
 
+    // Motorista ainda sem cidade: fica com a cidade onde esta (uma vez so).
+    const meta = ((await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } }))?.metadata ??
+      {}) as Record<string, unknown>;
+    if (!meta.praca) {
+      const p = await this.pracas.doPonto({ latitude: input.latitude, longitude: input.longitude });
+      if (p) await this.pracas.definirPracaDoMotorista(userId, p.id);
+    }
+
     return { updatedAt: new Date().toISOString(), isAvailable: driver.isOnline && activeRide === 0 };
   }
 
   // ------------------------------ ADMIN ------------------------------
 
-  async adminList(params: { page: number; limit: number; status?: DriverStatus; isOnline?: boolean; search?: string }) {
+  async adminList(
+    params: { page: number; limit: number; status?: DriverStatus; isOnline?: boolean; search?: string },
+    ids: string[] | null = null,
+    pracaDe?: (driverId: string) => { id: string | null; nome: string | null },
+  ) {
     const { items, total } = await this.repo.list({
       skip: toSkip(params.page, params.limit),
       take: params.limit,
       status: params.status,
       isOnline: params.isOnline,
       search: params.search,
+      ids,
     });
 
     // documents: a ultima foto de cada documento (lista, como a Central le);
@@ -261,6 +282,8 @@ export class DriversService {
         ...driver,
         documents: await this.ultimosDocumentos(driver.id),
         documentProgress: await this.getDocumentProgress(driver.id),
+        praca: pracaDe?.(driver.id).id ?? null,
+        pracaNome: pracaDe?.(driver.id).nome ?? null,
       })),
     );
 
@@ -563,7 +586,12 @@ export class DriversService {
   }
 
   /** Mapa do admin: motoristas online com posicao atual. */
-  async adminActiveDrivers() {
+  async adminActiveDrivers(ids: string[] | null = null) {
+    const todos = await this.ativosNoMapa();
+    return ids ? todos.filter((d) => ids.includes(d.driverId)) : todos;
+  }
+
+  private async ativosNoMapa() {
     return this.prisma.$queryRaw<
       Array<{
         driverId: string;

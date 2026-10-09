@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole, multiplierSchema, saveCategorySchema } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { TariffsService } from './tariffs.service';
+import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { updateTariffsSchema } from './dto';
 import { z } from 'zod';
 
@@ -12,6 +13,7 @@ const cobrancaSchema = z.object({ modo: z.enum(['TAXIMETRO', 'FECHADO']) });
 @ApiTags('Admin - Bandeiras')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN)
+@UseGuards(DonoGravaGuard)
 @Controller('admin/tariffs')
 export class TariffsController {
   constructor(private readonly tariffs: TariffsService) {}

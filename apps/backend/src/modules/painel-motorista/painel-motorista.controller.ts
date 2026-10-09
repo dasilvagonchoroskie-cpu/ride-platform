@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
 import { z } from 'zod';
@@ -6,6 +6,8 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PainelMotoristaService, type Periodo } from './painel-motorista.service';
+import { PracasService } from '../pracas/pracas.service';
+import { SoDonoGuard } from '../pracas/so-dono.guard';
 
 const atividadeSchema = z.object({
   period: z.enum(['day', 'week', 'month']).default('day'),
@@ -67,29 +69,34 @@ export class PainelMotoristaController {
 @Roles(UserRole.ADMIN)
 @Controller('admin')
 export class AdminCarteiraController {
-  constructor(private readonly painel: PainelMotoristaService) {}
+  constructor(
+    private readonly painel: PainelMotoristaService,
+    private readonly pracas: PracasService,
+  ) {}
 
   @Get('drivers/:id/wallet')
   @ApiOperation({ summary: 'Carteira de um motorista' })
-  carteira(@Param('id') driverId: string) {
+  async carteira(@Param('id') driverId: string, @CurrentUser() user: AuthenticatedUser) {
+    await this.pracas.exigirAcesso(user, await this.pracas.pracaDoMotorista(driverId));
     return this.painel.carteira(driverId);
   }
 
   @Post('drivers/:id/wallet/credit')
   @ApiOperation({ summary: 'Lanca a recarga (ou um ajuste) na carteira do motorista' })
-  creditar(
+  async creditar(
     @Param('id') driverId: string,
-    @CurrentUser('id') adminId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(creditoSchema))
     body: { amountCents: number; operation: 'CREDIT' | 'DEBIT'; description?: string },
   ) {
-    return this.painel.lancarCredito(driverId, body.amountCents, body.description, adminId, body.operation);
+    await this.pracas.exigirAcesso(user, await this.pracas.pracaDoMotorista(driverId));
+    return this.painel.lancarCredito(driverId, body.amountCents, body.description, user.id, body.operation);
   }
 
   @Get('wallets')
-  @ApiOperation({ summary: 'Todos os motoristas com o saldo da carteira' })
-  carteiras() {
-    return this.painel.carteiras();
+  @ApiOperation({ summary: 'Motoristas com o saldo da carteira (por cidade)' })
+  async carteiras(@CurrentUser() user: AuthenticatedUser, @Query('praca') praca?: string) {
+    return this.painel.carteiras(await this.pracas.idsDeMotoristas(await this.pracas.filtro(user, praca)));
   }
 
   @Get('settings/central')
@@ -99,6 +106,7 @@ export class AdminCarteiraController {
   }
 
   @Put('settings/central')
+  @UseGuards(SoDonoGuard)
   @ApiOperation({ summary: 'Configura WhatsApp, chave Pix da Central e saldo minimo' })
   configurar(
     @CurrentUser('id') adminId: string,

@@ -55,6 +55,29 @@ for rota in "/admin/drivers?status=PENDING" /admin/rides/active /admin/reports/s
   X=$(get "$rota" "$TA"); sucesso "$X" && ok "Central carrega $rota" || falha "Central carrega $rota" "$X"
 done
 
+# ---- Varias cidades (Evandro, 08/10/2026): o dono ve todas; o operador de
+# uma cidade entra na mesma Central e ve so a dele (operacao + recargas). ----
+HOJE=$(TZ=America/Sao_Paulo date +%Y-%m-%d)
+X=$(get /admin/eu "$TA")
+[ "$(echo "$X" | jq -r '.data.dono')" = "true" ] && ok "Central: conta do dono ve todas as cidades ($(echo "$X" | jq -r '[.data.pracas[].nome] | join(", ")'))" || falha "Central: conta do dono" "$X"
+PRACA=$(echo "$X" | jq -r '.data.pracas[0].id // empty')
+SUFO=$(date +%H%M%S)
+SENHA_OP="Teste${SUFO}ab"
+EMAILO="operador.${SUFO}@teste.fortalezamov.com.br"
+X=$(post /admin/equipe "{\"name\":\"Operador Teste Automatico\",\"email\":\"$EMAILO\",\"phone\":\"649${SUFO}88\",\"password\":\"$SENHA_OP\",\"praca\":\"$PRACA\"}" "$TA")
+OPID=$(echo "$X" | jq -r '.data.id // empty')
+[ -n "$OPID" ] && ok "Central: conta de operador da cidade $PRACA criada (equipe)" || falha "Central: criar operador" "$X"
+L=$(post /auth/password/login "{\"email\":\"$EMAILO\",\"password\":\"$SENHA_OP\"}"); TO=$(echo "$L" | jq -r '.data.accessToken // empty')
+X=$(get /admin/eu "$TO")
+[ "$(echo "$X" | jq -r '.data.dono')" = "false" ] && [ "$(echo "$X" | jq -r '.data.praca')" = "$PRACA" ] && ok "Operador: entra na mesma Central e ve so a cidade dele" || falha "Operador: escopo da cidade" "$X $L"
+X=$(get /admin/overview "$TO"); sucesso "$X" && ok "Operador: visao geral da cidade dele" || falha "Operador: visao geral" "$X"
+X=$(get /admin/wallets "$TO"); sucesso "$X" && ok "Operador: carteiras / recargas da cidade" || falha "Operador: carteiras" "$X"
+X=$(put /admin/tariffs/cobranca '{"modo":"TAXIMETRO"}' "$TO"); sucesso "$X" && falha "Operador nao deveria mudar tarifas" "$X" || ok "Operador: nao muda tarifas, cupons e comissao (so o dono)"
+X=$(get /admin/limpeza "$TO"); sucesso "$X" && falha "Operador nao deveria acessar a limpeza" "$X" || ok "Operador: nao acessa a limpeza de dados"
+X=$(get "/admin/relatorio?tipo=frota&de=$HOJE&ate=$HOJE" "$TO")
+echo "$X" | jq -r '.data.arquivo // empty' | grep -q '^relatorio-praca-' && ok "Operador: relatorio da frota sai so com a cidade dele" || falha "Operador: relatorio da cidade" "$X"
+X=$(get /admin/limpeza "$TA"); sucesso "$X" && ok "Central: limpeza de dados ($(echo "$X" | jq -r '.data.contasTeste') contas de teste, $(echo "$X" | jq -r '.data.corridas') corridas)" || falha "Central: resumo da limpeza" "$X"
+
 SUF=$(date +%H%M%S)
 TP=$(entrar "+55649${SUF}71" PASSENGER)
 [ -n "$TP" ] && ok "Passageiro: login pelo codigo de teste" || falha "Passageiro: login" "sem token"
@@ -321,6 +344,17 @@ X=$(post "/driver/rides/$RID/rate" '{"score":4}' "$TM"); [ "$(echo "$X" | jq -r 
 X=$(get "/driver/rides/history?period=day" "$TM")
 [ "$(echo "$X" | jq -r '.data.summary.rides')" -ge 1 ] 2>/dev/null && [ "$(echo "$X" | jq -r '.data.performance.acceptanceRate')" != "null" ] \
   && ok "Motorista: historico de hoje com totais e desempenho (aceitacao $(echo "$X" | jq -r '.data.performance.acceptanceRate')%, taxa $(echo "$X" | jq -r '.data.summary.commissionCents'))" || falha "Motorista: historico com periodo" "$X"
+# Relatorio de faturamento em PDF (Evandro, 08/10/2026).
+X=$(get "/driver/relatorio?de=$HOJE&ate=$HOJE" "$TM"); CAM=$(echo "$X" | jq -r '.data.caminho // empty')
+H=$(curl -s -m 120 "${API%/api}$CAM" | head -c 5)
+[ -n "$CAM" ] && [ "$H" = "%PDF-" ] && ok "Motorista: relatorio de faturamento em PDF" || falha "Motorista: relatorio em PDF" "$X $H"
+X=$(get "/admin/relatorio?tipo=frota&de=$HOJE&ate=$HOJE" "$TA"); CAM=$(echo "$X" | jq -r '.data.caminho // empty')
+H=$(curl -s -m 120 "${API%/api}$CAM" | head -c 5)
+[ -n "$CAM" ] && [ "$H" = "%PDF-" ] && ok "Central: relatorio da frota toda em PDF" || falha "Central: relatorio da frota" "$X $H"
+X=$(get "/admin/relatorio?tipo=motorista&driverId=$DID&de=$HOJE&ate=$HOJE" "$TA"); CAM=$(echo "$X" | jq -r '.data.caminho // empty')
+H=$(curl -s -m 120 "${API%/api}$CAM" | head -c 5)
+[ -n "$CAM" ] && [ "$H" = "%PDF-" ] && ok "Central: relatorio de um motorista em PDF" || falha "Central: relatorio do motorista" "$X $H"
+C=$(curl -s -o /dev/null -w "%{http_code}" "${API%/api}/api/relatorios/abc.def/x.pdf"); [ "$C" = "403" ] && ok "Seguranca: link de relatorio falso nao abre" || falha "Seguranca: link de relatorio falso" "$C"
 X=$(post "/rides/favoritos/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && ok "Passageiro: motorista adicionado aos favoritos" || falha "Passageiro: favoritar" "$X"
 X=$(post "/rides/bloqueados/$DID" '{}' "$TP"); [ "$(echo "$X" | jq -r '.data.items[0].driverId')" = "$DID" ] && [ "$(get /rides/favoritos "$TP" | jq -r --arg d "$DID" '[.data.items[] | select(.driverId==$d)] | length')" = "0" ] \
   && ok "Passageiro: bloqueou o motorista (sai dos favoritos)" || falha "Passageiro: bloquear motorista" "$X"
@@ -464,5 +498,12 @@ X=$(get "/admin/drivers/$DIDC" "$TA"); sucesso "$X" && falha "Motorista excluido
 X=$(get "/rides/history?page=1&pageSize=5" "$TP"); sucesso "$X" && ok "Passageiro: historico de corridas continua depois de excluir o motorista" || falha "Passageiro: historico sem o motorista" "$X"
 X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] && [ "$(echo "$X" | jq -r '.data.driverId')" = "null" ] && ok "Quem tambem e passageiro continua com a conta de passageiro" || falha "Conta de passageiro depois de excluir o motorista" "$X"
 CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
+# Limpeza: o teste apaga o que criou (contas de teste, corridas, cupons) e a
+# conta de operador, para nada de teste ficar no financeiro da Central.
+if [ -n "${OPID:-}" ]; then
+  X=$(curl -s -m 90 -X DELETE "$API/admin/equipe/$OPID" -H "Authorization: Bearer $TA"); sucesso "$X" && ok "Central: apagou a conta do operador de teste" || falha "Central: apagar operador" "$X"
+fi
+X=$(post /admin/limpeza/teste '{}' "$TA"); N=$(echo "$X" | jq -r '.data.contas // 0')
+[ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Limpeza: apagou as $N contas deste teste e $(echo "$X" | jq -r '.data.corridas') corridas delas" || falha "Limpeza dos dados do teste" "$X"
 echo | tee -a "$REL"; echo "Resultado: $FALHAS falha(s)." | tee -a "$REL"
 exit $FALHAS

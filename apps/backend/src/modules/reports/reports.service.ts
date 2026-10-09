@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DriverStatus, RideStatus } from '@prisma/client';
+import { DriverStatus, Prisma, RideStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 
 const ATIVAS: RideStatus[] = [
@@ -31,9 +31,9 @@ const DIA = 24 * HORA;
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async corridasAtivas() {
+  async corridasAtivas(daPraca: Prisma.RideWhereInput = {}) {
     const corridas = await this.prisma.ride.findMany({
-      where: { status: { in: ATIVAS } },
+      where: { status: { in: ATIVAS }, ...daPraca },
       orderBy: { requestedAt: 'desc' },
       take: 100,
       include: {
@@ -76,7 +76,8 @@ export class ReportsService {
     };
   }
 
-  async resumo() {
+  async resumo(daPraca: Prisma.RideWhereInput = {}, ids: string[] | null = null) {
+    const dosMotoristas = ids ? { id: { in: ids } } : {};
     const brasilia = new Date(Date.now() - 3 * HORA);
     const inicioHoje = new Date(
       Date.UTC(brasilia.getUTCFullYear(), brasilia.getUTCMonth(), brasilia.getUTCDate(), 3),
@@ -86,7 +87,7 @@ export class ReportsService {
 
     const [semana, mes, canceladas, aprovados, online, pendentes] = await Promise.all([
       this.prisma.ride.findMany({
-        where: { status: RideStatus.COMPLETED, finishedAt: { gte: inicioSemana } },
+        where: { status: RideStatus.COMPLETED, finishedAt: { gte: inicioSemana }, ...daPraca },
         select: {
           finalFareCents: true,
           estimatedFareCents: true,
@@ -96,13 +97,13 @@ export class ReportsService {
         },
       }),
       this.prisma.ride.aggregate({
-        where: { status: RideStatus.COMPLETED, finishedAt: { gte: inicioMes } },
+        where: { status: RideStatus.COMPLETED, finishedAt: { gte: inicioMes }, ...daPraca },
         _sum: { finalFareCents: true },
       }),
-      this.prisma.ride.count({ where: { cancelledAt: { gte: inicioSemana } } }),
-      this.prisma.driver.count({ where: { status: DriverStatus.APPROVED } }),
-      this.prisma.driver.count({ where: { isOnline: true } }),
-      this.prisma.driver.count({ where: { status: DriverStatus.PENDING } }),
+      this.prisma.ride.count({ where: { cancelledAt: { gte: inicioSemana }, ...daPraca } }),
+      this.prisma.driver.count({ where: { status: DriverStatus.APPROVED, ...dosMotoristas } }),
+      this.prisma.driver.count({ where: { isOnline: true, ...dosMotoristas } }),
+      this.prisma.driver.count({ where: { status: DriverStatus.PENDING, ...dosMotoristas } }),
     ]);
 
     const valor = (r: Concluida) => r.finalFareCents ?? r.estimatedFareCents;

@@ -39,8 +39,11 @@ export class DriversRepository {
     status?: DriverStatus;
     isOnline?: boolean;
     search?: string;
+    /** So estes motoristas (a cidade do operador). */
+    ids?: string[] | null;
   }) {
     const where: Prisma.DriverWhereInput = {
+      ...(params.ids ? { id: { in: params.ids } } : {}),
       ...(params.status ? { status: params.status } : {}),
       ...(params.isOnline !== undefined ? { isOnline: params.isOnline } : {}),
       ...(params.search

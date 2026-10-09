@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { SoDonoGuard } from '../pracas/so-dono.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { paginationSchema, UserRole } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -15,6 +16,7 @@ export class AdminVehiclesController {
   constructor(private readonly vehicles: VehiclesService) {}
 
   @Get('vehicles')
+  @UseGuards(SoDonoGuard)
   @ApiOperation({ summary: 'Lista todos os veiculos cadastrados' })
   listVehicles(@Query(new ZodValidationPipe(paginationSchema)) query: never) {
     return this.vehicles.adminListVehicles(query as never);

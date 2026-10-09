@@ -6,6 +6,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { RidesService } from '../rides/rides.service';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
+import { PracasService } from '../pracas/pracas.service';
 
 const HORA = 3_600_000;
 const DIA = 24 * HORA;
@@ -37,26 +38,33 @@ export class CentralService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rides: RidesService,
+    private readonly pracas: PracasService,
   ) {}
 
   // ================= Visao geral =================
 
-  async visaoGeral() {
+  /** [praca]: so a cidade (operador, ou o dono filtrando); null = todas. */
+  async visaoGeral(praca: string | null = null) {
     const hoje = inicioDeHoje();
+    const daPraca = await this.pracas.ondeCorridas(praca);
+    const ids = await this.pracas.idsDeMotoristas(praca);
+    const dosMotoristas = ids ? { id: { in: ids } } : {};
+    const sosDaPraca = await this.pracas.ondeSos(praca);
     const [ativas, concluidasHoje, online, ocupados, soma, sos, pendentes, ultimoPendente] = await Promise.all([
-      this.prisma.ride.count({ where: { status: { in: ABERTAS.filter((s) => s !== 'SCHEDULED') } } }),
-      this.prisma.ride.count({ where: { status: RideStatus.COMPLETED, finishedAt: { gte: hoje } } }),
-      this.prisma.driver.count({ where: { isOnline: true, status: DriverStatus.APPROVED } }),
-      this.prisma.ride.count({ where: { status: { in: EM_ANDAMENTO } } }),
+      this.prisma.ride.count({ where: { status: { in: ABERTAS.filter((s) => s !== 'SCHEDULED') }, ...daPraca } }),
+      this.prisma.ride.count({ where: { status: RideStatus.COMPLETED, finishedAt: { gte: hoje }, ...daPraca } }),
+      this.prisma.driver.count({ where: { isOnline: true, status: DriverStatus.APPROVED, ...dosMotoristas } }),
+      this.prisma.ride.count({ where: { status: { in: EM_ANDAMENTO }, ...daPraca } }),
       this.prisma.ride.aggregate({
-        where: { status: RideStatus.COMPLETED, finishedAt: { gte: hoje } },
+        where: { status: RideStatus.COMPLETED, finishedAt: { gte: hoje }, ...daPraca },
         _sum: { finalFareCents: true, commissionCents: true },
       }),
-      this.prisma.safetyEvent.count({ where: { type: 'PANIC_BUTTON', resolved: false } }),
+      this.prisma.safetyEvent.count({ where: { type: 'PANIC_BUTTON', resolved: false, ...sosDaPraca } }),
       // Cadastros esperando a Central (o painel avisa quando chega um novo).
-      this.prisma.driver.count({ where: { status: DriverStatus.PENDING, user: { deletedAt: null } } }),
+      // Cadastro sem cidade ainda (sem posicao) aparece para todos.
+      this.prisma.driver.count({ where: { status: DriverStatus.PENDING, user: { deletedAt: null }, ...(await this.pendentesDa(praca)) } }),
       this.prisma.driver.findFirst({
-        where: { status: DriverStatus.PENDING, user: { deletedAt: null } },
+        where: { status: DriverStatus.PENDING, user: { deletedAt: null }, ...(await this.pendentesDa(praca)) },
         orderBy: { createdAt: 'desc' },
         select: { id: true, createdAt: true, user: { select: { name: true, phone: true } } },
       }),
@@ -80,6 +88,13 @@ export class CentralService {
           }
         : null,
     };
+  }
+
+  /** Pendentes da praca: os da cidade e os que ainda nao tem cidade. */
+  private async pendentesDa(praca: string | null): Promise<{ id?: { in: string[] } }> {
+    if (!praca) return {};
+    const mapa = await this.pracas.mapaDeMotoristas();
+    return { id: { in: [...mapa.entries()].filter(([, p]) => p === praca || p === null).map(([id]) => id) } };
   }
 
   // ================= Despacho =================
@@ -208,9 +223,14 @@ export class CentralService {
    * ([todos]: tambem os offline, cinza, na ultima posicao conhecida —
    * Evandro, 08/10/2026: "o carro some do mapa quando fica offline").
    */
-  async livresPerto(lat: number, lng: number, todos = false) {
+  async livresPerto(lat: number, lng: number, todos = false, praca: string | null = null) {
+    const ids = await this.pracas.idsDeMotoristas(praca);
     const lista = await this.prisma.driver.findMany({
-      where: { status: DriverStatus.APPROVED, ...(todos ? { location: { isNot: null } } : { isOnline: true }) },
+      where: {
+        status: DriverStatus.APPROVED,
+        ...(todos ? { location: { isNot: null } } : { isOnline: true }),
+        ...(ids ? { id: { in: ids } } : {}),
+      },
       include: {
         user: { select: { name: true, phone: true } },
         location: true,
@@ -440,9 +460,10 @@ export class CentralService {
     return { items: await this.prisma.payout.findMany({ where: { driverId: d.id }, orderBy: { requestedAt: 'desc' }, take: 30 }) };
   }
 
-  async saques(status?: PayoutStatus) {
+  async saques(status?: PayoutStatus, praca: string | null = null) {
+    const ids = await this.pracas.idsDeMotoristas(praca);
     const itens = await this.prisma.payout.findMany({
-      where: status ? { status } : {},
+      where: { ...(status ? { status } : {}), ...(ids ? { driverId: { in: ids } } : {}) },
       orderBy: { requestedAt: 'desc' },
       take: 100,
       include: { driver: { include: { user: { select: { name: true, phone: true } }, wallet: true } } },
@@ -499,21 +520,28 @@ export class CentralService {
 
   // ================= Relatorio financeiro =================
 
-  async financeiro(dias: number) {
+  async financeiro(dias: number, praca: string | null = null) {
     const desde = new Date(inicioDeHoje().getTime() - (Math.max(dias, 1) - 1) * DIA);
+    const daPraca = await this.pracas.ondeCorridas(praca);
+    const ids = await this.pracas.idsDeMotoristas(praca);
     const concluidas = await this.prisma.ride.groupBy({
       by: ['paymentMethodType'],
-      where: { status: RideStatus.COMPLETED, finishedAt: { gte: desde } },
+      where: { status: RideStatus.COMPLETED, finishedAt: { gte: desde }, ...daPraca },
       _sum: { finalFareCents: true, commissionCents: true, discountCents: true },
       _count: { _all: true },
     });
     const pagos = await this.prisma.payout.aggregate({
-      where: { status: 'PAID', processedAt: { gte: desde } },
+      where: { status: 'PAID', processedAt: { gte: desde }, ...(ids ? { driverId: { in: ids } } : {}) },
       _sum: { amountCents: true },
       _count: { _all: true },
     });
     const creditos = await this.prisma.walletTransaction.aggregate({
-      where: { createdAt: { gte: desde }, type: 'ADJUSTMENT', amountCents: { gt: 0 } },
+      where: {
+        createdAt: { gte: desde },
+        type: 'ADJUSTMENT',
+        amountCents: { gt: 0 },
+        ...(ids ? { wallet: { driverId: { in: ids } } } : {}),
+      },
       _sum: { amountCents: true },
     });
     const porForma = concluidas.map((c) => ({
@@ -577,9 +605,9 @@ export class CentralService {
     return { resolved: false };
   }
 
-  async alertas(resolvidos: boolean) {
+  async alertas(resolvidos: boolean, praca: string | null = null) {
     const eventos = await this.prisma.safetyEvent.findMany({
-      where: { type: 'PANIC_BUTTON', resolved: resolvidos },
+      where: { type: 'PANIC_BUTTON', resolved: resolvidos, ...(await this.pracas.ondeSos(praca)) },
       orderBy: { createdAt: 'desc' },
       take: resolvidos ? 50 : 20,
       include: {

@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { SoDonoGuard } from '../pracas/so-dono.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -316,6 +317,7 @@ const cupomSchema = z.object({
 @ApiTags('Admin - Cupons')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN)
+@UseGuards(SoDonoGuard)
 @Controller('admin/coupons')
 export class AdminCuponsController {
   constructor(private readonly prisma: PrismaService) {}

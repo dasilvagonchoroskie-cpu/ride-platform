@@ -264,9 +264,9 @@ export class PainelMotoristaService {
   }
 
   /** Lista de todos os motoristas com o saldo (aba Carteiras / Recargas). */
-  async carteiras() {
+  async carteiras(ids: string[] | null = null) {
     const motoristas = await this.prisma.driver.findMany({
-      where: { status: { in: ['APPROVED', 'SUSPENDED', 'PENDING'] } },
+      where: { status: { in: ['APPROVED', 'SUSPENDED', 'PENDING'] }, ...(ids ? { id: { in: ids } } : {}) },
       orderBy: { createdAt: 'desc' },
       take: 300,
       select: {

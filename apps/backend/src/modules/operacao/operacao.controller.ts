@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
 import { z } from 'zod';
@@ -8,6 +8,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { DonoGravaGuard } from '../pracas/so-dono.guard';
+import { PracasService } from '../pracas/pracas.service';
 import { apagarAviso, gravarCidades, lerAvisos, lerCidades, publicarAviso, whatsappDaCentral } from './operacao.store';
 
 const cidadesSchema = z.object({
@@ -32,6 +34,7 @@ export class AppPublicoController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
+    private readonly pracas: PracasService,
   ) {}
 
   @Get('config')
@@ -42,6 +45,10 @@ export class AppPublicoController {
       cidades: await lerCidades(this.prisma),
       whatsapp: await whatsappDaCentral(this.prisma),
       avisos: await lerAvisos(this.prisma),
+      // Cidades da operacao: o motorista escolhe onde vai trabalhar no cadastro.
+      pracas: (await this.pracas.listar())
+        .filter((p) => p.ativa)
+        .map((p) => ({ id: p.id, nome: p.nome, uf: p.uf, latitude: p.latitude, longitude: p.longitude, whatsapp: p.whatsapp ?? null })),
     };
   }
 }
@@ -49,6 +56,7 @@ export class AppPublicoController {
 @ApiTags('Admin - Operacao')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN)
+@UseGuards(DonoGravaGuard)
 @Controller('admin/operacao')
 export class AdminOperacaoController {
   constructor(private readonly prisma: PrismaService) {}

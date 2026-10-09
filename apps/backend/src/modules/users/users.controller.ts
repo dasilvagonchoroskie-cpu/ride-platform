@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { SoDonoGuard } from '../pracas/so-dono.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   createAddressSchema,
@@ -103,6 +104,7 @@ export class UsersController {
 @ApiTags('Admin - Usuarios')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN)
+@UseGuards(SoDonoGuard)
 @Controller('admin/users')
 export class AdminUsersController {
   constructor(private readonly users: UsersService) {}

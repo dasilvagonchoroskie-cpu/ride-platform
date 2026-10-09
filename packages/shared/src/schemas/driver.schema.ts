@@ -17,6 +17,8 @@ export const driverOnboardingSchema = z.object({
   cnhCategory: z.enum(['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE']),
   cnhExpiresAt: z.coerce.date().refine((date) => date > new Date(), 'CNH vencida ou a vencer.'),
   pixKey: z.string().trim().max(200).optional(),
+  /** Cidade onde vai trabalhar (codigo da praca, de /app/config). */
+  praca: z.string().trim().max(40).optional(),
 });
 
 export const updateDriverSchema = driverOnboardingSchema.partial().extend({
