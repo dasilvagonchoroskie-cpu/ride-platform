@@ -147,6 +147,11 @@ export class DriversService {
   async updateMe(userId: string, input: UpdateDriverInput) {
     const driver = await this.repo.findByUserId(userId);
     if (!driver) throw BusinessException.notFound('Cadastro de motorista nao encontrado.');
+    // Evandro (10/10/2026): depois de aprovado, mudanca nos dados so com a
+    // Central aprovando (app do motorista -> Meus dados).
+    if (driver.status === DriverStatus.APPROVED) {
+      throw BusinessException.validation('Para mudar seus dados, use Meus dados no app: a Central aprova.');
+    }
 
     await this.repo.update(driver.id, {
       ...(input.birthDate ? { birthDate: input.birthDate } : {}),

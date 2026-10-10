@@ -123,6 +123,10 @@ class AuthState extends ChangeNotifier {
   /// Pede o codigo. [destino] e o telefone (+55...) ou o e-mail.
   Future<String?> requestOtp(String destino) => _pedirCodigo(destino, 'LOGIN');
 
+  /// Trocar o telefone (Evandro, 10/10/2026): o codigo vai para o e-mail da
+  /// conta (pedido pelo telefone atual) e prova que e a propria pessoa.
+  Future<String?> pedirCodigoTelefone() => _pedirCodigo(user?.phone ?? '', 'PHONE_VERIFICATION');
+
   /// Codigo para criar uma senha nova ("Esqueci minha senha").
   Future<String?> pedirCodigoSenha(String destino) => _pedirCodigo(destino, 'PASSWORD_RESET');
 
@@ -255,13 +259,25 @@ class AuthState extends ChangeNotifier {
   }
 
   /// Meus dados. Manda so o que mudou.
-  Future<void> atualizarPerfil({String? nome, String? email, String? genero, String? cidade, String? cpf}) async {
+  Future<void> atualizarPerfil({
+    String? nome,
+    String? email,
+    String? genero,
+    String? cidade,
+    String? cpf,
+    String? endereco,
+    String? telefone,
+    String? codigo,
+  }) async {
     final corpo = <String, dynamic>{
       if (nome != null) 'name': nome,
       if (email != null) 'email': email.trim().toLowerCase(),
       if (genero != null) 'gender': genero,
       if (cidade != null) 'city': cidade,
       if (cpf != null) 'cpf': cpf,
+      if (endereco != null) 'endereco': endereco.trim(),
+      if (telefone != null) 'phone': telefone,
+      if (codigo != null) 'codigo': codigo,
     };
     if (corpo.isEmpty) return;
     final data = await _client.request('PATCH', '/auth/perfil', body: corpo) as Map<String, dynamic>;

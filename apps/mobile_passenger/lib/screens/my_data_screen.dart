@@ -15,8 +15,11 @@ import 'change_password_screen.dart';
 import 'otp_screen.dart';
 import 'reset_password_screen.dart';
 
-/// Meus dados: nome, e-mail, genero, cidade e senha. CPF e telefone so
-/// para conferir (o CPF entra uma vez, no cadastro).
+/// Meus dados: nome, e-mail, genero, cidade, endereco, telefone e senha.
+/// O telefone troca com o codigo que chega no e-mail da conta. O CPF entra
+/// uma vez, no cadastro (para corrigir, a Central). Quem tambem e motorista
+/// muda nome, telefone, e-mail e endereco pelo app do motorista (a Central
+/// aprova) — Evandro, 10/10/2026.
 class MyDataScreen extends StatefulWidget {
   const MyDataScreen({super.key});
 
@@ -29,6 +32,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _cpf = TextEditingController();
   final TextEditingController _telefone = TextEditingController();
+  final TextEditingController _endereco = TextEditingController();
   String? _genero;
   String? _cidade;
   final Map<String, String?> _erros = {};
@@ -45,6 +49,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
       _telefone.text = u.phone.isEmpty ? 'Não informado' : telefoneLegivel(u.phone);
       _genero = u.genero;
       _cidade = u.cidade;
+      _endereco.text = u.endereco ?? '';
     }
   }
 
@@ -54,6 +59,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
     _email.dispose();
     _cpf.dispose();
     _telefone.dispose();
+    _endereco.dispose();
     super.dispose();
   }
 
@@ -72,12 +78,32 @@ class _MyDataScreenState extends State<MyDataScreen> {
     if (v != null && mounted) setState(() => _cidade = v);
   }
 
+  Future<void> _trocarTelefone() async {
+    final trocou = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: const _TrocarTelefone(),
+      ),
+    );
+    if (trocou == true && mounted) {
+      final u = context.read<AuthState>().user;
+      if (u != null) setState(() => _telefone.text = telefoneLegivel(u.phone));
+      avisar('Telefone trocado. Use o número novo para entrar.');
+    }
+  }
+
   Future<void> _salvar(UserProfile u) async {
     final cpfNovo = u.cpf == null && _cpf.text.trim().isNotEmpty;
+    final endereco = _endereco.text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final enderecoNovo = u.driverId == null && endereco.isNotEmpty && endereco != (u.endereco ?? '');
     final erros = <String, String?>{
       'nome': nomeCompleto(_nome.text) ? null : 'Informe nome e sobrenome, igual ao do CPF.',
       'email': emailValido(_email.text) ? null : 'Digite um e-mail válido.',
       'cpf': !cpfNovo || cpfValido(_cpf.text) ? null : 'CPF inválido. Confira os números.',
+      'endereco': !enderecoNovo || endereco.length >= 5 ? null : 'Escreva rua, número e bairro.',
     };
     setState(() {
       _erros
@@ -96,6 +122,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
             genero: _genero != null && _genero != u.genero ? _genero : null,
             cidade: _cidade != null && _cidade != u.cidade ? _cidade : null,
             cpf: cpfNovo ? onlyDigits(_cpf.text) : null,
+            endereco: enderecoNovo ? endereco : null,
           );
       avisar('Dados salvos.');
     } on ApiException {
@@ -111,6 +138,8 @@ class _MyDataScreenState extends State<MyDataScreen> {
     final cidades = context.watch<ConfigState>().cidades;
     const espaco = SizedBox(height: Spacing.xl);
     if (u == null) return const SizedBox.shrink();
+    final motorista = u.driverId != null;
+    const pelaCentral = 'Você também é motorista: mude pelo app do motorista (Meus dados). A Central aprova.';
 
     return TelaFormulario(
       titulo: 'Meus dados',
@@ -121,6 +150,8 @@ class _MyDataScreenState extends State<MyDataScreen> {
             rotulo: 'Nome e sobrenome',
             controller: _nome,
             capitalizar: TextCapitalization.words,
+            somenteLeitura: motorista,
+            ajuda: motorista ? pelaCentral : null,
             erro: _erros['nome'],
             aoMudar: (_) => setState(() => _erros['nome'] = null),
           ),
@@ -129,6 +160,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
             rotulo: 'E-mail',
             controller: _email,
             teclado: TextInputType.emailAddress,
+            somenteLeitura: motorista,
             erro: _erros['email'],
             aoMudar: (_) => setState(() => _erros['email'] = null),
           ),
@@ -143,6 +175,16 @@ class _MyDataScreenState extends State<MyDataScreen> {
             ),
             espaco,
           ],
+          CampoForm(
+            rotulo: 'Endereço',
+            dica: 'Rua, número e bairro',
+            controller: _endereco,
+            capitalizar: TextCapitalization.words,
+            somenteLeitura: motorista,
+            erro: _erros['endereco'],
+            aoMudar: (_) => setState(() => _erros['endereco'] = null),
+          ),
+          espaco,
           CampoForm(
             rotulo: 'CPF',
             dica: 'Digite seu CPF',
@@ -159,7 +201,17 @@ class _MyDataScreenState extends State<MyDataScreen> {
             rotulo: 'Telefone',
             controller: _telefone,
             somenteLeitura: true,
+            ajuda: motorista ? pelaCentral : null,
           ),
+          if (!motorista && !u.telefonePendente)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _trocarTelefone,
+                icon: const Icon(Icons.phone_iphone, size: 18),
+                label: const Text('Trocar telefone'),
+              ),
+            ),
           const SizedBox(height: Spacing.xxl),
           BotaoPrincipal(texto: 'Salvar', carregando: _salvando, aoTocar: () => _salvar(u)),
           const SizedBox(height: Spacing.xl),
@@ -175,6 +227,138 @@ class _MyDataScreenState extends State<MyDataScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Trocar o telefone: numero novo + codigo que chega no e-mail da conta.
+class _TrocarTelefone extends StatefulWidget {
+  const _TrocarTelefone();
+
+  @override
+  State<_TrocarTelefone> createState() => _TrocarTelefoneState();
+}
+
+class _TrocarTelefoneState extends State<_TrocarTelefone> {
+  final TextEditingController _novo = TextEditingController();
+  final TextEditingController _codigo = TextEditingController();
+  bool _enviado = false;
+  bool _ocupado = false;
+  String? _erro;
+  String? _destino;
+
+  @override
+  void dispose() {
+    _novo.dispose();
+    _codigo.dispose();
+    super.dispose();
+  }
+
+  bool get _numeroOk {
+    final d = onlyDigits(_novo.text);
+    return d.length == 10 || d.length == 11;
+  }
+
+  Future<void> _pedir() async {
+    if (!_numeroOk) {
+      setState(() => _erro = 'Digite o telefone novo com DDD.');
+      return;
+    }
+    final auth = context.read<AuthState>();
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    try {
+      final teste = await auth.pedirCodigoTelefone();
+      if (!mounted) return;
+      setState(() {
+        _enviado = true;
+        _destino = auth.codigoEnviadoPara;
+        if (teste != null) _codigo.text = teste;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _erro = 'Sem conexão. Tente de novo.');
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  Future<void> _salvar() async {
+    if (onlyDigits(_codigo.text).length != 6) {
+      setState(() => _erro = 'O código tem 6 números.');
+      return;
+    }
+    final auth = context.read<AuthState>();
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    try {
+      await auth.atualizarPerfil(telefone: '+55${onlyDigits(_novo.text)}', codigo: onlyDigits(_codigo.text));
+      if (mounted) Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _erro = 'Sem conexão. Tente de novo.');
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Trocar telefone', style: AppText.title),
+            const SizedBox(height: Spacing.sm),
+            Text(
+              _enviado
+                  ? 'Enviamos um código de 6 números para ${_destino ?? 'o e-mail da sua conta'}. Digite o código para confirmar.'
+                  : 'Para sua segurança, vamos mandar um código para o e-mail da sua conta.',
+              style: AppText.body.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: Spacing.lg),
+            CampoForm(
+              rotulo: 'Telefone novo (com DDD)',
+              controller: _novo,
+              teclado: TextInputType.phone,
+              formatadores: [mascaraTelefone],
+              somenteLeitura: _enviado,
+              aoMudar: (_) => setState(() => _erro = null),
+            ),
+            if (_enviado) ...[
+              const SizedBox(height: Spacing.lg),
+              CampoForm(
+                rotulo: 'Código do e-mail',
+                controller: _codigo,
+                teclado: TextInputType.number,
+                tamanhoMaximo: 6,
+                aoMudar: (_) => setState(() => _erro = null),
+              ),
+            ],
+            if (_erro != null) ...[
+              const SizedBox(height: Spacing.md),
+              Text(_erro!, style: AppText.body.copyWith(color: AppColors.danger)),
+            ],
+            const SizedBox(height: Spacing.xl),
+            BotaoPrincipal(
+              texto: _enviado ? 'Confirmar telefone novo' : 'Receber código no e-mail',
+              carregando: _ocupado,
+              aoTocar: _enviado ? _salvar : _pedir,
+            ),
+            if (_enviado)
+              TextButton(onPressed: _ocupado ? null : _pedir, child: const Text('Mandar outro código')),
+          ],
+        ),
       ),
     );
   }

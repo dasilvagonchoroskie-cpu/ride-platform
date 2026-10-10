@@ -11,6 +11,7 @@ import 'activity_screen.dart';
 import 'legal_screen.dart';
 import 'permissions_screen.dart';
 import 'registration_screen.dart';
+import 'meus_dados_screen.dart';
 import 'perfil_screen.dart';
 import 'rides_history_screen.dart';
 import 'sos_screen.dart';
@@ -81,6 +82,7 @@ class MenuScreen extends StatelessWidget {
           ),
           const Divider(height: Spacing.xl),
           MenuLinha(titulo: 'Perfil e documentos', onTap: () => _ir(context, const PerfilScreen())),
+          MenuLinha(titulo: 'Meus dados', onTap: () => _ir(context, const MeusDadosScreen())),
           MenuLinha(titulo: 'Cadastro', onTap: () => _ir(context, const RegistrationScreen())),
           MenuLinha(titulo: 'Meus veículos', onTap: () => _ir(context, const VehiclesScreen())),
           const Divider(height: Spacing.lg),

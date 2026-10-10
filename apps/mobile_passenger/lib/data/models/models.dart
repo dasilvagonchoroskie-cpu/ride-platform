@@ -115,6 +115,8 @@ class UserProfile {
     this.temSenha = false,
     this.telefonePendente = false,
     this.avatarUrl,
+    this.endereco,
+    this.driverId,
   });
 
   final String id;
@@ -145,6 +147,13 @@ class UserProfile {
   /// Foto de perfil no servidor (ex.: /arquivos/123).
   final String? avatarUrl;
 
+  /// Endereco (rua, numero, bairro), mudado em Meus dados.
+  final String? endereco;
+
+  /// A mesma conta tambem e motorista: nome, telefone, e-mail e endereco
+  /// mudam pelo app do motorista (a Central aprova).
+  final String? driverId;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -159,6 +168,8 @@ class UserProfile {
         'temSenha': temSenha,
         'telefonePendente': telefonePendente,
         'avatarUrl': avatarUrl,
+        'endereco': endereco,
+        'driverId': driverId,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -175,6 +186,8 @@ class UserProfile {
         temSenha: json['temSenha'] as bool? ?? false,
         telefonePendente: json['telefonePendente'] as bool? ?? false,
         avatarUrl: json['avatarUrl'] as String?,
+        endereco: json['endereco'] as String?,
+        driverId: json['driverId'] as String?,
       );
 
   UserProfile copyWith({String? name, String? email, bool? termsAccepted, String? avatarUrl}) => UserProfile(
@@ -191,6 +204,8 @@ class UserProfile {
         temSenha: temSenha,
         telefonePendente: telefonePendente,
         avatarUrl: avatarUrl ?? this.avatarUrl,
+        endereco: endereco,
+        driverId: driverId,
       );
 
   String get firstName => name.split(' ').first;

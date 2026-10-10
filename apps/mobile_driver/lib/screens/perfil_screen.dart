@@ -7,6 +7,7 @@ import '../core/fotos.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../state/driver_state.dart';
+import 'meus_dados_screen.dart';
 
 /// Os documentos que a Central confere (as fotos ficam guardadas no
 /// servidor e aparecem na Central para aprovar ou rejeitar). A foto do carro
@@ -222,6 +223,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     onPressed: _enviandoFoto ? null : _trocarFoto,
                     icon: const Icon(Icons.photo_camera_outlined),
                     label: Text(p?.avatarUrl == null ? 'Pôr foto de perfil' : 'Trocar foto de perfil'),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MeusDadosScreen())),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Ver e mudar meus dados'),
                   ),
                 ),
               ],
