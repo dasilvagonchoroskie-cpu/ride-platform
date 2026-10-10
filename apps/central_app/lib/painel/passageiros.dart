@@ -7,6 +7,7 @@ import '../core/theme/central_theme.dart';
 import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
+import 'dados_pessoais.dart';
 import 'foto.dart';
 import 'painel_state.dart';
 
@@ -314,6 +315,17 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
             Linha('Corridas', '${p.corridas}'),
             Linha('Cadastro', dataHora(p.desde)),
             Linha('Situação', _bloqueado ? 'Bloqueado' : 'Ativo', destaque: true),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Editar dados'),
+                onPressed: () async {
+                  final salvou = await editarDadosDaPessoa(context, widget.api, widget.p.id, nome: widget.p.nome);
+                  if (salvou && mounted) Navigator.of(context).pop();
+                },
+              ),
+            ),
             const SizedBox(height: Spacing.md),
             const Text('Histórico de bloqueios', style: AppText.heading),
             SizedBox(

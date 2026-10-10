@@ -8,6 +8,7 @@ import 'cadastrar_motorista.dart';
 import 'carros.dart';
 import 'carteiras.dart';
 import 'comuns.dart';
+import 'dados_pessoais.dart';
 import 'foto.dart';
 import 'painel_state.dart';
 import 'relatorio_pdf.dart';
@@ -129,6 +130,7 @@ class _MotoristasState extends State<Motoristas> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        FaixaPedidosDeAlteracao(key: ValueKey(_situacao), api: _api),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.all(Spacing.md),
@@ -479,6 +481,16 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                   Linha('Veículo', m.veiculo.isEmpty ? '-' : '${m.veiculo} · ${m.placa}'),
                   Linha('Cidade', d.pracaNome ?? 'Ainda sem cidade (aparece quando ele ficar online)'),
                   Linha('Cadastro', dataHora(m.cadastradoEm)),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Editar dados'),
+                      onPressed: () async {
+                        if (await editarDadosDaPessoa(context, _api, m.id, nome: m.nome)) _recarregar();
+                      },
+                    ),
+                  ),
                   if (context.watch<PainelState>().dono && (context.watch<PainelState>().eu?.pracas.length ?? 0) > 1)
                     Align(
                       alignment: Alignment.centerLeft,

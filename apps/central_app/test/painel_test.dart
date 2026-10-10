@@ -15,6 +15,7 @@ import 'package:central_app/painel/cidades_equipe.dart';
 import 'package:central_app/painel/limpeza.dart';
 import 'package:central_app/painel/comuns.dart';
 import 'package:central_app/painel/cupons.dart';
+import 'package:central_app/painel/dados_pessoais.dart';
 import 'package:central_app/painel/despacho.dart';
 import 'package:central_app/painel/financeiro.dart';
 import 'package:central_app/painel/motoristas.dart';
@@ -102,6 +103,12 @@ bool _comPendente = false;
 /// Motorista ativo trocou a foto de perfil e espera a Central (09/10/2026).
 bool _comFotoNova = false;
 
+/// Motorista pediu para mudar os dados (10/10/2026).
+bool _comPedidoDeDados = false;
+
+/// Pedidos que a Central mandou sobre dados pessoais (metodo, caminho, corpo).
+final List<String> _pedidosDeDados = [];
+
 /// Conta de operador de uma cidade (Teutonia), e nao o dono.
 bool _operador = false;
 
@@ -111,6 +118,33 @@ final _pracasTeste = [
 ];
 
 Object? _resposta(String metodo, String caminho, Map<String, String> q) {
+  if (caminho == '/api/admin/dados/pessoas/$_motoristaId') {
+    return {
+      'userId': 'u-$_motoristaId',
+      'motorista': true,
+      'dados': {
+        'name': 'Carlos Motorista', 'phone': '+5564999990001', 'email': 'carlos@teste.com', 'endereco': null,
+        'pixKey': null, 'cnhNumber': '12345678901', 'cnhCategory': 'B', 'cnhExpiresAt': '2030-01-01',
+        'cpf': '11122233344', 'birthDate': '1985-07-10',
+      },
+    };
+  }
+  if (caminho == '/api/admin/dados/alteracoes') {
+    return [
+      if (_comPedidoDeDados)
+        {
+          'userId': 'u-$_motoristaId', 'driverId': _motoristaId, 'nome': 'Carlos Motorista', 'telefone': '+5564999990001',
+          'pedidaEm': '2026-10-10T07:00:00.000Z',
+          'mudancas': [
+            {'campo': 'endereco', 'rotulo': 'Endereço', 'de': null, 'para': 'Rua Nova, 10 - Centro'},
+          ],
+        },
+    ];
+  }
+  if (caminho.startsWith('/api/admin/dados/alteracoes/')) {
+    _comPedidoDeDados = false;
+    return {'aprovado': true};
+  }
   if (caminho == '/api/admin/eu') {
     return _operador
         ? {'dono': false, 'praca': 'teutonia-rs', 'pracaNome': 'Teutônia', 'pracas': [_pracasTeste[1]]}
@@ -487,6 +521,9 @@ MockClient _servidor() => MockClient((http.Request r) async {
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );
+      }
+      if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
+        _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
       }
       final dados = _resposta(r.method, r.url.path, r.url.queryParameters);
       if (dados == null) {
@@ -1195,5 +1232,54 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     debugDisableShadows = true;
+  });
+
+  // Evandro (10/10/2026): a Central muda os dados quando a pessoa pede e
+  // aprova o que o motorista pediu pelo app.
+  testWidgets('Dados pessoais: aprovar o pedido do motorista e editar os dados', (tester) async {
+    _comPedidoDeDados = true;
+    _pedidosDeDados.clear();
+    addTearDown(() => _comPedidoDeDados = false);
+    final painel = await _abrir(tester, const Motoristas());
+    await _carregar(tester);
+    expect(find.text('1 motorista pediu para mudar os dados'), findsOneWidget);
+    await tester.tap(find.text('1 motorista pediu para mudar os dados'));
+    await _carregar(tester);
+    expect(find.textContaining('Rua Nova, 10 - Centro', findRichText: true), findsOneWidget);
+    await tester.tap(find.text('Aprovar'));
+    await _carregar(tester);
+    expect(_pedidosDeDados.any((p) => p.startsWith('POST /api/admin/dados/alteracoes/u-$_motoristaId/aprovar')), isTrue);
+    expect(find.text('Nenhum pedido esperando.'), findsOneWidget);
+
+    // Editar direto: so o que mudou vai para o servidor.
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PainelState>.value(
+        value: painel,
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => editarDadosDaPessoa(context, painel.api, _motoristaId, nome: 'Carlos'),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('abrir'));
+    await _carregar(tester);
+    expect(find.text('Editar dados · Carlos'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Número da CNH'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Endereço (rua, número e bairro)'), 'Rua Teste, 5 - Centro');
+    await tester.ensureVisible(find.text('Salvar'));
+    await tester.tap(find.text('Salvar'));
+    await _carregar(tester);
+    final patch = _pedidosDeDados.lastWhere((p) => p.startsWith('PATCH'));
+    expect(patch, contains('"endereco":"Rua Teste, 5 - Centro"'));
+    expect(patch, isNot(contains('"name"')));
+    expect(find.text('abrir'), findsOneWidget, reason: 'salvou e voltou');
+    await tester.pumpWidget(const SizedBox());
   });
 }

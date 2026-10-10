@@ -69,8 +69,12 @@ export class DadosPessoaisService {
   // Leitura
   // ------------------------------------------------------------------
 
-  private async pessoa(userId: string) {
-    const u = await this.prisma.user.findFirst({ where: { id: userId, deletedAt: null }, include: { driver: true } });
+  /** Pela conta (userId) ou pelo cadastro de motorista (driverId). */
+  private async pessoa(id: string) {
+    const u = await this.prisma.user.findFirst({
+      where: { deletedAt: null, OR: [{ id }, { driver: { id } }] },
+      include: { driver: true },
+    });
     if (!u) throw BusinessException.notFound('Cadastro nao encontrado.');
     return u;
   }
@@ -234,8 +238,9 @@ export class DadosPessoaisService {
       .sort((a, b) => String(a.pedidaEm).localeCompare(String(b.pedidaEm)));
   }
 
-  async aprovar(adminId: string, userId: string) {
-    const u = await this.pessoa(userId);
+  async aprovar(adminId: string, id: string) {
+    const u = await this.pessoa(id);
+    const userId = u.id;
     const meta = metaDe(u.metadata);
     const p = metaDe(meta.alteracaoPendente);
     if (!p.dados) throw BusinessException.validation('Este motorista nao tem pedido de alteracao.');
@@ -249,8 +254,9 @@ export class DadosPessoaisService {
     return { aprovado: true };
   }
 
-  async recusar(adminId: string, userId: string, motivo: string) {
-    const u = await this.pessoa(userId);
+  async recusar(adminId: string, id: string, motivo: string) {
+    const u = await this.pessoa(id);
+    const userId = u.id;
     const meta = metaDe(u.metadata);
     if (!metaDe(meta.alteracaoPendente).dados) throw BusinessException.validation('Este motorista nao tem pedido de alteracao.');
     delete meta.alteracaoPendente;
@@ -266,13 +272,14 @@ export class DadosPessoaisService {
   // Central muda direto (passageiro ou motorista)
   // ------------------------------------------------------------------
 
-  async dadosDaPessoa(userId: string) {
-    const u = await this.pessoa(userId);
+  async dadosDaPessoa(id: string) {
+    const u = await this.pessoa(id);
     return { userId: u.id, motorista: !!u.driver, dados: this.atuais(u), ...this.situacao(metaDe(u.metadata)) };
   }
 
-  async editarPelaCentral(adminId: string, userId: string, dados: DadosPelaCentral) {
-    const u = await this.pessoa(userId);
+  async editarPelaCentral(adminId: string, id: string, dados: DadosPelaCentral) {
+    const u = await this.pessoa(id);
+    const userId = u.id;
     const novo = this.limpo(dados);
     const mudancas = this.mudancas(this.atuais(u), novo);
     if (mudancas.length === 0) throw BusinessException.validation('Nada mudou.');

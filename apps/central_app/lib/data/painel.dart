@@ -992,6 +992,56 @@ class Cupom {
 // Chamadas ao servidor
 // ---------------------------------------------------------------------------
 
+/// Dados pessoais de um passageiro ou motorista (Central muda direto).
+class DadosPessoais {
+  DadosPessoais({required this.userId, required this.motorista, required this.dados});
+
+  final String userId;
+  final bool motorista;
+
+  /// name, phone, email, endereco, cpf, birthDate e, do motorista, pixKey,
+  /// cnhNumber, cnhCategory, cnhExpiresAt (datas em AAAA-MM-DD).
+  final Map<String, String?> dados;
+
+  factory DadosPessoais.fromJson(Map<String, dynamic> j) => DadosPessoais(
+        userId: j['userId'] as String? ?? '',
+        motorista: j['motorista'] == true,
+        dados: {for (final e in ((j['dados'] as Map?) ?? const {}).entries) '${e.key}': e.value?.toString()},
+      );
+}
+
+class MudancaDeDado {
+  MudancaDeDado({required this.rotulo, this.de, this.para});
+
+  final String rotulo;
+  final String? de;
+  final String? para;
+
+  factory MudancaDeDado.fromJson(Map<String, dynamic> j) =>
+      MudancaDeDado(rotulo: j['rotulo'] as String? ?? '', de: j['de']?.toString(), para: j['para']?.toString());
+}
+
+/// Pedido do motorista para mudar os dados: so vale depois de aprovado.
+class PedidoDeAlteracao {
+  PedidoDeAlteracao({required this.userId, required this.nome, required this.telefone, this.pedidaEm, required this.mudancas});
+
+  final String userId;
+  final String nome;
+  final String telefone;
+  final DateTime? pedidaEm;
+  final List<MudancaDeDado> mudancas;
+
+  factory PedidoDeAlteracao.fromJson(Map<String, dynamic> j) => PedidoDeAlteracao(
+        userId: j['userId'] as String? ?? '',
+        nome: j['nome'] as String? ?? '',
+        telefone: j['telefone'] as String? ?? '',
+        pedidaEm: DateTime.tryParse('${j['pedidaEm'] ?? ''}')?.toLocal(),
+        mudancas: [
+          for (final m in (j['mudancas'] as List? ?? const []).whereType<Map<String, dynamic>>()) MudancaDeDado.fromJson(m),
+        ],
+      );
+}
+
 class PainelApi {
   PainelApi([ApiClient? client]) : _c = client ?? ApiClient();
 
@@ -1140,6 +1190,22 @@ class PainelApi {
 
   Future<void> bloquearPassageiro(String id, bool bloquear, String motivo) =>
       _c.request('PATCH', '/admin/passengers/$id/block', body: {'blocked': bloquear, 'reason': motivo});
+
+  // Dados pessoais (Evandro, 10/10/2026): a Central muda os dados de
+  // qualquer um e aprova os pedidos dos motoristas. [id] = conta ou motorista.
+  Future<DadosPessoais> dadosDaPessoa(String id) async =>
+      DadosPessoais.fromJson(await _c.request('GET', '/admin/dados/pessoas/$id') as Map<String, dynamic>);
+
+  Future<DadosPessoais> editarDados(String id, Map<String, String> mudou) async =>
+      DadosPessoais.fromJson(await _c.request('PATCH', '/admin/dados/pessoas/$id', body: mudou) as Map<String, dynamic>);
+
+  Future<List<PedidoDeAlteracao>> alteracoesPendentes() async =>
+      [for (final j in _lista(await _c.request('GET', '/admin/dados/alteracoes'))) PedidoDeAlteracao.fromJson(j)];
+
+  Future<void> aprovarAlteracao(String userId) => _c.request('POST', '/admin/dados/alteracoes/$userId/aprovar', body: {});
+
+  Future<void> recusarAlteracao(String userId, String motivo) =>
+      _c.request('POST', '/admin/dados/alteracoes/$userId/recusar', body: {'motivo': motivo});
 
   // Tarifas
   Future<Tarifas> tarifas() async => Tarifas.fromJson(await _c.request('GET', '/admin/tariffs') as Map<String, dynamic>);
