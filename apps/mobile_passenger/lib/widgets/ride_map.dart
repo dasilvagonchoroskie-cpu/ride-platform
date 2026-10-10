@@ -10,7 +10,8 @@ import '../core/utils/geo.dart';
 import 'bussola.dart';
 import 'mapa_google.dart';
 
-enum MarkerKind { pickup, dropoff, driver, car }
+/// [moto]: mototaxi (Evandro, 10/10/2026), desenhado como moto no mapa.
+enum MarkerKind { pickup, dropoff, driver, car, moto }
 
 class MapMarker {
   const MapMarker({required this.id, required this.coords, required this.kind, this.label});
@@ -195,7 +196,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
     var changed = false;
 
     for (final marker in widget.markers) {
-      if (marker.kind != MarkerKind.car && marker.kind != MarkerKind.driver) continue;
+      if (marker.kind != MarkerKind.car && marker.kind != MarkerKind.driver && marker.kind != MarkerKind.moto) continue;
 
       final previousTarget = _targets[marker.id];
       final currentPosition = _animated[marker.id];
@@ -219,7 +220,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
 
   /// Posicao interpolada do veiculo (movimento suave entre atualizacoes).
   Coords _positionFor(MapMarker marker) {
-    if (marker.kind != MarkerKind.car && marker.kind != MarkerKind.driver) {
+    if (marker.kind != MarkerKind.car && marker.kind != MarkerKind.driver && marker.kind != MarkerKind.moto) {
       return marker.coords;
     }
 
@@ -309,7 +310,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   Widget _mapaGoogle() {
     final icones = _bitmaps;
     gm.BitmapDescriptor icone(MarkerKind k) {
-      final i = icones?[k == MarkerKind.driver ? MarkerKind.car : k];
+      final i = icones?[k == MarkerKind.driver || k == MarkerKind.moto ? MarkerKind.car : k];
       if (i != null) return i;
       return switch (k) {
         MarkerKind.pickup => gm.BitmapDescriptor.defaultMarkerWithHue(gm.BitmapDescriptor.hueGreen),
@@ -535,12 +536,12 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
     return Marker(
       point: _latLng(position),
       width: switch (marker.kind) {
-        MarkerKind.car || MarkerKind.driver => 40,
+        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => 40,
         MarkerKind.pickup => 34,
         MarkerKind.dropoff => 34,
       },
       height: switch (marker.kind) {
-        MarkerKind.car || MarkerKind.driver => 40,
+        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => 40,
         MarkerKind.pickup => 34,
         MarkerKind.dropoff => 34,
       },
@@ -551,9 +552,29 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             'assets/markers/car_black.png',
             fit: BoxFit.contain,
           ),
+        MarkerKind.moto => const _Moto(),
         MarkerKind.pickup => Image.asset('assets/markers/pin_pickup.png', fit: BoxFit.contain),
         MarkerKind.dropoff => Image.asset('assets/markers/pin_dropoff.png', fit: BoxFit.contain),
       },
+    );
+  }
+}
+
+/// Moto no mapa (mototaxi): circulo branco com a moto preta.
+class _Moto extends StatelessWidget {
+  const _Moto();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFF1B1F24), width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 1))],
+      ),
+      alignment: Alignment.center,
+      child: const Icon(Icons.two_wheeler, size: 24, color: Color(0xFF1B1F24)),
     );
   }
 }

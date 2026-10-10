@@ -72,3 +72,8 @@ export function multiplicadorNoPonto(m: MultiplierInput, ponto?: { latitude: num
   }
   return Math.round(valor * 100) / 100;
 }
+
+/** Categoria de moto (mototaxi): o codigo tem "MOTO" (ex.: MOTO, MOTOTAXI). */
+export function ehMoto(codigo: string | null | undefined): boolean {
+  return (codigo ?? '').toUpperCase().includes('MOTO');
+}

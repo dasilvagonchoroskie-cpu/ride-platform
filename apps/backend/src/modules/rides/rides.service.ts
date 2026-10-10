@@ -10,7 +10,7 @@ import { GeoService } from '../geo/geo.service';
 import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
-import { lerCategorias } from './categorias';
+import { ehMoto, lerCategorias } from './categorias';
 import { distanciaDoTaximetro, lerCobranca, paradasQueValem } from './cobranca';
 import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
@@ -154,7 +154,50 @@ export class RidesService {
       minFareApplied: orcamento.minFareApplied,
       /** TAXIMETRO: o valor final sai do trajeto feito; FECHADO: e este. */
       cobranca: await lerCobranca(this.prisma),
+      moto: ehMoto(orcamento.category),
+      // Mototaxi (Evandro, 10/10/2026): o passageiro escolhe Carro ou Moto,
+      // vendo o preco de cada categoria ativa.
+      opcoes: await this.opcoesDeCategoria(input, rota, passengerId),
     };
+  }
+
+  /** Preco da mesma viagem em cada categoria ativa (Carro, Moto...). */
+  private async opcoesDeCategoria(
+    input: EstimateRideInput,
+    rota: { distanceMeters: number; durationSeconds: number },
+    passengerId?: string,
+  ) {
+    const ativas = (await lerCategorias(this.prisma)).filter((c) => c.ativa);
+    const opcoes: Array<{ category: string; nome: string; moto: boolean; estimatedFareCents: number; totalToPayCents: number }> = [];
+    for (const c of ativas) {
+      try {
+        const o = await this.fare.calcular({
+          distanceMeters: rota.distanceMeters,
+          durationSeconds: rota.durationSeconds,
+          ...(input.scheduledFor ? { quando: input.scheduledFor } : {}),
+          category: c.codigo,
+          pickup: input.pickup,
+        });
+        let desconto = 0;
+        if (input.couponCode && passengerId) {
+          try {
+            desconto = (await validarCupom(this.prisma, passengerId, input.couponCode, o.totalCents)).descontoCents;
+          } catch {
+            desconto = 0;
+          }
+        }
+        opcoes.push({
+          category: c.codigo,
+          nome: c.nome || c.codigo,
+          moto: ehMoto(c.codigo),
+          estimatedFareCents: o.totalCents,
+          totalToPayCents: Math.max(0, o.totalCents - desconto),
+        });
+      } catch {
+        // Categoria sem tarifa configurada: nao aparece para escolher.
+      }
+    }
+    return opcoes;
   }
 
   // ------------------------------------------------------------------
@@ -445,19 +488,28 @@ export class RidesService {
    * passageiro ve que ha carro por perto, nao onde cada um esta parado.
    */
   async carrosPerto(lat: number, lng: number, userId?: string) {
-    const perto = await this.prisma.findNearbyDrivers({
-      latitude: lat,
-      longitude: lng,
-      radiusMeters: 5000,
-      limit: 12,
-      teste: userId ? await this.prisma.contaDeTeste(userId) : false,
-    });
+    const teste = userId ? await this.prisma.contaDeTeste(userId) : false;
+    // Cada categoria ativa (carro e moto aparecem com o desenho certo).
+    const ativas = (await lerCategorias(this.prisma)).filter((c) => c.ativa);
+    const listas = await Promise.all(
+      ativas.map(async (c) =>
+        (
+          await this.prisma.findNearbyDrivers({ latitude: lat, longitude: lng, radiusMeters: 5000, limit: 12, category: c.codigo, teste })
+        ).map((m) => ({ ...m, category: c.codigo })),
+      ),
+    );
+    const perto = listas
+      .flat()
+      .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .slice(0, 12);
     const arredondar = (n: number) => Math.round(n * 2000) / 2000;
     return perto.map((m, i) => ({
       id: `carro-${i + 1}`,
       latitude: arredondar(m.latitude),
       longitude: arredondar(m.longitude),
       distanceMeters: Math.round(m.distanceMeters),
+      category: m.category,
+      moto: ehMoto(m.category),
     }));
   }
 

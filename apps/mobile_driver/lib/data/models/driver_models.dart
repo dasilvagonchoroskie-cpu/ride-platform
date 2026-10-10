@@ -185,6 +185,7 @@ class VehicleInfo {
     required this.year,
     required this.color,
     required this.plate,
+    this.category = 'CARRO',
   });
 
   final String brand;
@@ -192,6 +193,10 @@ class VehicleInfo {
   final int year;
   final String color;
   final String plate;
+
+  /// Categoria do veiculo (CARRO, MOTO...). Moto: o mapa mostra uma moto.
+  final String category;
+  bool get moto => category.toUpperCase().contains('MOTO');
 
   String get description => '$brand $model $year';
 

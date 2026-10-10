@@ -229,7 +229,7 @@ class _EscolherMotoristaState extends State<_EscolherMotorista> {
                       final m = lista[i];
                       return ListTile(
                         enabled: !m.ocupado,
-                        leading: Icon(Icons.local_taxi, color: m.ocupado ? AppColors.warning : AppColors.success),
+                        leading: Icon(m.categoria.toUpperCase().contains('MOTO') ? Icons.two_wheeler : Icons.local_taxi, color: m.ocupado ? AppColors.warning : AppColors.success),
                         title: Text(m.nome, style: AppText.bodyStrong),
                         subtitle: Text(
                           '${m.ocupado ? 'Em corrida' : 'Livre'} · ${m.distanciaKm == null ? '?' : '${m.distanciaKm!.toStringAsFixed(1)} km'}'

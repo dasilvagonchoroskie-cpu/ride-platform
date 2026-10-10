@@ -121,6 +121,10 @@ EMB='{"latitude":-18.0125,"longitude":-49.3547,"address":"Praca da Matriz, Goiat
 DES='{"latitude":-18.0050,"longitude":-49.3610,"address":"Rodoviaria de Goiatuba"}'
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP")
 sucesso "$X" && ok "Passageiro: preco da corrida calculado" || falha "Passageiro: preco da corrida" "$X"
+# Mototaxi (Evandro, 10/10/2026): o preco vem por categoria ativa.
+[ "$(echo "$X" | jq -r '[.data.opcoes[] | select(.category=="CARRO")] | length')" = "1" ] && [ "$(echo "$X" | jq -r '.data.moto')" = "false" ] && ok "Passageiro: preco por categoria (Carro$(echo "$X" | jq -r '[.data.opcoes[] | select(.category!="CARRO") | ", " + .nome] | join("")'))" || falha "Passageiro: preco por categoria" "$X"
+X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
+[ "$(echo "$X" | jq -r '.success')" = "true" ] && [ "$(echo "$X" | jq -r '[.data[] | select(has("moto") | not)] | length')" = "0" ] && ok "Passageiro: carros perto dizem se sao moto ($(echo "$X" | jq -r '.data | length') perto)" || falha "Passageiro: carros perto com categoria" "$X"
 X=$(get "/geo/search?q=Avenida%20Brasilia&lat=-18.0125&lng=-49.3547" "$TP")
 N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: busca de destino real ($N resultado(s), 1o: $(echo "$X" | jq -r '.data[0].address') - $(echo "$X" | jq -r '.data[0].detail'))" || falha "Passageiro: busca de destino" "$X"

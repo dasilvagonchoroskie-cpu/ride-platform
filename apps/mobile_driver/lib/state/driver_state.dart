@@ -1028,6 +1028,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
         color: json['color'] as String? ?? '',
         plate: json['plate'] as String? ?? '',
+        category: json['category'] as String? ?? 'CARRO',
       );
     } catch (_) {
       vehicle = null;
@@ -1865,6 +1866,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           year: (v['year'] as num?)?.toInt() ?? DateTime.now().year,
           color: v['color'] as String? ?? '',
           plate: v['plate'] as String? ?? '',
+          category: v['category'] as String? ?? 'CARRO',
         );
         await AppStorage.write(AppStorage.vehicle, jsonEncode({
           'brand': vehicle!.brand,
@@ -1872,6 +1874,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'year': vehicle!.year,
           'color': vehicle!.color,
           'plate': vehicle!.plate,
+          'category': vehicle!.category,
         }));
       }
       notifyListeners();

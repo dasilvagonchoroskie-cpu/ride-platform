@@ -17,9 +17,9 @@ import '../widgets/ui.dart';
 
 /// Confirmacao da viagem.
 ///
-/// Modalidade unica: nao ha lista de opcoes a percorrer. O mapa mostra a
-/// rota em cima e embaixo aparece um card so, com o preco da bandeira
-/// vigente e o botao de confirmar.
+/// O mapa mostra a rota em cima e embaixo aparece o preco da bandeira
+/// vigente e o botao de confirmar. Com mais de uma categoria ativa (Carro e
+/// Moto), o passageiro escolhe antes, vendo o preco de cada uma.
 class ConfirmScreen extends StatefulWidget {
   const ConfirmScreen({super.key, required this.destination, required this.address});
 
@@ -228,6 +228,16 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                   ),
                   const SizedBox(height: Spacing.sm),
 
+                  // Mototaxi (Evandro, 10/10/2026): com Carro e Moto ativos na
+                  // Central, o passageiro escolhe vendo o preco de cada um.
+                  if (quote != null && quote.opcoes.length > 1) ...[
+                    _EscolhaCategoria(
+                      opcoes: quote.opcoes,
+                      escolhida: ride.categoria ?? quote.category,
+                      aoEscolher: ride.escolherCategoria,
+                    ),
+                    const SizedBox(height: Spacing.sm),
+                  ],
                   // Card unico com o preco da bandeira vigente.
                   Expanded(
                     child: SingleChildScrollView(
@@ -359,6 +369,63 @@ IconData _iconePagamento(String tipo) => switch (tipo) {
 /// Mostra a bandeira vigente e abre a conta: a bandeirada e, quando a
 /// viagem passa da franquia, quanto foi somado por distancia. O passageiro
 /// consegue conferir o valor em vez de so aceitar um numero.
+/// Carro ou Moto (ou outra categoria da Central), com o preco de cada uma.
+class _EscolhaCategoria extends StatelessWidget {
+  const _EscolhaCategoria({required this.opcoes, required this.escolhida, required this.aoEscolher});
+
+  final List<OpcaoCategoria> opcoes;
+  final String escolhida;
+  final ValueChanged<String> aoEscolher;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: opcoes.length,
+        separatorBuilder: (context, index) => const SizedBox(width: Spacing.sm),
+        itemBuilder: (context, i) {
+          final o = opcoes[i];
+          final sel = o.category == escolhida;
+          return Material(
+            color: sel ? AppColors.brandSoft : AppColors.surface,
+            borderRadius: BorderRadius.circular(Radii.md),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(Radii.md),
+              onTap: () => aoEscolher(o.category),
+              child: Container(
+                width: 148,
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(Radii.md),
+                  border: Border.all(color: sel ? AppColors.brand : AppColors.border, width: sel ? 2 : 1),
+                ),
+                child: Row(
+                  children: [
+                    Icon(o.moto ? Icons.two_wheeler : Icons.directions_car, color: sel ? AppColors.brand : AppColors.text),
+                    const SizedBox(width: Spacing.sm),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(o.nome, style: SheetText.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(formatMoney(o.aPagarCents), style: SheetText.muted),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _PriceCard extends StatelessWidget {
   const _PriceCard({required this.quote});
 

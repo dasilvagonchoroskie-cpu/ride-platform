@@ -17,6 +17,9 @@ LatLng _ll(Coords c) => LatLng(c.latitude, c.longitude);
 /// Carro offline: cinza, parado na ultima posicao que o aparelho mandou.
 const Color _cinzaOffline = Color(0xFF8E8E93);
 
+/// Mototaxi (Evandro, 10/10/2026): moto no mapa da Central; carro nos outros.
+IconData _iconeDo(MotoristaOnline m) => m.categoria.toUpperCase().contains('MOTO') ? Icons.two_wheeler : Icons.local_taxi;
+
 /// " · visto há 5 min" (ou ha horas/dias).
 String _vistoHa(DateTime? quando) {
   if (quando == null) return '';
@@ -123,7 +126,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
               onTap: () => _mostrarMotorista(context, m, p),
               child: _Pino(
                 cor: !m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success),
-                icone: Icons.local_taxi,
+                icone: _iconeDo(m),
               ),
             ),
           ),
@@ -176,7 +179,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
                         gm.Marker(
                           markerId: gm.MarkerId('motorista-${m.id}'),
                           position: paraGoogle(m.posicao!),
-                          icon: _pino(!m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success), Icons.local_taxi, 40),
+                          icon: _pino(!m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success), _iconeDo(m), 40),
                           anchor: const Offset(0.5, 0.5),
                           consumeTapEvents: true,
                           onTap: () => _mostrarMotorista(context, m, p),

@@ -30,6 +30,7 @@ class RideRepository {
     String dropoffAddress = 'Destino escolhido',
     String? couponCode,
     DateTime? agendadaPara,
+    String? category,
   }) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);
 
@@ -41,6 +42,7 @@ class RideRepository {
         'dropoff': {'address': dropoffAddress, ...destination.toJson()},
         if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
+        if (category != null) 'category': category,
       }) as Map<String, dynamic>;
 
       return EstimateResult(quote: RideQuote.fromJson(data));
@@ -62,6 +64,7 @@ class RideRepository {
     String paymentType = 'CASH',
     String? couponCode,
     DateTime? agendadaPara,
+    String? category,
   }) async {
     if (_useDemo) {
       return DemoEngine.createRide(
@@ -80,6 +83,7 @@ class RideRepository {
         'paymentMethodType': paymentType,
         if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
+        if (category != null) 'category': category,
       }) as Map<String, dynamic>;
 
       return Ride.fromServer(data['ride'] as Map<String, dynamic>);
@@ -194,6 +198,7 @@ class RideRepository {
             plate: '',
             color: '',
             position: Coords((c['latitude'] as num).toDouble(), (c['longitude'] as num).toDouble()),
+            moto: c['moto'] == true,
           ),
       ];
     } catch (_) {

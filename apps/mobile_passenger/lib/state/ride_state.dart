@@ -142,6 +142,19 @@ class RideState extends ChangeNotifier {
   /// Login do passageiro para a tela de conversa (chat).
   ApiClient get api => _repository.api;
 
+  /// Categoria escolhida na confirmacao (null = Carro, a padrao). Mototaxi:
+  /// Evandro, 10/10/2026.
+  String? categoria;
+
+  /// Troca Carro/Moto na confirmacao e refaz o preco.
+  Future<void> escolherCategoria(String codigo) async {
+    if (codigo == categoria) return;
+    categoria = codigo;
+    notifyListeners();
+    final u = _ultimaCotacao;
+    if (u != null) await estimate(u.$1, u.$2, pickupAddress: u.$3, dropoffAddress: u.$4);
+  }
+
   Future<RideQuote?> estimate(
     Coords origin,
     Coords destination, {
@@ -157,7 +170,8 @@ class RideState extends ChangeNotifier {
           dropoffAddress: dropoffAddress,
           couponCode: cupomCodigo,
           // Agendada paga a bandeira do horario da viagem (23h = noturna).
-          agendadaPara: agendarPara);
+          agendadaPara: agendarPara,
+          category: categoria);
       quote = result.quote;
       unawaited(_buscarRotaPrevia(origin, destination));
       return result.quote;
@@ -197,6 +211,7 @@ class RideState extends ChangeNotifier {
       paymentType: paymentType,
       couponCode: cupomCodigo,
       agendadaPara: agendarPara,
+      category: categoria,
     );
 
     cupomCodigo = null;

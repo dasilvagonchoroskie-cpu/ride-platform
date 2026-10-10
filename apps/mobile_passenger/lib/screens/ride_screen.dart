@@ -83,7 +83,7 @@ class RideScreen extends StatelessWidget {
               markers: [
                 MapMarker(id: 'dropoff', coords: corrida.dropoff.coords, kind: MarkerKind.dropoff),
                 if (motorista != null && motorista.posicaoReal)
-                  MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
+                  MapMarker(id: 'driver', coords: motorista.position, kind: corrida.moto ? MarkerKind.moto : MarkerKind.car),
               ],
               // Pelas ruas ate o destino (o traco some atras do carro).
               route: restanteDaRota(centro, estado.tripRoute),

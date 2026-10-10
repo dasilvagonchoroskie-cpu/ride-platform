@@ -151,7 +151,7 @@ class _SearchingScreenState extends State<SearchingScreen> {
               enquadrarMargem: EdgeInsets.fromLTRB(56, 96, 56, altura * 0.45),
               markers: [
                 MapMarker(id: 'pickup', coords: corrida.pickup.coords, kind: MarkerKind.pickup),
-                if (motorista.posicaoReal) MapMarker(id: 'driver', coords: motorista.position, kind: MarkerKind.car),
+                if (motorista.posicaoReal) MapMarker(id: 'driver', coords: motorista.position, kind: corrida.moto ? MarkerKind.moto : MarkerKind.car),
               ],
               // Pelas ruas; o traco some atras do carro conforme ele anda.
               driverRoute: motorista.posicaoReal ? restanteDaRota(motorista.position, estado.driverRoute) : const [],

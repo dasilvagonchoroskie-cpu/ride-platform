@@ -133,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final markers = <MapMarker>[
       MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
       for (final driver in ride.nearbyDrivers)
-        MapMarker(id: driver.id, coords: driver.position, kind: MarkerKind.car),
+        MapMarker(id: driver.id, coords: driver.position, kind: driver.moto ? MarkerKind.moto : MarkerKind.car),
     ];
 
     return Scaffold(

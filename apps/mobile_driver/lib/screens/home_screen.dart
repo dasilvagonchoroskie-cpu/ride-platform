@@ -103,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Positioned.fill(
             child: RideMap(
               center: driver.position,
-              markers: [MapMarker(id: 'me', coords: driver.position, kind: MarkerKind.car)],
+              markers: [MapMarker(id: 'me', coords: driver.position, kind: driver.vehicle?.moto == true ? MarkerKind.moto : MarkerKind.car)],
               span: 0.02,
               rounded: false,
               // Bussola automatica e centralizar (Evandro, 08/10/2026).

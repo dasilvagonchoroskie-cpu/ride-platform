@@ -280,7 +280,17 @@ class RideQuote {
     this.discountCents = 0,
     this.couponCode,
     this.taximetro = false,
+    this.category = 'CARRO',
+    this.moto = false,
+    this.opcoes = const [],
   });
+
+  /// Categoria deste preco (CARRO, MOTO...) e se e mototaxi.
+  final String category;
+  final bool moto;
+
+  /// Preco em cada categoria ativa: o passageiro escolhe (Carro ou Moto).
+  final List<OpcaoCategoria> opcoes;
 
   final FareFlag flag;
   final int priceCents;
@@ -325,6 +335,11 @@ class RideQuote {
         discountCents: (json['discountCents'] as num?)?.toInt() ?? 0,
         couponCode: json['couponCode'] as String?,
         taximetro: json['cobranca'] == 'TAXIMETRO',
+        category: json['category'] as String? ?? 'CARRO',
+        moto: json['moto'] == true,
+        opcoes: [
+          for (final o in (json['opcoes'] as List? ?? const []).whereType<Map<String, dynamic>>()) OpcaoCategoria.fromJson(o),
+        ],
       );
 
   Map<String, dynamic> toJson() => {
@@ -337,6 +352,25 @@ class RideQuote {
         'chargedDistanceMeters': chargedDistanceMeters,
         'minFareApplied': minFareApplied,
       };
+}
+
+/// Uma categoria para escolher na confirmacao (ex.: Carro R\$ 18,00 / Moto R\$ 12,00).
+class OpcaoCategoria {
+  const OpcaoCategoria({required this.category, required this.nome, required this.moto, required this.precoCents, required this.aPagarCents});
+
+  final String category;
+  final String nome;
+  final bool moto;
+  final int precoCents;
+  final int aPagarCents;
+
+  factory OpcaoCategoria.fromJson(Map<String, dynamic> j) => OpcaoCategoria(
+        category: j['category'] as String? ?? 'CARRO',
+        nome: j['nome'] as String? ?? 'Carro',
+        moto: j['moto'] == true,
+        precoCents: (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
+        aPagarCents: (j['totalToPayCents'] as num?)?.toInt() ?? (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class DriverInfo {
@@ -353,6 +387,7 @@ class DriverInfo {
     this.posicaoReal = false,
     this.fotoUrl,
     this.fotoCarroUrl,
+    this.moto = false,
   });
 
   /// Foto do rosto do motorista (/arquivos/...), se ele mandou.
@@ -360,6 +395,9 @@ class DriverInfo {
 
   /// Foto do carro de frente (/arquivos/...), se ele mandou.
   final String? fotoCarroUrl;
+
+  /// Mototaxi: o mapa mostra uma moto no lugar do carro.
+  final bool moto;
 
   final String id;
   final String name;
@@ -414,7 +452,14 @@ class Ride {
     this.taximetroCents,
     this.taximetroMetros,
     this.cobranca,
+    this.category,
   });
+
+  /// Categoria da corrida (CARRO, MOTO...).
+  final String? category;
+
+  /// Mototaxi: o mapa mostra uma moto.
+  bool get moto => (category ?? '').toUpperCase().contains('MOTO');
 
   /// Taximetro ao vivo durante a viagem (Evandro, 08/10/2026: "a contagem do
   /// valor na corrida"): o valor e o trajeto ate agora, vindos do servidor.
@@ -488,6 +533,7 @@ class Ride {
         taximetroCents: taximetroCents,
         taximetroMetros: taximetroMetros,
         cobranca: cobranca,
+        category: category,
       );
 
   Map<String, dynamic> toJson() => {
@@ -523,6 +569,7 @@ class Ride {
         'rating': rating,
         'discountCents': discountCents,
         'agendadaPara': agendadaPara,
+        'category': category,
       };
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -581,6 +628,7 @@ class Ride {
       rating: (json['rating'] as num?)?.toInt(),
       discountCents: (json['discountCents'] as num?)?.toInt() ?? 0,
       agendadaPara: json['agendadaPara'] as String?,
+      category: json['category'] as String?,
     );
   }
 
@@ -638,6 +686,7 @@ class Ride {
       taximetroCents: ((j['taximetro'] as Map?)?['valorCents'] as num?)?.toInt(),
       taximetroMetros: ((j['taximetro'] as Map?)?['distanceMeters'] as num?)?.toInt(),
       cobranca: j['cobranca'] as String?,
+      category: j['category'] as String?,
     );
   }
 

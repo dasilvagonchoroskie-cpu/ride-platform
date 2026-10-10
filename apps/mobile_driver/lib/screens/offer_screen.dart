@@ -82,7 +82,7 @@ class OfferScreen extends StatelessWidget {
               driverRoute: driver.rotaOfertaAteEmbarque,
               route: driver.rotaOfertaViagem,
               markers: [
-                MapMarker(id: 'me', coords: driver.position, kind: MarkerKind.car),
+                MapMarker(id: 'me', coords: driver.position, kind: driver.vehicle?.moto == true ? MarkerKind.moto : MarkerKind.car),
                 MapMarker(id: 'pickup', coords: offer.pickupCoords, kind: MarkerKind.pickup),
                 MapMarker(id: 'dropoff', coords: offer.dropoffCoords, kind: MarkerKind.dropoff),
               ],
