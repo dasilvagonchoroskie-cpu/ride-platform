@@ -380,7 +380,7 @@ class _EscolhaCategoria extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 64,
+      height: 76,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: opcoes.length,
@@ -396,7 +396,7 @@ class _EscolhaCategoria extends StatelessWidget {
               onTap: () => aoEscolher(o.category),
               child: Container(
                 width: 148,
-                padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(Radii.md),
                   border: Border.all(color: sel ? AppColors.brand : AppColors.border, width: sel ? 2 : 1),
@@ -408,6 +408,7 @@ class _EscolhaCategoria extends StatelessWidget {
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(o.nome, style: SheetText.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
