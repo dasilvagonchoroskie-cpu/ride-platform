@@ -1,0 +1,79 @@
+name: Fotos dos apps
+
+# Tira foto de cada tela do passageiro e do motorista (teste com servidor de
+# mentira, fontes de verdade e as barras do Android por cima) e guarda no
+# ramo "fotos-<app>", para conferir o visual sem precisar de um celular.
+# Rodado pelo Claude quando mexe no visual (Evandro, 10/10/2026: "deixar a
+# plataforma toda ajustada, 100%").
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Qual app (all, mobile_passenger, mobile_driver)'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: write
+
+jobs:
+  fotos:
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [mobile_passenger, mobile_driver]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Pular se nao for este app
+        id: pular
+        run: |
+          if [ "${{ inputs.app }}" != "" ] && [ "${{ inputs.app }}" != "all" ] && [ "${{ inputs.app }}" != "${{ matrix.app }}" ]; then
+            echo "pular=sim" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.pular.outputs.pular != 'sim'
+
+      - uses: subosito/flutter-action@v2
+        if: steps.pular.outputs.pular != 'sim'
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+
+      - name: Tirar as fotos
+        id: fotos
+        if: steps.pular.outputs.pular != 'sim'
+        continue-on-error: true
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          set -o pipefail
+          flutter pub get
+          flutter analyze 2>&1 | tee "$RUNNER_TEMP/analise.txt" || true
+          flutter test test/fotos_test.dart --update-goldens --dart-define=FOTOS=true 2>&1 | tee "$RUNNER_TEMP/fotos.txt"
+
+      - name: Guardar as fotos no ramo fotos-${{ matrix.app }}
+        if: always() && steps.pular.outputs.pular != 'sim'
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SAIDA="$RUNNER_TEMP/saida"
+          mkdir -p "$SAIDA"
+          cp -r apps/${{ matrix.app }}/test/fotos/. "$SAIDA/" 2>/dev/null || true
+          cp -r apps/${{ matrix.app }}/test/failures "$SAIDA/falhas" 2>/dev/null || true
+          tail -c 80000 "$RUNNER_TEMP/fotos.txt" > "$SAIDA/relatorio.txt" 2>/dev/null || echo "sem relatorio" > "$SAIDA/relatorio.txt"
+          cp "$RUNNER_TEMP/analise.txt" "$SAIDA/analise.txt" 2>/dev/null || true
+          echo "${{ github.sha }}" > "$SAIDA/commit.txt"
+          cd "$SAIDA"
+          git init -q -b fotos-${{ matrix.app }}
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          git add -A
+          git commit -q -m "fotos de ${{ matrix.app }} (execucao ${{ github.run_number }})"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" fotos-${{ matrix.app }}
+
+      - name: Falhar se as fotos nao sairam
+        if: steps.pular.outputs.pular != 'sim' && steps.fotos.outcome != 'success'
+        run: exit 1
