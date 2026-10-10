@@ -505,6 +505,20 @@ X=$(get /rides/current "$TP"); [ "$(echo "$X" | jq -r '.data.ride')" = "null" ] 
 X=$(get "/driver/rides/history" "$TM")
 [ "$(echo "$X" | jq -r '.data.total' 2>/dev/null)" -ge 1 ] 2>/dev/null && ok "Motorista: historico de corridas com $(echo "$X" | jq -r '.data.total') corrida(s)" || falha "Motorista: historico de corridas" "$X"
 
+# ---- Compartilhar a corrida (Evandro, 10/10/2026): link para a familia ----
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP"); RIDC=$(echo "$X" | jq -r '.data.ride.id // empty')
+X=$(post "/rides/$RIDC/compartilhar" '{}' "$TP"); LINK=$(echo "$X" | jq -r '.data.link // empty')
+TOK=${LINK##*/}
+Y=$(curl -s -m 60 "$API/acompanhar/$TOK/dados")
+[ -n "$LINK" ] && [ "$(echo "$Y" | jq -r '.data.situacao')" = "Procurando motorista" ] && [ "$(echo "$Y" | jq -r '.data | has("telefone")')" = "false" ] && ok "Passageiro: link para acompanhar a viagem (familia ve a situacao, sem telefone)" || falha "Passageiro: compartilhar corrida" "$X $Y"
+H=$(curl -s -m 60 "$API/acompanhar/$TOK")
+echo "$H" | grep -q "leaflet" && ok "Acompanhar: pagina do mapa abre sem login" || falha "Acompanhar: pagina" "$(echo "$H" | head -c 200)"
+Y=$(curl -s -m 60 "$API/acompanhar/${TOK%?}x/dados")
+[ "$(echo "$Y" | jq -r '.success')" = "false" ] && ok "Acompanhar: link alterado nao abre" || falha "Acompanhar: link falso" "$Y"
+X=$(post "/rides/$RIDC/compartilhar" '{}' "$TM")
+[ "$(echo "$X" | jq -r '.success')" = "false" ] && ok "Acompanhar: outra conta nao gera link da corrida dos outros" || falha "Acompanhar: link de corrida alheia" "$X"
+post "/rides/$RIDC/cancel" '{"reason":"Teste do compartilhar"}' "$TP" >/dev/null
+
 # ---- Corrida manual lancada pelo proprio motorista (Evandro, 09/10/2026) ----
 X=$(post /driver/manual-rides/buscar-passageiro "{\"contato\":\"+55649${SUF}71\"}" "$TM")
 [ "$(echo "$X" | jq -r '.data.encontrado')" = "true" ] && [ "$(echo "$X" | jq -r '.data | (has("phone") or has("email"))')" = "false" ] && ok "Motorista: corrida manual acha o passageiro pelo telefone e mostra so o primeiro nome ($(echo "$X" | jq -r '.data.primeiroNome'))" || falha "Motorista: buscar passageiro da corrida manual" "$X"

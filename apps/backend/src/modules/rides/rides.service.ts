@@ -1435,6 +1435,59 @@ export class RidesService {
     };
   }
 
+  /** A corrida e deste passageiro e ainda nao terminou (para compartilhar). */
+  async corridaAbertaDoPassageiro(passengerId: string, rideId: string): Promise<void> {
+    const r = await this.prisma.ride.findUnique({ where: { id: rideId }, select: { passengerId: true, status: true } });
+    if (!r || r.passengerId !== passengerId) throw BusinessException.forbidden('Esta corrida nao e sua.');
+    const abertas: RideStatus[] = ['SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS', 'REQUESTED'];
+    if (!abertas.includes(r.status)) throw BusinessException.validation('Esta corrida ja terminou.');
+  }
+
+  /**
+   * O que a familia ve pelo link (Evandro, 10/10/2026): situacao, primeiro
+   * nome do motorista, carro e placa, embarque, destino e onde o carro esta.
+   * Sem telefone de ninguem. O link vale ate 30 min depois do fim.
+   */
+  async acompanharPublico(rideId: string) {
+    const r = await this.prisma.ride.findUnique({
+      where: { id: rideId },
+      select: {
+        status: true, category: true, driverId: true, finishedAt: true, cancelledAt: true,
+        pickupAddress: true, pickupLat: true, pickupLng: true,
+        dropoffAddress: true, dropoffLat: true, dropoffLng: true,
+        vehicle: { select: { brand: true, model: true, color: true, plate: true } },
+        driver: { select: { user: { select: { name: true } } } },
+      },
+    });
+    if (!r) throw BusinessException.notFound('Link de acompanhamento invalido.');
+    const encerrada = !['REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'].includes(r.status);
+    const fim = r.finishedAt ?? r.cancelledAt;
+    if (encerrada && fim && Date.now() - fim.getTime() > 30 * 60_000) {
+      throw BusinessException.notFound('Este acompanhamento terminou.');
+    }
+    const situacoes: Record<string, string> = {
+      REQUESTED: 'Procurando motorista',
+      SEARCHING: 'Procurando motorista',
+      DRIVER_ASSIGNED: 'Motorista a caminho do embarque',
+      DRIVER_ARRIVING: 'Motorista a caminho do embarque',
+      DRIVER_WAITING: 'Motorista no local de embarque',
+      IN_PROGRESS: 'Em viagem',
+      COMPLETED: 'Viagem concluida: chegou ao destino',
+    };
+    const posicao = !encerrada && r.driverId ? await this.posicaoDoMotorista(r.driverId) : null;
+    return {
+      situacao: situacoes[r.status] ?? 'Corrida cancelada',
+      encerrada,
+      moto: ehMoto(r.category),
+      motorista: r.driver?.user?.name?.trim().split(/\s+/)[0] ?? null,
+      carro: r.vehicle ? [r.vehicle.brand, r.vehicle.model, r.vehicle.color].filter(Boolean).join(' ') : null,
+      placa: r.vehicle?.plate ?? null,
+      embarque: { endereco: r.pickupAddress, latitude: r.pickupLat, longitude: r.pickupLng },
+      destino: { endereco: r.dropoffAddress, latitude: r.dropoffLat, longitude: r.dropoffLng },
+      posicao: posicao ? { latitude: posicao.latitude, longitude: posicao.longitude } : null,
+    };
+  }
+
   async posicaoDoMotorista(driverId: string): Promise<{ latitude: number; longitude: number; updatedAt: string } | null> {
     const linhas = await this.prisma.$queryRaw<Array<{ latitude: number; longitude: number; atualizado: Date }>>`
       SELECT ST_Y(location::geometry) AS "latitude", ST_X(location::geometry) AS "longitude", last_seen_at AS "atualizado"
