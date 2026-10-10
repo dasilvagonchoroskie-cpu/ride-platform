@@ -1251,7 +1251,10 @@ void main() {
     expect(_pedidosDeDados.any((p) => p.startsWith('POST /api/admin/dados/alteracoes/u-$_motoristaId/aprovar')), isTrue);
     expect(find.text('Nenhum pedido esperando.'), findsOneWidget);
 
-    // Editar direto: so o que mudou vai para o servidor.
+    // Editar direto: so o que mudou vai para o servidor. (Arvore nova: a
+    // tela de pedidos aberta acima nao pode ficar por cima.)
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
     await tester.pumpWidget(
       ChangeNotifierProvider<PainelState>.value(
         value: painel,
