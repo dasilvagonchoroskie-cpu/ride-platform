@@ -159,6 +159,11 @@ export class CentralService {
 
   // ================= Despacho =================
 
+  private async ehContaDeTeste(userId: string): Promise<boolean> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true } });
+    return (u?.metadata as { teste?: boolean } | null)?.teste === true;
+  }
+
   /** Telefone (com DDD) ou e-mail -> filtro de busca da conta. */
   private contatoDoPassageiro(contato: string): { phone: string } | { email: string } {
     const c = contato.trim();
@@ -211,7 +216,8 @@ export class CentralService {
           role: UserRole.PASSENGER,
           status: UserStatus.ACTIVE,
           phoneVerifiedAt: null,
-          metadata: { criadoPeloMotorista: driverId } as never,
+          // Motorista do teste automatico: o passageiro criado tambem e de teste.
+          metadata: { criadoPeloMotorista: driverId, ...(await this.ehContaDeTeste(userId) ? { teste: true } : {}) } as never,
         },
       });
     }

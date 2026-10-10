@@ -663,6 +663,12 @@ X=$(patch "/admin/dados/pessoas/$UP" '{"endereco":"Rua Mudada Pela Central, 300"
 [ "$(echo "$X" | jq -r '.data.dados.endereco')" = "Rua Mudada Pela Central, 300" ] && ok "Central: mudou o endereco do passageiro direto" || falha "Central: editar passageiro" "$X"
 X=$(patch "/admin/dados/pessoas/$UP" "{\"phone\":\"+55649${SUF}72\"}" "$TA")
 echo "$X" | jq -r '.error.message // empty' | grep -qi "outro cadastro" && ok "Central: nao deixa colocar telefone que ja e de outra pessoa" || falha "Central: telefone repetido" "$X"
+# Evandro (10/10/2026): o numero dele estava preso numa conta VAZIA (entrou no
+# app do motorista e nao terminou o cadastro). Conta vazia libera o numero.
+FONE_VAZIO="+55649${SUF}58"; TVAZIO=$(entrar "$FONE_VAZIO" DRIVER)
+X=$(post /driver/meus-dados/alteracao "{\"phone\":\"$FONE_VAZIO\"}" "$TM")
+[ "$(echo "$X" | jq -r '[.data.pendente.mudancas[] | select(.campo=="phone")] | length')" = "1" ] && ok "Motorista: telefone preso numa conta vazia (cadastro nao terminado) fica livre" || falha "Motorista: liberar telefone de conta vazia" "$X"
+post /driver/meus-dados/alteracao '{}' "$TM" >/dev/null; curl -s -m 30 -X DELETE "$API/driver/meus-dados/alteracao" -H "Authorization: Bearer $TM" >/dev/null
 
 IDS=$(for i in $DID $DIDC $DIDV $DIDW; do printf '"%s",' "$i"; done | sed 's/,$//'); NIDS=$(echo $DID $DIDC $DIDV $DIDW | wc -w)
 X=$(post /admin/drivers/excluir "{\"ids\":[$IDS]}" "$TA")

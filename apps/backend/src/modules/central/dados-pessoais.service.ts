@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { PushService } from '../../integrations/notifications/push.service';
+import { liberarTelefoneDeContaVazia } from '../auth/conta-existente';
 
 /**
  * Dados pessoais (Evandro, 10/10/2026): o passageiro muda os proprios dados
@@ -124,9 +125,16 @@ export class DadosPessoaisService {
 
   /** Telefone, e-mail, CPF e CNH nao podem estar em outro cadastro. */
   private async garantirLivres(u: { id: string; driver: { id: string } | null }, novo: Partial<Record<keyof DadosPelaCentral, string>>) {
-    const outro = { NOT: { id: u.id }, deletedAt: null };
+    // Sem filtrar excluidos: o banco nao deixa repetir nem com conta excluida.
+    const outro = { NOT: { id: u.id } };
     if (novo.phone && (await this.prisma.user.findFirst({ where: { phone: novo.phone, ...outro }, select: { id: true } }))) {
-      throw BusinessException.conflict('Este telefone ja esta em outro cadastro.');
+      // Evandro (10/10/2026): o numero dele estava preso numa conta VAZIA
+      // (entrou no app do motorista em 26/09 e nao terminou o cadastro; nao
+      // aparece na Central). Conta vazia (sem corrida, sem pagamento, sem
+      // e-mail, sem cadastro de motorista) e apagada e o numero fica livre.
+      if (!(await liberarTelefoneDeContaVazia(this.prisma, novo.phone, u.id))) {
+        throw BusinessException.conflict('Este telefone ja esta em outro cadastro.');
+      }
     }
     if (novo.email && (await this.prisma.user.findFirst({ where: { email: novo.email, ...outro }, select: { id: true } }))) {
       throw BusinessException.conflict('Este e-mail ja esta em outro cadastro.');

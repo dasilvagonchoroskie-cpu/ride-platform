@@ -34,6 +34,8 @@ export class LimpezaService {
     'Motorista Pela Central',
     'Passageiro Vira Motorista',
     'Passageira Email Teste',
+    // Corrida manual do motorista no teste (passageiro sem conta).
+    'Passageiro Rua Teste',
   ];
 
   private ondeTeste(): Prisma.UserWhereInput {
