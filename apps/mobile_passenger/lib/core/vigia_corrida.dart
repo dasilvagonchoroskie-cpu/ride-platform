@@ -32,6 +32,15 @@ class VigiaCorrida {
     }
   }
 
+  /// Motorista chegou com o aplicativo aberto: assobio como alarme + vibra.
+  /// Mesma chave do vigia: toca uma vez so por corrida.
+  static Future<void> assobio(String rideId) async {
+    if (!Platform.isAndroid || rideId.isEmpty) return;
+    try {
+      await _canal.invokeMethod<dynamic>('assobio', {'chave': '$rideId:chegou'});
+    } catch (_) {}
+  }
+
   static Future<void> parar() async {
     if (!Platform.isAndroid) return;
     try {

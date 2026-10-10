@@ -336,7 +336,7 @@ public class CorridaService extends Service {
             try {
                 NotificationManagerCompat.from(this).notify(id, n);
             } catch (SecurityException ignored) { }
-            if (tocarMais) tocarPorUnsSegundos();
+            if (tocarMais) Assobio.tocar(this, rideId + ":chegou");
         });
     }
 

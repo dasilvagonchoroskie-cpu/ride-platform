@@ -38,6 +38,8 @@ class MainActivity : FlutterActivity() {
                             ContextCompat.startForegroundService(this, i)
                             result.success(true)
                         }
+                        // App aberto: o motorista chegou (o vigia usa a mesma chave; toca uma vez so).
+                        "assobio" -> result.success(Assobio.tocar(this, call.argument<String>("chave")))
                         // Endereco de push (Firebase) deste celular; null sem Firebase.
                         "tokenPush" -> Push.token(this) { t -> result.success(t) }
                         "parar" -> {

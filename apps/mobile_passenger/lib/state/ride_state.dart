@@ -474,6 +474,12 @@ class RideState extends ChangeNotifier {
         unawaited(HapticFeedback.heavyImpact());
         avisar('Nova mensagem do motorista. Toque em "chat" para ler.');
       }
+      // Evandro (10/10/2026): o motorista chegou e o app do passageiro nao
+      // alarmava. Agora, aberto ou minimizado, toca o assobio como alarme.
+      if (nova.status == RideStatus.driverWaiting && atual.status != RideStatus.driverWaiting) {
+        unawaited(HapticFeedback.heavyImpact());
+        unawaited(VigiaCorrida.assobio(nova.id));
+      }
       activeRide = nova;
       unawaited(_atualizarRotas(nova));
       if (nova.status == RideStatus.completed) _pararDeAcompanhar();
