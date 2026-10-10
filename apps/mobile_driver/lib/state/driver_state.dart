@@ -1342,12 +1342,12 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Busca (ou refaz) as rotas da corrida em andamento. Refaz quando o
-  /// motorista sai do caminho, no maximo a cada 30 s.
-  Future<void> _buscarRotas({bool forcar = false}) async {
+  /// motorista sai do caminho (no maximo a cada [intervalo] segundos).
+  Future<void> _buscarRotas({bool forcar = false, int intervalo = 30}) async {
     final ride = activeRide;
     if (ride == null || _buscandoRota) return;
     final agora = DateTime.now();
-    if (!forcar && agora.difference(_rotaPedidaEm).inSeconds < 30) return;
+    if (!forcar && agora.difference(_rotaPedidaEm).inSeconds < intervalo) return;
     _buscandoRota = true;
     _rotaPedidaEm = agora;
     try {
@@ -1389,8 +1389,27 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       _ => const <Coords>[],
     };
     if (ride.phase != RidePhase.toPickup && ride.phase != RidePhase.inProgress) return;
-    if (rota.length <= 2 || trechoMaisPerto(p, rota).$2 > 120) unawaited(_buscarRotas());
+    if (rota.length <= 2) {
+      unawaited(_buscarRotas());
+      return;
+    }
+    // Evandro (10/10/2026): o motorista foi por outra rua (conhece um caminho
+    // melhor) e a rota continuava presa no caminho antigo. Antes so refazia
+    // a mais de 120 m da linha; em cidade pequena a rua do lado fica a ~100 m.
+    // Agora: fora da linha por mais de 40 m (+ a margem do GPS), em duas
+    // leituras seguidas, refaz a rota a partir de onde o carro esta.
+    final limite = 40 + precisao.clamp(0, 40).toDouble();
+    if (trechoMaisPerto(p, rota).$2 > limite) {
+      _leiturasForaDaRota++;
+      if (_leiturasForaDaRota >= 2) unawaited(_buscarRotas(intervalo: 8));
+    } else {
+      _leiturasForaDaRota = 0;
+    }
   }
+
+  /// Leituras seguidas do GPS longe da rota desenhada (uma so pode ser o
+  /// GPS pulando).
+  int _leiturasForaDaRota = 0;
 
   // ------------------------------------------------------------------
   // Taximetro
