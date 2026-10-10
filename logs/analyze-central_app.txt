@@ -1,2 +1,5 @@
 Analyzing central_app...                                        
-No issues found! (ran in 10.7s)
+
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check. Guard a 'State.context' use with a 'mounted' check on the State, and other BuildContext use with a 'mounted' check on the BuildContext • lib/painel/passageiros.dart:325:55 • use_build_context_synchronously
+
+1 issue found. (ran in 8.1s)
