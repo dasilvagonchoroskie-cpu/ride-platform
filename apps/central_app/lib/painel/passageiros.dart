@@ -322,7 +322,7 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
                 label: const Text('Editar dados'),
                 onPressed: () async {
                   final salvou = await editarDadosDaPessoa(context, widget.api, widget.p.id, nome: widget.p.nome);
-                  if (salvou && mounted) Navigator.of(context).pop();
+                  if (salvou && context.mounted) Navigator.of(context).pop();
                 },
               ),
             ),

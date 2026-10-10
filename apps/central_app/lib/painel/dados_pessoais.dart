@@ -224,7 +224,9 @@ class PedidosDeAlteracaoScreen extends StatefulWidget {
 class _PedidosDeAlteracaoScreenState extends State<PedidosDeAlteracaoScreen> {
   late Future<List<PedidoDeAlteracao>> _pedidos = widget.api.alteracoesPendentes();
 
-  void _recarregar() => setState(() => _pedidos = widget.api.alteracoesPendentes());
+  void _recarregar() => setState(() {
+        _pedidos = widget.api.alteracoesPendentes();
+      });
 
   Future<void> _aprovar(PedidoDeAlteracao p) async {
     final ok = await tentar(context, () => widget.api.aprovarAlteracao(p.userId), sucesso: 'Dados de ${p.nome} atualizados.');
