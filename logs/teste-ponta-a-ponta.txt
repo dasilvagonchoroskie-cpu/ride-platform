@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 53a2ab3 (Central: editar dados de passageiro e motorista e aprovar/recusar os pedidos de )
-No ar agora: 53a2ab3
+Ultima mudanca do servidor no GitHub: e986b22 (Telefone preso em conta vazia (cadastro nao terminado) fica livre ao mudar os da)
+No ar agora: e986b22
 OK: servidor em dia.
-Teste de ponta a ponta - 10/10/2026 07:26 UTC
+Teste de ponta a ponta - 10/10/2026 08:03 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -18,7 +18,7 @@ OK     Operador: carteiras / recargas da cidade
 OK     Operador: nao muda tarifas, cupons e comissao (so o dono)
 OK     Operador: nao acessa a limpeza de dados
 OK     Operador: relatorio da frota sai so com a cidade dele
-OK     Central: limpeza de dados (0 contas de teste, 13 corridas)
+OK     Central: limpeza de dados (2 contas de teste, 14 corridas)
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
 OK     App: entrada por codigo no e-mail disponivel (telefone: true)
@@ -45,7 +45,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST7005)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST4166)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -112,14 +112,14 @@ OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE07261122 criado (R$ 3,00)
+OK     Central: cupom TESTE08034346 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 890 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (912 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 871 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (894 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 9873 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 3860 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -137,9 +137,9 @@ OK     Passageiro: ve o taximetro correndo (2000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 2000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (1700 centavos)
-OK     Bandeira certa pela hora de Brasilia (4h, noturna: 2000 centavos)
+OK     Bandeira certa pela hora de Brasilia (5h, noturna: 2000 centavos)
 OK     Central: resumo de hoje com 2 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1840 centavos, online 25s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1840 centavos, online 23s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -229,11 +229,12 @@ OK     Central: aprovou e os dados do motorista mudaram
 OK     Central: recusou e o motorista ve o motivo (nada mudou)
 OK     Central: mudou o endereco do passageiro direto
 OK     Central: nao deixa colocar telefone que ja e de outra pessoa
+OK     Motorista: telefone preso numa conta vazia (cadastro nao terminado) fica livre
 OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSAGEIRO, APAGADO)
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
 OK     Central: apagou a conta do operador de teste
-OK     Limpeza: apagou as 6 contas deste teste e 7 corridas delas
+OK     Limpeza: apagou as 9 contas deste teste e 10 corridas delas
 
 Resultado: 0 falha(s).
