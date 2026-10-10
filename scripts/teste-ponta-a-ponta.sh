@@ -632,6 +632,38 @@ X=$(get "/admin/dispatch/drivers?lat=-18.0125&lng=-49.3547" "$TA")
 post "/rides/$RID/cancel" '{"reason":"Teste automatico"}' "$TP" >/dev/null
 # Limpeza pela opcao "Excluir" da Central (Evandro, 08/10/2026): os
 # motoristas de teste nao ficam mais acumulando na lista.
+# ---- Dados pessoais (Evandro, 10/10/2026): passageiro muda os dele; motorista
+# pede e a Central aprova; a Central muda de qualquer um ----
+X=$(patch /auth/perfil '{"endereco":"Rua Teste do Passageiro, 100 - Centro"}' "$TP")
+[ "$(echo "$X" | jq -r '.data.endereco')" = "Rua Teste do Passageiro, 100 - Centro" ] && ok "Passageiro: mudou o endereco em Meus dados" || falha "Passageiro: endereco" "$X"
+FONE_P2="+55649${SUF}59"
+X=$(patch /auth/perfil "{\"phone\":\"$FONE_P2\"}" "$TP")
+echo "$X" | jq -r '.error.message // empty' | grep -qi "codigo" && ok "Passageiro: trocar telefone sem o codigo do e-mail nao passa" || falha "Passageiro: telefone sem codigo" "$X"
+P=$(pedir_codigo "{\"phone\":\"+55649${SUF}71\",\"purpose\":\"PHONE_VERIFICATION\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+X=$(patch /auth/perfil "{\"phone\":\"$FONE_P2\",\"codigo\":\"${C:-000000}\"}" "$TP")
+[ "$(echo "$X" | jq -r '.data.phone')" = "$FONE_P2" ] && ok "Passageiro: trocou o proprio telefone com o codigo do e-mail" || falha "Passageiro: trocar telefone" "$X $P"
+X=$(patch /auth/perfil '{"name":"Nome Trocado Por Fora"}' "$TM")
+echo "$X" | jq -r '.error.message // empty' | grep -qi "motorista" && ok "Motorista: nao muda o nome pelo caminho do passageiro (vai para a Central aprovar)" || falha "Motorista: mudar nome sem aprovacao" "$X"
+X=$(get /driver/meus-dados "$TM")
+[ "$(echo "$X" | jq -r '.data.dados.cnhNumber' | wc -c)" -gt 5 ] && ok "Motorista: Meus dados mostra o cadastro (CNH, telefone, e-mail)" || falha "Motorista: ver meus dados" "$X"
+X=$(post /driver/meus-dados/alteracao '{"endereco":"Rua do Motorista Teste, 200 - Centro","pixKey":"pix.teste@fortalezamov.com.br"}' "$TM")
+[ "$(echo "$X" | jq -r '.data.pendente.mudancas | length')" = "2" ] && [ "$(echo "$X" | jq -r '.data.dados.endereco')" != "Rua do Motorista Teste, 200 - Centro" ] && ok "Motorista: pediu para mudar endereco e PIX (ainda nao vale)" || falha "Motorista: pedir alteracao" "$X"
+UM=$(get /auth/me "$TM" | jq -r '.data.id')
+X=$(get /admin/dados/alteracoes "$TA")
+[ "$(echo "$X" | jq -r "[.data[] | select(.userId==\"$UM\")] | length")" = "1" ] && ok "Central: ve o pedido de mudanca do motorista" || falha "Central: lista de pedidos" "$X"
+X=$(post "/admin/dados/alteracoes/$UM/aprovar" '{}' "$TA")
+Y=$(get /driver/meus-dados "$TM")
+[ "$(echo "$Y" | jq -r '.data.dados.endereco')" = "Rua do Motorista Teste, 200 - Centro" ] && [ "$(echo "$Y" | jq -r '.data.pendente')" = "null" ] && ok "Central: aprovou e os dados do motorista mudaram" || falha "Central: aprovar alteracao" "$X $Y"
+post /driver/meus-dados/alteracao '{"pixKey":"outra.chave@fortalezamov.com.br"}' "$TM" >/dev/null
+X=$(post "/admin/dados/alteracoes/$UM/recusar" '{"motivo":"Chave PIX nao confere (teste)"}' "$TA")
+Y=$(get /driver/meus-dados "$TM")
+[ "$(echo "$Y" | jq -r '.data.ultimaRecusa.motivo')" = "Chave PIX nao confere (teste)" ] && [ "$(echo "$Y" | jq -r '.data.dados.pixKey')" = "pix.teste@fortalezamov.com.br" ] && ok "Central: recusou e o motorista ve o motivo (nada mudou)" || falha "Central: recusar alteracao" "$X $Y"
+UP=$(get /auth/me "$TP" | jq -r '.data.id')
+X=$(patch "/admin/dados/pessoas/$UP" '{"endereco":"Rua Mudada Pela Central, 300"}' "$TA")
+[ "$(echo "$X" | jq -r '.data.dados.endereco')" = "Rua Mudada Pela Central, 300" ] && ok "Central: mudou o endereco do passageiro direto" || falha "Central: editar passageiro" "$X"
+X=$(patch "/admin/dados/pessoas/$UP" "{\"phone\":\"+55649${SUF}72\"}" "$TA")
+echo "$X" | jq -r '.error.message // empty' | grep -qi "outro cadastro" && ok "Central: nao deixa colocar telefone que ja e de outra pessoa" || falha "Central: telefone repetido" "$X"
+
 IDS=$(for i in $DID $DIDC $DIDV $DIDW; do printf '"%s",' "$i"; done | sed 's/,$//'); NIDS=$(echo $DID $DIDC $DIDV $DIDW | wc -w)
 X=$(post /admin/drivers/excluir "{\"ids\":[$IDS]}" "$TA")
 [ "$(echo "$X" | jq -r '.data.excluidos')" = "$NIDS" ] && ok "Central: excluiu $NIDS motoristas de teste ($(echo "$X" | jq -r '[.data.itens[].resultado] | join(", ")'))" || falha "Central: excluir motoristas" "$X"

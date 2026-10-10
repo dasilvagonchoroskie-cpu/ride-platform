@@ -98,6 +98,12 @@ export class PushService implements OnApplicationBootstrap {
     })().catch((e) => this.logger.warn(`Push falhou: ${(e as Error).message}`));
   }
 
+  /** Aviso simples (titulo + texto) para uma pessoa: ex. "dados atualizados". */
+  aviso(userId: string, titulo: string, texto: string): void {
+    if (!this.ligado) return;
+    this.paraUsuario(userId, { tipo: 'aviso', titulo, texto }, 3600);
+  }
+
   /** Chamado novo para o motorista: acorda o celular. */
   async chamadoParaMotorista(driverId: string): Promise<void> {
     if (!this.ligado) return;

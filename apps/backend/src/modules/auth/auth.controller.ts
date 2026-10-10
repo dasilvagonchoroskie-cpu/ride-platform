@@ -58,6 +58,10 @@ const perfilSchema = z
     city: cidadeSchema.optional(),
     cpf: cpfSchema.optional(),
     phone: phoneSchema.optional(),
+    // Trocar o telefone: codigo enviado ao e-mail da conta (pedido pelo
+    // telefone ATUAL em /auth/otp/request, finalidade PHONE_VERIFICATION).
+    codigo: z.string().trim().regex(/^\d{6}$/, 'O codigo tem 6 numeros.').optional(),
+    endereco: z.string().trim().min(5, 'Endereco muito curto.').max(200).optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nada para atualizar.' });
 
@@ -200,7 +204,7 @@ export class AuthController {
   perfil(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(perfilSchema))
-    body: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string },
+    body: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string; codigo?: string; endereco?: string },
   ) {
     return this.auth.atualizarPerfil(user.id, body);
   }

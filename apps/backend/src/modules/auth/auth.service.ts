@@ -16,6 +16,8 @@ export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
 interface MetaUsuario {
   genero?: Genero;
   cidade?: string;
+  /** Endereco da pessoa (rua, numero, bairro), mudado em Meus dados. */
+  endereco?: string;
   cadastroCompleto?: boolean;
   cadastroConcluidoEm?: string;
   /** Conta do teste automatico (corridas so entre contas de teste). */
@@ -67,6 +69,7 @@ export interface AuthResult extends IssuedTokens {
     cpf: string | null;
     genero: Genero | null;
     cidade: string | null;
+    endereco: string | null;
     /** Se ja existe senha (para entrar pelo e-mail). Nunca devolve a senha. */
     temSenha: boolean;
     /** Entrou pelo e-mail e ainda nao informou o telefone. */
@@ -405,6 +408,7 @@ export class AuthService {
       cpf: user.cpf ?? null,
       genero: metaDe(user).genero ?? null,
       cidade: metaDe(user).cidade ?? null,
+      endereco: metaDe(user).endereco ?? null,
       temSenha: !!user.passwordHash,
       telefonePendente: telefonePendente(user.phone),
     };
@@ -484,11 +488,26 @@ export class AuthService {
   /** Meus dados: nome, e-mail, genero e cidade. O CPF so entra se ainda estiver vazio. */
   async atualizarPerfil(
     userId: string,
-    input: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string },
+    input: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string; codigo?: string; endereco?: string },
   ): Promise<AuthResult['user']> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { driver: { select: { id: true } } } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
-    const novoTelefone = input.phone ? await this.validarTelefoneNovo(userId, user.phone, input.phone) : null;
+    // Evandro (10/10/2026): dado do MOTORISTA so muda com a Central aprovando
+    // (app do motorista -> Meus dados). Quem tambem e motorista nao troca
+    // nome, telefone, e-mail ou endereco por aqui.
+    if (user.driver) {
+      const mudaria =
+        (input.name && input.name.replace(/\s+/g, ' ').trim() !== user.name) ||
+        (input.email && input.email !== user.email) ||
+        (input.phone && input.phone !== user.phone && !telefonePendente(user.phone)) ||
+        (input.endereco !== undefined && input.endereco !== metaDe(user).endereco);
+      if (mudaria) {
+        throw BusinessException.validation(
+          'Voce tambem e motorista: mude nome, telefone, e-mail e endereco pelo app do motorista (Meus dados). A Central aprova.',
+        );
+      }
+    }
+    const novoTelefone = input.phone ? await this.validarTelefoneNovo(userId, user.phone, input.phone, input.codigo) : null;
 
     if (input.cpf && user.cpf && input.cpf !== user.cpf) {
       throw BusinessException.validation('O CPF nao pode ser trocado depois do cadastro. Fale com a Central.');
@@ -505,12 +524,13 @@ export class AuthService {
           ...(input.email && input.email !== user.email ? { email: input.email, emailVerifiedAt: null } : {}),
           ...(input.cpf && !user.cpf ? { cpf: input.cpf } : {}),
           ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null } : {}),
-          ...(input.gender || cidade
+          ...(input.gender || cidade || input.endereco
             ? {
                 metadata: {
                   ...meta,
                   ...(input.gender ? { genero: input.gender } : {}),
                   ...(cidade ? { cidade } : {}),
+                  ...(input.endereco ? { endereco: input.endereco } : {}),
                 } as never,
               }
             : {}),
@@ -582,12 +602,21 @@ export class AuthService {
    * Telefone de quem entrou pelo e-mail. Obrigatorio enquanto a conta nao
    * tem telefone; depois disso so muda pela Central.
    */
-  private async validarTelefoneNovo(userId: string, atual: string, novo?: string): Promise<string | null> {
+  private async validarTelefoneNovo(userId: string, atual: string, novo?: string, codigo?: string): Promise<string | null> {
     if (!telefonePendente(atual)) {
-      if (novo && novo !== atual) {
-        throw BusinessException.validation('O telefone nao pode ser trocado por aqui. Fale com a Central.');
+      if (!novo || novo === atual) return null;
+      // Evandro (10/10/2026): o passageiro troca o proprio telefone. Prova
+      // que e ele: o codigo que chegou no e-mail da conta (pedido pelo
+      // telefone atual, finalidade PHONE_VERIFICATION).
+      if (!codigo) {
+        throw BusinessException.validation('Para trocar o telefone, peca o codigo e digite o que chegou no seu e-mail.');
       }
-      return null;
+      const dono = await this.prisma.user.findFirst({ where: { phone: novo, NOT: { id: userId } }, select: { id: true } });
+      if (dono && !(await liberarTelefoneDeContaVazia(this.prisma, novo, userId))) {
+        throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
+      }
+      await this.otp.verify({ phone: atual, purpose: OtpPurpose.PHONE_VERIFICATION, code: codigo });
+      return novo;
     }
     if (!novo) throw BusinessException.validation('Informe o seu telefone com DDD.');
     const dono = await this.prisma.user.findFirst({ where: { phone: novo, NOT: { id: userId } }, select: { id: true } });
