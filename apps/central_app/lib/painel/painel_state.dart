@@ -49,6 +49,16 @@ class PainelState extends ChangeNotifier {
   bool _fotoVistaLida = false;
   static const String _chaveFotoVista = 'central.documentoVisto';
 
+  /// Pedido de mudanca de dados ou saque que a Central ainda nao viu
+  /// (Evandro, 10/10/2026: "sempre quando tiver aprovacoes, a central tem
+  /// que alarmar"). Chave = central.alteracaoVista / central.saqueVisto.
+  AprovacaoResumo? alteracaoNova;
+  AprovacaoResumo? saqueNovo;
+  final Map<String, String?> _vistos = {};
+  bool _vistosLidos = false;
+  static const String chaveAlteracaoVista = 'central.alteracaoVista';
+  static const String chaveSaqueVisto = 'central.saqueVisto';
+
   Coords get centro {
     if (PosicaoDoAparelho.atual != null) return PosicaoDoAparelho.atual!;
     if (motoristas.any((m) => m.posicao != null)) return motoristas.firstWhere((m) => m.posicao != null).posicao!;
@@ -150,6 +160,7 @@ class PainelState extends ChangeNotifier {
       }
       await _conferirPendente();
       await _conferirDocumentoNovo();
+      await _conferirAprovacoesNovas();
       _falhasSeguidas = 0;
     } on ApiException catch (e) {
       _falhou(e.code == 'NETWORK_ERROR'
@@ -213,6 +224,56 @@ class PainelState extends ChangeNotifier {
               : '${ultimo.nome} tem ${nomeDoDocumento(ultimo.tipo)} esperando a Central. Toque para conferir.',
       id: ultimo.id,
     );
+  }
+
+  Future<void> _conferirAprovacoesNovas() async {
+    if (!_vistosLidos) {
+      for (final k in [chaveAlteracaoVista, chaveSaqueVisto]) {
+        try {
+          _vistos[k] = await AppStorage.read(k);
+        } catch (_) {}
+      }
+      _vistosLidos = true;
+    }
+    final a = indicadores.ultimaAlteracao;
+    if (a == null || a.id.isEmpty) {
+      alteracaoNova = null;
+    } else if (a.id != _vistos[chaveAlteracaoVista] && a.id != alteracaoNova?.id) {
+      alteracaoNova = a;
+      final outros = indicadores.alteracoes - 1;
+      await Alarme.aviso(
+        'Mudança de dados para aprovar',
+        '${a.nome} pediu para mudar os dados${outros > 0 ? ' (e mais $outros)' : ''}. Toque para conferir.',
+        id: a.id,
+      );
+    }
+    final q = indicadores.ultimoSaque;
+    if (q == null || q.id.isEmpty) {
+      saqueNovo = null;
+    } else if (q.id != _vistos[chaveSaqueVisto] && q.id != saqueNovo?.id) {
+      saqueNovo = q;
+      await Alarme.aviso(
+        'Saque pedido',
+        '${q.nome} pediu um saque${q.valorCents == null ? '' : ' de R\$ ${(q.valorCents! / 100).toStringAsFixed(2).replaceAll('.', ',')}'}. Toque para conferir.',
+        id: q.id,
+      );
+    }
+  }
+
+  /// A pessoa viu o aviso (mudanca de dados ou saque).
+  Future<void> marcarAprovacaoVista(String chave) async {
+    final item = chave == chaveAlteracaoVista ? alteracaoNova : saqueNovo;
+    if (item == null) return;
+    _vistos[chave] = item.id;
+    if (chave == chaveAlteracaoVista) {
+      alteracaoNova = null;
+    } else {
+      saqueNovo = null;
+    }
+    try {
+      await AppStorage.write(chave, item.id);
+    } catch (_) {}
+    notifyListeners();
   }
 
   /// A pessoa viu o aviso da foto nova.

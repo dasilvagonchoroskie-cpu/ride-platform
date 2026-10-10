@@ -28,6 +28,10 @@ class Indicadores {
     this.ultimoPendente,
     this.paraConferir = 0,
     this.ultimoParaConferir,
+    this.alteracoes = 0,
+    this.ultimaAlteracao,
+    this.saques = 0,
+    this.ultimoSaque,
   });
 
   final int ativas;
@@ -57,6 +61,17 @@ class Indicadores {
   final int paraConferir;
   final DocumentoParaConferir? ultimoParaConferir;
 
+  /// Motoristas que pediram para mudar os dados (Evandro, 10/10/2026).
+  final int alteracoes;
+  final AprovacaoResumo? ultimaAlteracao;
+
+  /// Saques pedidos esperando a Central.
+  final int saques;
+  final AprovacaoResumo? ultimoSaque;
+
+  /// Tudo o que espera a Central aprovar.
+  int get aprovacoes => pendentes + paraConferir + alteracoes + saques;
+
   factory Indicadores.fromJson(Map<String, dynamic> j) => Indicadores(
         ativas: _int(j['activeRides']),
         concluidasHoje: _int(j['completedToday']),
@@ -77,6 +92,27 @@ class Indicadores {
         ultimoParaConferir: j['latestDocumentToReview'] is Map<String, dynamic>
             ? DocumentoParaConferir.fromJson(j['latestDocumentToReview'] as Map<String, dynamic>)
             : null,
+        alteracoes: _int(j['dataChangesPending']),
+        ultimaAlteracao: j['latestDataChange'] is Map<String, dynamic>
+            ? AprovacaoResumo.fromJson(j['latestDataChange'] as Map<String, dynamic>)
+            : null,
+        saques: _int(j['payoutsPending']),
+        ultimoSaque: j['latestPayout'] is Map<String, dynamic> ? AprovacaoResumo.fromJson(j['latestPayout'] as Map<String, dynamic>) : null,
+      );
+}
+
+/// O pedido mais novo de um tipo (mudanca de dados, saque) para avisar.
+class AprovacaoResumo {
+  const AprovacaoResumo({required this.id, required this.nome, this.valorCents});
+
+  final String id;
+  final String nome;
+  final int? valorCents;
+
+  factory AprovacaoResumo.fromJson(Map<String, dynamic> j) => AprovacaoResumo(
+        id: '${j['id'] ?? ''}',
+        nome: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : 'Motorista',
+        valorCents: (j['amountCents'] as num?)?.toInt(),
       );
 }
 

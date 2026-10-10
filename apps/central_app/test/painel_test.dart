@@ -186,6 +186,10 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       'latestPendingDriver': _comPendente
           ? {'id': _motoristaId, 'name': 'Evandro Da Silva gonchoroski', 'phone': '+5564992686632', 'createdAt': '2026-10-08T15:05:14.317Z'}
           : null,
+      'dataChangesPending': _comPedidoDeDados ? 1 : 0,
+      'latestDataChange': _comPedidoDeDados
+          ? {'id': 'u-$_motoristaId|2026-10-10T07:00:00.000Z', 'userId': 'u-$_motoristaId', 'driverId': _motoristaId, 'name': 'Carlos Motorista', 'createdAt': '2026-10-10T07:00:00.000Z'}
+          : null,
       'documentsToReview': _comFotoNova ? 1 : 0,
       'latestDocumentToReview': _comFotoNova
           ? {'id': 'doc-foto-2', 'type': 'PROFILE_PHOTO', 'driverId': _motoristaId, 'name': 'Joao Batista da Silva', 'createdAt': '2026-10-09T05:00:00.000Z'}
@@ -1286,5 +1290,52 @@ void main() {
     expect(patch, isNot(contains('"name"')));
     expect(find.text('abrir'), findsOneWidget, reason: 'salvou e voltou');
     await tester.pumpWidget(const SizedBox());
+  });
+
+  // Evandro (10/10/2026): "sempre quando tiver aprovacoes, a central tem que
+  // alarmar" — o motorista pediu mudanca de dados e a Central nao soube.
+  testWidgets('Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos', (tester) async {
+    _comSos = false;
+    _comPendente = false;
+    _comFotoNova = false;
+    _comPedidoDeDados = true;
+    addTearDown(() => _comPedidoDeDados = false);
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<CentralState>(
+            create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+          ),
+          ChangeNotifierProvider<PainelState>.value(value: painel),
+        ],
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const ShellScreen(),
+        ),
+      ),
+    );
+    await _carregar(tester);
+
+    expect(find.text('Mudança de dados para aprovar'), findsOneWidget);
+    expect(find.textContaining('Carlos Motorista pediu para mudar os dados'), findsOneWidget);
+    expect(find.textContaining('1 mudança(s) de dados'), findsOneWidget, reason: 'faixa fixa no topo');
+    expect(painel.indicadores.alteracoes, 1);
+
+    await tester.tap(find.text('Conferir'));
+    await _carregar(tester);
+    expect(find.text('Mudanças de dados para aprovar'), findsOneWidget);
+    expect(painel.alteracaoNova, isNull);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('central.alteracaoVista'), 'u-$_motoristaId|2026-10-10T07:00:00.000Z');
+    await tester.pumpWidget(const SizedBox());
+    painel.parar();
   });
 }

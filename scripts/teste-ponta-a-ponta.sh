@@ -649,6 +649,8 @@ X=$(get /driver/meus-dados "$TM")
 X=$(post /driver/meus-dados/alteracao '{"endereco":"Rua do Motorista Teste, 200 - Centro","pixKey":"pix.teste@fortalezamov.com.br"}' "$TM")
 [ "$(echo "$X" | jq -r '.data.pendente.mudancas | length')" = "2" ] && [ "$(echo "$X" | jq -r '.data.dados.endereco')" != "Rua do Motorista Teste, 200 - Centro" ] && ok "Motorista: pediu para mudar endereco e PIX (ainda nao vale)" || falha "Motorista: pedir alteracao" "$X"
 UM=$(get /auth/me "$TM" | jq -r '.data.id')
+X=$(get /admin/overview "$TA")
+[ "$(echo "$X" | jq -r '.data.dataChangesPending')" -ge 1 ] 2>/dev/null && [ -n "$(echo "$X" | jq -r '.data.latestDataChange.name // empty')" ] && ok "Central: o painel avisa que tem mudanca de dados para aprovar ($(echo "$X" | jq -r '.data.latestDataChange.name'))" || falha "Central: aviso de mudanca de dados no painel" "$X"
 X=$(get /admin/dados/alteracoes "$TA")
 [ "$(echo "$X" | jq -r "[.data[] | select(.userId==\"$UM\")] | length")" = "1" ] && ok "Central: ve o pedido de mudanca do motorista" || falha "Central: lista de pedidos" "$X"
 X=$(post "/admin/dados/alteracoes/$UM/aprovar" '{}' "$TA")

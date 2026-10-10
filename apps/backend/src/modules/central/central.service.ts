@@ -10,6 +10,7 @@ import { PracasService } from '../pracas/pracas.service';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { avisarOfertaNova } from '../rides/ofertas-ao-vivo';
 import { PushService } from '../../integrations/notifications/push.service';
+import { DadosPessoaisService } from './dados-pessoais.service';
 
 /** Conta criada pelo teste automatico (marcada no login com a chave de teste). */
 export const eraTeste = (metadata: unknown): boolean =>
@@ -52,6 +53,7 @@ export class CentralService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rides: RidesService,
+    private readonly dadosPessoais: DadosPessoaisService,
     private readonly pracas: PracasService,
     private readonly vehicles: VehiclesService,
     private readonly push: PushService,
@@ -103,6 +105,20 @@ export class CentralService {
       this.vehicles.paraConferir(ids),
     ]);
     const paraConferir = docsParaConferir + carrosParaConferir.length;
+    // Evandro (10/10/2026): toda aprovacao tem que avisar a Central. Pedidos
+    // de mudanca de dados dos motoristas e saques pedidos.
+    const doMotorista = ids ? { driverId: { in: ids } } : {};
+    const [alteracoesTodas, saquesPedidos, ultimoSaque] = await Promise.all([
+      this.dadosPessoais.pendentes(),
+      this.prisma.payout.count({ where: { status: PayoutStatus.REQUESTED, ...doMotorista } }),
+      this.prisma.payout.findFirst({
+        where: { status: PayoutStatus.REQUESTED, ...doMotorista },
+        orderBy: { requestedAt: 'desc' },
+        select: { id: true, amountCents: true, requestedAt: true, driver: { select: { user: { select: { name: true } } } } },
+      }),
+    ]);
+    const alteracoes = ids ? alteracoesTodas.filter((a) => a.driverId && ids.includes(a.driverId)) : alteracoesTodas;
+    const ultimaAlteracao = alteracoes[alteracoes.length - 1];
     // Ganho da Central hoje (Evandro, 09/10/2026: "ali tinha que aparecer o
     // faturamento da central, a comissao"): comissao das corridas + as
     // mensalidades cobradas hoje. O total das corridas (dos motoristas)
@@ -134,6 +150,25 @@ export class CentralService {
             name: ultimoPendente.user?.name ?? null,
             phone: ultimoPendente.user?.phone ?? null,
             createdAt: ultimoPendente.createdAt,
+          }
+        : null,
+      dataChangesPending: alteracoes.length,
+      latestDataChange: ultimaAlteracao
+        ? {
+            id: `${ultimaAlteracao.userId}|${String(ultimaAlteracao.pedidaEm ?? '')}`,
+            userId: ultimaAlteracao.userId,
+            driverId: ultimaAlteracao.driverId,
+            name: ultimaAlteracao.nome,
+            createdAt: ultimaAlteracao.pedidaEm,
+          }
+        : null,
+      payoutsPending: saquesPedidos,
+      latestPayout: ultimoSaque
+        ? {
+            id: ultimoSaque.id,
+            name: ultimoSaque.driver.user?.name ?? null,
+            amountCents: ultimoSaque.amountCents,
+            createdAt: ultimoSaque.requestedAt,
           }
         : null,
       documentsToReview: paraConferir,

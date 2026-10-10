@@ -11,6 +11,7 @@ import '../painel/cidades_equipe.dart';
 import '../painel/limpeza.dart';
 import '../painel/comuns.dart';
 import '../painel/cupons.dart';
+import '../painel/dados_pessoais.dart';
 import '../painel/despacho.dart';
 import '../painel/financeiro.dart';
 import '../painel/motoristas.dart';
@@ -73,6 +74,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _painel.addListener(_sosNovo);
     _painel.addListener(_motoristaNovo);
     _painel.addListener(_fotoNova);
+    _painel.addListener(_aprovacaoNova);
     _painel.iniciar();
     // Alarme do SOS e cadastro novo tambem com a Central minimizada.
     WidgetsBinding.instance.addObserver(this);
@@ -90,6 +92,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _painel.removeListener(_sosNovo);
     _painel.removeListener(_motoristaNovo);
     _painel.removeListener(_fotoNova);
+    _painel.removeListener(_aprovacaoNova);
     _painel.parar();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -193,6 +196,107 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _irPara('motoristas');
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DetalheMotorista(id: doc.motoristaId)));
     if (outros > 0 && mounted) avisar(context, 'Há mais $outros documento(s) para conferir em Motoristas → Ativos.');
+  }
+
+  /// Mudanca de dados de motorista ou saque pedido (Evandro, 10/10/2026:
+  /// "sempre quando tiver aprovacoes, a central tem que alarmar"). Janela
+  /// por cima de qualquer aba; SOS, cadastro novo e foto nova vem antes.
+  String? _avisoAprovacaoAberto;
+
+  void _aprovacaoNova() {
+    if (_avisoAprovacaoAberto != null || _avisoPendenteAberto != null || _avisoFotoAberto != null) return;
+    if (_painel.alertasNovos.isNotEmpty || _painel.pendenteNovo != null || _painel.fotoNova != null) return;
+    final alteracao = _painel.alteracaoNova;
+    final saque = _painel.saqueNovo;
+    if (alteracao == null && saque == null) return;
+    final ehAlteracao = alteracao != null;
+    final item = (alteracao ?? saque)!;
+    _avisoAprovacaoAberto = item.id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _abrirAvisoAprovacao(item, ehAlteracao);
+    });
+  }
+
+  Future<void> _abrirAvisoAprovacao(AprovacaoResumo item, bool ehAlteracao) async {
+    final ver = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(ehAlteracao ? Icons.edit_note : Icons.payments_outlined, color: AppColors.warning, size: 36),
+        title: Text(ehAlteracao ? 'Mudança de dados para aprovar' : 'Saque para conferir'),
+        content: Text(ehAlteracao
+            ? '${item.nome} pediu para mudar os dados no aplicativo do motorista. Nada muda até você aprovar.'
+            : '${item.nome} pediu um saque${item.valorCents == null ? '' : ' de ${reais(item.valorCents!)}'}. Confira em Financeiro.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Conferir')),
+        ],
+      ),
+    );
+    _avisoAprovacaoAberto = null;
+    await _painel.marcarAprovacaoVista(ehAlteracao ? PainelState.chaveAlteracaoVista : PainelState.chaveSaqueVisto);
+    if (ver != true || !mounted) return;
+    if (ehAlteracao) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeAlteracaoScreen(api: _painel.api)));
+      await _painel.atualizar();
+    } else {
+      _irPara('financeiro');
+    }
+    // Tinha outro aviso esperando (ex.: saque depois da mudanca de dados).
+    _aprovacaoNova();
+  }
+
+  /// O que esta esperando a Central, para a faixa e o menu de aprovacoes.
+  List<(String, int, IconData, VoidCallback)> _aprovacoes(PainelState p) {
+    final i = p.indicadores;
+    return [
+      if (i.pendentes > 0) ('${i.pendentes} cadastro(s) de motorista', i.pendentes, Icons.person_add_alt_1, () => _irPara('motoristas')),
+      if (i.paraConferir > 0) ('${i.paraConferir} foto(s), documento(s) ou carro(s)', i.paraConferir, Icons.photo_camera_outlined, () => _irPara('motoristas')),
+      if (i.alteracoes > 0)
+        (
+          '${i.alteracoes} mudança(s) de dados',
+          i.alteracoes,
+          Icons.edit_note,
+          () async {
+            await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeAlteracaoScreen(api: p.api)));
+            await p.atualizar();
+          },
+        ),
+      if (i.saques > 0) ('${i.saques} saque(s) pedido(s)', i.saques, Icons.payments_outlined, () => _irPara('financeiro')),
+    ];
+  }
+
+  Future<void> _verAprovacoes(PainelState p) async {
+    final itens = _aprovacoes(p);
+    if (itens.length == 1) {
+      itens.first.$4();
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(Spacing.lg),
+              child: Text('Esperando a Central', style: AppText.heading),
+            ),
+            for (final it in itens)
+              ListTile(
+                leading: Icon(it.$3, color: AppColors.warning),
+                title: Text(it.$1),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  it.$4();
+                },
+              ),
+            const SizedBox(height: Spacing.md),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Aba aberta, pelo codigo (a lista muda conforme quem esta na Central).
@@ -300,7 +404,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     int? badge(String id) => switch (id) {
           'despacho' => fila == 0 ? null : fila,
           // Ao vivo (a cada 5 s), nao so quando a Central abre.
-          'motoristas' => _pendentes(p, central) == 0 ? null : _pendentes(p, central),
+          'motoristas' => switch (_pendentes(p, central) + p.indicadores.paraConferir + p.indicadores.alteracoes) {
+              0 => null,
+              final n => n,
+            },
+          'financeiro' => p.indicadores.saques == 0 ? null : p.indicadores.saques,
           'alertas' => p.alertas.isEmpty ? null : p.alertas.length,
           _ => null,
         };
@@ -349,7 +457,39 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           ),
         ),
       ],
-      child: Stack(
+      child: Column(
+        children: [
+          // Faixa fixa enquanto houver algo esperando a Central (nada fica
+          // esquecido: Evandro, 10/10/2026).
+          if (p.indicadores.aprovacoes > 0)
+            Material(
+              color: AppColors.warning,
+              child: InkWell(
+                onTap: () => _verAprovacoes(p),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.sm),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notifications_active_outlined, color: Colors.white),
+                      const SizedBox(width: Spacing.md),
+                      Expanded(
+                        child: Text(
+                          p.indicadores.aprovacoes == 1
+                              ? 'Esperando a Central: ${_aprovacoes(p).map((a) => a.$1).join(' · ')}'
+                              : '${p.indicadores.aprovacoes} aprovações esperando: ${_aprovacoes(p).map((a) => a.$1).join(' · ')}',
+                          style: AppText.bodyStrong.copyWith(color: Colors.white),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Text('VER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(
+            child: Stack(
         children: [
           Positioned.fill(
             child: IndexedStack(
@@ -388,6 +528,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
+        ],
+      ),
+          ),
         ],
       ),
     );

@@ -52,6 +52,9 @@ public class VigiaCentralService extends Service {
     private static final int ID_SOS = 7102;
     private static final int ID_CADASTRO = 7103;
     private static final int ID_SESSAO = 7104;
+    private static final int ID_DOCUMENTO = 7105;
+    private static final int ID_ALTERACAO = 7106;
+    private static final int ID_SAQUE = 7107;
     private static final long INTERVALO_MS = 8000;
     private static final String PREFS = "fortaleza_central";
 
@@ -144,6 +147,48 @@ public class VigiaCentralService extends Service {
         if (d.optInt("sosActive", 0) > 0) conferirSos();
         JSONObject pendente = d.optJSONObject("latestPendingDriver");
         if (pendente != null) conferirCadastro(pendente, d.optInt("driversPending", 1));
+        // Evandro (10/10/2026): toda aprovacao avisa a Central, tambem com o
+        // aplicativo minimizado: foto/documento/carro, mudanca de dados e saque.
+        JSONObject doc = d.optJSONObject("latestDocumentToReview");
+        if (doc != null) {
+            String tipo = doc.optString("type", "");
+            String nome = nomeDe(doc);
+            String titulo = "VEHICLE".equals(tipo) ? "Carro novo para conferir"
+                    : ("PROFILE_PHOTO".equals(tipo) ? "Foto nova para conferir" : "Documento para conferir");
+            conferirAprovacao("documento", "flutter.central.documentoVisto", doc.optString("id", ""), ID_DOCUMENTO,
+                    titulo, nome + " está esperando a Central. Toque para conferir.");
+        }
+        JSONObject alteracao = d.optJSONObject("latestDataChange");
+        if (alteracao != null) {
+            int fila = d.optInt("dataChangesPending", 1) - 1;
+            conferirAprovacao("alteracao", "flutter.central.alteracaoVista", alteracao.optString("id", ""), ID_ALTERACAO,
+                    "Mudança de dados para aprovar",
+                    nomeDe(alteracao) + " pediu para mudar os dados" + (fila > 0 ? " (e mais " + fila + ")" : "") + ". Toque para conferir.");
+        }
+        JSONObject saque = d.optJSONObject("latestPayout");
+        if (saque != null) {
+            conferirAprovacao("saque", "flutter.central.saqueVisto", saque.optString("id", ""), ID_SAQUE,
+                    "Saque pedido", nomeDe(saque) + " pediu um saque. Toque para conferir.");
+        }
+    }
+
+    private static String nomeDe(JSONObject o) {
+        String nome = o.optString("name", "");
+        return nome == null || nome.trim().isEmpty() || "null".equals(nome) ? "Um motorista" : nome.trim();
+    }
+
+    /** Avisa uma vez por pedido (nem repete o que a Central ja viu aberta). */
+    private void conferirAprovacao(String tipo, String chaveNoApp, String id, int idAviso, String titulo, String texto) {
+        if (id == null || id.isEmpty()) return;
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String vistoNoApp = getApplicationContext()
+                .getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+                .getString(chaveNoApp, null);
+        String avisado = p.getString("avisado_" + tipo, null);
+        if (id.equals(vistoNoApp) || id.equals(avisado)) return;
+        if (naTela) return; // a Central aberta mostra a janela
+        p.edit().putString("avisado_" + tipo, id).apply();
+        principal.post(() -> avisar(CANAL_CADASTRO, idAviso, titulo, texto, false));
     }
 
     private void conferirSos() throws Exception {

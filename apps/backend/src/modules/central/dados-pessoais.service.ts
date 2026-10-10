@@ -231,8 +231,14 @@ export class DadosPessoaisService {
 
   /** Pedidos esperando a Central. */
   async pendentes() {
+    // So as contas com pedido aberto (a Central consulta a cada 5 s).
+    const comPedido = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM users
+      WHERE deleted_at IS NULL AND metadata -> 'alteracaoPendente' ->> 'pedidaEm' IS NOT NULL
+    `;
+    if (comPedido.length === 0) return [];
     const lista = await this.prisma.user.findMany({
-      where: { deletedAt: null, driver: { isNot: null } },
+      where: { id: { in: comPedido.map((c) => c.id) }, driver: { isNot: null } },
       select: { id: true, name: true, phone: true, metadata: true, driver: { select: { id: true } } },
     });
     return lista
