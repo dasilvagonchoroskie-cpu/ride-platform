@@ -1276,7 +1276,9 @@ void main() {
     expect(find.text('Editar dados · Carlos'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Número da CNH'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextField, 'Endereço (rua, número e bairro)'), 'Rua Teste, 5 - Centro');
-    await tester.scrollUntilVisible(find.text('Salvar'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
+    await tester.pumpAndSettle();
+    expect(find.text('Salvar'), findsOneWidget);
     await tester.tap(find.text('Salvar'));
     await _carregar(tester);
     final patch = _pedidosDeDados.lastWhere((p) => p.startsWith('PATCH'));
