@@ -244,6 +244,21 @@ class RideState extends ChangeNotifier {
     if (refazerPreco && u != null) await estimate(u.$1, u.$2, pickupAddress: u.$3, dropoffAddress: u.$4);
   }
 
+  /// Link para a familia acompanhar a viagem no mapa (Evandro, 10/10/2026).
+  Future<String?> linkDeAcompanhar() async {
+    final r = activeRide;
+    if (r == null) return null;
+    try {
+      final d = await _repository.api.request('POST', '/rides/${r.id}/compartilhar', body: const {}) as Map<String, dynamic>;
+      return d['link'] as String?;
+    } on ApiException {
+      return null; // o motivo ja apareceu na tela (aviso do servidor)
+    } catch (_) {
+      avisar('Sem conexão. Tente de novo.');
+      return null;
+    }
+  }
+
   /// Cupons que o passageiro ainda pode usar.
   Future<List<CupomDisponivel>> cupons() => _repository.cupons();
 

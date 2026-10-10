@@ -8,6 +8,7 @@ import '../core/utils/geo.dart';
 import '../data/models/models.dart';
 import '../state/config_state.dart';
 import '../state/ride_state.dart';
+import '../widgets/compartilhar_viagem.dart';
 import '../widgets/corrida_ui.dart';
 import '../widgets/motorista_ui.dart';
 import 'sos_screen.dart';
@@ -170,6 +171,7 @@ class RideScreen extends StatelessWidget {
                           onPressed: () => context.read<RideState>().advanceRide(),
                         ),
                       ),
+                    const BotaoCompartilharViagem(),
                     TextButton.icon(
                       onPressed: () => falarComCentral(
                         whatsapp,

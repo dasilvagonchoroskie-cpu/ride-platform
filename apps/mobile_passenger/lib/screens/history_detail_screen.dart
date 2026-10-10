@@ -4,6 +4,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/models/models.dart';
+import '../widgets/compartilhar_viagem.dart';
 import '../widgets/map_canvas.dart';
 import '../widgets/ui.dart';
 
@@ -69,6 +70,8 @@ class HistoryDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const AppDivider(),
+                    _DetailRow(label: 'Embarque', value: ride.pickup.address),
+                    _DetailRow(label: 'Destino', value: ride.dropoff.address),
                     _DetailRow(
                       label: 'Distância',
                       value: formatDistance(ride.distanceMeters.toDouble()),
@@ -76,6 +79,10 @@ class HistoryDetailScreen extends StatelessWidget {
                     _DetailRow(label: 'Duração', value: formatDuration(ride.durationSeconds)),
                     _DetailRow(label: 'Bandeira', value: ride.fareFlag.label),
                     _DetailRow(label: 'Pagamento', value: ride.paymentMethod),
+                    if (ride.discountCents > 0) ...[
+                      _DetailRow(label: 'Valor da corrida', value: formatMoney(ride.fareCents)),
+                      _DetailRow(label: 'Desconto (cupom)', value: '- ${formatMoney(ride.discountCents)}'),
+                    ],
                     const AppDivider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -85,7 +92,7 @@ class HistoryDetailScreen extends StatelessWidget {
                           style: TextStyle(color: AppColors.text, fontSize: 19, fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          formatMoney(ride.fareCents),
+                          formatMoney(ride.aPagarCents),
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 19,
@@ -128,6 +135,21 @@ class HistoryDetailScreen extends StatelessWidget {
                   ),
                 ),
               ],
+              // Recibo (Evandro, 10/10/2026): para mandar a quem quiser.
+              if (ride.status == RideStatus.completed) ...[
+                const SizedBox(height: Spacing.md),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                  icon: const Icon(Icons.receipt_long),
+                  label: const Text('Compartilhar recibo'),
+                  onPressed: () => compartilharTexto(
+                    context,
+                    titulo: 'Recibo da corrida',
+                    explicacao: 'Data, trajeto, motorista, placa e valor desta corrida.',
+                    texto: textoDoRecibo(ride),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -148,14 +170,41 @@ class _DetailRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 15)),
-          Text(
-            value,
-            style: const TextStyle(color: AppColors.text, fontSize: 15, fontWeight: FontWeight.w600),
+          const SizedBox(width: Spacing.md),
+          // Endereco comprido quebra a linha em vez de estourar a tela.
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(color: AppColors.text, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Recibo em texto (vai pelo WhatsApp ou copiado).
+String textoDoRecibo(Ride ride) {
+  final b = StringBuffer()
+    ..writeln('Recibo Fortaleza Mov - corrida ${ride.code}')
+    ..writeln('Data: ${formatDateTime(ride.finishedAt ?? ride.createdAt)}')
+    ..writeln('Embarque: ${ride.pickup.address}')
+    ..writeln('Destino: ${ride.dropoff.address}')
+    ..writeln('Distância: ${formatDistance(ride.distanceMeters.toDouble())} - ${formatDuration(ride.durationSeconds)}');
+  final m = ride.driver;
+  if (m != null) {
+    b.writeln('Motorista: ${m.name}${m.vehicle.isEmpty ? '' : ' - ${m.vehicle}'}${m.plate.isEmpty ? '' : ' - placa ${m.plate}'}');
+  }
+  if (ride.discountCents > 0) {
+    b
+      ..writeln('Valor da corrida: ${formatMoney(ride.fareCents)}')
+      ..writeln('Desconto (cupom): ${formatMoney(ride.discountCents)}');
+  }
+  b.write('Total: ${formatMoney(ride.aPagarCents)} (${ride.paymentMethod}, pago ao motorista)');
+  return b.toString();
 }

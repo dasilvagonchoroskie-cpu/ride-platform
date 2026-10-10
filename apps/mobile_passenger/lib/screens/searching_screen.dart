@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../data/models/models.dart';
 import '../state/ride_state.dart';
+import '../widgets/compartilhar_viagem.dart';
 import '../core/utils/geo.dart';
 import '../widgets/corrida_ui.dart';
 import '../widgets/motorista_ui.dart';
@@ -232,7 +233,7 @@ class _SearchingScreenState extends State<SearchingScreen> {
                                   onPressed: () => context.read<RideState>().advanceRide(),
                                 ),
                               ),
-                            const SizedBox(height: Spacing.sm),
+                            const BotaoCompartilharViagem(),
                             BotaoCancelarPilula(carregando: _cancelando, aoTocar: () => _cancelar(corrida)),
                           ],
                         ),
