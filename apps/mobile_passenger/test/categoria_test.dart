@@ -67,7 +67,9 @@ void main() {
           headers: {'content-type': 'application/json; charset=utf-8'});
     });
     final app = AppState(client: ApiClient(client: servidor))..coords = _goiatuba;
-    final corridas = RideState(repository: RideRepository(client: ApiClient(client: servidor)));
+    final corridas = RideState(repository: RideRepository(client: ApiClient(client: servidor), demo: false));
+    // O preco e pedido na tela anterior (Inicio), antes de abrir a confirmacao.
+    await tester.runAsync(() => corridas.estimate(_goiatuba, _destino, dropoffAddress: 'Rua Destino, 10'));
     await tester.pumpWidget(
       MultiProvider(
         providers: [

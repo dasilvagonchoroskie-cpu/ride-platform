@@ -9,11 +9,14 @@ import '../models/models.dart';
 /// Quando a API esta configurada, fala com o backend; caso contrario (ou em
 /// caso de falha), delega para o motor de demonstracao local.
 class RideRepository {
-  RideRepository({ApiClient? client}) : _client = client ?? ApiClient();
+  /// [demo]: so para testes (forca o servidor mesmo sem API configurada).
+  RideRepository({ApiClient? client, bool? demo})
+      : _client = client ?? ApiClient(),
+        _useDemo = demo ?? !AppConfig.hasApi;
 
   final ApiClient _client;
 
-  bool _useDemo = !AppConfig.hasApi;
+  bool _useDemo;
 
   bool get isDemo => _useDemo;
 
