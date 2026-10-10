@@ -44,6 +44,12 @@ export class LimpezaController {
     return this.limpeza.zerarOperacao(adminId);
   }
 
+  @Get('exportar')
+  @ApiOperation({ summary: 'Copia de todas as tabelas em JSON (a esteira diaria guarda criptografada)' })
+  exportar() {
+    return this.limpeza.exportar();
+  }
+
   @Get('contas')
   @ApiOperation({ summary: 'Contas de passageiro e motorista (com marca de teste)' })
   contas(@Query('busca') busca?: string) {

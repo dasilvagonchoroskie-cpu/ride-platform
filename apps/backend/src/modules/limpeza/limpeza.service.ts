@@ -270,6 +270,33 @@ export class LimpezaService {
     return nome;
   }
 
+  /**
+   * Copia de FORA do banco (Evandro, 10/10/2026): todas as tabelas em JSON
+   * para a esteira diaria guardar criptografada (so quem tem a chave privada
+   * abre). Ficam de fora: spatial_ref_sys (lista do PostGIS) e os codigos e
+   * logins (otp_codes, refresh_tokens), que nao servem para restaurar.
+   */
+  async exportar() {
+    const tabelas = await this.prisma.$queryRaw<Array<{ nome: string }>>`
+      SELECT c.relname AS nome FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+        AND c.relname NOT IN ('spatial_ref_sys', 'otp_codes', 'refresh_tokens', '_prisma_migrations')
+      ORDER BY c.relname`;
+    const dados: Record<string, unknown[]> = {};
+    for (const t of tabelas) {
+      if (!/^[a-z_][a-z0-9_]*$/.test(t.nome)) continue;
+      const r = await this.prisma.$queryRawUnsafe<Array<{ linhas: unknown[] | null }>>(
+        `SELECT COALESCE(json_agg(t), '[]'::json) AS linhas FROM public."${t.nome}" t`,
+      );
+      dados[t.nome] = r[0]?.linhas ?? [];
+    }
+    return {
+      geradoEm: new Date().toISOString(),
+      contagem: Object.fromEntries(Object.entries(dados).map(([k, v]) => [k, v.length])),
+      tabelas: dados,
+    };
+  }
+
   private async registrar(adminId: string, acao: string, dados: Record<string, unknown>) {
     await this.prisma.auditLog
       .create({ data: { actorId: adminId, actorRole: UserRole.ADMIN, action: acao, entity: 'limpeza', after: dados as never } })
