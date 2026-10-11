@@ -11,6 +11,7 @@ import { VehiclesService } from '../vehicles/vehicles.service';
 import { avisarOfertaNova } from '../rides/ofertas-ao-vivo';
 import { PushService } from '../../integrations/notifications/push.service';
 import { DadosPessoaisService } from './dados-pessoais.service';
+import { PedidosExclusaoService } from './pedidos-exclusao.service';
 
 /** Conta criada pelo teste automatico (marcada no login com a chave de teste). */
 export const eraTeste = (metadata: unknown): boolean =>
@@ -57,6 +58,7 @@ export class CentralService {
     private readonly pracas: PracasService,
     private readonly vehicles: VehiclesService,
     private readonly push: PushService,
+    private readonly exclusoes: PedidosExclusaoService,
   ) {}
 
   // ================= Visao geral =================
@@ -108,7 +110,7 @@ export class CentralService {
     // Evandro (10/10/2026): toda aprovacao tem que avisar a Central. Pedidos
     // de mudanca de dados dos motoristas e saques pedidos.
     const doMotorista = ids ? { driverId: { in: ids } } : {};
-    const [alteracoesTodas, saquesPedidos, ultimoSaque] = await Promise.all([
+    const [alteracoesTodas, saquesPedidos, ultimoSaque, exclusoes] = await Promise.all([
       this.dadosPessoais.pendentes(),
       this.prisma.payout.count({ where: { status: PayoutStatus.REQUESTED, ...doMotorista } }),
       this.prisma.payout.findFirst({
@@ -116,6 +118,8 @@ export class CentralService {
         orderBy: { requestedAt: 'desc' },
         select: { id: true, amountCents: true, requestedAt: true, driver: { select: { user: { select: { name: true } } } } },
       }),
+      // Pedidos de exclusao de conta pela pagina da internet (11/10/2026).
+      this.exclusoes.resumo(),
     ]);
     const alteracoes = ids ? alteracoesTodas.filter((a) => a.driverId && ids.includes(a.driverId)) : alteracoesTodas;
     const ultimaAlteracao = alteracoes[alteracoes.length - 1];
@@ -171,6 +175,8 @@ export class CentralService {
             createdAt: ultimoSaque.requestedAt,
           }
         : null,
+      accountDeletionsPending: exclusoes.total,
+      latestAccountDeletion: exclusoes.ultimo,
       documentsToReview: paraConferir,
       latestDocumentToReview: ultimoParaConferir
         ? {

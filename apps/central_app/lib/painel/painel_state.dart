@@ -54,10 +54,14 @@ class PainelState extends ChangeNotifier {
   /// que alarmar"). Chave = central.alteracaoVista / central.saqueVisto.
   AprovacaoResumo? alteracaoNova;
   AprovacaoResumo? saqueNovo;
+
+  /// Pedido de exclusao de conta pela pagina da internet (11/10/2026).
+  AprovacaoResumo? exclusaoNova;
   final Map<String, String?> _vistos = {};
   bool _vistosLidos = false;
   static const String chaveAlteracaoVista = 'central.alteracaoVista';
   static const String chaveSaqueVisto = 'central.saqueVisto';
+  static const String chaveExclusaoVista = 'central.exclusaoVista';
 
   Coords get centro {
     if (PosicaoDoAparelho.atual != null) return PosicaoDoAparelho.atual!;
@@ -228,7 +232,7 @@ class PainelState extends ChangeNotifier {
 
   Future<void> _conferirAprovacoesNovas() async {
     if (!_vistosLidos) {
-      for (final k in [chaveAlteracaoVista, chaveSaqueVisto]) {
+      for (final k in [chaveAlteracaoVista, chaveSaqueVisto, chaveExclusaoVista]) {
         try {
           _vistos[k] = await AppStorage.read(k);
         } catch (_) {}
@@ -258,15 +262,32 @@ class PainelState extends ChangeNotifier {
         id: q.id,
       );
     }
+    final x = indicadores.ultimaExclusao;
+    if (x == null || x.id.isEmpty) {
+      exclusaoNova = null;
+    } else if (x.id != _vistos[chaveExclusaoVista] && x.id != exclusaoNova?.id) {
+      exclusaoNova = x;
+      await Alarme.aviso(
+        'Pedido de exclusão de conta',
+        '${x.nome} pediu pela internet para excluir a conta. Atenda em até 7 dias.',
+        id: x.id,
+      );
+    }
   }
 
   /// A pessoa viu o aviso (mudanca de dados ou saque).
   Future<void> marcarAprovacaoVista(String chave) async {
-    final item = chave == chaveAlteracaoVista ? alteracaoNova : saqueNovo;
+    final item = switch (chave) {
+      chaveAlteracaoVista => alteracaoNova,
+      chaveExclusaoVista => exclusaoNova,
+      _ => saqueNovo,
+    };
     if (item == null) return;
     _vistos[chave] = item.id;
     if (chave == chaveAlteracaoVista) {
       alteracaoNova = null;
+    } else if (chave == chaveExclusaoVista) {
+      exclusaoNova = null;
     } else {
       saqueNovo = null;
     }

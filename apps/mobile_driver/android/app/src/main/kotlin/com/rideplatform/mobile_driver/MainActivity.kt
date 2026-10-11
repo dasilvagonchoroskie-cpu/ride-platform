@@ -211,9 +211,10 @@ class MainActivity : FlutterActivity() {
             "sobrepor" -> if (Build.VERSION.SDK_INT >= 23) {
                 startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, pacote))
             }
-            "bateria" -> if (Build.VERSION.SDK_INT >= 23) {
-                startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pacote))
-            }
+            // A Google Play nao deixa pedir a isencao direto
+            // (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS): abre os ajustes do app,
+            // onde o motorista toca em Bateria > Sem restricoes.
+            "bateria" -> abrirAjustesDoApp()
             "telaCheia" -> if (Build.VERSION.SDK_INT >= 34) {
                 startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pacote))
             }

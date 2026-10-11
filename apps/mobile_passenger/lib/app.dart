@@ -46,7 +46,8 @@ class RideApp extends StatelessWidget {
       home: PortaoPermissoes(
         itens: const [
           ItemPermissao('localizacao', 'Localização',
-              'Para achar você no mapa e o motorista saber onde buscar.'),
+              'Para achar você no mapa e o motorista saber onde buscar. Usada só com o aplicativo aberto; '
+              'durante a corrida, o motorista vê o ponto de embarque, não a sua localização ao vivo.'),
           ItemPermissao('gps', 'GPS do celular ligado',
               'Sem o GPS ligado o celular não sabe onde você está.'),
           ItemPermissao('notificacao', 'Notificações',

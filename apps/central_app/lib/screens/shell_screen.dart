@@ -12,6 +12,7 @@ import '../painel/limpeza.dart';
 import '../painel/comuns.dart';
 import '../painel/cupons.dart';
 import '../painel/dados_pessoais.dart';
+import '../painel/pedidos_exclusao.dart';
 import '../painel/despacho.dart';
 import '../painel/financeiro.dart';
 import '../painel/motoristas.dart';
@@ -208,24 +209,44 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     if (_painel.alertasNovos.isNotEmpty || _painel.pendenteNovo != null || _painel.fotoNova != null) return;
     final alteracao = _painel.alteracaoNova;
     final saque = _painel.saqueNovo;
-    if (alteracao == null && saque == null) return;
-    final ehAlteracao = alteracao != null;
-    final item = (alteracao ?? saque)!;
+    final exclusao = _painel.exclusaoNova;
+    // Ordem: mudanca de dados, saque, pedido de exclusao de conta.
+    final (String chave, AprovacaoResumo? item) = alteracao != null
+        ? (PainelState.chaveAlteracaoVista, alteracao)
+        : saque != null
+            ? (PainelState.chaveSaqueVisto, saque)
+            : (PainelState.chaveExclusaoVista, exclusao);
+    if (item == null) return;
     _avisoAprovacaoAberto = item.id;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _abrirAvisoAprovacao(item, ehAlteracao);
+      if (mounted) _abrirAvisoAprovacao(item, chave);
     });
   }
 
-  Future<void> _abrirAvisoAprovacao(AprovacaoResumo item, bool ehAlteracao) async {
+  Future<void> _abrirAvisoAprovacao(AprovacaoResumo item, String chave) async {
+    final (IconData icone, String titulo, String texto) = switch (chave) {
+      PainelState.chaveAlteracaoVista => (
+          Icons.edit_note,
+          'Mudança de dados para aprovar',
+          '${item.nome} pediu para mudar os dados no aplicativo do motorista. Nada muda até você aprovar.',
+        ),
+      PainelState.chaveExclusaoVista => (
+          Icons.person_remove_outlined,
+          'Pedido de exclusão de conta',
+          '${item.nome} pediu pela página da internet para excluir a conta. Confira quem é e atenda em até 7 dias.',
+        ),
+      _ => (
+          Icons.payments_outlined,
+          'Saque para conferir',
+          '${item.nome} pediu um saque${item.valorCents == null ? '' : ' de ${reais(item.valorCents!)}'}. Confira em Financeiro.',
+        ),
+    };
     final ver = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        icon: Icon(ehAlteracao ? Icons.edit_note : Icons.payments_outlined, color: AppColors.warning, size: 36),
-        title: Text(ehAlteracao ? 'Mudança de dados para aprovar' : 'Saque para conferir'),
-        content: Text(ehAlteracao
-            ? '${item.nome} pediu para mudar os dados no aplicativo do motorista. Nada muda até você aprovar.'
-            : '${item.nome} pediu um saque${item.valorCents == null ? '' : ' de ${reais(item.valorCents!)}'}. Confira em Financeiro.'),
+        icon: Icon(icone, color: AppColors.warning, size: 36),
+        title: Text(titulo),
+        content: Text(texto),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),
           FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Conferir')),
@@ -233,10 +254,13 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       ),
     );
     _avisoAprovacaoAberto = null;
-    await _painel.marcarAprovacaoVista(ehAlteracao ? PainelState.chaveAlteracaoVista : PainelState.chaveSaqueVisto);
+    await _painel.marcarAprovacaoVista(chave);
     if (ver != true || !mounted) return;
-    if (ehAlteracao) {
+    if (chave == PainelState.chaveAlteracaoVista) {
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeAlteracaoScreen(api: _painel.api)));
+      await _painel.atualizar();
+    } else if (chave == PainelState.chaveExclusaoVista) {
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeExclusaoScreen(api: _painel.api)));
       await _painel.atualizar();
     } else {
       _irPara('financeiro');
@@ -262,6 +286,16 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           },
         ),
       if (i.saques > 0) ('${i.saques} saque(s) pedido(s)', i.saques, Icons.payments_outlined, () => _irPara('financeiro')),
+      if (i.exclusoes > 0)
+        (
+          '${i.exclusoes} pedido(s) de exclusão de conta',
+          i.exclusoes,
+          Icons.person_remove_outlined,
+          () async {
+            await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeExclusaoScreen(api: p.api)));
+            await p.atualizar();
+          },
+        ),
     ];
   }
 
@@ -409,6 +443,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
               final n => n,
             },
           'financeiro' => p.indicadores.saques == 0 ? null : p.indicadores.saques,
+          'passageiros' => p.indicadores.exclusoes == 0 ? null : p.indicadores.exclusoes,
           'alertas' => p.alertas.isEmpty ? null : p.alertas.length,
           _ => null,
         };

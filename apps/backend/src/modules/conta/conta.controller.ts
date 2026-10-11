@@ -101,7 +101,8 @@ export class ContaController {
     const contato = typeof body?.contato === 'string' ? body.contato : '';
     const motivo = typeof body?.motivo === 'string' && body.motivo.trim() ? body.motivo.trim() : null;
     try {
-      await this.conta.pedidoPelaInternet(contato, motivo);
+      const chaveTeste = typeof body?.teste === 'string' ? body.teste : undefined;
+      await this.conta.pedidoPelaInternet(contato, motivo, chaveTeste);
       res.send(
         pagina(
           'Pedido recebido',

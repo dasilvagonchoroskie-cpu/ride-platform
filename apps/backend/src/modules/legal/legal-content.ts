@@ -11,8 +11,11 @@
 
 export const LEGAL_VERSION = '1.0.0';
 
-const RAZAO_SOCIAL_PENDENTE =
-  '[Fortaleza Digital Security — CNPJ a preencher após o registro do MEI]';
+// Evandro (11/10/2026): marca Fortaleza Mov; quem desenvolve e opera e a
+// Fortaleza Digital Security. CNPJ ainda nao existe: entra aqui quando sair.
+const OPERADORA = 'Fortaleza Digital Security (Goiatuba – GO, CNPJ em registro)';
+const EMAIL_CONTATO = 'fortalezadigitalsecurity@gmail.com';
+const WHATSAPP_CONTATO = '(64) 99647-2794';
 
 // Texto com acentos e parágrafos inteiros (revisão de 11/10/2026): os apps
 // juntam as linhas de cada parágrafo. A versão continua 1.0.0 porque a
@@ -25,7 +28,7 @@ Versão ${LEGAL_VERSION} — vigente a partir de sua publicação no aplicativo.
 
 ## 1. O que é a Fortaleza Mov
 
-A Fortaleza Mov, operada por ${RAZAO_SOCIAL_PENDENTE}, é uma plataforma de tecnologia que aproxima passageiros e motoristas parceiros para a realização de corridas de carro e de moto (mototáxi). A plataforma **não presta o serviço de transporte diretamente**: ela é uma intermediária que conecta as partes, sendo o motorista parceiro o responsável pela execução da viagem.
+A Fortaleza Mov, desenvolvida e operada por ${OPERADORA}, é uma plataforma de tecnologia que aproxima passageiros e motoristas parceiros para a realização de corridas de carro e de moto (mototáxi). A plataforma **não presta o serviço de transporte diretamente**: ela é uma intermediária que conecta as partes, sendo o motorista parceiro o responsável pela execução da viagem.
 
 ## 2. Cadastro
 
@@ -70,7 +73,11 @@ A plataforma pode suspender ou encerrar contas que violem estes Termos, incluind
 
 Estes Termos podem ser atualizados. Mudanças relevantes exigem novo aceite antes de continuar usando o aplicativo.
 
-## 10. Foro
+## 10. Contato
+
+Dúvidas, reclamações e pedidos: e-mail ${EMAIL_CONTATO} ou WhatsApp da Central ${WHATSAPP_CONTATO} (também pelo aplicativo, em Ajuda → Falar com a Central).
+
+## 11. Foro
 
 Fica eleito o foro da comarca de Goiatuba, Estado de Goiás, para dirimir quaisquer controvérsias decorrentes destes Termos.
 
@@ -83,7 +90,10 @@ export const PRIVACY_MD = `# Política de Privacidade — Fortaleza Mov
 
 Versão ${LEGAL_VERSION} — vigente a partir de sua publicação no aplicativo.
 
-Esta Política explica como a Fortaleza Mov, operada por ${RAZAO_SOCIAL_PENDENTE}, coleta, usa e protege os dados pessoais de passageiros e motoristas parceiros, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD).
+Esta Política explica como a Fortaleza Mov coleta, usa e protege os dados pessoais de passageiros e motoristas parceiros, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD). Vale para os aplicativos Fortaleza Mov (passageiro) e Fortaleza Mov Motorista e para a Central da plataforma.
+
+**Quem é o responsável (controlador):** ${OPERADORA}, que desenvolve e opera a Fortaleza Mov.
+**Encarregado pelos dados (LGPD):** a própria Fortaleza Digital Security — e-mail ${EMAIL_CONTATO}, WhatsApp ${WHATSAPP_CONTATO}.
 
 ## 1. Quais dados coletamos
 
@@ -91,7 +101,9 @@ Esta Política explica como a Fortaleza Mov, operada por ${RAZAO_SOCIAL_PENDENTE
 
 **De motoristas parceiros, adicionalmente:** número, categoria e validade da CNH, chave Pix, dados do veículo (placa, marca, modelo, ano, cor) e os documentos enviados para análise (foto da CNH, do CRLV, do veículo, comprovante de residência e certidão de antecedentes criminais).
 
-**Durante uma corrida:** a localização GPS do passageiro e do motorista, o trajeto percorrido, o horário de cada etapa (pedido, aceite, embarque, desembarque), o valor, a avaliação e as mensagens trocadas no chat da corrida.
+**Durante uma corrida:** os pontos de embarque e de destino, a localização GPS do motorista e o trajeto percorrido, o horário de cada etapa (pedido, aceite, embarque, desembarque), o valor, a avaliação e as mensagens trocadas no chat da corrida. A localização do passageiro é usada com o aplicativo aberto (para marcar o embarque) e, se ele apertar o SOS, é enviada à Central.
+
+**Do aparelho:** o identificador de notificações (para os avisos chegarem ao celular), o modelo do aparelho e a versão do aplicativo, para segurança e suporte. Não coletamos contatos da agenda, mensagens SMS, fotos da galeria (só a foto que você escolher enviar) nem o histórico de outros aplicativos.
 
 **Contatos de emergência (opcional):** nome e telefone das pessoas que o passageiro cadastrar, para avisá-las em caso de SOS.
 
@@ -115,11 +127,29 @@ Os dados e os documentos ficam no banco de dados da plataforma, com acesso restr
 - **OpenStreetMap** e serviços de rota e de busca de endereço (recebem coordenadas e o texto buscado, sem o nome do usuário);
 - **WhatsApp**, somente quando o próprio usuário escolhe compartilhar a viagem, o recibo ou falar com a Central.
 
-## 4. Por quanto tempo guardamos
+## 4. Como protegemos os dados
+
+- Toda a comunicação entre os aplicativos e o servidor é criptografada (HTTPS).
+- Senhas são guardadas cifradas; os códigos de acesso vencem em poucos minutos.
+- Documentos e fotos só abrem para quem tem permissão (o dono e a equipe da Central), com login.
+- Links de "Compartilhar viagem" são assinados pelo servidor e vencem sozinhos.
+- Cópia de segurança diária do banco, criptografada, guardada por até 30 dias.
+- A Central só é acessada pela equipe autorizada, com senha ou com código enviado ao e-mail da conta.
+
+## 5. Permissões do celular
+
+- **Localização:** no passageiro, com o aplicativo aberto, para marcar o embarque; no motorista, também com o aplicativo fechado enquanto ele está Disponível ou em corrida, para receber chamados e mostrar o carro ao passageiro (com aviso fixo na barra do celular).
+- **Notificações:** avisos da corrida (motorista aceitou, chegou, chamado novo, recarga, aprovações).
+- **Câmera e fotos:** só quando a pessoa escolhe tirar ou enviar uma foto (perfil, documentos e carro do motorista).
+- **Motorista, aparecer sobre outros apps e tela cheia com o celular bloqueado:** para o chamado abrir na hora, com o botão de deslizar para aceitar.
+
+Nenhuma permissão é usada para outra finalidade além das descritas aqui.
+
+## 6. Por quanto tempo guardamos
 
 Os dados são mantidos enquanto a conta estiver ativa e pelo prazo adicional exigido por lei após o encerramento (por exemplo, para fins fiscais ou de defesa em processos). O usuário pode excluir a conta a qualquer momento pelo aplicativo (Conta → Excluir minha conta) ou pela página pública de exclusão, respeitados os prazos legais de guarda que se apliquem ao caso.
 
-## 5. Seus direitos, conforme a LGPD
+## 7. Seus direitos, conforme a LGPD
 
 Você pode, a qualquer momento:
 
@@ -131,17 +161,17 @@ Você pode, a qualquer momento:
 - revogar o consentimento dado, quando aplicável;
 - se opor a um tratamento realizado com base em outra hipótese legal.
 
-Para exercer qualquer um desses direitos, fale com a Central pelo canal informado no aplicativo (Ajuda → Falar com a Central).
+Para exercer qualquer um desses direitos, escreva para ${EMAIL_CONTATO}, chame no WhatsApp ${WHATSAPP_CONTATO} ou use o aplicativo (Ajuda → Falar com a Central). Respondemos em até 15 dias. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).
 
-## 6. Compartilhamento de dados
+## 8. Compartilhamento de dados
 
 Compartilhamos apenas o necessário para a corrida acontecer: o passageiro vê o nome, a foto, a nota e o veículo do motorista; o motorista vê o nome, a nota e os endereços de embarque e destino do passageiro. O link de "Compartilhar viagem" mostra o primeiro nome do motorista, o veículo, a placa, o embarque, o destino e a posição do carro, sem telefone de ninguém, e deixa de funcionar 30 minutos depois do fim da corrida. Fora isso, dados pessoais não são repassados a terceiros, exceto quando exigido por lei ou ordem judicial.
 
-## 7. Menores de idade
+## 9. Menores de idade
 
 O aplicativo não se destina a menores de 18 anos.
 
-## 8. Alterações desta Política
+## 10. Alterações desta Política
 
 Esta Política pode ser atualizada para refletir mudanças na forma como tratamos os dados. Mudanças relevantes exigem novo aceite antes de continuar usando o aplicativo.
 

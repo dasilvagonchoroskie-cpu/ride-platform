@@ -28,8 +28,11 @@ class _Item {
 }
 
 const _itens = [
+  // Aviso claro exigido pela Google Play para localizacao com o app fechado.
   _Item('localizacao', 'Localização',
-      'Para o sistema saber que você está perto do passageiro e mandar a corrida certa.'),
+      'A Fortaleza Mov Motorista usa a sua localização para mandar corridas perto de você e mostrar ao passageiro onde o carro está — '
+      'também com o aplicativo fechado ou a tela desligada, enquanto você estiver Disponível ou em corrida (fica um aviso fixo na barra do celular). '
+      'Ao ficar Offline, para.'),
   _Item('gps', 'GPS do celular ligado',
       'Sem o GPS ligado o celular não sabe onde você está.'),
   _Item('notificacao', 'Notificações',
@@ -37,7 +40,7 @@ const _itens = [
   _Item('sobrepor', 'Aparecer sobre outros apps',
       'Para a chamada abrir em tela cheia por cima do que estiver aberto — GPS, WhatsApp, qualquer coisa.'),
   _Item('bateria', 'Sem restrição de bateria',
-      'Para o Android não desligar o aplicativo com o celular no bolso.'),
+      'Para o Android não desligar o aplicativo com o celular no bolso. Na tela que abrir, toque em Bateria e escolha "Sem restrições".'),
   _Item('telaCheia', 'Tela cheia com o celular bloqueado',
       'Para a chamada acender a tela e abrir em tela cheia, com o botão de deslizar para aceitar, mesmo com o celular bloqueado.'),
 ];

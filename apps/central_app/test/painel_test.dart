@@ -109,6 +109,12 @@ bool _comPedidoDeDados = false;
 /// Pedidos que a Central mandou sobre dados pessoais (metodo, caminho, corpo).
 final List<String> _pedidosDeDados = [];
 
+/// Pedido de exclusao de conta pela pagina da internet (11/10/2026).
+bool _comPedidoExclusaoConta = false;
+
+/// Pedidos que a Central mandou para atender a exclusao (metodo e caminho).
+final List<String> _atendimentosExclusao = [];
+
 /// Conta de operador de uma cidade (Teutonia), e nao o dono.
 bool _operador = false;
 
@@ -118,6 +124,20 @@ final _pracasTeste = [
 ];
 
 Object? _resposta(String metodo, String caminho, Map<String, String> q) {
+  if (caminho == '/api/admin/exclusoes') {
+    return [
+      if (_comPedidoExclusaoConta)
+        {
+          'id': '11111111-2222-3333-4444-555555555555', 'contato': 'maria@exemplo.com', 'motivo': 'Não uso mais',
+          'createdAt': '2026-10-11T03:00:00.000Z', 'teste': false,
+          'conta': {'userId': 'u-maria', 'nome': 'Maria Passageira', 'telefone': '+5564999991234', 'email': 'maria@exemplo.com', 'motorista': false},
+        },
+    ];
+  }
+  if (caminho.startsWith('/api/admin/exclusoes/')) {
+    _comPedidoExclusaoConta = false;
+    return {'ok': true, 'resultado': 'APAGADO'};
+  }
   if (caminho == '/api/admin/dados/pessoas/$_motoristaId') {
     return {
       'userId': 'u-$_motoristaId',
@@ -189,6 +209,10 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       'dataChangesPending': _comPedidoDeDados ? 1 : 0,
       'latestDataChange': _comPedidoDeDados
           ? {'id': 'u-$_motoristaId|2026-10-10T07:00:00.000Z', 'userId': 'u-$_motoristaId', 'driverId': _motoristaId, 'name': 'Carlos Motorista', 'createdAt': '2026-10-10T07:00:00.000Z'}
+          : null,
+      'accountDeletionsPending': _comPedidoExclusaoConta ? 1 : 0,
+      'latestAccountDeletion': _comPedidoExclusaoConta
+          ? {'id': '11111111-2222-3333-4444-555555555555', 'name': 'Maria Passageira', 'createdAt': '2026-10-11T03:00:00.000Z'}
           : null,
       'documentsToReview': _comFotoNova ? 1 : 0,
       'latestDocumentToReview': _comFotoNova
@@ -528,6 +552,9 @@ MockClient _servidor() => MockClient((http.Request r) async {
       }
       if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
         _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
+      }
+      if (r.url.path.startsWith('/api/admin/exclusoes/') && r.method != 'GET') {
+        _atendimentosExclusao.add('${r.method} ${r.url.path}');
       }
       final dados = _resposta(r.method, r.url.path, r.url.queryParameters);
       if (dados == null) {
@@ -1335,6 +1362,65 @@ void main() {
     expect(painel.alteracaoNova, isNull);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('central.alteracaoVista'), 'u-$_motoristaId|2026-10-10T07:00:00.000Z');
+    await tester.pumpWidget(const SizedBox());
+    painel.parar();
+  });
+
+  // Google Play (11/10/2026): pedido de exclusao feito na pagina da internet
+  // tem que alarmar na Central e ser atendido por ela.
+  testWidgets('Casca: pedido de exclusao de conta pela internet avisa e a Central exclui', (tester) async {
+    _comSos = false;
+    _comPendente = false;
+    _comFotoNova = false;
+    _comPedidoDeDados = false;
+    _comPedidoExclusaoConta = true;
+    _atendimentosExclusao.clear();
+    addTearDown(() => _comPedidoExclusaoConta = false);
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<CentralState>(
+            create: (_) => CentralState(repository: CentralRepository(client: ApiClient(client: _servidor()))),
+          ),
+          ChangeNotifierProvider<PainelState>.value(value: painel),
+        ],
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const ShellScreen(),
+        ),
+      ),
+    );
+    await _carregar(tester);
+
+    expect(find.text('Pedido de exclusão de conta'), findsOneWidget);
+    expect(find.textContaining('Maria Passageira pediu pela página da internet'), findsOneWidget);
+    expect(find.textContaining('1 pedido(s) de exclusão de conta'), findsOneWidget, reason: 'faixa fixa no topo');
+    expect(painel.indicadores.exclusoes, 1);
+
+    await tester.tap(find.text('Conferir'));
+    await _carregar(tester);
+    expect(find.text('Pedidos de exclusão de conta'), findsOneWidget);
+    expect(find.text('maria@exemplo.com'), findsOneWidget);
+    expect(find.text('Motivo: Não uso mais'), findsOneWidget);
+    expect(find.text('Maria Passageira · passageiro'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('central.exclusaoVista'), '11111111-2222-3333-4444-555555555555');
+
+    await tester.tap(find.text('Excluir conta'));
+    await tester.pumpAndSettle();
+    expect(find.text('Excluir a conta de Maria Passageira?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await _carregar(tester);
+    expect(_atendimentosExclusao, contains('POST /api/admin/exclusoes/11111111-2222-3333-4444-555555555555/excluir'));
+    expect(find.text('Nenhum pedido esperando.'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     painel.parar();
   });

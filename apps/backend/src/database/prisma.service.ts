@@ -18,6 +18,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleInit(): Promise<void> {
     await this.$connect();
     this.logger.log('Conectado ao PostgreSQL.');
+    await this.ajustesDeSeguranca();
+  }
+
+  /**
+   * Ajustes de seguranca que so o dono dos objetos (o usuario do app) pode
+   * fazer. Idempotente: roda a cada partida e nao muda nada se ja estiver ok.
+   * - set_updated_at com search_path fixo (aviso do Supabase, 11/10/2026).
+   */
+  private async ajustesDeSeguranca(): Promise<void> {
+    try {
+      await this.$executeRawUnsafe('ALTER FUNCTION public.set_updated_at() SET search_path = pg_catalog, public');
+    } catch (e) {
+      this.logger.warn(`Ajuste de seguranca do banco nao aplicado: ${(e as Error).message}`);
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

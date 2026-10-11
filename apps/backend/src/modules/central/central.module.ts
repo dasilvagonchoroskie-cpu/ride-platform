@@ -7,11 +7,12 @@ import { CorridaDoMotoristaController } from './corrida-do-motorista.controller'
 import { CentralService } from './central.service';
 import { DadosPessoaisCentralController, MeusDadosMotoristaController } from './dados-pessoais.controller';
 import { DadosPessoaisService } from './dados-pessoais.service';
+import { PedidosExclusaoService } from './pedidos-exclusao.service';
 
 @Module({
   imports: [PrismaModule, RidesModule, VehiclesModule],
   controllers: [AdminCentralController, SafetyController, DriverPayoutsController, CorridaDoMotoristaController, MeusDadosMotoristaController, DadosPessoaisCentralController],
-  providers: [CentralService, DadosPessoaisService],
-  exports: [CentralService],
+  providers: [CentralService, DadosPessoaisService, PedidosExclusaoService],
+  exports: [CentralService, PedidosExclusaoService],
 })
 export class CentralModule {}

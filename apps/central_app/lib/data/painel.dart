@@ -32,6 +32,8 @@ class Indicadores {
     this.ultimaAlteracao,
     this.saques = 0,
     this.ultimoSaque,
+    this.exclusoes = 0,
+    this.ultimaExclusao,
   });
 
   final int ativas;
@@ -69,8 +71,12 @@ class Indicadores {
   final int saques;
   final AprovacaoResumo? ultimoSaque;
 
+  /// Pedidos de exclusao de conta feitos pela pagina da internet (11/10/2026).
+  final int exclusoes;
+  final AprovacaoResumo? ultimaExclusao;
+
   /// Tudo o que espera a Central aprovar.
-  int get aprovacoes => pendentes + paraConferir + alteracoes + saques;
+  int get aprovacoes => pendentes + paraConferir + alteracoes + saques + exclusoes;
 
   factory Indicadores.fromJson(Map<String, dynamic> j) => Indicadores(
         ativas: _int(j['activeRides']),
@@ -98,6 +104,10 @@ class Indicadores {
             : null,
         saques: _int(j['payoutsPending']),
         ultimoSaque: j['latestPayout'] is Map<String, dynamic> ? AprovacaoResumo.fromJson(j['latestPayout'] as Map<String, dynamic>) : null,
+        exclusoes: _int(j['accountDeletionsPending']),
+        ultimaExclusao: j['latestAccountDeletion'] is Map<String, dynamic>
+            ? AprovacaoResumo.fromJson(j['latestAccountDeletion'] as Map<String, dynamic>)
+            : null,
       );
 }
 
@@ -1078,6 +1088,45 @@ class PedidoDeAlteracao {
       );
 }
 
+/// Pedido de exclusao de conta feito pela pagina da internet.
+class PedidoDeExclusao {
+  PedidoDeExclusao({required this.id, required this.contato, this.motivo, this.criadoEm, this.conta});
+
+  final String id;
+  final String contato;
+  final String? motivo;
+  final DateTime? criadoEm;
+
+  /// Conta achada com aquele telefone ou e-mail (null = nenhuma).
+  final ContaDoPedido? conta;
+
+  factory PedidoDeExclusao.fromJson(Map<String, dynamic> j) => PedidoDeExclusao(
+        id: '${j['id'] ?? ''}',
+        contato: '${j['contato'] ?? ''}',
+        motivo: (j['motivo'] as String?)?.trim().isNotEmpty == true ? j['motivo'] as String : null,
+        criadoEm: DateTime.tryParse('${j['createdAt'] ?? ''}')?.toLocal(),
+        conta: j['conta'] is Map<String, dynamic> ? ContaDoPedido.fromJson(j['conta'] as Map<String, dynamic>) : null,
+      );
+}
+
+class ContaDoPedido {
+  ContaDoPedido({required this.userId, required this.nome, this.telefone, this.email, this.motorista = false});
+
+  final String userId;
+  final String nome;
+  final String? telefone;
+  final String? email;
+  final bool motorista;
+
+  factory ContaDoPedido.fromJson(Map<String, dynamic> j) => ContaDoPedido(
+        userId: '${j['userId'] ?? ''}',
+        nome: (j['nome'] as String?)?.trim().isNotEmpty == true ? j['nome'] as String : 'Sem nome',
+        telefone: j['telefone'] as String?,
+        email: j['email'] as String?,
+        motorista: j['motorista'] == true,
+      );
+}
+
 class PainelApi {
   PainelApi([ApiClient? client]) : _c = client ?? ApiClient();
 
@@ -1242,6 +1291,19 @@ class PainelApi {
 
   Future<void> recusarAlteracao(String userId, String motivo) =>
       _c.request('POST', '/admin/dados/alteracoes/$userId/recusar', body: {'motivo': motivo});
+
+  // Pedidos de exclusao de conta pela pagina da internet (11/10/2026).
+  Future<List<PedidoDeExclusao>> pedidosDeExclusao() async =>
+      [for (final j in _lista(await _c.request('GET', '/admin/exclusoes'))) PedidoDeExclusao.fromJson(j)];
+
+  Future<void> excluirContaDoPedido(String id) => _c.request('POST', '/admin/exclusoes/$id/excluir', body: {});
+
+  /// [como]: SEM_CONTA (nao achou a conta) ou RESOLVIDO.
+  Future<void> resolverPedidoDeExclusao(String id, String como, {String? observacao}) => _c.request(
+        'POST',
+        '/admin/exclusoes/$id/resolver',
+        body: {'como': como, if (observacao != null && observacao.trim().isNotEmpty) 'observacao': observacao.trim()},
+      );
 
   // Tarifas
   Future<Tarifas> tarifas() async => Tarifas.fromJson(await _c.request('GET', '/admin/tariffs') as Map<String, dynamic>);

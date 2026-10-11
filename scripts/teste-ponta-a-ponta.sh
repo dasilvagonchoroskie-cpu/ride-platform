@@ -322,6 +322,27 @@ X=$(post /conta/excluir '{}' "$TXX"); sucesso "$X" && falha "Excluir conta sem c
 X=$(post /conta/excluir '{"confirmacao":"EXCLUIR"}' "$TXX")
 [ "$(echo "$X" | jq -r '.data.ok')" = "true" ] && ok "Passageiro: exclui a propria conta pelo app ($(echo "$X" | jq -r '.data.resultado'))" || falha "Passageiro: excluir a propria conta" "$X"
 X=$(get /auth/me "$TXX"); sucesso "$X" && falha "Conta excluida ainda entra" "$X" || ok "Conta excluida nao entra mais"
+
+# Pedido de exclusao pela pagina da internet (Google Play, 11/10/2026): a
+# Central ve, alarma e atende (exclui a conta ou marca "sem conta").
+TXE=$(entrar "+55649${SUF}86" PASSENGER)
+X=$(curl -s -m 60 -X POST "$API/conta/exclusao" -H 'Content-Type: application/json' -d "{\"contato\":\"(64) 9${SUF}86\",\"motivo\":\"teste automatico\",\"teste\":\"$CHAVE\"}")
+echo "$X" | grep -q "Pedido recebido" && ok "Pagina de exclusao: pedido recebido" || falha "Pagina de exclusao: enviar pedido" "$(echo "$X" | head -c 200)"
+X=$(curl -s -m 60 -X POST "$API/conta/exclusao" -H 'Content-Type: application/json' -d "{\"contato\":\"ninguem-${SUF}@exemplo.com\",\"teste\":\"$CHAVE\"}")
+X=$(get /admin/overview "$TA")
+[ "$(echo "$X" | jq -r '.data.accountDeletionsPending')" -ge 2 ] 2>/dev/null && [ -n "$(echo "$X" | jq -r '.data.latestAccountDeletion.id // empty')" ] && ok "Central: o painel avisa o pedido de exclusao de conta" || falha "Central: aviso de pedido de exclusao" "$X"
+X=$(get /admin/exclusoes "$TA")
+EXID=$(echo "$X" | jq -r --arg c "(64) 9${SUF}86" '.data[] | select(.contato==$c) | .id' | head -1)
+EXU=$(echo "$X" | jq -r --arg c "(64) 9${SUF}86" '.data[] | select(.contato==$c) | .conta.userId // empty' | head -1)
+EXN=$(echo "$X" | jq -r --arg c "ninguem-${SUF}@exemplo.com" '.data[] | select(.contato==$c) | .id' | head -1)
+[ -n "$EXID" ] && [ -n "$EXU" ] && ok "Central: lista o pedido e acha a conta pelo telefone" || falha "Central: lista de pedidos de exclusao" "$X"
+X=$(get /admin/exclusoes "$TXE"); sucesso "$X" && falha "Seguranca: passageiro viu pedidos de exclusao" "$X" || ok "Seguranca: so a Central ve os pedidos de exclusao"
+X=$(post "/admin/exclusoes/$EXN/excluir" '{}' "$TA"); sucesso "$X" && falha "Pedido sem conta nao deveria excluir nada" "$X" || ok "Central: pedido sem conta nao exclui ninguem"
+X=$(post "/admin/exclusoes/$EXN/resolver" '{"como":"SEM_CONTA","observacao":"teste"}' "$TA"); sucesso "$X" && ok "Central: marca o pedido sem conta como atendido" || falha "Central: resolver pedido sem conta" "$X"
+X=$(post "/admin/exclusoes/$EXID/excluir" '{}' "$TA")
+[ "$(echo "$X" | jq -r '.data.ok')" = "true" ] && ok "Central: excluiu a conta do pedido ($(echo "$X" | jq -r '.data.resultado'))" || falha "Central: excluir conta do pedido" "$X"
+X=$(get /auth/me "$TXE"); sucesso "$X" && falha "Conta do pedido ainda entra" "$X" || ok "Conta excluida pelo pedido nao entra mais"
+X=$(get /admin/exclusoes "$TA"); [ -z "$(echo "$X" | jq -r --arg a "$EXID" --arg b "$EXN" '.data[] | select(.id==$a or .id==$b) | .id')" ] && ok "Central: pedidos atendidos saem da lista" || falha "Central: pedidos atendidos ainda na lista" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Motorista sem saldo nao deveria ficar disponivel" "$X" || ok "Carteira: motorista com saldo zero nao fica disponivel ($(echo "$X" | jq -r '.error.message' | cut -c1-60)...)"
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")
 [ "$(echo "$X" | jq -r '.data.balanceCents')" = "5000" ] && ok "Central: recarga de R\$ 50,00 (credito no extrato)" || falha "Central: recarga inicial" "$X"
@@ -702,6 +723,10 @@ CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.
 if [ -n "${OPID:-}" ]; then
   X=$(curl -s -m 90 -X DELETE "$API/admin/equipe/$OPID" -H "Authorization: Bearer $TA"); sucesso "$X" && ok "Central: apagou a conta do operador de teste" || falha "Central: apagar operador" "$X"
 fi
+# Pedidos de exclusao do teste que sobraram (se algo falhou no meio).
+for ID in $(get /admin/exclusoes "$TA" | jq -r '.data[]? | select(.teste==true) | .id'); do
+  post "/admin/exclusoes/$ID/resolver" '{"como":"RESOLVIDO","observacao":"limpeza do teste"}' "$TA" >/dev/null
+done
 X=$(post /admin/limpeza/teste '{}' "$TA"); N=$(echo "$X" | jq -r '.data.contas // 0')
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Limpeza: apagou as $N contas deste teste e $(echo "$X" | jq -r '.data.corridas') corridas delas" || falha "Limpeza dos dados do teste" "$X"
 echo | tee -a "$REL"; echo "Resultado: $FALHAS falha(s)." | tee -a "$REL"

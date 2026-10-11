@@ -55,6 +55,7 @@ public class VigiaCentralService extends Service {
     private static final int ID_DOCUMENTO = 7105;
     private static final int ID_ALTERACAO = 7106;
     private static final int ID_SAQUE = 7107;
+    private static final int ID_EXCLUSAO = 7108;
     private static final long INTERVALO_MS = 8000;
     private static final String PREFS = "fortaleza_central";
 
@@ -169,6 +170,14 @@ public class VigiaCentralService extends Service {
         if (saque != null) {
             conferirAprovacao("saque", "flutter.central.saqueVisto", saque.optString("id", ""), ID_SAQUE,
                     "Saque pedido", nomeDe(saque) + " pediu um saque. Toque para conferir.");
+        }
+        // Pedido de exclusao de conta pela pagina da internet (11/10/2026).
+        JSONObject exclusao = d.optJSONObject("latestAccountDeletion");
+        if (exclusao != null) {
+            String quem = exclusao.optString("name", "");
+            if (quem == null || quem.trim().isEmpty() || "null".equals(quem)) quem = "Alguém";
+            conferirAprovacao("exclusao", "flutter.central.exclusaoVista", exclusao.optString("id", ""), ID_EXCLUSAO,
+                    "Pedido de exclusão de conta", quem.trim() + " pediu para excluir a conta. Atenda em até 7 dias.");
         }
     }
 
