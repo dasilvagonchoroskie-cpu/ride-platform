@@ -1317,7 +1317,10 @@ void main() {
       if (aba == 'Ao vivo') {
         await tester.tap(find.textContaining('Corridas de hoje'));
         await tester.pumpAndSettle();
-        await tester.scrollUntilVisible(find.text('Cancelada'), 300, scrollable: find.byType(Scrollable).first);
+        // Arrasta pela barra Motoristas/Corridas (no meio da tela fica o mapa,
+        // que mexe o mapa em vez de rolar a lista).
+        await tester.drag(find.byType(SegmentedButton<int>), const Offset(0, -400));
+        await tester.pumpAndSettle();
         await _foto(tester, '${(n++).toString().padLeft(2, '0')}-ao-vivo-corridas');
       }
       if (aba == 'Financeiro') {
@@ -1460,8 +1463,10 @@ void main() {
     expect(find.text('Motoristas (1)'), findsOneWidget);
     expect(find.text('Carlos Henrique Oliveira'), findsNothing);
 
-    // Corridas de hoje.
+    // Corridas de hoje (arrasta pela barra: no meio da tela fica o mapa).
     await tester.tap(find.text('Corridas de hoje (2)'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(SegmentedButton<int>), const Offset(0, -400));
     await tester.pumpAndSettle();
     expect(find.text('Cancelada'), findsOneWidget);
     expect(find.text('Motorista: Carlos Henrique Oliveira'), findsOneWidget);
