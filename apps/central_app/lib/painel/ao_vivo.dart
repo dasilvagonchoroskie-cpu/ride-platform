@@ -228,7 +228,7 @@ class _AoVivoState extends State<AoVivo> {
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     isDense: true,
-                    hintText: 'Buscar motorista ou placa...',
+                    hintText: 'Nome ou placa',
                     prefixIcon: const Icon(Icons.search, size: 20),
                     filled: true,
                     fillColor: AppColors.surface,
