@@ -81,9 +81,11 @@ class RideScreen extends StatelessWidget {
               enquadrarMargem: EdgeInsets.fromLTRB(56, 110, 56, MediaQuery.sizeOf(context).height * 0.45),
               // Bussola e centralizar (no carro, ou no embarque enquanto ele nao aparece).
               minhaPosicao: centro,
-              // Botoes do mapa logo abaixo do SOS: no lugar padrao eles
-              // ficavam escondidos atras do botao do chat (foto da tela).
-              controlesAlinhamento: const Alignment(1, -0.55),
+              // Botoes do mapa lado a lado, logo abaixo do SOS: no lugar
+              // padrao eles ficavam escondidos atras do botao do chat.
+              controlesAlinhamento: Alignment.topRight,
+              controlesEmLinha: true,
+              controlesMargem: const EdgeInsets.fromLTRB(Spacing.md, 76, Spacing.md, Spacing.md),
               markers: [
                 MapMarker(id: 'dropoff', coords: corrida.dropoff.coords, kind: MarkerKind.dropoff),
                 if (motorista != null && motorista.posicaoReal)

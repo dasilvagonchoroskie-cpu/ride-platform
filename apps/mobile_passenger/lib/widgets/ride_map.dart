@@ -49,6 +49,8 @@ class RideMap extends StatefulWidget {
     this.minhaPosicao,
     this.bussolaAutomatica = false,
     this.controlesAlinhamento = const Alignment(1, -0.45),
+    this.controlesEmLinha = false,
+    this.controlesMargem = const EdgeInsets.all(Spacing.md),
     this.enquadrar = const [],
     this.enquadrarChave,
     this.enquadrarMargem = const EdgeInsets.fromLTRB(40, 72, 40, 40),
@@ -65,6 +67,12 @@ class RideMap extends StatefulWidget {
 
   /// Onde ficam a bussola e o centralizar (fora do caminho dos paineis).
   final Alignment controlesAlinhamento;
+
+  /// Bussola e centralizar lado a lado (em vez de um embaixo do outro).
+  final bool controlesEmLinha;
+
+  /// Distancia dos botoes do mapa ate a borda (ex.: para ficar abaixo do SOS).
+  final EdgeInsets controlesMargem;
 
   /// Mude o numero para o mapa voltar a [center] (botao "minha localizacao").
   final int recentrar;
@@ -460,8 +468,9 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
               child: Align(
                 alignment: widget.controlesAlinhamento,
                 child: Padding(
-                  padding: const EdgeInsets.all(Spacing.md),
-                  child: Column(
+                  padding: widget.controlesMargem,
+                  child: Flex(
+                    direction: widget.controlesEmLinha ? Axis.horizontal : Axis.vertical,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       BotaoBussola(
@@ -473,7 +482,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
                         },
                       ),
                       if (widget.minhaPosicao != null) ...[
-                        const SizedBox(height: Spacing.sm),
+                        const SizedBox(width: Spacing.sm, height: Spacing.sm),
                         BotaoDoMapa(
                           dica: 'Centralizar na minha localização',
                           aoTocar: _centralizar,

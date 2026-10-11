@@ -233,7 +233,7 @@ class PainelMotorista extends StatelessWidget {
       width: 48,
       height: 48,
       decoration: const BoxDecoration(color: AppColors.surfaceElevated, shape: BoxShape.circle),
-      child: Icon(m.moto ? Icons.two_wheeler : Icons.directions_car, color: AppColors.textMuted, size: 26),
+      child: Icon(corrida.moto || m.moto ? Icons.two_wheeler : Icons.directions_car, color: AppColors.textMuted, size: 26),
     );
 
     return Column(

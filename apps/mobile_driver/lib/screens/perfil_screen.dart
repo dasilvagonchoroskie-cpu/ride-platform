@@ -204,8 +204,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         children: [
                           Text(p?.name ?? 'Motorista', style: AppText.title, maxLines: 2, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: Spacing.xs),
-                          Text('Telefone: ${telefoneBonito(p?.phone).isEmpty ? '-' : telefoneBonito(p?.phone)}', style: AppText.body),
-                          Text('Placa: ${d.vehicle?.plate ?? '-'}', style: AppText.body),
+                          // Icone no lugar do rotulo: "Telefone: (64)" quebrava
+                          // a linha no meio do numero.
+                          _LinhaIcone(
+                            icone: Icons.phone_outlined,
+                            texto: telefoneBonito(p?.phone).isEmpty ? '-' : telefoneBonito(p?.phone),
+                          ),
+                          _LinhaIcone(icone: Icons.directions_car_outlined, texto: d.vehicle?.plate ?? '-'),
                         ],
                       ),
                     ),
@@ -513,6 +518,29 @@ class _LinhaDocumento extends StatelessWidget {
                   onPressed: aoEnviar,
                   child: Text(status.isEmpty ? 'Enviar' : (status == 'APPROVED' ? 'Atualizar' : 'Trocar')),
                 ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LinhaIcone extends StatelessWidget {
+  const _LinhaIcone({required this.icone, required this.texto});
+
+  final IconData icone;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          Icon(icone, size: 16, color: AppColors.textMuted),
+          const SizedBox(width: Spacing.xs),
+          Expanded(
+            child: Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.body),
+          ),
         ],
       ),
     );
