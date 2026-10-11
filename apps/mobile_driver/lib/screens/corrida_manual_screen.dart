@@ -122,7 +122,8 @@ class _CorridaManualScreenState extends State<CorridaManualScreen> {
               enabled: !_ocupado,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: 'Telefone (com DDD) ou e-mail do passageiro',
+                labelText: 'Telefone ou e-mail do passageiro',
+                helperText: 'Telefone com DDD, ex.: (64) 99999-0000',
                 prefixIcon: Icon(Icons.person_search),
               ),
               onChanged: (_) => setState(() {

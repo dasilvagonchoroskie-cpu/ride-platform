@@ -193,7 +193,7 @@ void main() {
   testWidgets('Motorista chegou: faixa verde', (tester) async {
     await _abrir(tester, const SearchingScreen(), corrida: _corrida('DRIVER_WAITING'));
     expect(find.text('O motorista chegou'), findsOneWidget);
-    expect(find.text('Ele está te esperando'), findsOneWidget);
+    expect(find.text('Está te esperando'), findsOneWidget);
   });
 
   testWidgets('Em viagem: painel do motorista e chat continuam', (tester) async {

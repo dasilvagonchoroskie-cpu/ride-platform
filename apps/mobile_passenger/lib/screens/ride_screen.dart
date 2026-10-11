@@ -81,6 +81,9 @@ class RideScreen extends StatelessWidget {
               enquadrarMargem: EdgeInsets.fromLTRB(56, 110, 56, MediaQuery.sizeOf(context).height * 0.45),
               // Bussola e centralizar (no carro, ou no embarque enquanto ele nao aparece).
               minhaPosicao: centro,
+              // Botoes do mapa logo abaixo do SOS: no lugar padrao eles
+              // ficavam escondidos atras do botao do chat (foto da tela).
+              controlesAlinhamento: const Alignment(1, -0.55),
               markers: [
                 MapMarker(id: 'dropoff', coords: corrida.dropoff.coords, kind: MarkerKind.dropoff),
                 if (motorista != null && motorista.posicaoReal)
@@ -128,7 +131,7 @@ class RideScreen extends StatelessWidget {
               child: SafeArea(
                 top: false,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+                  constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.5),
                   child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

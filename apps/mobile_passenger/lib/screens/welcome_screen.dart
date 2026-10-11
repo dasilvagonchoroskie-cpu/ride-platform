@@ -57,7 +57,7 @@ class WelcomeScreen extends StatelessWidget {
               if (app.isDemo) ...[
                 const SizedBox(height: Spacing.md),
                 BotaoContorno(
-                  texto: 'Entrar em modo demonstração',
+                  texto: 'Modo demonstração',
                   aoTocar: () => context.read<AuthState>().demoLogin('Passageiro Demo', '+5511999990001'),
                 ),
               ],

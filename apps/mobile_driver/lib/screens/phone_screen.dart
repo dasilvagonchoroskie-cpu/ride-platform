@@ -131,7 +131,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
               const SizedBox(height: Spacing.xl),
               AppField(
                 label: 'Telefone',
-                hint: '(11) 98888-0000',
+                hint: '(64) 99999-0000',
                 controller: _controller,
                 keyboardType: TextInputType.phone,
                 error: _error,

@@ -154,7 +154,9 @@ class SheetSurface extends StatelessWidget {
           BoxShadow(color: Color(0x26000000), blurRadius: 18, offset: Offset(0, -4)),
         ],
       ),
-      child: child,
+      // Material transparente: os ListTile e InkWell dentro da folha
+      // branca mostram o toque (sem isso o fundo branco escondia o efeito).
+      child: Material(type: MaterialType.transparency, child: child),
     );
   }
 }

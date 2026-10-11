@@ -206,7 +206,9 @@ class _SearchingScreenState extends State<SearchingScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Ao entrar no carro, diga este código ao motorista:',
+                                        corrida.driver?.moto == true
+                                            ? 'Ao subir na moto, diga este código ao motorista:'
+                                            : 'Ao entrar no carro, diga este código ao motorista:',
                                         style: AppText.body.copyWith(color: AppColors.text),
                                       ),
                                     ),

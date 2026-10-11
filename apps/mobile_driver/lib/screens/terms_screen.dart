@@ -5,6 +5,7 @@ import '../core/api/api_client.dart';
 import '../core/legal/legal_content.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
+import '../widgets/texto_legal.dart';
 import '../widgets/ui.dart';
 
 /// Aceite obrigatorio dos Termos de Uso e da Politica de Privacidade.
@@ -110,8 +111,8 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
                     child: TabBarView(
                       controller: _abas,
                       children: [
-                        _TextoLegal(texto: _termos),
-                        _TextoLegal(texto: _privacidade),
+                        TextoLegal(texto: _termos),
+                        TextoLegal(texto: _privacidade),
                       ],
                     ),
                   ),
@@ -140,56 +141,6 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Renderizacao simples do texto legal: sem depender de pacote de
-/// markdown, so distinguindo titulos (linhas com #) do corpo.
-class _TextoLegal extends StatelessWidget {
-  const _TextoLegal({required this.texto});
-
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    final linhas = texto.split('\n');
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final linha in linhas) _linha(linha),
-        ],
-      ),
-    );
-  }
-
-  Widget _linha(String bruta) {
-    final s = bruta.trim();
-    if (s.isEmpty) return const SizedBox(height: Spacing.sm);
-    if (s.startsWith('# ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: Spacing.md, bottom: Spacing.xs),
-        child: Text(s.substring(2), style: AppText.title),
-      );
-    }
-    if (s.startsWith('## ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: Spacing.md, bottom: Spacing.xs),
-        child: Text(s.substring(3), style: AppText.heading),
-      );
-    }
-    if (s == '---') {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.sm),
-        child: Divider(color: AppColors.border, height: 1),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.xs),
-      child: Text(s, style: AppText.body.copyWith(color: AppColors.textMuted, height: 1.5)),
     );
   }
 }

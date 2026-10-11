@@ -105,9 +105,11 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
         // largura do botao de voltar e o mapa virava uma fita no meio).
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ---------- 40% superiores: mapa com a rota tracada ----------
+          // ---------- 30% superiores: mapa com a rota tracada ----------
+          // (era 40%: no celular de 780 de altura, com Carro/Moto, o preco
+          // ficava cortado embaixo do cupom — a foto da tela pegou.)
           Expanded(
-            flex: 4,
+            flex: 3,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -154,9 +156,9 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             ),
           ),
 
-          // ---------- 60% inferiores: lista de opcoes de viagem ----------
+          // ---------- 70% inferiores: lista de opcoes de viagem ----------
           Expanded(
-            flex: 6,
+            flex: 7,
             child: SheetSurface(
               padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.lg, Spacing.lg, Spacing.lg),
               child: Column(
@@ -437,7 +439,7 @@ class _PriceCard extends StatelessWidget {
     final noturna = quote.flag == FareFlag.noturna;
 
     return Container(
-      padding: const EdgeInsets.all(Spacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.md),
       decoration: BoxDecoration(
         color: AppColors.sheet,
         borderRadius: BorderRadius.circular(Radii.sm),
@@ -446,30 +448,13 @@ class _PriceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(
-                noturna ? Icons.nightlight_round : Icons.wb_sunny_outlined,
-                size: 18,
-                color: AppColors.sheetMuted,
-              ),
-              const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: Text(
-                  'Bandeira ${quote.flag.label} - ${quote.flag.faixa}',
-                  style: SheetText.muted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Spacing.md),
-
+          // O preco vem primeiro: e o que o passageiro procura.
           // Evandro (09/10/2026): o valor do pedido e so aproximado; quem
           // fecha a conta e o taximetro do motorista (distancia + tempo parado).
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(formatMoney(quote.priceCents), style: SheetText.price),
+              Text(formatMoney(quote.priceCents), style: SheetText.price.copyWith(fontSize: 22)),
               const SizedBox(width: Spacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -492,6 +477,23 @@ class _PriceCard extends StatelessWidget {
             '${formatDistance(quote.distanceMeters.toDouble())} - cerca de '
             '${(quote.durationSeconds / 60).round()} min',
             style: SheetText.muted,
+          ),
+          const SizedBox(height: Spacing.xs),
+          Row(
+            children: [
+              Icon(
+                noturna ? Icons.nightlight_round : Icons.wb_sunny_outlined,
+                size: 16,
+                color: AppColors.sheetMuted,
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Text(
+                  'Bandeira ${quote.flag.label} - ${quote.flag.faixa}',
+                  style: SheetText.muted,
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: Spacing.md),

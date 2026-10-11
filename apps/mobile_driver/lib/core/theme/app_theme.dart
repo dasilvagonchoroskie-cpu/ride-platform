@@ -159,13 +159,22 @@ class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: base.colorScheme.copyWith(
+      // Esquema inteiro tirado do azul da marca: sem isso, os botoes
+      // "tonais", as abas selecionadas e os cartoes vinham no lilas padrao
+      // do Flutter (as fotos das telas pegaram em 10/10/2026).
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.brand,
+        brightness: Brightness.light,
+      ).copyWith(
         primary: AppColors.brand,
         secondary: AppColors.gold,
         surface: AppColors.surface,
         error: AppColors.danger,
         onPrimary: Colors.white,
         onSurface: AppColors.text,
+        onSecondary: AppColors.text,
+        secondaryContainer: const Color(0xFFDCE6F7),
+        onSecondaryContainer: AppColors.brandDark,
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surface,

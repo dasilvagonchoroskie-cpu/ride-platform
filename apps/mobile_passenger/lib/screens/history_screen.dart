@@ -48,7 +48,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Padding(
             padding: const EdgeInsets.only(right: Spacing.lg),
             child: Center(
-              child: AppBadge(text: '${completed.length} CORRIDAS', tone: AppBadgeTone.info),
+              child: AppBadge(text: completed.length == 1 ? '1 CORRIDA' : '${completed.length} CORRIDAS', tone: AppBadgeTone.info),
             ),
           ),
         ],

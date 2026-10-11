@@ -66,8 +66,8 @@ class _RidesHistoryScreenState extends State<RidesHistoryScreen> {
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: 'day', label: Text('Hoje')),
-                ButtonSegment(value: 'week', label: Text('Esta semana')),
-                ButtonSegment(value: 'month', label: Text('Este mês')),
+                ButtonSegment(value: 'week', label: Text('Semana')),
+                ButtonSegment(value: 'month', label: Text('Mês')),
               ],
               selected: {_periodo},
               onSelectionChanged: (s) {
@@ -97,11 +97,13 @@ class _RidesHistoryScreenState extends State<RidesHistoryScreen> {
                 ],
               ),
               const SizedBox(height: Spacing.sm),
+              // Rotulos curtos: em 3 colunas, "Cancelamentos" quebrava no meio
+              // da palavra no celular de 360 de largura.
               Row(
                 children: [
-                  _Numero(rotulo: 'Aceitação de chamadas', valor: '${_int(des['acceptanceRate'])}%'),
+                  _Numero(rotulo: 'Aceitação', valor: '${_int(des['acceptanceRate'])}%'),
                   const SizedBox(width: Spacing.sm),
-                  _Numero(rotulo: 'Cancelamentos', valor: '${_int(des['cancellations'])}'),
+                  _Numero(rotulo: 'Canceladas', valor: '${_int(des['cancellations'])}'),
                   const SizedBox(width: Spacing.sm),
                   _Numero(rotulo: 'Sua nota', valor: '★ ${(des['ratingAvg'] as num? ?? 5).toStringAsFixed(1)}'),
                 ],
@@ -134,7 +136,7 @@ class _Numero extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(rotulo, maxLines: 2, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+            Text(rotulo, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption.copyWith(color: AppColors.textMuted)),
             FittedBox(fit: BoxFit.scaleDown, child: Text(valor, style: AppText.heading.copyWith(color: cor))),
           ],
         ),

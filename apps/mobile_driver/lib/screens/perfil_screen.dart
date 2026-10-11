@@ -204,7 +204,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         children: [
                           Text(p?.name ?? 'Motorista', style: AppText.title, maxLines: 2, overflow: TextOverflow.ellipsis),
                           const SizedBox(height: Spacing.xs),
-                          Text('Telefone: ${p?.phone ?? '-'}', style: AppText.body),
+                          Text('Telefone: ${telefoneBonito(p?.phone).isEmpty ? '-' : telefoneBonito(p?.phone)}', style: AppText.body),
                           Text('Placa: ${d.vehicle?.plate ?? '-'}', style: AppText.body),
                         ],
                       ),

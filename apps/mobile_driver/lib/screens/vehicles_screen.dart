@@ -221,8 +221,10 @@ class _Veiculo extends StatelessWidget {
                   children: [
                     Text(
                       '${dados['brand'] ?? ''} ${dados['model'] ?? ''}'.trim(),
-                      style: AppText.heading.copyWith(fontSize: 18),
-                      maxLines: 1,
+                      style: AppText.heading.copyWith(fontSize: 17),
+                      // 2 linhas: com a placa ao lado, "Chevrolet Onix Plus"
+                      // virava "Chevrolet ..." no celular de 360.
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import '../core/theme/app_theme.dart';
+import '../core/utils/formatters.dart';
 import '../state/driver_state.dart';
 
 /// Meus dados (Evandro, 10/10/2026): o motorista confere e pede para mudar
@@ -53,6 +54,13 @@ class _MeusDadosScreenState extends State<MeusDadosScreen> {
   }
 
   static String _telefoneSemPais(String? t) => (t ?? '').replaceFirst(RegExp(r'^\+55'), '');
+
+  /// Telefone do pedido em +55... aparece como (64) 99999-0001.
+  static String _valorBonito(Object? campo, Object? valor) {
+    if (valor == null || '$valor'.isEmpty) return '-';
+    if (campo == 'phone') return telefoneBonito('$valor');
+    return '$valor';
+  }
 
   static String _dataBr(String? iso) {
     if (iso == null || iso.length < 10) return '-';
@@ -175,7 +183,7 @@ class _MeusDadosScreenState extends State<MeusDadosScreen> {
               titulo: 'Esperando a Central aprovar',
               linhas: [
                 for (final m in (pendente['mudancas'] as List? ?? const []))
-                  if (m is Map) '${m['rotulo']}: ${m['para'] ?? '-'}',
+                  if (m is Map) '${m['rotulo']}: ${_valorBonito(m['campo'], m['para'])}',
               ],
               acao: TextButton(onPressed: _enviando ? null : _desistir, child: const Text('Desistir do pedido')),
             ),
@@ -211,7 +219,10 @@ class _MeusDadosScreenState extends State<MeusDadosScreen> {
               tileColor: AppColors.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md)),
               leading: const Icon(Icons.lock_outline),
-              title: Text('CPF ${_atual['cpf'] ?? '-'} · nascimento ${_dataBr(_atual['birthDate'] as String?)}'),
+              title: Text(
+                'CPF: ${(_atual['cpf'] as String?)?.isNotEmpty == true ? _atual['cpf'] : 'não informado'}\n'
+                'Nascimento: ${_atual['birthDate'] == null ? 'não informado' : _dataBr(_atual['birthDate'] as String?)}',
+              ),
               subtitle: const Text('Para corrigir, fale com a Central.'),
             ),
             if (_erro != null) ...[

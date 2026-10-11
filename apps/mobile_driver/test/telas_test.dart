@@ -180,7 +180,7 @@ void main() {
   testWidgets('Historico: filtros, totais, desempenho e taxa por corrida', (tester) async {
     await _abrir(tester, const RidesHistoryScreen());
     expect(find.text('Hoje'), findsOneWidget);
-    expect(find.text('Este mês'), findsOneWidget);
+    expect(find.text('Mês'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
     expect(find.textContaining('17,02'), findsWidgets);
     expect(find.textContaining('Taxa descontada: R\$'), findsOneWidget);

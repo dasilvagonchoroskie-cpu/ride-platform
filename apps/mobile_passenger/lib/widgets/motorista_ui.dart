@@ -43,7 +43,7 @@ class FaixaTempoAteVoce extends StatelessWidget {
     String linha;
     if (chegou) {
       titulo = 'O motorista chegou';
-      linha = 'Ele está te esperando';
+      linha = 'Está te esperando';
     } else if (emViagem) {
       final (min, km) = tempoAteVoce(m?.position ?? corrida.pickup.coords, corrida.dropoff.coords);
       titulo = 'Até o destino';
@@ -85,20 +85,22 @@ class FaixaTempoAteVoce extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: AppText.bodyStrong.copyWith(color: Colors.white, fontSize: 16),
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(chegou ? Icons.place : Icons.schedule, color: Colors.white, size: 20),
-                      const SizedBox(width: Spacing.xs),
-                      Flexible(
-                        child: Text(
+                  // Diminui a letra em vez de cortar ("Ele está te es..."
+                  // aparecia cortado na foto da tela de 360 de largura).
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(chegou ? Icons.place : Icons.schedule, color: Colors.white, size: 20),
+                        const SizedBox(width: Spacing.xs),
+                        Text(
                           linha,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: AppText.heading.copyWith(color: Colors.white, fontSize: 20),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -218,18 +220,20 @@ class PainelMotorista extends StatelessWidget {
     final viagens = m.totalRides == 1 ? '1 viagem' : '${m.totalRides} viagens';
     final telefone = m.telefone ?? '';
 
+    // Iniciais um pouco para cima e para a esquerda: o circulo do carro
+    // (embaixo, a direita) cobria metade das letras.
     final rosto = Container(
       width: 84,
       height: 84,
-      alignment: Alignment.center,
+      alignment: const Alignment(-0.2, -0.15),
       decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
-      child: Text(m.initials, style: AppText.title.copyWith(color: Colors.white)),
+      child: Text(m.initials, style: AppText.title.copyWith(color: Colors.white, fontSize: 24)),
     );
     final carro = Container(
-      width: 56,
-      height: 56,
+      width: 48,
+      height: 48,
       decoration: const BoxDecoration(color: AppColors.surfaceElevated, shape: BoxShape.circle),
-      child: const Icon(Icons.directions_car, color: AppColors.textMuted, size: 30),
+      child: Icon(m.moto ? Icons.two_wheeler : Icons.directions_car, color: AppColors.textMuted, size: 26),
     );
 
     return Column(
@@ -257,7 +261,7 @@ class PainelMotorista extends StatelessWidget {
                         child: _Moldura(
                           child: m.fotoCarroUrl == null
                               ? carro
-                              : FotoDoServidor(caminho: m.fotoCarroUrl!, tamanho: 56, reserva: carro),
+                              : FotoDoServidor(caminho: m.fotoCarroUrl!, tamanho: 48, reserva: carro),
                         ),
                       ),
                     ],
@@ -288,8 +292,8 @@ class PainelMotorista extends StatelessWidget {
                   ),
                   const SizedBox(height: Spacing.sm),
                   Wrap(
-                    spacing: Spacing.sm,
-                    runSpacing: Spacing.sm,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
                       _Acao(
                         icone: corrida.bloqueado ? Icons.lock_open : Icons.block,
@@ -393,15 +397,23 @@ class _Acao extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(Radii.md),
         onTap: aoTocar,
+        // 62 de largura: os 3 botoes (Bloquear, Favoritar, Ligar) cabem
+        // numa linha so no celular de 360 (antes o Ligar caia para baixo).
         child: SizedBox(
-          width: 82,
-          height: 64,
+          width: 62,
+          height: 58,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icone, color: cor, size: 26),
+              Icon(icone, color: cor, size: 24),
               const SizedBox(height: 2),
-              Text(rotulo, style: AppText.caption.copyWith(color: AppColors.textMuted, fontSize: 12)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(rotulo, maxLines: 1, style: AppText.caption.copyWith(color: AppColors.textMuted, fontSize: 12)),
+                ),
+              ),
             ],
           ),
         ),

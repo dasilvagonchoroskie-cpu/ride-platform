@@ -355,14 +355,33 @@ class _PainelInferior extends StatelessWidget {
               Row(
                 children: [
                   const _Aba(icone: Icons.location_on, rotulo: 'Mapa', ativa: true),
+                  // Bolinha desenhada (o emoji mudava de cara em cada celular).
                   Expanded(
-                    child: Text(
-                      online ? '🟢 Online' : '🔴 Offline',
-                      textAlign: TextAlign.center,
-                      style: AppText.title.copyWith(
-                        fontSize: 26,
-                        color: online ? AppColors.primary : AppColors.danger,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: online ? AppColors.primary : AppColors.danger,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: Spacing.sm),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              online ? 'Online' : 'Offline',
+                              style: AppText.title.copyWith(
+                                fontSize: 26,
+                                color: online ? AppColors.primary : AppColors.danger,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   _Aba(icone: Icons.directions_car, rotulo: 'Corridas', onTap: onCorridas),

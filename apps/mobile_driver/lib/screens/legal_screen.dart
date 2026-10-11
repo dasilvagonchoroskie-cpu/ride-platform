@@ -4,6 +4,7 @@ import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
 import '../core/theme/app_theme.dart';
+import '../widgets/texto_legal.dart';
 
 /// Termos de uso ou Politica de Privacidade (texto oficial do servidor).
 class LegalScreen extends StatefulWidget {
@@ -46,13 +47,7 @@ class _LegalScreenState extends State<LegalScreen> {
       appBar: AppBar(title: Text(widget.privacidade ? 'Política de Privacidade' : 'Termos de uso')),
       body: _texto == null
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(Spacing.xl),
-              child: SelectableText(
-                _texto!.replaceAll(RegExp(r'^#+\s*', multiLine: true), ''),
-                style: AppText.body.copyWith(fontSize: 16, height: 1.5),
-              ),
-            ),
+          : TextoLegal(texto: _texto!, padding: const EdgeInsets.all(Spacing.xl)),
     );
   }
 }

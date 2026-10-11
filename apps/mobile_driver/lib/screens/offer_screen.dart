@@ -92,7 +92,11 @@ class OfferScreen extends StatelessWidget {
           Expanded(
             flex: 6,
             child: SheetSurface(
-              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.xl),
+              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg),
+              // Deslizar e Recusar ficam SEMPRE na tela, embaixo; so os
+              // detalhes rolam. Antes, em celular de 780 de altura, o
+              // "Deslize para aceitar" ficava 162 pontos abaixo da tela
+              // (a foto da tela pegou em 10/10/2026).
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -106,7 +110,7 @@ class OfferScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: Spacing.lg),
+                  const SizedBox(height: Spacing.md),
 
                   // Contador de expiracao
                   Row(
@@ -145,143 +149,164 @@ class OfferScreen extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: Spacing.lg),
-
-                  // Ganho em destaque
-                  Container(
-                    padding: const EdgeInsets.all(Spacing.lg),
-                    decoration: BoxDecoration(
-                      color: AppColors.sheetField,
-                      borderRadius: BorderRadius.circular(Radii.sm),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('VALOR DA CORRIDA', style: SheetText.label),
-                            Text(
-                              formatMoney(offer.fareCents),
-                              style: SheetText.title.copyWith(fontSize: 28),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('Seu ganho', style: SheetText.muted),
-                            Text(formatMoney(offer.earningCents), style: SheetText.heading),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.brandSoft,
-                                borderRadius: BorderRadius.circular(Radii.pill),
-                              ),
-                              child: Text(
-                                offer.paymentMethod,
-                                style: SheetText.label.copyWith(color: AppColors.brand, letterSpacing: 0),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
                   const SizedBox(height: Spacing.md),
 
-                  // Passageiro
-                  Row(
-                    children: [
-                      AppAvatar(initials: offer.passengerInitials, size: 44),
-                      const SizedBox(width: Spacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(offer.passengerName, style: SheetText.heading),
-                            Row(
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Ganho em destaque
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.sheetField,
+                              borderRadius: BorderRadius.circular(Radii.sm),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                AppStars(value: offer.passengerRating, size: 12),
-                                const SizedBox(width: Spacing.xs),
-                                Text(offer.passengerRating.toStringAsFixed(2), style: SheetText.muted),
-                                const SizedBox(width: Spacing.sm),
-                                Text(offer.paymentMethod, style: SheetText.muted),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('VALOR DA CORRIDA', style: SheetText.label),
+                                    Text(
+                                      formatMoney(offer.fareCents),
+                                      style: SheetText.title.copyWith(fontSize: 28),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('Seu ganho', style: SheetText.muted),
+                                    Text(formatMoney(offer.earningCents), style: SheetText.heading),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.brandSoft,
+                                        borderRadius: BorderRadius.circular(Radii.pill),
+                                      ),
+                                      child: Text(
+                                        offer.paymentMethod,
+                                        style: SheetText.label.copyWith(color: AppColors.brand, letterSpacing: 0),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+
+                          const SizedBox(height: Spacing.md),
+
+                          // Rota primeiro: e o que decide o aceite.
+                          Row(
+                            children: [
+                              const Icon(Icons.my_location, size: 18, color: AppColors.sheetText),
+                              const SizedBox(width: Spacing.md),
+                              Expanded(
+                                child: Text(
+                                  '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
+                                  style: SheetText.body,
+                                ),
+                              ),
+                              Text(formatDuration(offer.durationSeconds), style: SheetText.heading),
+                            ],
+                          ),
+                          const SizedBox(height: Spacing.sm),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Icon(Icons.location_on, size: 18, color: AppColors.primary),
+                              ),
+                              const SizedBox(width: Spacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('ONDE BUSCAR', style: SheetText.label),
+                                    Text(
+                                      offer.pickupAddress,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.body,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: Spacing.sm),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Icon(Icons.flag, size: 18, color: AppColors.danger),
+                              ),
+                              const SizedBox(width: Spacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('PARA ONDE VAI', style: SheetText.label),
+                                    Text(
+                                      offer.dropoffAddress,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.body,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: Spacing.sm),
+                              Text(
+                                formatDistance(offer.tripDistanceMeters.toDouble()),
+                                style: SheetText.muted,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: Spacing.md),
+                          const AppDivider(onLight: true),
+
+                          // Passageiro
+                          Row(
+                            children: [
+                              AppAvatar(initials: offer.passengerInitials, size: 40),
+                              const SizedBox(width: Spacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      offer.passengerName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.heading,
+                                    ),
+                                    Row(
+                                      children: [
+                                        AppStars(value: offer.passengerRating, size: 12),
+                                        const SizedBox(width: Spacing.xs),
+                                        Text(offer.passengerRating.toStringAsFixed(1), style: SheetText.muted),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
 
                   const SizedBox(height: Spacing.md),
-                  const AppDivider(onLight: true),
-
-                  // Rota
-                  Row(
-                    children: [
-                      const Icon(Icons.my_location, size: 18, color: AppColors.sheetText),
-                      const SizedBox(width: Spacing.md),
-                      Expanded(
-                        child: Text(
-                          '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
-                          style: SheetText.body,
-                        ),
-                      ),
-                      Text(formatDuration(offer.durationSeconds), style: SheetText.heading),
-                    ],
-                  ),
-                  const SizedBox(height: Spacing.sm),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 18, color: AppColors.primary),
-                      const SizedBox(width: Spacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('ONDE BUSCAR', style: SheetText.label),
-                            Text(
-                              offer.pickupAddress,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: SheetText.body,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: Spacing.sm),
-                  Row(
-                    children: [
-                      const Icon(Icons.flag, size: 18, color: AppColors.danger),
-                      const SizedBox(width: Spacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('PARA ONDE VAI', style: SheetText.label),
-                            Text(
-                              offer.dropoffAddress,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: SheetText.body,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        formatDistance(offer.tripDistanceMeters.toDouble()),
-                        style: SheetText.muted,
-                      ),
-                    ],
-                  ),
-
-                  const Spacer(),
 
                   // Deslizar para aceitar (Evandro, 09/10/2026): toque sem
                   // querer no bolso nao aceita corrida.
@@ -290,11 +315,14 @@ class OfferScreen extends StatelessWidget {
                     cor: AppColors.accent,
                     aoConfirmar: () => context.read<DriverState>().acceptOffer(),
                   ),
-                  const SizedBox(height: Spacing.sm),
-                  AppButton(
-                    label: 'Recusar',
-                    variant: AppButtonVariant.secondary,
+                  const SizedBox(height: Spacing.xs),
+                  TextButton(
                     onPressed: () => context.read<DriverState>().declineOffer(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.sheetMuted,
+                      minimumSize: const Size.fromHeight(44),
+                    ),
+                    child: const Text('Recusar', style: AppText.button),
                   ),
                 ],
               ),

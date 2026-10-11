@@ -283,7 +283,12 @@ class BotaoPrincipal extends StatelessWidget {
                 height: 22,
                 child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
               )
-            : Text(texto, style: AppText.button.copyWith(fontSize: 18)),
+            // Uma linha so, centralizada: texto comprido diminui a letra
+            // em vez de quebrar torto (o da Ajuda quebrava em 2 linhas).
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(texto, maxLines: 1, style: AppText.button.copyWith(fontSize: 18)),
+              ),
       ),
     );
   }
