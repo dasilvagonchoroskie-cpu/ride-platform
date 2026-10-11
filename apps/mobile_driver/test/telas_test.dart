@@ -212,8 +212,10 @@ void main() {
     final d = await _abrir(tester, const VehiclesScreen());
     expect(find.text('Em uso'), findsOneWidget);
     expect(find.text('Guardado (liberado)'), findsOneWidget);
-    expect(find.text('Aguardando a Central conferir'), findsOneWidget);
     expect(find.text('Usar este carro'), findsOneWidget);
+    // Nome do carro em ate 2 linhas: o terceiro cartao fica mais para baixo.
+    await tester.scrollUntilVisible(find.text('Aguardando a Central conferir'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Aguardando a Central conferir'), findsOneWidget);
     expect(find.textContaining('Falta mandar'), findsOneWidget);
     expect(d.vehicle?.plate, 'ABC1D23');
     await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 200, scrollable: find.byType(Scrollable).first);

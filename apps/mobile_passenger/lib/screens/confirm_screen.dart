@@ -105,11 +105,11 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
         // largura do botao de voltar e o mapa virava uma fita no meio).
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ---------- 30% superiores: mapa com a rota tracada ----------
+          // ---------- 1/3 de cima: mapa com a rota tracada ----------
           // (era 40%: no celular de 780 de altura, com Carro/Moto, o preco
           // ficava cortado embaixo do cupom — a foto da tela pegou.)
           Expanded(
-            flex: 3,
+            flex: 33,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -156,9 +156,9 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
             ),
           ),
 
-          // ---------- 70% inferiores: lista de opcoes de viagem ----------
+          // ---------- 2/3 de baixo: lista de opcoes de viagem ----------
           Expanded(
-            flex: 7,
+            flex: 67,
             child: SheetSurface(
               padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.lg, Spacing.lg, Spacing.lg),
               child: Column(
@@ -451,11 +451,12 @@ class _PriceCard extends StatelessWidget {
           // O preco vem primeiro: e o que o passageiro procura.
           // Evandro (09/10/2026): o valor do pedido e so aproximado; quem
           // fecha a conta e o taximetro do motorista (distancia + tempo parado).
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: Spacing.sm,
+            runSpacing: Spacing.xs,
             children: [
               Text(formatMoney(quote.priceCents), style: SheetText.price.copyWith(fontSize: 22)),
-              const SizedBox(width: Spacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
