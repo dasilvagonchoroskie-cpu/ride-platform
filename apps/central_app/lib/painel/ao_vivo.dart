@@ -10,6 +10,7 @@ import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
+import 'visao_geral.dart' show PinoDaCidade;
 
 /// Painel "Ao vivo" (Evandro, 11/10/2026, no modelo da Central do Motocas):
 /// quantos motoristas estao livres, a caminho, no embarque e em viagem; o
@@ -149,12 +150,19 @@ class _AoVivoState extends State<AoVivo> {
 
   void _enquadrar() {
     if (!_mapaPronto) return;
+    // Cidade escolhida no topo: o mapa vai para ela. Todas as cidades: entram
+    // os pontos das cidades no enquadramento.
+    final painel = context.read<PainelState>();
+    final cidade = painel.pracaNaTela;
     final pontos = [
       for (final m in _filtrados)
         if (m.posicao != null) LatLng(m.posicao!.latitude, m.posicao!.longitude),
+      for (final c in painel.pracasNoMapa) LatLng(c.posicao.latitude, c.posicao.longitude),
     ];
     try {
-      if (pontos.length >= 2) {
+      if (cidade != null && PainelState.temPosicao(cidade) && pontos.length < 2) {
+        _mapa.move(LatLng(cidade.posicao.latitude, cidade.posicao.longitude), 13.5);
+      } else if (pontos.length >= 2) {
         _mapa.fitCamera(CameraFit.coordinates(coordinates: pontos, padding: const EdgeInsets.fromLTRB(60, 50, 60, 30), maxZoom: 16));
       } else if (pontos.length == 1) {
         _mapa.move(pontos.first, 15);
@@ -185,6 +193,7 @@ class _AoVivoState extends State<AoVivo> {
     }
     final lista = _filtrados;
     final altura = MediaQuery.sizeOf(context).height;
+    final painel = context.watch<PainelState>();
     return RefreshIndicator(
       onRefresh: _carregar,
       child: ListView(
@@ -299,6 +308,21 @@ class _AoVivoState extends State<AoVivo> {
                                     child: _Etiqueta(motorista: m),
                                   ),
                                 ),
+                            // Todas as cidades: toque numa cidade abre ela.
+                            for (final c in painel.pracasNoMapa)
+                              Marker(
+                                point: LatLng(c.posicao.latitude, c.posicao.longitude),
+                                width: 170,
+                                height: 40,
+                                alignment: Alignment.topCenter,
+                                child: GestureDetector(
+                                  onTap: () => painel.escolherPraca(c.id),
+                                  child: PinoDaCidade(
+                                    nome: c.nome,
+                                    online: d.motoristas.where((m) => m.situacao != 'OFFLINE' && m.posicao != null && painel.cidadeDe(m.posicao!)?.id == c.id).length,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                         if (mostrarRuasNoMapa)
@@ -357,6 +381,8 @@ class _AoVivoState extends State<AoVivo> {
   }
 
   LatLng _centro(PainelAoVivo d) {
+    final cidade = context.read<PainelState>().pracaNaTela;
+    if (cidade != null && PainelState.temPosicao(cidade)) return LatLng(cidade.posicao.latitude, cidade.posicao.longitude);
     for (final m in d.motoristas) {
       if (m.posicao != null) return LatLng(m.posicao!.latitude, m.posicao!.longitude);
     }

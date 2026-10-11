@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
@@ -73,13 +75,25 @@ class _VisaoGeralState extends State<VisaoGeral> {
   }
 
   void _enquadrar(PainelState p) {
+    // Cidade escolhida no topo (Evandro, 11/10/2026): o mapa vai para ela.
+    // "Todas as cidades": mostra todas no mapa, cada uma com um ponto.
+    final cidade = p.pracaNaTela;
     final pontos = <LatLng>[
       for (final m in p.motoristas)
         if (m.posicao != null) _ll(m.posicao!),
       for (final c in p.corridas) _ll(c.embarque),
       for (final a in p.alertas)
         if (a.posicao != null) _ll(a.posicao!),
+      for (final c in p.pracasNoMapa) _ll(c.posicao),
     ];
+    if (cidade != null && PainelState.temPosicao(cidade) && pontos.length < 2) {
+      if (_google) {
+        _controleGoogle.mover(cidade.posicao, zoom: 13.5);
+      } else {
+        _mapa.move(_ll(cidade.posicao), 13.5);
+      }
+      return;
+    }
     if (_google) {
       if (pontos.length >= 2) {
         _controleGoogle.enquadrar([for (final l in pontos) Coords(l.latitude, l.longitude)], animar: true);
@@ -98,7 +112,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<PainelState>();
-    if (!_centralizou && p.atualizadoEm != null) {
+    if (!_centralizou && p.dadosDaCidadeNaTela) {
       _centralizou = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _enquadrar(p);
@@ -138,6 +152,18 @@ class _VisaoGeralState extends State<VisaoGeral> {
             height: 52,
             child: const _Pino(cor: AppColors.danger, icone: Icons.sos, grande: true),
           ),
+      // Todas as cidades: um ponto por cidade; toque abre aquela cidade.
+      for (final c in p.pracasNoMapa)
+        Marker(
+          point: _ll(c.posicao),
+          width: 170,
+          height: 40,
+          alignment: Alignment.topCenter,
+          child: GestureDetector(
+            onTap: () => p.escolherPraca(c.id),
+            child: PinoDaCidade(nome: c.nome, online: p.onlinePorCidade[c.id] ?? 0),
+          ),
+        ),
     ];
 
     return Stack(
@@ -193,6 +219,15 @@ class _VisaoGeralState extends State<VisaoGeral> {
                           anchor: const Offset(0.5, 0.5),
                           consumeTapEvents: true,
                         ),
+                    for (final c in p.pracasNoMapa)
+                      gm.Marker(
+                        markerId: gm.MarkerId('cidade-${c.id}'),
+                        position: paraGoogle(c.posicao),
+                        icon: _pino(AppColors.brandDark, Icons.location_city, 44),
+                        anchor: const Offset(0.5, 0.5),
+                        infoWindow: gm.InfoWindow(title: c.nome, snippet: '${p.onlinePorCidade[c.id] ?? 0} online'),
+                        onTap: () => p.escolherPraca(c.id),
+                      ),
                   },
                 )
               : FlutterMap(
@@ -528,4 +563,62 @@ class _Legenda extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Ponto de uma cidade no mapa de "Todas as cidades": nome e motoristas
+/// online. Toque abre a cidade (o mapa vai para ela).
+class PinoDaCidade extends StatelessWidget {
+  const PinoDaCidade({super.key, required this.nome, required this.online});
+
+  final String nome;
+  final int online;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.brandDark,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white, width: 1.5),
+            boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 5, offset: Offset(0, 2))],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.location_city, color: AppColors.gold, size: 15),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  '$nome · $online',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+        CustomPaint(size: const Size(10, 6), painter: _PontaCidade()),
+      ],
+    );
+  }
+}
+
+class _PontaCidade extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final caminho = ui.Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(caminho, Paint()..color = AppColors.brandDark);
+  }
+
+  @override
+  bool shouldRepaint(_PontaCidade old) => false;
 }

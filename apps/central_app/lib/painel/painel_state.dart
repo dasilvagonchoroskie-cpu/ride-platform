@@ -30,6 +30,7 @@ class PainelState extends ChangeNotifier {
 
   Timer? _vigia;
   bool _consultando = false;
+  bool _deNovo = false;
 
   /// Cadastro de motorista novo que a Central ainda nao viu: a casca abre
   /// uma janela com som (Evandro, 08/10/2026: "nao recebi notificacao
@@ -64,6 +65,9 @@ class PainelState extends ChangeNotifier {
   static const String chaveExclusaoVista = 'central.exclusaoVista';
 
   Coords get centro {
+    // Cidade escolhida no topo (Evandro, 11/10/2026): o mapa vai para ela.
+    final cidade = pracaNaTela;
+    if (cidade != null && temPosicao(cidade)) return cidade.posicao;
     if (PosicaoDoAparelho.atual != null) return PosicaoDoAparelho.atual!;
     if (motoristas.any((m) => m.posicao != null)) return motoristas.firstWhere((m) => m.posicao != null).posicao!;
     if (corridas.isNotEmpty) return corridas.first.embarque;
@@ -74,8 +78,12 @@ class PainelState extends ChangeNotifier {
 
   void iniciar() {
     _vigia?.cancel();
-    unawaited(carregarEu());
-    atualizar();
+    // Primeiro quem e a conta e a cidade guardada; depois os dados dela (o
+    // mapa ja abre na cidade certa).
+    unawaited(() async {
+      await carregarEu();
+      await atualizar();
+    }());
     _vigia = Timer.periodic(const Duration(seconds: 5), (_) => atualizar());
   }
 
@@ -92,6 +100,59 @@ class PainelState extends ChangeNotifier {
 
   /// Cidade escolhida pelo dono (null = todas as cidades).
   String? get pracaEscolhida => api.praca;
+
+  /// Cidade a que pertencem os dados que estao na tela (null = todas). Logo
+  /// depois de trocar a cidade, os dados ainda sao da anterior ate a
+  /// resposta chegar: o mapa so se enquadra quando batem.
+  String? pracaDosDados;
+
+  bool get dadosDaCidadeNaTela => atualizadoEm != null && pracaDosDados == api.praca;
+
+  /// A cidade que esta na tela, com o centro e o raio (null = todas).
+  /// Operador de cidade: sempre a dele.
+  Praca? get pracaNaTela {
+    final e = eu;
+    if (e == null) return null;
+    final id = e.dono ? api.praca : e.praca;
+    if (id == null) return e.dono ? null : e.pracas.firstOrNull;
+    return e.pracas.where((p) => p.id == id).firstOrNull;
+  }
+
+  /// "Todas as cidades" do dono: cada cidade vira um ponto no mapa (toque
+  /// abre aquela cidade). Com uma cidade escolhida, lista vazia.
+  List<Praca> get pracasNoMapa {
+    final e = eu;
+    if (e == null || !e.dono || api.praca != null || e.pracas.length < 2) return const [];
+    return e.pracas.where((p) => p.ativa && temPosicao(p)).toList();
+  }
+
+  static bool temPosicao(Praca p) => p.posicao.latitude != 0 || p.posicao.longitude != 0;
+
+  /// Cidade mais perto de um ponto (dentro do raio dela), para contar os
+  /// motoristas de cada cidade no mapa de todas as cidades.
+  Praca? cidadeDe(Coords ponto) {
+    Praca? melhor;
+    var menor = double.infinity;
+    for (final c in pracasNoMapa) {
+      final d = distanceKm(ponto, c.posicao);
+      if (d <= c.raioKm && d < menor) {
+        menor = d;
+        melhor = c;
+      }
+    }
+    return melhor;
+  }
+
+  /// Quantos motoristas online em cada cidade (pelo mapa de todas).
+  Map<String, int> get onlinePorCidade {
+    final r = <String, int>{};
+    for (final m in motoristas) {
+      if (!m.online || m.posicao == null) continue;
+      final c = cidadeDe(m.posicao!);
+      if (c != null) r[c.id] = (r[c.id] ?? 0) + 1;
+    }
+    return r;
+  }
 
   static const String _chavePraca = 'central.praca';
 
@@ -113,6 +174,9 @@ class PainelState extends ChangeNotifier {
   /// O dono troca a cidade do topo (null = todas). Tudo recarrega.
   Future<void> escolherPraca(String? id) async {
     api.praca = id;
+    // Os carros e corridas da cidade anterior saem do mapa na hora.
+    motoristas = const [];
+    corridas = const [];
     try {
       if (id == null) {
         await AppStorage.remove(_chavePraca);
@@ -141,8 +205,13 @@ class PainelState extends ChangeNotifier {
   }
 
   Future<void> atualizar() async {
-    if (_consultando) return;
+    if (_consultando) {
+      // Trocou a cidade no meio de uma consulta: consulta de novo no fim.
+      _deNovo = true;
+      return;
+    }
     _consultando = true;
+    final praca = api.praca;
     try {
       final r = await Future.wait([
         api.indicadores(),
@@ -156,6 +225,7 @@ class PainelState extends ChangeNotifier {
       alertas = r[3] as List<AlertaSos>;
       erro = null;
       atualizadoEm = DateTime.now();
+      pracaDosDados = praca;
       _silenciados.removeWhere((id) => !alertas.any((a) => a.id == id));
       if (alertasNovos.isNotEmpty) {
         Alarme.tocar();
@@ -175,6 +245,10 @@ class PainelState extends ChangeNotifier {
     } finally {
       _consultando = false;
       notifyListeners();
+      if (_deNovo) {
+        _deNovo = false;
+        unawaited(atualizar());
+      }
     }
   }
 

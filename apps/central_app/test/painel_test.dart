@@ -1438,6 +1438,43 @@ void main() {
     painel.parar();
   });
 
+  // Evandro (11/10/2026): a Central matriz escolhe a cidade e o mapa vai
+  // para ela; em "Todas as cidades" cada cidade aparece no mapa.
+  testWidgets('Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    _comSos = false;
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())));
+    await tester.runAsync(() async {
+      await painel.carregarEu();
+      await painel.atualizar();
+    });
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PainelState>.value(
+        value: painel,
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          home: Scaffold(body: VisaoGeral(abrirDespacho: () {})),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(painel.pracasNoMapa.length, 2);
+    expect(find.textContaining('Goiatuba ·'), findsOneWidget);
+    expect(find.textContaining('Teutônia ·'), findsOneWidget);
+
+    await tester.tap(find.textContaining('Teutônia ·'));
+    await _carregar(tester);
+    expect(painel.pracaEscolhida, 'teutonia-rs');
+    expect(painel.pracaNaTela?.nome, 'Teutônia');
+    expect(painel.centro.latitude, closeTo(-29.448, 0.001), reason: 'o mapa vai para a cidade escolhida');
+    expect(find.textContaining('Teutônia ·'), findsNothing, reason: 'com uma cidade escolhida, sem os pontos das cidades');
+    painel.parar();
+    await tester.pumpWidget(const SizedBox());
+  });
+
   // Evandro (11/10/2026), no modelo da Central do Motocas: contadores por
   // situacao, mapa com o nome, lista com carro/placa e corridas de hoje.
   testWidgets('Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje', (tester) async {
