@@ -1,27 +1,89 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
-00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:01 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:02 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:03 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:03 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:04 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
-00:04 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
-00:04 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:05 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:05 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:06 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
-00:06 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:06 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:07 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:07 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:08 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:08 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
-00:08 +21 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
-00:08 +22 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:09 +23 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:09 +24 ~1: All tests passed!
+lib/painel/ao_vivo.dart:588:9: Error: The method 'moveTo' isn't defined for the type 'Path<LatLng>'.
+ - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+ - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'moveTo'.
+      ..moveTo(0, 0)
+        ^^^^^^
+lib/painel/ao_vivo.dart:589:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
+ - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+ - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
+      ..lineTo(size.width, 0)
+        ^^^^^^
+lib/painel/ao_vivo.dart:590:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
+ - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+ - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
+      ..lineTo(size.width / 2, size.height)
+        ^^^^^^
+lib/painel/ao_vivo.dart:591:9: Error: The method 'close' isn't defined for the type 'Path<LatLng>'.
+ - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+ - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'close'.
+      ..close();
+        ^^^^^
+lib/painel/ao_vivo.dart:592:21: Error: The argument type 'Path/*1*/<LatLng>' can't be assigned to the parameter type 'Path/*2*/'.
+ - 'Path/*1*/' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+ - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+ - 'Path/*2*/' is from 'dart:ui'.
+    canvas.drawPath(p, Paint()..color = cor);
+                    ^
+00:00 +0 -1: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: lib/painel/ao_vivo.dart:588:9: Error: The method 'moveTo' isn't defined for the type 'Path<LatLng>'.
+   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'moveTo'.
+        ..moveTo(0, 0)
+          ^^^^^^
+  lib/painel/ao_vivo.dart:589:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
+   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
+        ..lineTo(size.width, 0)
+          ^^^^^^
+  lib/painel/ao_vivo.dart:590:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
+   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
+        ..lineTo(size.width / 2, size.height)
+          ^^^^^^
+  lib/painel/ao_vivo.dart:591:9: Error: The method 'close' isn't defined for the type 'Path<LatLng>'.
+   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+  Try correcting the name to the name of an existing method, or defining a method named 'close'.
+        ..close();
+          ^^^^^
+  lib/painel/ao_vivo.dart:592:21: Error: The argument type 'Path/*1*/<LatLng>' can't be assigned to the parameter type 'Path/*2*/'.
+   - 'Path/*1*/' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
+   - 'Path/*2*/' is from 'dart:ui'.
+      canvas.drawPath(p, Paint()..color = cor);
+                      ^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+00:00 +0 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
+00:00 +1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +2 -1: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart

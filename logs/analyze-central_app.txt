@@ -1,2 +1,9 @@
 Analyzing central_app...                                        
-No issues found! (ran in 6.9s)
+
+  error • The method 'moveTo' isn't defined for the type 'Path'. Try correcting the name to the name of an existing method, or defining a method named 'moveTo' • lib/painel/ao_vivo.dart:588:9 • undefined_method
+  error • The method 'lineTo' isn't defined for the type 'Path'. Try correcting the name to the name of an existing method, or defining a method named 'lineTo' • lib/painel/ao_vivo.dart:589:9 • undefined_method
+  error • The method 'lineTo' isn't defined for the type 'Path'. Try correcting the name to the name of an existing method, or defining a method named 'lineTo' • lib/painel/ao_vivo.dart:590:9 • undefined_method
+  error • The method 'close' isn't defined for the type 'Path'. Try correcting the name to the name of an existing method, or defining a method named 'close' • lib/painel/ao_vivo.dart:591:9 • undefined_method
+  error • The argument type 'Path<LatLng>' can't be assigned to the parameter type 'Path'.  • lib/painel/ao_vivo.dart:592:21 • argument_type_not_assignable
+
+5 issues found. (ran in 7.1s)
