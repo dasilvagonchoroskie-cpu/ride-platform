@@ -163,7 +163,7 @@ class _AoVivoState extends State<AoVivo> {
       if (cidade != null && PainelState.temPosicao(cidade) && pontos.length < 2) {
         _mapa.move(LatLng(cidade.posicao.latitude, cidade.posicao.longitude), 13.5);
       } else if (pontos.length >= 2) {
-        _mapa.fitCamera(CameraFit.coordinates(coordinates: pontos, padding: const EdgeInsets.fromLTRB(60, 50, 60, 30), maxZoom: 16));
+        _mapa.fitCamera(CameraFit.coordinates(coordinates: pontos, padding: const EdgeInsets.fromLTRB(90, 60, 90, 30), maxZoom: 16));
       } else if (pontos.length == 1) {
         _mapa.move(pontos.first, 15);
       }

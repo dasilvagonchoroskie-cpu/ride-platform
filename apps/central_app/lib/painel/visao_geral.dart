@@ -103,7 +103,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
       return;
     }
     if (pontos.length >= 2) {
-      _mapa.fitCamera(CameraFit.coordinates(coordinates: pontos, padding: const EdgeInsets.fromLTRB(60, 170, 60, 170), maxZoom: 16));
+      _mapa.fitCamera(CameraFit.coordinates(coordinates: pontos, padding: const EdgeInsets.fromLTRB(90, 170, 90, 170), maxZoom: 16));
     } else {
       _mapa.move(_ll(pontos.isEmpty ? p.centro : Coords(pontos.first.latitude, pontos.first.longitude)), 14);
     }
