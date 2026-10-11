@@ -1268,6 +1268,7 @@ void main() {
 
     var n = 3;
     for (final aba in [
+      'Ao vivo',
       'Despacho',
       'Motoristas',
       'Passageiros',
@@ -1294,6 +1295,12 @@ void main() {
         await _foto(tester, '${(n++).toString().padLeft(2, '0')}-motorista-carros');
         Navigator.of(tester.element(find.text('Cadastrar outro carro'))).pop();
         await _carregar(tester);
+      }
+      if (aba == 'Ao vivo') {
+        await tester.tap(find.textContaining('Corridas de hoje'));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(find.text('Cancelada'), 300, scrollable: find.byType(Scrollable).first);
+        await _foto(tester, '${(n++).toString().padLeft(2, '0')}-ao-vivo-corridas');
       }
       if (aba == 'Financeiro') {
         await tester.tap(find.text('Já fiz o PIX').first);
