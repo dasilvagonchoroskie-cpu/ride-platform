@@ -1,89 +1,131 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
-lib/painel/ao_vivo.dart:588:9: Error: The method 'moveTo' isn't defined for the type 'Path<LatLng>'.
- - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
- - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'moveTo'.
-      ..moveTo(0, 0)
-        ^^^^^^
-lib/painel/ao_vivo.dart:589:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
- - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
- - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
-      ..lineTo(size.width, 0)
-        ^^^^^^
-lib/painel/ao_vivo.dart:590:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
- - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
- - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
-      ..lineTo(size.width / 2, size.height)
-        ^^^^^^
-lib/painel/ao_vivo.dart:591:9: Error: The method 'close' isn't defined for the type 'Path<LatLng>'.
- - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
- - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-Try correcting the name to the name of an existing method, or defining a method named 'close'.
-      ..close();
-        ^^^^^
-lib/painel/ao_vivo.dart:592:21: Error: The argument type 'Path/*1*/<LatLng>' can't be assigned to the parameter type 'Path/*2*/'.
- - 'Path/*1*/' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
- - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
- - 'Path/*2*/' is from 'dart:ui'.
-    canvas.drawPath(p, Paint()..color = cor);
-                    ^
-00:00 +0 -1: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart [E]
-  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart":
-  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: lib/painel/ao_vivo.dart:588:9: Error: The method 'moveTo' isn't defined for the type 'Path<LatLng>'.
-   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'moveTo'.
-        ..moveTo(0, 0)
-          ^^^^^^
-  lib/painel/ao_vivo.dart:589:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
-   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
-        ..lineTo(size.width, 0)
-          ^^^^^^
-  lib/painel/ao_vivo.dart:590:9: Error: The method 'lineTo' isn't defined for the type 'Path<LatLng>'.
-   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'lineTo'.
-        ..lineTo(size.width / 2, size.height)
-          ^^^^^^
-  lib/painel/ao_vivo.dart:591:9: Error: The method 'close' isn't defined for the type 'Path<LatLng>'.
-   - 'Path' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-  Try correcting the name to the name of an existing method, or defining a method named 'close'.
-        ..close();
-          ^^^^^
-  lib/painel/ao_vivo.dart:592:21: Error: The argument type 'Path/*1*/<LatLng>' can't be assigned to the parameter type 'Path/*2*/'.
-   - 'Path/*1*/' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-   - 'LatLng' is from 'package:latlong2/latlong.dart' ('../../../../../.pub-cache/hosted/pub.dev/latlong2-0.10.1/lib/latlong.dart').
-   - 'Path/*2*/' is from 'dart:ui'.
-      canvas.drawPath(p, Paint()..color = cor);
-                      ^
-  .
-  Error: The Dart compiler exited unexpectedly.
-  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
-  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
-  dart:async/zone_root.dart 48:47                  _rootRunUnary
-  dart:async/zone.dart 816:35                      _CustomZone.runUnary
-  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
-  dart:async/future_impl.dart 977:13               Future._propagateToListeners
-  dart:async/future_impl.dart 862:9                Future._propagateToListeners
-  dart:async/future_impl.dart 720:5                Future._completeWithValue
-  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
-  dart:async/zone_root.dart 35:13                  _rootRun
-  dart:async/zone.dart 810:35                      _CustomZone.run
-  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
-  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
-  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
-  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
-  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
-  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:01 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:01 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:02 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
+00:02 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:03 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:04 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
+00:04 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
+00:05 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
+00:05 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
+00:05 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:06 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
+00:07 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
+00:07 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
+00:07 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: at least one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Configurações": []>
+   Which: means none were found but some were expected
+aba Configurações no menu
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart:1062:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart line 1062
+The test description was:
+  Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:08 +16 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral [E]
+  Test failed. See exception logs above.
+  The test description was: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
   
-00:00 +0 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
-00:00 +1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +2 -1: Some tests failed.
+00:08 +16 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:09 +17 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
+00:09 +18 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
+00:09 +19 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
+00:09 +20 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
+00:09 +20 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
+00:10 +21 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
+00:11 +22 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 69 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/central_app/lib/painel/ao_vivo.dart:740:23
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#01d61 relayoutBoundary=up16 OVERFLOWING:
+  creator: Row ← Column ← Expanded ← Row ← Padding ← Listener ← RawGestureDetector ← GestureDetector ←
+    Semantics ← DefaultSelectionStyle ← Builder ← MouseRegion ← ⋯
+  parentData: offset=Offset(0.0, 0.0); flex=null; fit=null (can use size)
+  constraints: BoxConstraints(0.0<=w<=130.0, 0.0<=h<=Infinity)
+  size: Size(130.0, 22.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during layout:
+A RenderFlex overflowed by 69 pixels on the right.
+
+The relevant error-causing widget was:
+  Row
+  Row:file:///home/runner/work/ride-platform/ride-platform/apps/central_app/lib/painel/ao_vivo.dart:740:23
+
+The overflowing RenderFlex has an orientation of Axis.horizontal.
+The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
+black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
+Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
+RenderFlex to fit within the available space instead of being sized to their natural size.
+This is considered an error condition because it indicates that there is content that cannot be
+seen. If the content is legitimately bigger than the available space, consider clipping it with a
+ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
+like a ListView.
+The specific RenderFlex in question is: RenderFlex#6c0e3 relayoutBoundary=up16 OVERFLOWING:
+  creator: Row ← Column ← Expanded ← Row ← Padding ← Listener ← RawGestureDetector ← GestureDetector ←
+    Semantics ← DefaultSelectionStyle ← Builder ← MouseRegion ← ⋯
+  parentData: offset=Offset(0.0, 0.0); flex=null; fit=null (can use size)
+  constraints: BoxConstraints(0.0<=w<=130.0, 0.0<=h<=Infinity)
+  size: Size(130.0, 22.0)
+  direction: horizontal
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: center
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (2) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:11 +22 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje [E]
+  Test failed. See exception logs above.
+  The test description was: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+  
+00:11 +22 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
+00:12 +23 ~1 -2: Some tests failed.
 
 Failing tests:
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
+  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
