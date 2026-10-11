@@ -1,0 +1,20 @@
+
+::group::✅ Passing tests
+✅ 01 entrada
+✅ 02 telefone
+✅ 03 entrar com e-mail
+✅ 04 esqueci a senha
+✅ 05 cidade e cadastro
+✅ 07 termos
+✅ 08 inicio, destino, atividade e conta
+✅ 13 confirmar viagem com Carro e Moto
+✅ 15 procurando, a caminho, chegou, em viagem e fim
+✅ 23 recibo
+✅ 25 meus dados e trocar telefone
+✅ 27 telas da conta
+::endgroup::
+::group::✅ (tearDownAll)
+SEM RESPOSTA DE TESTE: GET /api/geo/reverse
+::endgroup::
+
+🎉 12 tests passed.
