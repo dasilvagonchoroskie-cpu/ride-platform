@@ -56,6 +56,9 @@ TA=$(echo "$L" | jq -r '.data.accessToken // empty')
 for rota in "/admin/drivers?status=PENDING" /admin/rides/active /admin/reports/summary /admin/tariffs; do
   X=$(get "$rota" "$TA"); sucesso "$X" && ok "Central carrega $rota" || falha "Central carrega $rota" "$X"
 done
+# Painel ao vivo da Central (11/10/2026): formato que o app le.
+X=$(get /admin/ao-vivo "$TA")
+[ "$(echo "$X" | jq -r '(.data.counts.livres|type)+"/"+(.data.drivers|type)+"/"+(.data.ridesToday|type)')" = "number/array/array" ] && ok "Central: painel ao vivo (livres $(echo "$X" | jq -r '.data.counts.livres'), em viagem $(echo "$X" | jq -r '.data.counts.emViagem'), corridas hoje $(echo "$X" | jq -r '.data.ridesToday|length'))" || falha "Central: painel ao vivo" "$X"
 
 # ---- Varias cidades (Evandro, 08/10/2026): o dono ve todas; o operador de
 # uma cidade entra na mesma Central e ve so a dele (operacao + recargas). ----
