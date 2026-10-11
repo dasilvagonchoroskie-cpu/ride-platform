@@ -1088,6 +1088,150 @@ class PedidoDeAlteracao {
       );
 }
 
+/// Painel ao vivo (Evandro, 11/10/2026, no modelo da Central do Motocas):
+/// motoristas por situacao, no mapa e em lista, e as corridas de hoje.
+class PainelAoVivo {
+  const PainelAoVivo({
+    this.livres = 0,
+    this.aCaminho = 0,
+    this.noEmbarque = 0,
+    this.emViagem = 0,
+    this.offline = 0,
+    this.motoristas = const [],
+    this.corridasHoje = const [],
+  });
+
+  final int livres;
+  final int aCaminho;
+  final int noEmbarque;
+  final int emViagem;
+  final int offline;
+  final List<MotoristaAoVivo> motoristas;
+  final List<CorridaDoDia> corridasHoje;
+
+  factory PainelAoVivo.fromJson(Map<String, dynamic> j) {
+    final c = (j['counts'] as Map?)?.cast<String, dynamic>() ?? const {};
+    return PainelAoVivo(
+      livres: _int(c['livres']),
+      aCaminho: _int(c['aCaminho']),
+      noEmbarque: _int(c['noEmbarque']),
+      emViagem: _int(c['emViagem']),
+      offline: _int(c['offline']),
+      motoristas: [
+        for (final m in (j['drivers'] as List? ?? const []).whereType<Map<String, dynamic>>()) MotoristaAoVivo.fromJson(m),
+      ],
+      corridasHoje: [
+        for (final r in (j['ridesToday'] as List? ?? const []).whereType<Map<String, dynamic>>()) CorridaDoDia.fromJson(r),
+      ],
+    );
+  }
+}
+
+/// LIVRE, A_CAMINHO, NO_EMBARQUE, EM_VIAGEM ou OFFLINE.
+class MotoristaAoVivo {
+  const MotoristaAoVivo({
+    required this.id,
+    required this.nome,
+    this.telefone,
+    required this.situacao,
+    this.veiculo = '',
+    this.cor = '',
+    this.placa = '',
+    this.categoria = 'CARRO',
+    this.moto = false,
+    this.nota = 5,
+    this.posicao,
+    this.vistoEm,
+    this.corridaCodigo,
+    this.corridaPassageiro,
+  });
+
+  final String id;
+  final String nome;
+  final String? telefone;
+  final String situacao;
+  final String veiculo;
+  final String cor;
+  final String placa;
+  final String categoria;
+  final bool moto;
+  final double nota;
+  final Coords? posicao;
+  final DateTime? vistoEm;
+  final String? corridaCodigo;
+  final String? corridaPassageiro;
+
+  String get primeiroNome => nome.trim().split(RegExp(r'\s+')).first;
+
+  factory MotoristaAoVivo.fromJson(Map<String, dynamic> j) {
+    final lat = (j['latitude'] as num?)?.toDouble();
+    final lng = (j['longitude'] as num?)?.toDouble();
+    final r = (j['ride'] as Map?)?.cast<String, dynamic>();
+    return MotoristaAoVivo(
+      id: '${j['driverId'] ?? ''}',
+      nome: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : 'Motorista',
+      telefone: j['phone'] as String?,
+      situacao: '${j['situacao'] ?? 'OFFLINE'}',
+      veiculo: '${j['vehicle'] ?? ''}',
+      cor: '${j['color'] ?? ''}',
+      placa: '${j['plate'] ?? ''}',
+      categoria: '${j['category'] ?? 'CARRO'}',
+      moto: j['moto'] == true,
+      nota: (j['rating'] as num?)?.toDouble() ?? 5,
+      posicao: lat != null && lng != null ? Coords(lat, lng) : null,
+      vistoEm: DateTime.tryParse('${j['lastSeenAt'] ?? ''}')?.toLocal(),
+      corridaCodigo: r?['code'] as String?,
+      corridaPassageiro: r?['passengerName'] as String?,
+    );
+  }
+}
+
+/// Corrida de hoje (qualquer situacao) para a lista do painel ao vivo.
+class CorridaDoDia {
+  const CorridaDoDia({
+    required this.id,
+    required this.codigo,
+    required this.status,
+    this.moto = false,
+    this.pedidaEm,
+    this.valorCents = 0,
+    this.embarque = '',
+    this.destino = '',
+    this.passageiro = '',
+    this.passageiroTelefone,
+    this.motorista,
+    this.placa,
+  });
+
+  final String id;
+  final String codigo;
+  final String status;
+  final bool moto;
+  final DateTime? pedidaEm;
+  final int valorCents;
+  final String embarque;
+  final String destino;
+  final String passageiro;
+  final String? passageiroTelefone;
+  final String? motorista;
+  final String? placa;
+
+  factory CorridaDoDia.fromJson(Map<String, dynamic> j) => CorridaDoDia(
+        id: '${j['id'] ?? ''}',
+        codigo: '${j['code'] ?? ''}',
+        status: '${j['status'] ?? ''}',
+        moto: j['moto'] == true,
+        pedidaEm: DateTime.tryParse('${j['requestedAt'] ?? ''}')?.toLocal(),
+        valorCents: _int(j['fareCents']),
+        embarque: '${j['pickupAddress'] ?? ''}',
+        destino: '${j['dropoffAddress'] ?? ''}',
+        passageiro: (j['passengerName'] as String?)?.trim().isNotEmpty == true ? j['passengerName'] as String : 'Passageiro',
+        passageiroTelefone: j['passengerPhone'] as String?,
+        motorista: j['driverName'] as String?,
+        placa: j['driverPlate'] as String?,
+      );
+}
+
 /// Pedido de exclusao de conta feito pela pagina da internet.
 class PedidoDeExclusao {
   PedidoDeExclusao({required this.id, required this.contato, this.motivo, this.criadoEm, this.conta});
@@ -1291,6 +1435,10 @@ class PainelApi {
 
   Future<void> recusarAlteracao(String userId, String motivo) =>
       _c.request('POST', '/admin/dados/alteracoes/$userId/recusar', body: {'motivo': motivo});
+
+  /// Painel ao vivo: motoristas por situacao e as corridas de hoje (por cidade).
+  Future<PainelAoVivo> aoVivo() async =>
+      PainelAoVivo.fromJson(await _c.request('GET', '/admin/ao-vivo', query: _naPraca) as Map<String, dynamic>);
 
   // Pedidos de exclusao de conta pela pagina da internet (11/10/2026).
   Future<List<PedidoDeExclusao>> pedidosDeExclusao() async =>

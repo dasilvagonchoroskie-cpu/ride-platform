@@ -24,6 +24,13 @@ export class ReportsController {
     return this.reports.corridasAtivas(await this.pracas.ondeCorridas(await this.pracas.filtro(user, praca)));
   }
 
+  @Get('ao-vivo')
+  @ApiOperation({ summary: 'Painel ao vivo: motoristas por situacao (livre, a caminho, no embarque, em viagem) e corridas de hoje' })
+  async aoVivo(@CurrentUser() user: AuthenticatedUser, @Query('praca') praca?: string) {
+    const filtro = await this.pracas.filtro(user, praca);
+    return this.reports.aoVivo(await this.pracas.ondeCorridas(filtro), await this.pracas.idsDeMotoristas(filtro));
+  }
+
   @Get('reports/summary')
   @ApiOperation({ summary: 'Resumo financeiro e operacional (horario de Brasilia, por cidade)' })
   async resumo(@CurrentUser() user: AuthenticatedUser, @Query('praca') praca?: string) {

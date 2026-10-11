@@ -10,6 +10,7 @@ import 'package:central_app/core/theme/central_theme.dart';
 import 'package:central_app/data/painel.dart';
 import 'package:central_app/data/repositories/central_repository.dart';
 import 'package:central_app/painel/alertas.dart';
+import 'package:central_app/painel/ao_vivo.dart';
 import 'package:central_app/painel/carteiras.dart';
 import 'package:central_app/painel/cidades_equipe.dart';
 import 'package:central_app/painel/limpeza.dart';
@@ -124,6 +125,49 @@ final _pracasTeste = [
 ];
 
 Object? _resposta(String metodo, String caminho, Map<String, String> q) {
+  if (caminho == '/api/admin/ao-vivo') {
+    return {
+      'counts': {'livres': 1, 'aCaminho': 1, 'noEmbarque': 0, 'emViagem': 1, 'offline': 1},
+      'drivers': [
+        {
+          'driverId': 'd-1', 'name': 'Carlos Henrique Oliveira', 'phone': '+5564999990001', 'situacao': 'EM_VIAGEM',
+          'vehicle': 'Chevrolet Onix', 'color': 'Prata', 'plate': 'ABC1D23', 'category': 'CARRO', 'moto': false, 'rating': 4.9,
+          'latitude': -18.0125, 'longitude': -49.3547, 'lastSeenAt': '2026-10-11T07:00:00.000Z',
+          'ride': {'id': 'r-1', 'code': 'AB12CD', 'status': 'IN_PROGRESS', 'passengerName': 'Maria'},
+        },
+        {
+          'driverId': 'd-2', 'name': 'Danilo Rodrigues', 'phone': '+5564999990002', 'situacao': 'A_CAMINHO',
+          'vehicle': 'Honda CG 160', 'color': 'Vermelha', 'plate': 'MOT0A12', 'category': 'MOTO', 'moto': true, 'rating': 5,
+          'latitude': -18.0150, 'longitude': -49.3500, 'lastSeenAt': '2026-10-11T07:00:00.000Z',
+          'ride': {'id': 'r-2', 'code': 'XY98ZT', 'status': 'DRIVER_ARRIVING', 'passengerName': 'Joana'},
+        },
+        {
+          'driverId': 'd-3', 'name': 'Marlon Soares', 'phone': '+5564999990003', 'situacao': 'LIVRE',
+          'vehicle': 'Fiat Argo', 'color': 'Branco', 'plate': 'FMV0T01', 'category': 'CARRO', 'moto': false, 'rating': 4.7,
+          'latitude': -18.0100, 'longitude': -49.3600, 'lastSeenAt': '2026-10-11T07:00:00.000Z', 'ride': null,
+        },
+        {
+          'driverId': 'd-4', 'name': 'Patrick Offline', 'phone': '+5564999990004', 'situacao': 'OFFLINE',
+          'vehicle': 'VW Gol', 'color': 'Preto', 'plate': 'GOL1A11', 'category': 'CARRO', 'moto': false, 'rating': 4.5,
+          'latitude': -18.0200, 'longitude': -49.3400, 'lastSeenAt': '2026-10-10T22:00:00.000Z', 'ride': null,
+        },
+      ],
+      'ridesToday': [
+        {
+          'id': 'r-1', 'code': 'AB12CD', 'status': 'IN_PROGRESS', 'category': 'CARRO', 'moto': false,
+          'requestedAt': '2026-10-11T07:10:00.000Z', 'fareCents': 1850, 'pickupAddress': 'Rua Javari, 1234',
+          'dropoffAddress': 'Rodoviária', 'passengerName': 'Maria', 'passengerPhone': '+5564999991111',
+          'driverId': 'd-1', 'driverName': 'Carlos Henrique Oliveira', 'driverPlate': 'ABC1D23',
+        },
+        {
+          'id': 'r-9', 'code': 'QW12ER', 'status': 'CANCELLED_BY_PASSENGER', 'category': 'MOTO', 'moto': true,
+          'requestedAt': '2026-10-11T06:00:00.000Z', 'fareCents': 1200, 'pickupAddress': 'Praça da Matriz',
+          'dropoffAddress': 'Hospital', 'passengerName': 'Pedro', 'passengerPhone': null,
+          'driverId': null, 'driverName': null, 'driverPlate': null,
+        },
+      ],
+    };
+  }
   if (caminho == '/api/admin/exclusoes') {
     return [
       if (_comPedidoExclusaoConta)
@@ -1364,6 +1408,40 @@ void main() {
     expect(prefs.getString('central.alteracaoVista'), 'u-$_motoristaId|2026-10-10T07:00:00.000Z');
     await tester.pumpWidget(const SizedBox());
     painel.parar();
+  });
+
+  // Evandro (11/10/2026), no modelo da Central do Motocas: contadores por
+  // situacao, mapa com o nome, lista com carro/placa e corridas de hoje.
+  testWidgets('Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje', (tester) async {
+    await _abrir(tester, const AoVivo(intervalo: Duration(hours: 1)));
+    await _carregar(tester);
+    expect(find.text('Livres'), findsOneWidget);
+    expect(find.text('Em viagem'), findsWidgets);
+    expect(find.text('Mostrar offline (1)'), findsOneWidget);
+    // Lista: offline fica escondido ate pedir.
+    expect(find.text('Carlos Henrique Oliveira'), findsOneWidget);
+    expect(find.text('Moto · Honda CG 160 · MOT0A12'), findsOneWidget);
+    expect(find.text('AB12CD · Maria'), findsOneWidget);
+    expect(find.text('Patrick Offline'), findsNothing);
+    expect(find.text('Motoristas (3)'), findsOneWidget);
+    // Etiquetas no mapa com o primeiro nome.
+    expect(find.text('Danilo'), findsOneWidget);
+
+    // Filtro por categoria: so moto.
+    await tester.tap(find.text('Todas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Moto').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Motoristas (1)'), findsOneWidget);
+    expect(find.text('Carlos Henrique Oliveira'), findsNothing);
+
+    // Corridas de hoje.
+    await tester.tap(find.text('Corridas de hoje (2)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cancelada'), findsOneWidget);
+    expect(find.text('Motorista: Carlos Henrique Oliveira'), findsOneWidget);
+    expect(find.text('Sem motorista'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
   });
 
   // Google Play (11/10/2026): pedido de exclusao feito na pagina da internet

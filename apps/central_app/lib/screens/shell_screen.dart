@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import '../painel/alertas.dart';
+import '../painel/ao_vivo.dart';
 import '../painel/carteiras.dart';
 import '../painel/cidades_equipe.dart';
 import '../painel/limpeza.dart';
@@ -53,6 +54,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   /// e das recargas; tarifas, cupons, comissao, cidades e limpeza so ele).
   static const _todas = <_Aba>[
     _Aba('mapa', 'Visão Geral', Icons.map_outlined),
+    // Evandro (11/10/2026), no modelo da Central do Motocas: motoristas por
+    // situacao, no mapa com o nome e em lista, e as corridas de hoje.
+    _Aba('aovivo', 'Motoristas ao vivo', Icons.sensors, menu: 'Ao vivo'),
     _Aba('despacho', 'Despacho', Icons.support_agent),
     _Aba('motoristas', 'Motoristas', Icons.badge_outlined),
     _Aba('passageiros', 'Passageiros', Icons.people_outline, soDono: true),
@@ -352,6 +356,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     switch (id) {
       case 'mapa':
         return VisaoGeral(abrirDespacho: () => _irPara('despacho'));
+      case 'aovivo':
+        return AoVivo(ativa: _atual == 'aovivo');
       case 'despacho':
         return const Despacho();
       case 'motoristas':
