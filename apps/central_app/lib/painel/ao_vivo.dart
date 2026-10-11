@@ -737,10 +737,12 @@ class _LinhaCorrida extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: Spacing.xs,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           _Pilula(texto: nome, cor: cor),
-                          const SizedBox(width: Spacing.xs),
                           Text(c.codigo, style: AppText.caption.copyWith(color: AppColors.textMuted)),
                         ],
                       ),

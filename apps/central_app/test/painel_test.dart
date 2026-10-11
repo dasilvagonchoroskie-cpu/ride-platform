@@ -639,6 +639,21 @@ Future<PainelState> _abrir(WidgetTester tester, Widget tela) async {
   return painel;
 }
 
+/// Item do menu lateral (13 abas: as de baixo so aparecem rolando o menu).
+Finder _noMenu(String aba) => find.descendant(of: find.byType(Drawer), matching: find.text(aba));
+
+Future<void> _mostrarNoMenu(WidgetTester tester, String aba) async {
+  final lista = find.descendant(of: find.byType(Drawer), matching: find.byType(Scrollable)).first;
+  for (final passo in const [Offset(0, -60), Offset(0, 60)]) {
+    for (var i = 0; i < 40 && _noMenu(aba).evaluate().isEmpty; i++) {
+      await tester.drag(lista, passo);
+      await tester.pumpAndSettle();
+    }
+  }
+  await tester.ensureVisible(_noMenu(aba));
+  await tester.pumpAndSettle();
+}
+
 /// Espera as respostas do servidor de mentira chegarem e a tela redesenhar.
 Future<void> _carregar(WidgetTester tester) async {
   for (var i = 0; i < 5; i++) {
@@ -1058,10 +1073,12 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
-      expect(find.text(aba), findsWidgets, reason: 'aba $aba no menu');
+    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
+      await _mostrarNoMenu(tester, aba);
+      expect(_noMenu(aba), findsOneWidget, reason: 'aba $aba no menu');
     }
-    await tester.tap(find.text('Financeiro').last);
+    await _mostrarNoMenu(tester, 'Financeiro');
+    await tester.tap(_noMenu('Financeiro'));
     await _carregar(tester);
     expect(find.text('Saques PIX'), findsOneWidget);
 
@@ -1283,7 +1300,8 @@ void main() {
     ]) {
       await tester.tap(find.byIcon(Icons.menu));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(aba).last);
+      await _mostrarNoMenu(tester, aba);
+      await tester.tap(_noMenu(aba));
       await _carregar(tester);
       final nome = aba.toLowerCase().replaceAll(' / ', '-').replaceAll(' ', '-');
       await _foto(tester, '${(n++).toString().padLeft(2, '0')}-$nome');
