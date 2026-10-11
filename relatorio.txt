@@ -1,0 +1,12 @@
+
+::group::✅ Passing tests
+✅ 01 entrada, telefone e e-mail
+✅ 04 termos, cadastro e em analise
+✅ 07 inicio desconectado e conectado
+✅ 09 chamado
+✅ 10 corrida: a caminho, esperando, viagem e fim
+✅ 16 menu, atividades, carteira e historico
+✅ 24 meus dados
+::endgroup::
+
+🎉 7 tests passed.
