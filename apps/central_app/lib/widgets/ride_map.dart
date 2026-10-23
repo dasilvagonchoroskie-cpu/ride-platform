@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../core/theme/central_theme.dart';
 import '../core/utils/geo.dart';
+import '../core/mapa_config.dart';
 
 enum MarkerKind { pickup, dropoff, driver, car, passenger }
 
@@ -146,9 +147,9 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             // travava o mapa com "API KEY REQUIRED"; a troca perde o tema
             // escuro do mapa, mas garante que ele sempre carrega.
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: MapaConfig.tiles,
               userAgentPackageName: 'com.rideplatform.central_app',
-              maxZoom: 19,
+              maxZoom: MapaConfig.maxZoom.toDouble(),
               tileProvider: NetworkTileProvider(),
               errorTileCallback: (tile, error, stackTrace) {
                 // Tiles indisponiveis ficam no fundo escuro, sem quebrar o mapa.
@@ -193,9 +194,9 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
               color: AppColors.background.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text(
-              '© OpenStreetMap contributors',
-              style: TextStyle(
+            child: Text(
+              MapaConfig.atribuicao,
+              style: const TextStyle(
                 fontFamily: AppText.family,
                 color: AppColors.textFaint,
                 fontSize: 9,

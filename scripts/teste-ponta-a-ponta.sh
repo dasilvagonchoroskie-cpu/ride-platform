@@ -92,6 +92,7 @@ X=$(get /app/config)
 [ "$(echo "$X" | jq -r '.data.login.email' 2>/dev/null)" = "true" ] && ok "App: entrada por codigo no e-mail disponivel (telefone: $(echo "$X" | jq -r '.data.login.telefone'))" || falha "App: canais de entrada" "$X"
 CID=$(echo "$X" | jq -r '.data.cidades[0] // empty' 2>/dev/null)
 sucesso "$X" && ok "App: configuracao publica ($(echo "$X" | jq -r '.data.cidades | length') cidade(s), WhatsApp $(echo "$X" | jq -r '.data.whatsapp // "nenhum"'))" || falha "App: configuracao publica" "$X"
+echo "$X" | jq -r '.data.mapa.tiles // empty' | grep -q '^https://.*{z}.*{x}.*{y}' && ok "App: endereco do mapa vindo do servidor ($(echo "$X" | jq -r '.data.mapa.tiles' | cut -d/ -f3))" || falha "App: endereco do mapa" "$(echo "$X" | jq -c '.data.mapa')"
 X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos carregados" || falha "Central: cidades e avisos" "$X"
 CPFP=$(python3 -c "
 import random

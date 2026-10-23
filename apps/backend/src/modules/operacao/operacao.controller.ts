@@ -10,6 +10,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { PracasService } from '../pracas/pracas.service';
+import { mapaDoApp } from './mapa.config';
 import { apagarAviso, gravarCidades, lerAvisos, lerCidades, publicarAviso, whatsappDaCentral } from './operacao.store';
 
 const cidadesSchema = z.object({
@@ -38,7 +39,7 @@ export class AppPublicoController {
   ) {}
 
   @Get('config')
-  @ApiOperation({ summary: 'Cidades, WhatsApp da Central, avisos e formas de entrar que funcionam agora' })
+  @ApiOperation({ summary: 'Cidades, WhatsApp da Central, avisos, formas de entrar e endereco do mapa' })
   async config() {
     return {
       login: { ...this.auth.canaisDeLogin(), senha: true },
@@ -49,6 +50,8 @@ export class AppPublicoController {
       pracas: (await this.pracas.listar())
         .filter((p) => p.ativa)
         .map((p) => ({ id: p.id, nome: p.nome, uf: p.uf, latitude: p.latitude, longitude: p.longitude, whatsapp: p.whatsapp ?? null })),
+      // Endereco das imagens do mapa (padrao OpenStreetMap; troca pelo Render sem APK novo).
+      mapa: mapaDoApp(),
     };
   }
 }

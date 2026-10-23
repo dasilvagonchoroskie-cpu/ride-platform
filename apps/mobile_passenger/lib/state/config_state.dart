@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
+import '../core/mapa_config.dart';
 import '../core/storage/app_storage.dart';
 import '../data/models/models.dart';
 
@@ -92,5 +93,7 @@ class ConfigState extends ChangeNotifier {
       for (final a in (data['avisos'] as List<dynamic>? ?? const []))
         if (a is Map<String, dynamic>) AvisoCentral.fromJson(a),
     ];
+    // Endereco das imagens do mapa (padrao OpenStreetMap).
+    MapaConfig.aplicar(data);
   }
 }

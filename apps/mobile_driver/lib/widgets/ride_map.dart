@@ -9,6 +9,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/geo.dart';
 import 'bussola.dart';
 import 'mapa_google.dart';
+import '../core/mapa_config.dart';
 
 /// [moto]: mototaxi (Evandro, 10/10/2026), desenhado como moto no mapa.
 enum MarkerKind { pickup, dropoff, driver, car, moto }
@@ -407,9 +408,9 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
       children: [
         if (mostrarRuasNoMapa)
           TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            urlTemplate: MapaConfig.tiles,
             userAgentPackageName: 'br.com.fortalezamov.motorista',
-            maxZoom: 19,
+            maxZoom: MapaConfig.maxZoom.toDouble(),
             tileProvider: NetworkTileProvider(),
             errorTileCallback: (tile, error, stackTrace) {
               // Tiles indisponiveis ficam no fundo, sem quebrar o mapa.
@@ -498,9 +499,9 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
                   color: AppColors.background.withValues(alpha: 0.72),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  '© OpenStreetMap contributors',
-                  style: TextStyle(
+                child: Text(
+                  MapaConfig.atribuicao,
+                  style: const TextStyle(
                     fontFamily: AppText.family,
                     color: AppColors.textFaint,
                     fontSize: 9,

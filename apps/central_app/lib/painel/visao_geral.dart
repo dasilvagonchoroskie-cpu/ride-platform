@@ -13,6 +13,7 @@ import '../widgets/bussola.dart';
 import '../widgets/mapa_google.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
+import '../core/mapa_config.dart';
 
 LatLng _ll(Coords c) => LatLng(c.latitude, c.longitude);
 
@@ -236,9 +237,9 @@ class _VisaoGeralState extends State<VisaoGeral> {
             children: [
               if (mostrarRuasNoMapa)
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: MapaConfig.tiles,
                   userAgentPackageName: 'com.rideplatform.central_app',
-                  maxZoom: 19,
+                  maxZoom: MapaConfig.maxZoom.toDouble(),
                 ),
               MarkerLayer(markers: marcadores),
             ],
