@@ -1,0 +1,55 @@
+name: Auditoria das dependencias
+
+# So le e relata (nada e atualizado aqui): pacotes desatualizados dos 3 apps
+# Flutter e vulnerabilidades do servidor. Grava em logs/auditoria-*.txt.
+# Rodado pelo Claude na auditoria de 23/10/2026 e quando precisar de novo.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auditoria:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+
+      - name: Pacotes dos apps (flutter pub outdated)
+        run: |
+          mkdir -p "$RUNNER_TEMP/rel"
+          for app in mobile_passenger mobile_driver central_app; do
+            (cd apps/$app && flutter pub get >/dev/null 2>&1; flutter pub outdated --no-dev-dependencies 2>&1) > "$RUNNER_TEMP/rel/auditoria-$app.txt" || true
+          done
+          flutter --version > "$RUNNER_TEMP/rel/auditoria-flutter.txt" 2>&1 || true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Vulnerabilidades do servidor (pnpm audit)
+        run: |
+          pnpm install --frozen-lockfile >/dev/null 2>&1 || pnpm install >/dev/null 2>&1
+          pnpm audit --prod > "$RUNNER_TEMP/rel/auditoria-servidor.txt" 2>&1 || true
+
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs
+          cp "$RUNNER_TEMP"/rel/*.txt logs/ 2>/dev/null || exit 0
+          git add logs/auditoria-*.txt
+          git commit -m "relatorio: auditoria das dependencias (execucao ${{ github.run_number }})" || exit 0
+          for t in 1 2 3 4 5; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
