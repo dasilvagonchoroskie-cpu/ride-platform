@@ -46,6 +46,17 @@ class CorridasNativo {
     }
   }
 
+  /// O vigia nativo deu uma volta no ultimo minuto (esta esperando chamados
+  /// no servidor e avisa o app na hora). false fora do Android ou com erro.
+  static Future<bool> vigiaVivo() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      return await _canal.invokeMethod<bool>('vigiaVivo').timeout(const Duration(seconds: 3)) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> iniciar(String api, String token) =>
       _chamar('iniciar', {'api': api, 'token': token});
 

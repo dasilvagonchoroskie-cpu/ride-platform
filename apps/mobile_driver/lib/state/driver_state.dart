@@ -1142,7 +1142,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         positionAccuracy = p.accuracy;
         _naCorrida(position, p.accuracy);
         notifyListeners();
-        _mandarPosicao(p);
+        _talvezMandarPosicao(p);
       }, onError: (_) {
         // Um erro isolado do stream nao para o motorista: o heartbeat
         // continua tentando enviar a ultima posicao boa conhecida.
@@ -1156,6 +1156,35 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   void _pararGps() {
     _gps?.cancel();
     _gps = null;
+    _envioPendente?.cancel();
+    _envioPendente = null;
+    _posicaoPendente = null;
+  }
+
+  // Economia (auditoria de 23/10/2026): andando, o GPS da uma leitura a
+  // cada 15 m (quase 1 por segundo) e cada uma virava um envio ao servidor.
+  // O passageiro e a Central so atualizam a cada 4 s: agora vai no maximo
+  // uma posicao a cada 4 s (a mais nova). O taximetro continua medindo cada
+  // leitura aqui no celular — so o envio ficou mais espacado.
+  DateTime? _posicaoEnviadaEm;
+  Position? _posicaoPendente;
+  Timer? _envioPendente;
+
+  void _talvezMandarPosicao(Position p) {
+    final agora = DateTime.now();
+    final ultima = _posicaoEnviadaEm;
+    if (ultima != null && agora.difference(ultima) < AppConfig.locationInterval) {
+      _posicaoPendente = p;
+      _envioPendente ??= Timer(AppConfig.locationInterval - agora.difference(ultima), () {
+        _envioPendente = null;
+        final pendente = _posicaoPendente;
+        if (pendente != null) _talvezMandarPosicao(pendente);
+      });
+      return;
+    }
+    _posicaoPendente = null;
+    _posicaoEnviadaEm = agora;
+    unawaited(_mandarPosicao(p));
   }
 
   /// Avisa o servidor da posicao atual.
@@ -1199,12 +1228,34 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
       if (activeRide == null && offer == null) {
         if (AppConfig.hasApi) {
-          _buscarChamados();
+          unawaited(_buscarChamadosSePreciso());
         } else if (DateTime.now().second % 12 == 0) {
           receiveOffer();
         }
       }
     });
+  }
+
+  // Economia (auditoria de 23/10/2026): com o app aberto, ele perguntava
+  // por chamados a cada 4 s mesmo com o vigia nativo ja esperando no
+  // servidor (~900 perguntas por hora por motorista). Com o vigia vivo, o
+  // chamado chega do mesmo jeito na hora (o vigia avisa o app); o app so
+  // confere a cada 20 s, por seguranca. Sem o vigia, segue a cada 4 s.
+  DateTime? _vigiaConferidoEm;
+  bool _vigiaVivo = false;
+  DateTime? _chamadosConferidosEm;
+
+  Future<void> _buscarChamadosSePreciso() async {
+    final agora = DateTime.now();
+    final conferido = _vigiaConferidoEm;
+    if (conferido == null || agora.difference(conferido) > const Duration(seconds: 20)) {
+      _vigiaConferidoEm = agora;
+      _vigiaVivo = await CorridasNativo.vigiaVivo();
+    }
+    final ultima = _chamadosConferidosEm;
+    if (_vigiaVivo && ultima != null && agora.difference(ultima) < const Duration(seconds: 20)) return;
+    _chamadosConferidosEm = agora;
+    await _buscarChamados();
   }
 
   void _stopHeartbeat() {

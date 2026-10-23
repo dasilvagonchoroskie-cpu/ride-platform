@@ -84,6 +84,18 @@ public class CorridasService extends Service {
     private static final String PREFS = "fortaleza_corridas";
 
     private volatile boolean rodando = false;
+
+    /**
+     * Ultima volta do vigia (auditoria de 23/10/2026): com o vigia vivo, o
+     * aplicativo aberto nao precisa perguntar por chamados a cada 4 s — o
+     * vigia ja espera no servidor e avisa o app na hora ("chamadoNovo").
+     */
+    private static volatile long voltaEm = 0;
+
+    /** O vigia deu uma volta no ultimo minuto (a espera no servidor e de ate 25 s). */
+    public static boolean vivo() {
+        return voltaEm > 0 && System.currentTimeMillis() - voltaEm < 60000;
+    }
     private Thread vigia;
     private String api = "";
     private String token = "";
@@ -170,6 +182,7 @@ public class CorridasService extends Service {
 
     private void encerrar() {
         rodando = false;
+        voltaEm = 0;
         if (vigia != null) vigia.interrupt();
         pararAlarme();
         desligarGps();
@@ -196,6 +209,8 @@ public class CorridasService extends Service {
             } catch (Exception e) {
                 r = FALHOU;
             }
+            // Falhou (sem rede, sessao vencida): o app volta a perguntar sozinho.
+            voltaEm = r == FALHOU ? 0 : System.currentTimeMillis();
             long agora = System.currentTimeMillis();
             if (agora - carteiraEm >= CARTEIRA_MS) {
                 carteiraEm = agora;
@@ -346,6 +361,7 @@ public class CorridasService extends Service {
                 if (novo == null) {
                     avisarSessaoVencida();
                     rodando = false;
+                    voltaEm = 0;
                     principal.post(this::encerrar);
                     return null;
                 }

@@ -169,6 +169,8 @@ class MainActivity : FlutterActivity() {
                     // Fabricante do aparelho (Xiaomi, Samsung...) para mostrar o
                     // ajuste certo de "iniciar sozinho" / bateria.
                     "fabricante" -> result.success(Build.MANUFACTURER ?: "")
+                    // O vigia nativo esta esperando chamados no servidor?
+                    "vigiaVivo" -> result.success(CorridasService.vivo())
                     else -> result.notImplemented()
                 }
             } catch (e: Exception) {
