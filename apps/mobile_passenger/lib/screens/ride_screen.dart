@@ -72,6 +72,8 @@ class RideScreen extends StatelessWidget {
         children: [
           Positioned.fill(
             child: RideMap(
+              // O taximetro fica no alto, a esquerda: a atribuicao vai abaixo dele.
+              atribuicaoTopo: 150,
               center: centro,
               span: 0.03,
               rounded: false,

@@ -132,7 +132,7 @@ A Central **não mudou nesta etapa** (já não esperava o GPS); a diferença é 
 | Rota 1 vez por etapa (refaz só fora do caminho, com limite) | **[AUTO]** só por leitura do código e testes existentes; falta corrida de rua |
 | FusedLocationProvider no passageiro | **[SEM TESTE]** em aparelho (montado e analisado) |
 | Imagens da TomTom aparecendo no Android de teste | **[REAL no emulador]** medição "tomtom" (logs/medir-mapa/tomtom): as ruas da TomTom aparecem nos 3 apps (fotos da tela do passageiro e do motorista) |
-| Atribuição "© TomTom" visível | corrigido na montagem 243: nos mapas de tela cheia ela ficava atrás do painel de baixo (vista nas fotos da medição); agora vai no alto, à esquerda |
+| Atribuição "© TomTom" visível | corrigido: nos mapas de tela cheia ela ficava atrás do painel de baixo (vista nas fotos da medição); agora vai no alto, à esquerda (abaixo do taxímetro nas telas de corrida). Conferido nas fotos das telas (esteira "Fotos dos apps") |
 
 **Medição "tomtom" (mesma esteira e mesma régua da seção 4; tempo desde o início do app):**
 

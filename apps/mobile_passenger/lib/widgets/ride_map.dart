@@ -56,7 +56,12 @@ class RideMap extends StatefulWidget {
     this.enquadrar = const [],
     this.enquadrarChave,
     this.enquadrarMargem = const EdgeInsets.fromLTRB(40, 72, 40, 40),
+    this.atribuicaoTopo = 72,
   });
+
+  /// Mapa de tela cheia: distancia da atribuicao "© TomTom" ate o alto da
+  /// tela (abaixo da barra de cima; telas com o taximetro no alto usam mais).
+  final double atribuicaoTopo;
 
   /// Mostra a bussola (Evandro, 08/10/2026: "nos tres aplicativos").
   final bool bussola;
@@ -501,7 +506,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
               right: widget.height == null ? null : 4,
               bottom: widget.height == null ? null : 2,
               left: widget.height == null ? 6 : null,
-              top: widget.height == null ? MediaQuery.paddingOf(context).top + 72 : null,
+              top: widget.height == null ? MediaQuery.paddingOf(context).top + widget.atribuicaoTopo : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
