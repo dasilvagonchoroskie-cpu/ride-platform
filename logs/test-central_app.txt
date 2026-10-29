@@ -6,9 +6,9 @@
 00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
 00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Operador (nao dono): o servidor recusa e a Central mostra o motivo
-00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Operador (nao dono): o servidor recusa e a Central mostra o motivo
+00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
 00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
 00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
 00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
@@ -23,7 +23,7 @@
 00:06 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
 00:07 +22: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
 00:07 +23: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:08 +24: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:07 +24: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
 00:08 +25: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
 00:09 +26: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
 00:10 +27: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
@@ -34,14 +34,14 @@
 00:12 +32: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
 00:13 +33: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
 00:13 +34: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:13 +35: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:14 +35: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
 00:14 +36: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
 00:15 +37: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
 00:15 +38: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
 00:15 +39: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
 00:15 +39 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
 00:16 +40 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:16 +41 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
+00:17 +41 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
 00:17 +42 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
 00:17 +43 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:17 +44 ~1: All tests passed!
+00:18 +44 ~1: All tests passed!
