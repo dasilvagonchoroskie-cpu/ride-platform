@@ -705,6 +705,27 @@ export class DriversService {
       },
     });
 
-    return { ...driver, progress: await this.getDocumentProgress(driverId) };
+    return { ...driver, progress: await this.getDocumentProgress(driverId), ...(await this.ondeAbrirOMapa(driverId)) };
+  }
+
+  /**
+   * Onde o mapa do motorista abre antes do GPS acertar (29/10/2026: na
+   * primeira abertura, sem posicao guardada, o app ficava em "Localizando
+   * voce" ate o GPS responder — dentro de casa, 20 s ou mais). Vai a ultima
+   * posicao que o servidor conhece e o centro da cidade (praca) dele.
+   */
+  private async ondeAbrirOMapa(driverId: string) {
+    try {
+      const [l] = await this.prisma.$queryRaw<Array<{ lat: number | null; lng: number | null; em: Date | null }>>`
+        SELECT ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, last_seen_at AS em
+        FROM driver_locations WHERE driver_id = ${driverId}::uuid`;
+      const p = await this.pracas.buscar(await this.pracas.pracaDoMotorista(driverId));
+      return {
+        ultimaPosicao: l?.lat != null && l?.lng != null ? { latitude: Number(l.lat), longitude: Number(l.lng), em: l.em } : null,
+        praca: p ? { id: p.id, nome: p.nome, uf: p.uf, latitude: p.latitude, longitude: p.longitude } : null,
+      };
+    } catch {
+      return { ultimaPosicao: null, praca: null };
+    }
   }
 }

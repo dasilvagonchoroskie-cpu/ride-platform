@@ -280,6 +280,8 @@ C=$(curl -s -o /dev/null -w "%{http_code}" "$API$DOCURL" -H "Authorization: Bear
 X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
 sucesso "$X" && ok "Central: motorista aprovado com conferencia presencial" || falha "Central: aprovar motorista" "$X"
 X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "APPROVED" ] && ok "App do motorista ve a aprovacao (botao Atualizar status)" || falha "Motorista: ver aprovacao" "$(echo "$X" | jq -c '.data.status')"
+# Mapa sem GPS (29/10/2026): o cadastro diz onde abrir o mapa antes do GPS.
+[ "$(echo "$X" | jq -r '(.data.praca.latitude|type)+"/"+(.data | has("ultimaPosicao") | tostring)')" = "number/true" ] && ok "Motorista: mapa abre sem esperar o GPS (cidade $(echo "$X" | jq -r '.data.praca.nome'), ultima posicao: $(echo "$X" | jq -r 'if .data.ultimaPosicao then "sim" else "ainda nao" end'))" || falha "Motorista: onde abrir o mapa sem GPS" "$(echo "$X" | jq -c '{praca: .data.praca, ultimaPosicao: .data.ultimaPosicao}')"
 
 # Foto de perfil do motorista (Evandro, 09/10/2026): o motorista troca pelo
 # app, a Central confere; a Central tambem poe/troca a foto.

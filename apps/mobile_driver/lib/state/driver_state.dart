@@ -414,6 +414,25 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     ));
   }
 
+  /// Primeira abertura neste celular, sem GPS e sem posicao guardada: abre
+  /// o mapa na ultima posicao que o servidor conhece (ou no centro da cidade
+  /// do motorista) em vez de ficar em "Localizando voce" ate o GPS responder
+  /// (medicao no 4G de 29/10/2026: 20 s ou mais sem mapa). Quando o GPS
+  /// chega, o mapa vai para a posicao certa.
+  void usarPosicaoDoServidor(Map<String, dynamic> d) {
+    if (temPosicao) return;
+    for (final k in const ['ultimaPosicao', 'praca']) {
+      final m = d[k];
+      if (m is Map && m['latitude'] is num && m['longitude'] is num) {
+        position = Coords((m['latitude'] as num).toDouble(), (m['longitude'] as num).toDouble());
+        posicaoGuardada = true;
+        Medida.marcar('posicao-do-servidor');
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
   Future<void> _lerPosicaoGuardada() async {
     try {
       final raw = await AppStorage.read(AppStorage.ultimaPosicao);
@@ -1973,6 +1992,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final d = await _client.request('GET', '/drivers/me') as Map<String, dynamic>;
       dadosCadastro = d;
+      usarPosicaoDoServidor(d);
       final nota = double.tryParse('${d['ratingAvg'] ?? ''}');
       final aceite = double.tryParse('${d['acceptanceRate'] ?? ''}');
       final u = d['user'] as Map<String, dynamic>?;
