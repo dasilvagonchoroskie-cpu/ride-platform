@@ -62,6 +62,9 @@ export const ERROR_CODES = {
   PAYMENT_FAILED: 'PAYMENT_FAILED',
   INSUFFICIENT_BALANCE: 'INSUFFICIENT_BALANCE',
   MIN_PAYOUT_NOT_REACHED: 'MIN_PAYOUT_NOT_REACHED',
+
+  /** Mapa (TomTom) no limite da cota ou fora do ar: o app mostra a contingencia. */
+  MAPA_LIMITE: 'MAPA_LIMITE',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

@@ -20,7 +20,7 @@ export function corridaDoToken(token: string, segredo: string): string | null {
   return certo.length === veio.length && timingSafeEqual(certo, veio) ? id : null;
 }
 
-/** Pagina publica do acompanhamento (mapa OpenStreetMap + Leaflet). */
+/** Pagina publica do acompanhamento (Leaflet + imagens da TomTom servidas pelo proprio servidor, sem a chave na pagina). */
 export function paginaDeAcompanhar(token: string): string {
   return `<!doctype html>
 <html lang="pt-BR">
@@ -54,7 +54,7 @@ export function paginaDeAcompanhar(token: string): string {
 <script>
   var TOKEN = ${JSON.stringify(token)};
   var mapa = L.map('mapa', { zoomControl: false }).setView([-15.8, -47.9], 4);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+  L.tileLayer('/api/acompanhar/' + TOKEN + '/mapa/{z}/{x}/{y}.png', { minZoom: 3, maxZoom: 18, attribution: '&copy; TomTom' }).addTo(mapa);
   var ponto = function (cor) { return L.circleMarker([0, 0], { radius: 9, color: '#fff', weight: 3, fillColor: cor, fillOpacity: 1 }); };
   var embarque = ponto('#2E9E5B'), destino = ponto('#D93A3A'), carro = null, enquadrou = false;
   function texto(id, t) { document.getElementById(id).textContent = t || ''; }

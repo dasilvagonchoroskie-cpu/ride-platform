@@ -124,7 +124,7 @@ Os dados e os documentos ficam no banco de dados da plataforma, com acesso restr
 
 - **Render** (servidor) e **Supabase** (banco de dados), com servidores nos Estados Unidos — a transferência internacional segue o art. 33 da LGPD, com cláusulas de proteção de dados desses fornecedores;
 - **Google Firebase** (envio de notificações ao celular) e **Google/Gmail** (envio dos códigos de acesso por e-mail);
-- **OpenStreetMap** e serviços de rota e de busca de endereço (recebem coordenadas e o texto buscado, sem o nome do usuário);
+- **TomTom** (mapa, busca de endereço e rotas: recebe coordenadas e o texto buscado, sem o nome do usuário; as imagens do mapa são pedidas pelo próprio celular);
 - **WhatsApp**, somente quando o próprio usuário escolhe compartilhar a viagem, o recibo ou falar com a Central.
 
 ## 4. Como protegemos os dados

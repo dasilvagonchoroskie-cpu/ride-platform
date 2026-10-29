@@ -1,55 +1,58 @@
+import { TomTomGeo } from '../geo/tomtom';
+
 /**
- * Endereco das imagens do mapa usado pelos 3 aplicativos (auditoria de
- * 23/10/2026).
+ * Mapa dos 3 aplicativos (desde 29/10/2026: TomTom).
  *
- * Padrao: OpenStreetMap, gratis. Se um dia o OSM limitar o uso, basta
- * colocar outro endereco nas variaveis do Render (MAPA_TILES_URL e
- * MAPA_ATRIBUICAO) e os aplicativos passam a usar sozinhos, sem APK novo.
- * Endereco invalido e ignorado: fica o OpenStreetMap.
+ * - GET /app/config (publico) leva so o provedor e a atribuicao, SEM chave.
+ *   Apps antigos (montagem 241 e anteriores) nao acham "tiles" ali e seguem
+ *   com o mapa que ja tinham, sem quebrar.
+ * - GET /geo/mapa (so com login) leva o endereco das imagens com a chave:
+ *   a chave fica so na variavel TOMTOM_API_KEY do Render e da para trocar
+ *   sem APK novo.
+ *
+ * Imagens de 512 px: 4 vezes menos pedidos que as de 256 px para a mesma tela
+ * (cota gratis da TomTom: 200 mil imagens por mes).
  */
 export const MAPA_PADRAO = {
-  tiles: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  atribuicao: '© OpenStreetMap contributors',
-  maxZoom: 19,
-  // 'google' so vale no APK montado com a chave do Google Maps; sem a chave
-  // o app usa o OpenStreetMap. MAPA_PROVEDOR=osm no Render volta todo mundo
-  // para o OpenStreetMap sem app novo.
-  provedor: 'google',
+  provedor: 'tomtom',
+  atribuicao: '© TomTom',
+  maxZoom: 20,
+  tamanho: 512,
 } as const;
 
-export type ProvedorDoMapa = 'google' | 'osm';
+export type ProvedorDoMapa = 'tomtom' | 'google';
 
 export interface MapaDoApp {
-  tiles: string;
+  provedor: ProvedorDoMapa;
   atribuicao: string;
   maxZoom: number;
-  provedor: ProvedorDoMapa;
+  tamanho: number;
 }
 
+export interface MapaComChave extends MapaDoApp {
+  /** Endereco das imagens com {z}/{x}/{y}; null = sem chave no servidor. */
+  tiles: string | null;
+}
+
+/** MAPA_PROVEDOR=google no Render: os apps montados com a chave do Google usam o Google. */
 function provedorDoMapa(env: Record<string, string | undefined>): ProvedorDoMapa {
-  return env.MAPA_PROVEDOR?.trim().toLowerCase() === 'osm' ? 'osm' : 'google';
+  return env.MAPA_PROVEDOR?.trim().toLowerCase() === 'google' ? 'google' : 'tomtom';
 }
 
-/** So https, com {z}, {x} e {y}, sem espacos e de tamanho razoavel. */
-export function enderecoDeMapaValido(url: string | undefined | null): url is string {
-  if (!url) return false;
-  const u = url.trim();
+/** O que vai no /app/config (publico): nada de chave. */
+export function mapaDoApp(env: Record<string, string | undefined> = process.env): MapaDoApp {
+  return { ...MAPA_PADRAO, provedor: provedorDoMapa(env) };
+}
+
+/** Endereco das imagens da TomTom (com a chave), para quem entrou na conta. */
+export function enderecoDasImagens(chave: string): string {
   return (
-    u.length <= 300 &&
-    u.startsWith('https://') &&
-    !/\s/.test(u) &&
-    u.includes('{z}') &&
-    u.includes('{x}') &&
-    u.includes('{y}')
+    'https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png' +
+    `?tileSize=${MAPA_PADRAO.tamanho}&language=pt-BR&key=${encodeURIComponent(chave)}`
   );
 }
 
-export function mapaDoApp(env: Record<string, string | undefined> = process.env): MapaDoApp {
-  const url = env.MAPA_TILES_URL?.trim();
-  const provedor = provedorDoMapa(env);
-  if (!enderecoDeMapaValido(url)) return { ...MAPA_PADRAO, provedor };
-  const atribuicao = env.MAPA_ATRIBUICAO?.trim().slice(0, 120) || MAPA_PADRAO.atribuicao;
-  const zoom = Number(env.MAPA_MAX_ZOOM);
-  const maxZoom = Number.isInteger(zoom) && zoom >= 10 && zoom <= 22 ? zoom : MAPA_PADRAO.maxZoom;
-  return { tiles: url, atribuicao, maxZoom, provedor };
+export function mapaComChave(env: Record<string, string | undefined> = process.env): MapaComChave {
+  const chave = TomTomGeo.daVariavel(env);
+  return { ...mapaDoApp(env), tiles: chave ? enderecoDasImagens(chave) : null };
 }

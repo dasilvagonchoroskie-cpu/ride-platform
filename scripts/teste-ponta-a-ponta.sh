@@ -92,7 +92,10 @@ X=$(get /app/config)
 [ "$(echo "$X" | jq -r '.data.login.email' 2>/dev/null)" = "true" ] && ok "App: entrada por codigo no e-mail disponivel (telefone: $(echo "$X" | jq -r '.data.login.telefone'))" || falha "App: canais de entrada" "$X"
 CID=$(echo "$X" | jq -r '.data.cidades[0] // empty' 2>/dev/null)
 sucesso "$X" && ok "App: configuracao publica ($(echo "$X" | jq -r '.data.cidades | length') cidade(s), WhatsApp $(echo "$X" | jq -r '.data.whatsapp // "nenhum"'))" || falha "App: configuracao publica" "$X"
-echo "$X" | jq -r '.data.mapa.tiles // empty' | grep -q '^https://.*{z}.*{x}.*{y}' && ok "App: endereco do mapa vindo do servidor ($(echo "$X" | jq -r '.data.mapa.tiles' | cut -d/ -f3))" || falha "App: endereco do mapa" "$(echo "$X" | jq -c '.data.mapa')"
+# Mapa TomTom (29/10/2026): o /app/config publico NUNCA leva a chave; o
+# endereco das imagens (com a chave) so vem com login, em /geo/mapa. Nada
+# do que vem do /geo/mapa e impresso aqui (o relatorio e publico).
+[ "$(echo "$X" | jq -r '.data.mapa.provedor')" = "tomtom" ] && ! echo "$X" | grep -q 'key=' && ok "App: configuracao publica do mapa (TomTom) sem a chave" || falha "App: mapa na configuracao publica" "$(echo "$X" | jq -c '.data.mapa | {provedor, atribuicao, temTiles: has("tiles")}')"
 X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos carregados" || falha "Central: cidades e avisos" "$X"
 CPFP=$(python3 -c "
 import random
@@ -132,6 +135,10 @@ X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
 X=$(get "/geo/search?q=Avenida%20Brasilia&lat=-18.0125&lng=-49.3547" "$TP")
 N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: busca de destino real ($N resultado(s), 1o: $(echo "$X" | jq -r '.data[0].address') - $(echo "$X" | jq -r '.data[0].detail'))" || falha "Passageiro: busca de destino" "$X"
+X=$(get /geo/mapa "$TP")
+[ "$(echo "$X" | jq -r '(.data.tiles // "") | startswith("https://api.tomtom.com/map/1/tile/")')" = "true" ] && [ "$(echo "$X" | jq -r '.data.tamanho')" = "512" ] \
+  && ok "Mapa: imagens da TomTom com login (512 px, economia: $(echo "$X" | jq -r '.data.economia'))" || falha "Mapa: imagens da TomTom" "$(echo "$X" | jq -c '{provedor: .data.provedor, temTiles: ((.data.tiles // "") != ""), erro: .error.code}')"
+C=$(curl -s -o /dev/null -w "%{http_code}" "$API/geo/mapa"); [ "$C" = "401" ] && ok "Seguranca: a chave do mapa nao sai sem login" || falha "Seguranca: chave do mapa sem login" "$C"
 X=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
 [ -n "$(echo "$X" | jq -r '.data.address // empty' | grep -v '^Ponto no mapa')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
 
@@ -722,6 +729,8 @@ X=$(get "/admin/drivers/$DIDC" "$TA"); sucesso "$X" && falha "Motorista excluido
 X=$(get "/rides/history?page=1&pageSize=5" "$TP"); sucesso "$X" && ok "Passageiro: historico de corridas continua depois de excluir o motorista" || falha "Passageiro: historico sem o motorista" "$X"
 X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] && [ "$(echo "$X" | jq -r '.data.driverId')" = "null" ] && ok "Quem tambem e passageiro continua com a conta de passageiro" || falha "Conta de passageiro depois de excluir o motorista" "$X"
 CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
+X=$(get /geo/uso "$TA"); [ "$(echo "$X" | jq -r '.data.ligado')" = "true" ] && ok "Central: uso da TomTom hoje ($(echo "$X" | jq -r '[.data.servicos[] | "\(.servico) \(.hoje)/\(.parteDoDia)"] | join(", ")'))" || falha "Central: uso da TomTom" "$(echo "$X" | jq -c '{ligado: .data.ligado, erro: .error.code}')"
+X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso da TomTom" "$X" || ok "Seguranca: so a Central ve o uso da TomTom"
 # Limpeza: o teste apaga o que criou (contas de teste, corridas, cupons) e a
 # conta de operador, para nada de teste ficar no financeiro da Central.
 if [ -n "${OPID:-}" ]; then

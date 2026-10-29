@@ -7,6 +7,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AppConfigService } from '../../config/app-config.service';
+import { ImagensDoAcompanhar } from './acompanhar-imagens';
 import { corridaDoToken, paginaDeAcompanhar, tokenDeAcompanhar } from './acompanhar';
 import { RidesService } from './rides.service';
 
@@ -41,6 +42,8 @@ export class CompartilharCorridaController {
 @Public()
 @Controller('acompanhar')
 export class AcompanharCorridaController {
+  private readonly imagens = new ImagensDoAcompanhar();
+
   constructor(
     private readonly rides: RidesService,
     private readonly config: AppConfigService,
@@ -57,13 +60,34 @@ export class AcompanharCorridaController {
     this.corrida(token);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    // Esta pagina usa o Leaflet (unpkg) e os mapas do OpenStreetMap.
+    // Esta pagina usa o Leaflet (unpkg); as imagens do mapa (TomTom) vem do
+    // proprio servidor, entao a chave nunca aparece na pagina.
     res.setHeader(
       'Content-Security-Policy',
       "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; " +
-        "img-src 'self' data: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://unpkg.com; connect-src 'self'",
+        "img-src 'self' data: https://unpkg.com; connect-src 'self'",
     );
     res.send(paginaDeAcompanhar(token));
+  }
+
+  /** Imagem do mapa da pagina (TomTom pelo servidor, com guardado). */
+  @Get(':token/mapa/:z/:x/:y')
+  async imagem(
+    @Param('token') token: string,
+    @Param('z') z: string,
+    @Param('x') x: string,
+    @Param('y') y: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    this.corrida(token);
+    const r = await this.imagens.buscar(token, z, x, y.replace(/\.png$/, ''));
+    if (!r) {
+      res.status(404).end();
+      return;
+    }
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(r);
   }
 
   @Get(':token/dados')

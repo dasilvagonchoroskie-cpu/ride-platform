@@ -50,7 +50,8 @@ export class AppPublicoController {
       pracas: (await this.pracas.listar())
         .filter((p) => p.ativa)
         .map((p) => ({ id: p.id, nome: p.nome, uf: p.uf, latitude: p.latitude, longitude: p.longitude, whatsapp: p.whatsapp ?? null })),
-      // Endereco das imagens do mapa (padrao OpenStreetMap; troca pelo Render sem APK novo).
+      // Mapa: provedor e atribuicao (TomTom). A chave das imagens vem so com
+      // login, em GET /geo/mapa.
       mapa: mapaDoApp(),
     };
   }

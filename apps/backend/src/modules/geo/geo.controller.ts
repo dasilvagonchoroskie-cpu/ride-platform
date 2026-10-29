@@ -4,7 +4,9 @@ import { UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { mapaComChave } from '../operacao/mapa.config';
 import { GeoService } from './geo.service';
+import { UsoDoMapaService } from './uso-do-mapa';
 
 const buscaSchema = z.object({
   q: z.string().trim().min(2).max(120),
@@ -29,10 +31,13 @@ const rotaSchema = z.object({
 @Roles(UserRole.PASSENGER, UserRole.DRIVER, UserRole.ADMIN)
 @Controller('geo')
 export class GeoController {
-  constructor(private readonly geo: GeoService) {}
+  constructor(
+    private readonly geo: GeoService,
+    private readonly uso: UsoDoMapaService,
+  ) {}
 
   @Get('search')
-  @ApiOperation({ summary: 'Busca enderecos e lugares perto de um ponto (OpenStreetMap)' })
+  @ApiOperation({ summary: 'Busca enderecos e lugares perto de um ponto (TomTom, pelo servidor)' })
   buscar(@Query(new ZodValidationPipe(buscaSchema)) q: { q: string; lat: number; lng: number }) {
     return this.geo.buscar(q.q, q.lat, q.lng);
   }
@@ -42,17 +47,35 @@ export class GeoController {
   async rota(@Query(new ZodValidationPipe(rotaSchema)) q: { deLat: number; deLng: number; paraLat: number; paraLng: number }) {
     const de = { latitude: q.deLat, longitude: q.deLng };
     const para = { latitude: q.paraLat, longitude: q.paraLng };
-    return (
-      (await this.geo.rota(de, para)) ?? {
-        distanceMeters: null,
-        durationSeconds: null,
-        pontos: [
-          [de.latitude, de.longitude],
-          [para.latitude, para.longitude],
-        ],
-        porRua: false,
-      }
-    );
+    // So para desenhar: nao essencial (no modo economia vem a linha reta).
+    // A rota da corrida (embarque -> destino) ja foi pedida no orcamento e
+    // vem do guardado, sem gastar cota.
+    const r = await this.geo.rota(de, para, false);
+    if (r) return r;
+    return {
+      distanceMeters: null,
+      durationSeconds: null,
+      pontos: [
+        [de.latitude, de.longitude],
+        [para.latitude, para.longitude],
+      ],
+      porRua: false,
+      limite: this.geo.parado(),
+      economia: this.geo.economia(),
+    };
+  }
+
+  @Get('mapa')
+  @ApiOperation({ summary: 'Endereco das imagens do mapa (TomTom, com a chave) e modo economia — so com login' })
+  mapa() {
+    return { ...mapaComChave(), economia: this.geo.economia(), parado: this.geo.parado() };
+  }
+
+  @Get('uso')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Uso da TomTom hoje e no mes (Central)' })
+  usoDoMapa() {
+    return { ligado: this.geo.ligado, ...this.uso.resumo() };
   }
 
   @Get('reverse')

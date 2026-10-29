@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { ERROR_CODES } from '@ride/shared';
+import { BusinessException } from '../../common/errors/business.exception';
+import { LimiteDoMapa, LugarDoProvedor, ProvedorGeo, TomTomGeo } from './tomtom';
+import { UsoDoMapaService } from './uso-do-mapa';
 
 /** Um endereco encontrado, pronto para a lista do "Para onde?". */
 export interface Lugar {
@@ -9,18 +13,9 @@ export interface Lugar {
   latitude: number;
   longitude: number;
   distanceKm: number | null;
+  /** true = o mapa esta no limite agora (o app mostra a contingencia). */
+  limite?: boolean;
 }
-
-interface ItemNominatim {
-  lat: string;
-  lon: string;
-  name?: string;
-  display_name?: string;
-  address?: Record<string, string>;
-}
-
-/** Rota por rua (OSRM, OpenStreetMap): gratuito e sem chave. */
-const OSRM = 'https://router.project-osrm.org';
 
 /** Caminho pelas ruas entre dois pontos, para desenhar no mapa e medir a corrida. */
 export interface RotaPorRua {
@@ -32,278 +27,193 @@ export interface RotaPorRua {
   porRua: boolean;
 }
 
-const BASE = 'https://nominatim.openstreetmap.org';
-/** Reserva: Photon (Komoot), tambem OpenStreetMap, gratuito e sem chave. */
-const PHOTON = 'https://photon.komoot.io';
+const HORA_MS = 60 * 60 * 1000;
+const DIA_MS = 24 * HORA_MS;
 
-interface ItemPhoton {
-  geometry?: { coordinates?: [number, number] };
-  properties?: Record<string, string | undefined>;
+/** Guardado com prazo e tamanho maximo (o mais antigo sai primeiro). */
+class Guardado<T> {
+  private readonly itens = new Map<string, { quando: number; valor: T }>();
+  constructor(
+    private readonly prazoMs: number,
+    private readonly maximo: number,
+  ) {}
+
+  ler(chave: string): T | null {
+    const c = this.itens.get(chave);
+    if (!c) return null;
+    if (Date.now() - c.quando > this.prazoMs) {
+      this.itens.delete(chave);
+      return null;
+    }
+    return c.valor;
+  }
+
+  gravar(chave: string, valor: T): void {
+    if (this.itens.size >= this.maximo) {
+      const maisAntiga = this.itens.keys().next().value;
+      if (maisAntiga !== undefined) this.itens.delete(maisAntiga);
+    }
+    this.itens.set(chave, { quando: Date.now(), valor });
+  }
 }
 
-/** Nome do estado -> sigla (o Photon devolve o nome por extenso). */
-const UF: Record<string, string> = {
-  acre: 'AC', alagoas: 'AL', amapa: 'AP', amazonas: 'AM', bahia: 'BA', ceara: 'CE',
-  'distrito federal': 'DF', 'espirito santo': 'ES', goias: 'GO', maranhao: 'MA',
-  'mato grosso': 'MT', 'mato grosso do sul': 'MS', 'minas gerais': 'MG', para: 'PA',
-  paraiba: 'PB', parana: 'PR', pernambuco: 'PE', piaui: 'PI', 'rio de janeiro': 'RJ',
-  'rio grande do norte': 'RN', 'rio grande do sul': 'RS', rondonia: 'RO', roraima: 'RR',
-  'santa catarina': 'SC', 'sao paulo': 'SP', sergipe: 'SE', tocantins: 'TO',
-};
-const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-const DIA_MS = 24 * 60 * 60 * 1000;
+/** Texto normalizado da busca (para o guardado). */
+const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 /**
- * Enderecos pelo OpenStreetMap (Nominatim): gratuito e sem chave.
+ * Busca de endereco, endereco de um ponto e rota pelas ruas.
  *
- * A politica de uso do Nominatim pede: no maximo 1 consulta por segundo,
- * identificacao do aplicativo e cache. Por isso as consultas passam pelo
- * servidor (nunca direto do celular), uma de cada vez, e o resultado fica
- * guardado por um dia.
+ * Desde 29/10/2026 (pedido do Evandro) pela TomTom, SEMPRE pelo servidor:
+ * a chave nunca vai para o celular, um contador so para todos os usuarios
+ * (a cota e da chave) e o que ja foi perguntado fica guardado para todos.
+ * O servidor publico do OpenStreetMap (Nominatim) e o Photon/OSRM sairam.
+ *
+ * Economia: busca 3 dias guardada; endereco de um ponto 7 dias (grade de
+ * ~11 m); rota 1 dia (mesmos pontos = mesma rota, entao a rota da corrida
+ * e pedida uma vez so: no orcamento; o pedido, o app do passageiro e o do
+ * motorista reaproveitam).
  */
 @Injectable()
 export class GeoService {
   private readonly logger = new Logger(GeoService.name);
-  private readonly cache = new Map<string, { quando: number; valor: unknown }>();
-  private proximaVez = 0;
-  /**
-   * O Nominatim publico bloqueia (429) o IP compartilhado do servidor
-   * gratuito do Render (visto em 08/10/2026: TODA busca voltava vazia).
-   * Depois de um bloqueio, por 15 minutos vai direto ao Photon.
-   */
-  private nominatimBloqueadoAte = 0;
+  private readonly provedor: ProvedorGeo | null;
+  private readonly buscas = new Guardado<Lugar[]>(3 * DIA_MS, 3000);
+  private readonly enderecos = new Guardado<Lugar>(7 * DIA_MS, 6000);
+  private readonly rotas = new Guardado<RotaPorRua>(DIA_MS, 2000);
+
+  constructor(private readonly uso: UsoDoMapaService) {
+    const chave = TomTomGeo.daVariavel();
+    this.provedor = chave
+      ? new TomTomGeo(chave, (s) => uso.contar(s), undefined, (m) => this.logger.warn(m))
+      : null;
+    if (!chave) this.logger.warn('TOMTOM_API_KEY ausente: busca, endereco e rota pela TomTom desligadas.');
+  }
+
+  /** Para testes: outro provedor (ex.: TomTom com respostas de mentira). */
+  static comProvedor(uso: UsoDoMapaService, provedor: ProvedorGeo | null): GeoService {
+    const g = new GeoService(uso);
+    (g as unknown as { provedor: ProvedorGeo | null }).provedor = provedor;
+    return g;
+  }
+
+  get ligado(): boolean {
+    return this.provedor !== null;
+  }
+
+  economia(): boolean {
+    return this.uso.economia();
+  }
+
+  parado(): boolean {
+    return !this.provedor || this.uso.parado();
+  }
+
+  private limite(): BusinessException {
+    return new BusinessException(
+      ERROR_CODES.MAPA_LIMITE,
+      'A busca de endereços está no limite agora. Escreva o endereço ou escolha no mapa.',
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
 
   async buscar(texto: string, lat: number, lng: number): Promise<Lugar[]> {
     const q = texto.trim().replace(/\s+/g, ' ');
-    const chave = `s:${q.toLowerCase()}:${lat.toFixed(2)}:${lng.toFixed(2)}`;
-    const guardado = this.lerCache<Lugar[]>(chave);
+    const chave = `${semAcento(q)}:${lat.toFixed(2)}:${lng.toFixed(2)}`;
+    const guardado = this.buscas.ler(chave);
     if (guardado) return this.comDistancia(guardado, lat, lng);
+    const p = this.provedor;
+    if (!p || !this.uso.pode('geocode', true)) throw this.limite();
 
-    // Primeiro a regiao (uns 35 km em volta; se pouco aparecer, uns 80 km),
-    // para "Rua Sao Paulo" achar a rua da cidade antes da de outro estado.
-    // Depois, se ainda houver pouco, o Brasil inteiro: o passageiro pode ver
-    // quanto da uma corrida para qualquer lugar (decisao do Evandro em
-    // 05/10/2026 — sem limite de area). "Porto Alegre" em Goiatuba mostra a
-    // rua local primeiro e a cidade gaucha logo depois.
-    const caixaDe = (g: number) => [lng - g, lat + g, lng + g, lat - g].map((n) => n.toFixed(5)).join(',');
-    const base = `q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=br`;
-    let itens = (await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.32)}&bounded=1`)) ?? [];
-    if (itens.length < 3) {
-      itens = [...itens, ...((await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}&bounded=1`)) ?? [])];
+    const perto = { lat, lng };
+    let regiao: LugarDoProvedor[] = [];
+    let lugares: LugarDoProvedor[] = [];
+    let brasil: LugarDoProvedor[] = [];
+    try {
+      // 1) A regiao (uns 80 km): "Rua Sao Paulo" acha a da cidade primeiro.
+      regiao = await p.geocodificar(q, perto, 80_000);
+      // 2) Lugares com nome (Rodoviaria, Hospital) — cota pequena (2.500/mes):
+      //    so quando a regiao trouxe pouco e fora do modo economia.
+      if (regiao.length < 3 && this.uso.pode('search', false)) lugares = await p.lugares(q, perto, 30_000);
+      // 3) O Brasil todo (decisao de 05/10/2026: ver o preco para qualquer
+      //    lugar, ex.: "Porto Alegre") — fora do modo economia.
+      if (this.uso.pode('geocode', false)) brasil = await p.geocodificar(q, null, null);
+    } catch (e) {
+      if (!(e instanceof LimiteDoMapa)) throw e;
+      this.logger.warn(`TomTom no limite (${e.status}) na busca: parado ate a meia-noite.`);
+      this.uso.limiteDaTomTom();
+      if (regiao.length + lugares.length + brasil.length === 0) throw this.limite();
     }
-    // Sempre tambem o Brasil todo (regiao continua primeiro): com varias
-    // "Rua Porto Alegre" na regiao, a cidade de Porto Alegre sumia da lista.
-    const regiaoNominatim = itens.slice(0, 7);
-    itens = [...regiaoNominatim, ...((await this.consultar<ItemNominatim[]>(`/search?${base}&viewbox=${caixaDe(0.75)}`)) ?? [])];
-    let lugares = (itens ?? []).map((i) => this.paraLugar(i));
-    if (lugares.length === 0) lugares = await this.buscarPhoton(q, lat, lng);
-    // Sem repetidos (o mesmo nome no mesmo ponto aparece as vezes duas vezes).
     const vistos = new Set<string>();
-    const unicos = lugares.filter((l) => {
-      const k = `${l.address}|${l.latitude.toFixed(4)}|${l.longitude.toFixed(4)}`;
-      if (vistos.has(k)) return false;
-      vistos.add(k);
-      return true;
-    });
-    this.gravarCache(chave, unicos);
+    const unicos: Lugar[] = [...lugares, ...regiao.slice(0, 7), ...brasil, ...regiao.slice(7)]
+      .filter((l) => {
+        const k = `${semAcento(l.address)}|${l.latitude.toFixed(3)}|${l.longitude.toFixed(3)}`;
+        if (vistos.has(k)) return false;
+        vistos.add(k);
+        return true;
+      })
+      .slice(0, 12)
+      .map((l) => ({ ...l, distanceKm: null }));
+    if (unicos.length > 0) this.buscas.gravar(chave, unicos);
     return this.comDistancia(unicos, lat, lng);
   }
 
+  /** Endereco escrito de um ponto do mapa (embarque pelo GPS, destino no mapa). */
+  async endereco(lat: number, lng: number): Promise<Lugar> {
+    const chave = `${lat.toFixed(4)}:${lng.toFixed(4)}`;
+    const guardado = this.enderecos.ler(chave);
+    if (guardado) return { ...guardado, latitude: lat, longitude: lng };
+    const ponto: Lugar = {
+      address: `Ponto no mapa (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+      detail: '',
+      latitude: lat,
+      longitude: lng,
+      distanceKm: null,
+    };
+    const p = this.provedor;
+    if (!p || !this.uso.pode('reverse', true)) return { ...ponto, limite: true };
+    try {
+      const l = await p.enderecoDoPonto(lat, lng);
+      if (!l) return ponto;
+      const lugar: Lugar = { ...l, latitude: lat, longitude: lng, distanceKm: null };
+      this.enderecos.gravar(chave, lugar);
+      return lugar;
+    } catch (e) {
+      if (!(e instanceof LimiteDoMapa)) throw e;
+      this.logger.warn(`TomTom no limite (${e.status}) no endereco: parado ate a meia-noite.`);
+      this.uso.limiteDaTomTom();
+      return { ...ponto, limite: true };
+    }
+  }
+
   /**
-   * Caminho pelas estradas (Evandro, 08/10/2026: "a rota tem que ir pela
-   * estrada certa, nao aquele risco verde que parece rota de aviao").
-   * OSRM publico do OpenStreetMap; guardado por um dia. Sem resposta,
+   * Caminho pelas ruas (Evandro, 08/10/2026: "a rota tem que ir pela estrada
+   * certa"). [essencial] = para o preco (orcamento, fim da corrida); so para
+   * desenhar no mapa nao e essencial e para no modo economia. Sem rota,
    * devolve null e quem chamou usa a linha reta.
    */
   async rota(
     origem: { latitude: number; longitude: number },
     destino: { latitude: number; longitude: number },
+    essencial = true,
   ): Promise<RotaPorRua | null> {
     const f = (n: number) => n.toFixed(4);
-    const chave = `rota:${f(origem.latitude)},${f(origem.longitude)}:${f(destino.latitude)},${f(destino.longitude)}`;
-    const guardada = this.lerCache<RotaPorRua>(chave);
+    const chave = `${f(origem.latitude)},${f(origem.longitude)}:${f(destino.latitude)},${f(destino.longitude)}`;
+    const guardada = this.rotas.ler(chave);
     if (guardada) return guardada;
-
-    const controle = new AbortController();
-    const relogio = setTimeout(() => controle.abort(), 9000);
+    const p = this.provedor;
+    if (!p || !this.uso.pode('routing', essencial)) return null;
     try {
-      const url =
-        `${OSRM}/route/v1/driving/${origem.longitude},${origem.latitude};${destino.longitude},${destino.latitude}` +
-        '?overview=full&geometries=geojson&alternatives=false&steps=false';
-      const resp = await fetch(url, {
-        headers: { 'User-Agent': 'FortalezaMov/1.0 (+https://fortalezadigitalsecurity.com.br)' },
-        signal: controle.signal,
-      });
-      if (!resp.ok) {
-        this.logger.warn(`OSRM respondeu ${resp.status}`);
-        return null;
-      }
-      const corpo = (await resp.json()) as {
-        code?: string;
-        routes?: Array<{ distance: number; duration: number; geometry?: { coordinates?: Array<[number, number]> } }>;
-      };
-      const r = corpo.routes?.[0];
-      const coords = r?.geometry?.coordinates ?? [];
-      if (corpo.code !== 'Ok' || !r || coords.length < 2) return null;
-      // No maximo uns 500 pontos (o mapa do celular nao precisa de mais).
-      const passo = Math.max(1, Math.ceil(coords.length / 500));
-      const pontos: Array<[number, number]> = [];
-      for (let i = 0; i < coords.length; i += passo) pontos.push([coords[i][1], coords[i][0]]);
-      const ultimo = coords[coords.length - 1];
-      if (pontos[pontos.length - 1][0] !== ultimo[1] || pontos[pontos.length - 1][1] !== ultimo[0]) {
-        pontos.push([ultimo[1], ultimo[0]]);
-      }
-      const rota: RotaPorRua = {
-        distanceMeters: Math.round(r.distance),
-        durationSeconds: Math.round(r.duration),
-        pontos,
-        porRua: true,
-      };
-      this.gravarCache(chave, rota);
+      const r = await p.rota(origem, destino);
+      if (!r) return null;
+      const rota: RotaPorRua = { ...r, porRua: true };
+      this.rotas.gravar(chave, rota);
       return rota;
     } catch (e) {
-      this.logger.warn(`OSRM sem resposta: ${(e as Error).message}`);
+      if (!(e instanceof LimiteDoMapa)) throw e;
+      this.logger.warn(`TomTom no limite (${e.status}) na rota: parado ate a meia-noite.`);
+      this.uso.limiteDaTomTom();
       return null;
-    } finally {
-      clearTimeout(relogio);
     }
-  }
-
-  /** Endereco escrito de um ponto do mapa (embarque pelo GPS, destino no mapa). */
-  async endereco(lat: number, lng: number): Promise<Lugar> {
-    const chave = `r:${lat.toFixed(4)}:${lng.toFixed(4)}`;
-    const guardado = this.lerCache<Lugar>(chave);
-    if (guardado) return guardado;
-
-    const item = await this.consultar<ItemNominatim>(
-      `/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18`,
-    );
-    const reserva = item && item.lat ? null : await this.reversoPhoton(lat, lng);
-    const lugar: Lugar = item && item.lat
-      ? { ...this.paraLugar(item), latitude: lat, longitude: lng, distanceKm: null }
-      : reserva
-      ? { ...reserva, latitude: lat, longitude: lng, distanceKm: null }
-      : {
-          address: `Ponto no mapa (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
-          detail: '',
-          latitude: lat,
-          longitude: lng,
-          distanceKm: null,
-        };
-    if ((item && item.lat) || reserva) this.gravarCache(chave, lugar);
-    return lugar;
-  }
-
-  // ---------------- Reserva: Photon ----------------
-
-  /** Regiao primeiro (caixa de uns 80 km); se vier pouco, o Brasil todo, perto primeiro. */
-  private async buscarPhoton(q: string, lat: number, lng: number): Promise<Lugar[]> {
-    const g = 0.75;
-    const caixa = [lng - g, lat - g, lng + g, lat + g].map((n) => n.toFixed(5)).join(',');
-    const base = `/api/?q=${encodeURIComponent(q)}&lat=${lat}&lon=${lng}&limit=10&lang=default`;
-    // Regiao e Brasil juntos (regiao primeiro). Antes o Brasil so entrava
-    // com menos de 5 achados na regiao: "Porto Alegre" em Goiatuba so
-    // mostrava as ruas Porto Alegre da regiao, nunca a cidade.
-    // O Brasil vai SEM o ponto de referencia: assim vem pela importancia
-    // (a cidade de Porto Alegre), e nao de novo as ruas daqui.
-    const brasilBase = `/api/?q=${encodeURIComponent(q)}&limit=10&lang=default`;
-    const [regiao, brasil] = await Promise.all([
-      this.consultarPhoton<{ features?: ItemPhoton[] }>(`${base}&bbox=${caixa}`).then((r) => r?.features ?? []),
-      this.consultarPhoton<{ features?: ItemPhoton[] }>(brasilBase).then((r) => r?.features ?? []),
-    ]);
-    const todos = [...regiao.slice(0, 6), ...brasil, ...regiao.slice(6)];
-    const vistos = new Set<string>();
-    return todos
-      .filter((f) => (f.properties?.countrycode ?? 'BR').toUpperCase() === 'BR')
-      .map((f) => this.paraLugarPhoton(f))
-      .filter((l): l is Lugar => l !== null)
-      .filter((l) => {
-        const k = `${l.address}|${l.latitude.toFixed(3)}|${l.longitude.toFixed(3)}`;
-        if (vistos.has(k)) return false;
-        vistos.add(k);
-        return true;
-      })
-      .slice(0, 12);
-  }
-
-  private async reversoPhoton(lat: number, lng: number): Promise<Lugar | null> {
-    const r = await this.consultarPhoton<{ features?: ItemPhoton[] }>(`/reverse?lat=${lat}&lon=${lng}&lang=default`);
-    const f = r?.features?.[0];
-    return f ? this.paraLugarPhoton(f) : null;
-  }
-
-  private paraLugarPhoton(f: ItemPhoton): Lugar | null {
-    const c = f.geometry?.coordinates;
-    const p = f.properties ?? {};
-    if (!c || c.length < 2) return null;
-    const eRua = p.osm_key === 'highway';
-    const eCidade = ['city', 'town', 'village'].includes(p.type ?? '') || ['city', 'town', 'village'].includes(p.osm_value ?? '');
-    const nome = (p.name ?? '').trim();
-    const rua = (p.street ?? (eRua ? nome : '')).trim();
-    const numero = p.housenumber ? `, ${p.housenumber}` : '';
-    const bairro = p.district ?? p.locality ?? '';
-    const cidade = p.city ?? (eCidade ? nome : '') ?? '';
-    const uf = UF[semAcento(p.state ?? '')] ?? p.state ?? '';
-    const linhaRua = rua ? `${rua}${numero}` : '';
-    const principal = nome && !eRua ? nome : linhaRua || nome;
-    const apoio = [nome && !eRua && linhaRua ? linhaRua : '', bairro, cidade && uf ? `${cidade} - ${uf}` : cidade || uf]
-      .filter((x) => x && x.length > 0 && x !== principal)
-      .join(', ');
-    return {
-      address: principal || 'Endereco sem nome',
-      detail: apoio,
-      latitude: Number(c[1]),
-      longitude: Number(c[0]),
-      distanceKm: null,
-    };
-  }
-
-  private async consultarPhoton<T>(caminho: string): Promise<T | null> {
-    const controle = new AbortController();
-    const relogio = setTimeout(() => controle.abort(), 9000);
-    try {
-      const resp = await fetch(`${PHOTON}${caminho}`, {
-        headers: { 'User-Agent': 'FortalezaMov/1.0 (+https://fortalezadigitalsecurity.com.br)' },
-        signal: controle.signal,
-      });
-      if (!resp.ok) {
-        this.logger.warn(`Photon respondeu ${resp.status} em ${caminho.split('?')[0]}`);
-        return null;
-      }
-      return (await resp.json()) as T;
-    } catch (e) {
-      this.logger.warn(`Photon sem resposta: ${(e as Error).message}`);
-      return null;
-    } finally {
-      clearTimeout(relogio);
-    }
-  }
-
-  // ------------------------------------------------------------------
-
-  private paraLugar(i: ItemNominatim): Lugar {
-    const a = i.address ?? {};
-    const rua = a.road ?? a.pedestrian ?? a.footway ?? a.street ?? '';
-    const numero = a.house_number ? `, ${a.house_number}` : '';
-    const bairro = a.suburb ?? a.neighbourhood ?? a.quarter ?? a.city_district ?? '';
-    const cidade = a.city ?? a.town ?? a.village ?? a.municipality ?? '';
-    const uf = a['ISO3166-2-lvl4']?.replace('BR-', '') ?? a.state ?? '';
-
-    const nome = (i.name ?? '').trim();
-    const linhaRua = rua ? `${rua}${numero}` : '';
-    // Um lugar com nome (Rodoviaria, Hospital) aparece pelo nome; senao, pela rua.
-    const principal = nome && nome !== rua ? nome : linhaRua || nome || (i.display_name ?? '').split(',')[0];
-    const apoio = [nome && nome !== rua ? linhaRua : '', bairro, cidade && uf ? `${cidade} - ${uf}` : cidade]
-      .filter((p) => p && p.length > 0)
-      .join(', ');
-
-    return {
-      address: principal || 'Endereco sem nome',
-      detail: apoio,
-      latitude: Number(i.lat),
-      longitude: Number(i.lon),
-      distanceKm: null,
-    };
   }
 
   private comDistancia(lista: Lugar[], lat: number, lng: number): Lugar[] {
@@ -314,55 +224,5 @@ export class GeoService {
     const r = (g: number) => (g * Math.PI) / 180;
     const d = Math.sin(r(a2 - a1) / 2) ** 2 + Math.cos(r(a1)) * Math.cos(r(a2)) * Math.sin(r(o2 - o1) / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(d), Math.sqrt(1 - d));
-  }
-
-  /** Uma consulta por vez, com 1,1 s de intervalo (regra do Nominatim). */
-  private async consultar<T>(caminho: string): Promise<T | null> {
-    if (Date.now() < this.nominatimBloqueadoAte) return null;
-    const agora = Date.now();
-    const espera = Math.max(0, this.proximaVez - agora);
-    this.proximaVez = Math.max(agora, this.proximaVez) + 1100;
-    if (espera > 0) await new Promise((r) => setTimeout(r, espera));
-
-    const controle = new AbortController();
-    const relogio = setTimeout(() => controle.abort(), 9000);
-    try {
-      const resp = await fetch(`${BASE}${caminho}&accept-language=pt-BR`, {
-        headers: {
-          'User-Agent': 'FortalezaMov/1.0 (+https://fortalezadigitalsecurity.com.br; fortalezadigitalsecurity@gmail.com)',
-          'Accept-Language': 'pt-BR',
-        },
-        signal: controle.signal,
-      });
-      if (!resp.ok) {
-        this.logger.warn(`Nominatim respondeu ${resp.status} em ${caminho.split('?')[0]}`);
-        if (resp.status === 429 || resp.status === 403) this.nominatimBloqueadoAte = Date.now() + 15 * 60_000;
-        return null;
-      }
-      return (await resp.json()) as T;
-    } catch (e) {
-      this.logger.warn(`Nominatim sem resposta: ${(e as Error).message}`);
-      return null;
-    } finally {
-      clearTimeout(relogio);
-    }
-  }
-
-  private lerCache<T>(chave: string): T | null {
-    const c = this.cache.get(chave);
-    if (!c) return null;
-    if (Date.now() - c.quando > DIA_MS) {
-      this.cache.delete(chave);
-      return null;
-    }
-    return c.valor as T;
-  }
-
-  private gravarCache(chave: string, valor: unknown): void {
-    if (this.cache.size > 3000) {
-      const maisAntiga = this.cache.keys().next().value;
-      if (maisAntiga !== undefined) this.cache.delete(maisAntiga);
-    }
-    this.cache.set(chave, { quando: Date.now(), valor });
   }
 }
