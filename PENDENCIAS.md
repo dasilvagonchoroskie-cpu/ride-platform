@@ -16,7 +16,7 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 | App do passageiro: análise / testes de tela | nenhum problema / 69 passaram, 0 falharam, 12 pulados (fotos de tela, outra esteira) | logs/analyze-mobile_passenger.txt, logs/test-mobile_passenger.txt |
 | App do motorista: análise / testes de tela | nenhum problema / 68 passaram, 0 falharam, 7 pulados (fotos) | logs/analyze-mobile_driver.txt, logs/test-mobile_driver.txt |
 | Central: análise / testes de tela | nenhum problema / 44 passaram, 0 falharam, 1 pulado (fotos) | logs/analyze-central_app.txt, logs/test-central_app.txt |
-| Teste de ponta a ponta no servidor real | **283 etapas, 0 falhas** (29/10, 22:21 UTC; servidor com as etapas 3, 6 e 7 no ar) | logs/teste-ponta-a-ponta.txt |
+| Teste de ponta a ponta no servidor real | **284 etapas, 0 falhas** (29/10, 22:54 UTC; servidor com as etapas 3, 6 e 7 no ar) | logs/teste-ponta-a-ponta.txt |
 | iPhone: compilar os 3 apps (sem assinar, sem publicar) | os 3 compilaram (Xcode, ~41 MB cada) | logs/ios-*.txt |
 | App de outro operador ("exemplo") | passageiro e motorista compilados; dentro do APK: pacote br.com.exemplomov.teste.passageiro / .motorista e nome "Exemplo Mov" / "Exemplo Mov Motorista" | logs/operadores/exemplo/ |
 | Mapa no 4G fraco (Android de teste, antes x depois) | seção 6 | logs/medir-mapa/4g-antes, 4g-depois, 4g-final |
