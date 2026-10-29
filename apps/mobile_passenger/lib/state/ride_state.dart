@@ -13,6 +13,7 @@ import '../data/repositories/ride_repository.dart';
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import 'auth_state.dart';
+import '../core/medida.dart';
 
 /// Ciclo de vida da corrida: estimativa, pareamento, viagem, recibo e historico.
 class RideState extends ChangeNotifier {
@@ -125,6 +126,7 @@ class RideState extends ChangeNotifier {
   /// Popula os carros visiveis no mapa da tela inicial.
   Future<void> refreshNearby(Coords origin) async {
     nearbyDrivers = await _repository.nearbyDrivers(origin);
+    if (nearbyDrivers.isNotEmpty) Medida.marcar('marcadores');
     notifyListeners();
   }
 

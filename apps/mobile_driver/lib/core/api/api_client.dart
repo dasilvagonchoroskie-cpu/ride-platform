@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../storage/app_storage.dart';
 import '../avisos.dart';
+import '../medida.dart';
 
 class ApiException implements Exception {
   ApiException(this.code, this.message, {this.statusCode});
@@ -146,6 +147,8 @@ class ApiClient {
       headers['Authorization'] = 'Bearer $token';
     }
 
+    // Montagem de medicao (etapa 2, 29/10/2026): tempo de cada pedido.
+    final medindo = Medida.ligada ? (Stopwatch()..start()) : null;
     http.Response response;
     try {
       final payload = body == null ? null : jsonEncode(body);
@@ -175,6 +178,7 @@ class ApiClient {
     } catch (error) {
       throw ApiException('NETWORK_ERROR', 'Sem conexão com o servidor. ($error)');
     }
+    if (medindo != null) Medida.servidor(path, medindo.elapsedMilliseconds, response.statusCode);
 
     // 204 (ex.: tirar um carro): deu certo e nao tem corpo.
     if (response.body.isEmpty && response.statusCode >= 200 && response.statusCode < 300) return null;

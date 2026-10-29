@@ -14,6 +14,7 @@ import '../widgets/mapa_google.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 import '../core/mapa_config.dart';
+import '../core/medida.dart';
 
 LatLng _ll(Coords c) => LatLng(c.latitude, c.longitude);
 
@@ -167,6 +168,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
         ),
     ];
 
+    Medida.marcar('mapa');
     return Stack(
       children: [
         Positioned.fill(
@@ -183,6 +185,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   myLocationButtonEnabled: false,
                   tiltGesturesEnabled: false,
                   onMapCreated: (c) {
+                    Medida.marcar('mapa_pronto');
                     _controleGoogle.mapa = c;
                     if (p.atualizadoEm != null) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -238,7 +241,8 @@ class _VisaoGeralState extends State<VisaoGeral> {
               if (mostrarRuasNoMapa)
                 TileLayer(
                   urlTemplate: MapaConfig.tiles,
-                  userAgentPackageName: 'com.rideplatform.central_app',
+                                    tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
+userAgentPackageName: 'com.rideplatform.central_app',
                   maxZoom: MapaConfig.maxZoom.toDouble(),
                 ),
               MarkerLayer(markers: marcadores),

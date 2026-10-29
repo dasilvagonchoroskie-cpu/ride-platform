@@ -10,6 +10,7 @@ import '../core/utils/geo.dart';
 import 'bussola.dart';
 import 'mapa_google.dart';
 import '../core/mapa_config.dart';
+import '../core/medida.dart';
 
 /// [moto]: mototaxi (Evandro, 10/10/2026), desenhado como moto no mapa.
 enum MarkerKind { pickup, dropoff, driver, car, moto }
@@ -309,6 +310,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   // ------------------------------------------------------------------
 
   Widget _mapaGoogle() {
+    Medida.marcar('mapa');
     final icones = _bitmaps;
     gm.BitmapDescriptor icone(MarkerKind k) {
       final i = icones?[k == MarkerKind.driver || k == MarkerKind.moto ? MarkerKind.car : k];
@@ -333,6 +335,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
       // enquadra e centraliza so na parte livre.
       padding: _temEnquadramento ? _folga : EdgeInsets.zero,
       onMapCreated: (c) {
+        Medida.marcar('mapa_pronto');
         _controleGoogle.mapa = c;
         if (_temEnquadramento) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -394,6 +397,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   // ------------------------------------------------------------------
 
   Widget _mapaOsm() {
+    Medida.marcar('mapa');
     return FlutterMap(
       mapController: _mapa,
       options: MapOptions(
@@ -409,7 +413,8 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
         if (mostrarRuasNoMapa)
           TileLayer(
             urlTemplate: MapaConfig.tiles,
-            userAgentPackageName: 'br.com.fortalezamov.motorista',
+                        tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
+userAgentPackageName: 'br.com.fortalezamov.motorista',
             maxZoom: MapaConfig.maxZoom.toDouble(),
             tileProvider: NetworkTileProvider(),
             errorTileCallback: (tile, error, stackTrace) {

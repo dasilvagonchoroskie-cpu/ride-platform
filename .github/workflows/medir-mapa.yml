@@ -1,0 +1,178 @@
+name: Medir o mapa
+
+# Etapa 2 do pedido do Evandro (29/10/2026): quanto tempo o mapa leva para
+# aparecer em cada app, num Android de teste (emulador) com internet de
+# verdade e o servidor real. Cria contas de teste so para isso e apaga no fim.
+# O APK de medicao NAO e publicado em lugar nenhum.
+on:
+  workflow_dispatch:
+    inputs:
+      rotulo:
+        description: 'Nome da medicao (ex.: antes, depois)'
+        required: true
+        default: 'antes'
+      apps:
+        description: 'Apps, separados por virgula'
+        required: true
+        default: 'mobile_passenger,mobile_driver,central_app'
+      ref:
+        description: 'Commit a medir (vazio = o mais novo do main)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+# Mesma fila do teste de ponta a ponta: os dois entram como a Central e
+# apagam as contas de teste no fim; nunca rodam juntos.
+concurrency:
+  group: servidor-real
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+  JAVA_VERSION: '17'
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.lista.outputs.apps }}
+    steps:
+      - id: lista
+        run: |
+          echo "apps=$(echo '${{ inputs.apps }}' | tr -d ' ' | jq -Rc 'split(",") | map(select(length>0))')" >> "$GITHUB_OUTPUT"
+
+  medir:
+    name: Medir ${{ matrix.app }}
+    needs: preparar
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: ${{ fromJson(needs.preparar.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Ligar a aceleracao do emulador (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Pacote e dependencias
+        id: app
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          case "${{ matrix.app }}" in
+            mobile_passenger) echo "pkg=br.com.fortalezamov.passageiro" >> "$GITHUB_OUTPUT"; echo "fotos=--fotos" >> "$GITHUB_OUTPUT" ;;
+            mobile_driver)    echo "pkg=br.com.fortalezamov.motorista" >> "$GITHUB_OUTPUT"; echo "fotos=--fotos" >> "$GITHUB_OUTPUT" ;;
+            central_app)      echo "pkg=com.rideplatform.central_app" >> "$GITHUB_OUTPUT"; echo "fotos=" >> "$GITHUB_OUTPUT" ;;
+          esac
+          flutter pub get
+
+      - name: Assinatura de producao (mesma dos APKs)
+        env:
+          CHAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SENHA_LOJA: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SENHA_CHAVE: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APELIDO: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          echo "$CHAVE" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/assinatura.jks" "$SENHA_LOJA" "$APELIDO" "$SENHA_CHAVE" > "apps/${{ matrix.app }}/android/key.properties"
+
+      - name: Firebase (passageiro e motorista)
+        if: matrix.app != 'central_app'
+        run: python3 scripts/firebase-config.py infra/firebase-apps.b64
+
+      - name: Chave do Google Maps (se existir)
+        run: |
+          if [ -s infra/mapas.b64 ]; then
+            echo "::add-mask::$(base64 -d infra/mapas.b64)"
+            echo "MAPS_API_KEY=$(base64 -d infra/mapas.b64)" >> "$GITHUB_ENV"
+            echo "MAPA_DEFINE=--dart-define=MAPA_GOOGLE=true" >> "$GITHUB_ENV"
+            echo "Mapa: Google Maps"
+          else
+            echo "Mapa: OpenStreetMap"
+          fi
+
+      - name: Contas de teste
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+        run: |
+          set -euo pipefail
+          bash scripts/medir-contas.sh preparar "${{ matrix.app }}" "$RUNNER_TEMP/contas"
+          echo "::add-mask::$(cat "$RUNNER_TEMP/contas/semente.b64")"
+
+      - name: Compilar o APK de medicao (x86_64, so para o emulador)
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          set -euo pipefail
+          flutter build apk --release --target-platform android-x64 --build-number=1 --build-name=0.0.1 \
+            --dart-define=MEDIR=true --dart-define=MEDIR_PREFS="$(cat "$RUNNER_TEMP/contas/semente.b64")" ${MAPA_DEFINE:-} 2>&1 | tail -n 5
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/medir.apk"
+          rm -f build/app/outputs/flutter-apk/*.apk
+
+      - name: Manter o motorista de teste disponivel
+        env:
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+        run: nohup bash scripts/medir-contas.sh manter "$RUNNER_TEMP/contas" > /dev/null 2>&1 &
+
+      - name: Medir no emulador
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: true
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 540x1200
+          script: bash scripts/medir-mapa.sh ${{ steps.app.outputs.pkg }} "$RUNNER_TEMP/medir.apk" "$RUNNER_TEMP/medida"
+
+      - name: Relatorio
+        if: always()
+        run: |
+          pip install --quiet pillow
+          python3 scripts/medir-analisar.py "$RUNNER_TEMP/medida" "${{ matrix.app }}" "${{ inputs.rotulo }}" \
+            "logs/medir-mapa/${{ inputs.rotulo }}/${{ matrix.app }}" ${{ steps.app.outputs.fotos }} || true
+          cp "$RUNNER_TEMP/medida/erros.txt" "logs/medir-mapa/${{ inputs.rotulo }}/${{ matrix.app }}/erros-do-android.txt" 2>/dev/null || true
+
+      - name: Apagar as contas de teste
+        if: always()
+        env:
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+        run: |
+          pkill -f "medir-contas.sh manter" || true
+          bash scripts/medir-contas.sh apagar "$RUNNER_TEMP/contas" || true
+          rm -rf "$RUNNER_TEMP/contas" "$RUNNER_TEMP/medir.apk"
+
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          # O commit medido pode ser antigo: o relatorio vai por cima do main atual.
+          git stash push --include-untracked -- logs/medir-mapa >/dev/null 2>&1 || true
+          git fetch -q origin main && git checkout -q -B relatorio origin/main
+          git stash pop >/dev/null 2>&1 || true
+          git add logs/medir-mapa || exit 0
+          git commit -m "relatorio: medicao do mapa (${{ inputs.rotulo }}, ${{ matrix.app }}) [skip ci]" || exit 0
+          for t in 1 2 3 4 5; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done

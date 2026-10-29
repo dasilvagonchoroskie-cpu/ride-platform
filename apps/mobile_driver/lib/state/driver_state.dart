@@ -17,6 +17,7 @@ import '../core/utils/geo.dart';
 import '../data/demo/driver_demo.dart';
 import '../data/models/driver_models.dart';
 import '../core/avisos.dart';
+import '../core/medida.dart';
 
 /// Estado do motorista: cadastro, documentos, status online, ofertas,
 /// corrida em andamento e carteira.
@@ -355,8 +356,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       final p = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
       position = Coords(p.latitude, p.longitude);
-        posicaoReal = true;
       posicaoReal = true;
+      Medida.marcar('gps');
       notifyListeners();
     } catch (_) {
       // Sem sinal agora; a tela "Localizando" oferece tentar de novo.

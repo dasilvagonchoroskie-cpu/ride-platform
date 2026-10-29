@@ -10,6 +10,7 @@ import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import 'auth_state.dart';
 import '../data/models/models.dart';
+import '../core/medida.dart';
 
 enum DataSource { api, demo, unknown }
 
@@ -63,6 +64,7 @@ class AppState extends ChangeNotifier {
     locationGranted = location.granted;
     accuracyMeters = location.accuracyMeters;
     localizacaoReal = !location.mocked;
+    if (localizacaoReal) Medida.marcar('gps');
 
     // A primeira leitura do GPS costuma vir torta — as vezes com centenas
     // de metros de erro. Em vez de congelar nela, o aparelho segue
@@ -146,6 +148,7 @@ class AppState extends ChangeNotifier {
       coords = r.coords;
       accuracyMeters = r.accuracyMeters;
       localizacaoReal = true;
+      Medida.marcar('gps');
     }
     if (r.granted && _vigia == null) _vigiarPosicao();
     notifyListeners();
@@ -202,6 +205,7 @@ class AppState extends ChangeNotifier {
 
         coords = Coords(position.latitude, position.longitude);
           localizacaoReal = true;
+        Medida.marcar('gps');
         accuracyMeters = position.accuracy;
         notifyListeners();
       }, onError: (_) {});

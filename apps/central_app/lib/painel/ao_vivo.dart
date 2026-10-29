@@ -12,6 +12,7 @@ import 'comuns.dart';
 import 'painel_state.dart';
 import 'visao_geral.dart' show PinoDaCidade;
 import '../core/mapa_config.dart';
+import '../core/medida.dart';
 
 /// Painel "Ao vivo" (Evandro, 11/10/2026, no modelo da Central do Motocas):
 /// quantos motoristas estao livres, a caminho, no embarque e em viagem; o
@@ -292,7 +293,8 @@ class _AoVivoState extends State<AoVivo> {
                         if (mostrarRuasNoMapa)
                           TileLayer(
                             urlTemplate: MapaConfig.tiles,
-                            userAgentPackageName: 'com.rideplatform.central_app',
+                                                        tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
+userAgentPackageName: 'com.rideplatform.central_app',
                             maxZoom: MapaConfig.maxZoom.toDouble(),
                           ),
                         MarkerLayer(

@@ -15,6 +15,7 @@ import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 import '../core/mapa_config.dart';
+import '../core/medida.dart';
 
 /// Aba Alertas e Seguranca: SOS abertos (ao vivo) e o historico.
 class Alertas extends StatefulWidget {
@@ -213,7 +214,8 @@ class _TelaSosState extends State<TelaSos> {
                       if (mostrarRuasNoMapa)
                         TileLayer(
                           urlTemplate: MapaConfig.tiles,
-                          userAgentPackageName: 'com.rideplatform.central_app',
+                                                    tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
+userAgentPackageName: 'com.rideplatform.central_app',
                         ),
                       MarkerLayer(markers: [
                         Marker(

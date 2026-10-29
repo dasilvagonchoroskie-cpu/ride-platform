@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../core/theme/central_theme.dart';
 import '../core/utils/geo.dart';
 import '../core/mapa_config.dart';
+import '../core/medida.dart';
 
 enum MarkerKind { pickup, dropoff, driver, car, passenger }
 
@@ -148,7 +149,8 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             // escuro do mapa, mas garante que ele sempre carrega.
             TileLayer(
               urlTemplate: MapaConfig.tiles,
-              userAgentPackageName: 'com.rideplatform.central_app',
+                            tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
+userAgentPackageName: 'com.rideplatform.central_app',
               maxZoom: MapaConfig.maxZoom.toDouble(),
               tileProvider: NetworkTileProvider(),
               errorTileCallback: (tile, error, stackTrace) {

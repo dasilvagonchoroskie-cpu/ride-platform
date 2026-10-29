@@ -8,6 +8,7 @@ import '../core/posicao_aparelho.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
+import '../core/medida.dart';
 
 /// Estado ao vivo do painel: mapa, fila de corridas e alertas de SOS.
 /// Pergunta ao servidor a cada 5 segundos enquanto a Central esta aberta.
@@ -222,6 +223,7 @@ class PainelState extends ChangeNotifier {
       indicadores = r[0] as Indicadores;
       corridas = r[1] as List<CorridaAtiva>;
       motoristas = r[2] as List<MotoristaOnline>;
+      if (motoristas.any((m) => m.posicao != null)) Medida.marcar('marcadores');
       alertas = r[3] as List<AlertaSos>;
       erro = null;
       atualizadoEm = DateTime.now();

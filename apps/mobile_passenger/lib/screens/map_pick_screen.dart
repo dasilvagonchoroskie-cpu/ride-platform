@@ -14,6 +14,7 @@ import '../widgets/mapa_google.dart';
 import '../widgets/ride_map.dart' show mostrarRuasNoMapa;
 import '../widgets/ui.dart';
 import '../core/mapa_config.dart';
+import '../core/medida.dart';
 
 /// Escolher o destino arrastando o mapa: o alfinete fica parado no meio e
 /// o endereco aparece embaixo. Serve para quando a busca nao acha o lugar
@@ -113,7 +114,8 @@ class _MapPickScreenState extends State<MapPickScreen> {
               children: [
                 TileLayer(
                   urlTemplate: MapaConfig.tiles,
-                  userAgentPackageName: 'br.com.fortalezamov.passageiro',
+                                    tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
+userAgentPackageName: 'br.com.fortalezamov.passageiro',
                   maxZoom: MapaConfig.maxZoom.toDouble(),
                 ),
               ],
