@@ -1,0 +1,8 @@
+Execucao 1 (2026-10-29T22:15Z)
+package: name='br.com.exemplomov.teste.passageiro' versionCode='2001' versionName='1.0.1' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+targetSdkVersion:'36'
+application-label:'Exemplo Mov'
+total 21792
+drwxr-xr-x  2 runner runner     4096 Oct 29 22:15 .
+drwxr-xr-x 15 runner runner     4096 Oct 29 22:15 ..
+-rw-r--r--  1 runner runner 22304671 Oct 29 22:15 exemplo-passageiro-1.apk
