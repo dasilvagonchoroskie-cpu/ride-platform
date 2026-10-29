@@ -17,12 +17,13 @@ import os
 import re
 import sys
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageStat
 
 PASTA, APP, ROTULO, SAIDA = sys.argv[1:5]
 GUARDAR_FOTOS = '--fotos' in sys.argv
 INSTANTES = [1000, 3000, 6000, 9000, 12000, 19000]
-LIMIAR_CORES = 30
+LIMIAR_CORES = 100
+LIMIAR_DIFERENCA = 20
 
 EVENTOS = [
     ('primeiro_quadro', 'primeira tela desenhada'),
@@ -34,15 +35,29 @@ EVENTOS = [
 ]
 
 
-def cores_do_mapa(caminho):
-    """Cores diferentes (em 16 tons por canal) no meio da tela, onde fica o mapa."""
+def regiao_do_mapa(caminho):
+    """Meio da tela, onde fica o mapa (reduzido)."""
     try:
         img = Image.open(caminho).convert('RGB')
     except Exception:
-        return -1
+        return None
     w, h = img.size
-    regiao = img.crop((int(w * 0.08), int(h * 0.30), int(w * 0.92), int(h * 0.62))).resize((160, 120))
-    return len({(r >> 4, g >> 4, b >> 4) for r, g, b in regiao.getdata()})
+    return img.crop((int(w * 0.08), int(h * 0.30), int(w * 0.92), int(h * 0.62))).resize((160, 120))
+
+
+def cores(regiao):
+    """Cores diferentes (em 16 tons por canal)."""
+    if regiao is None:
+        return -1
+    return len({(r >> 4, g >> 4, b >> 4) for r, g, b in regiao.get_flattened_data()}) if hasattr(regiao, 'get_flattened_data') \
+        else len({(r >> 4, g >> 4, b >> 4) for r, g, b in regiao.getdata()})
+
+
+def diferenca(a, b):
+    """Diferenca media entre duas fotos (0 = iguais)."""
+    if a is None or b is None:
+        return 0
+    return sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3
 
 
 def ler_eventos(nome):
@@ -103,8 +118,12 @@ resumo = {}
 for nome in ('r1', 'r2', 'r3'):
     ev, api = ler_eventos(nome)
     lista = fotos(nome)
-    serie = [(t, cores_do_mapa(c)) for t, c in lista]
-    primeira_com_mapa = next((t for t, n in serie if n >= LIMIAR_CORES), None)
+    # A primeira foto ainda e a tela inicial do Android (cheia de cores):
+    # mapa visivel = muitas cores E diferente dessa primeira foto.
+    regioes = [(t, regiao_do_mapa(c)) for t, c in lista]
+    base = regioes[0][1] if regioes else None
+    serie = [(t, cores(r), diferenca(r, base)) for t, r in regioes]
+    primeira_com_mapa = next((t for t, n, d in serie[1:] if n >= LIMIAR_CORES and d >= LIMIAR_DIFERENCA), None)
     p(f'== {NOMES[nome]} ==')
     p(f'  Android até o primeiro quadro (TotalTime): {seg(tempo_android(nome))}')
     for chave, texto in EVENTOS:
@@ -114,7 +133,7 @@ for nome in ('r1', 'r2', 'r3'):
     if faltando:
         p(f'  não aconteceu nos 20 s: {", ".join(faltando)}')
     p(f'  mapa com ruas visível pela foto da tela: {seg(primeira_com_mapa)} (desde o toque no ícone)')
-    p('  cores na área do mapa (instante: cores): ' + ', '.join(f'{t / 1000:.1f}s:{n}' for t, n in serie[::2]))
+    p('  fotos (instante: cores/diferença da 1ª foto): ' + ', '.join(f'{t / 1000:.1f}s:{n}/{d:.0f}' for t, n, d in serie[::2]))
     if api:
         p('  servidor (1º pedido de cada caminho): ' + '; '.join(f'{c} {ms} ms ({s})' for c, ms, s, _ in api[:12]))
     p('')
