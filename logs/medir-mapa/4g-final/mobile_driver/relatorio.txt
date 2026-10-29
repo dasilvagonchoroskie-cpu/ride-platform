@@ -1,0 +1,29 @@
+Medicao do mapa — mobile_driver — "4g-final"
+Aparelho de teste: emulador Android da esteira do GitHub ()
+Rede: a da esteira (EUA) LIMITADA como um 4G fraco: 6 Mbit/s para baixar, 1,5 para subir, 100 a 250 ms de atraso.
+
+== r1 primeira abertura, GPS sem sinal nos primeiros 8 s ==
+  Android até o primeiro quadro (TotalTime): —
+  não aconteceu nos 20 s: primeira tela desenhada, posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
+  mapa com ruas visível pela foto da tela: — (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 
+  imagens do mapa pela rede: nenhuma (vieram do guardado do celular)
+
+== r2 segunda abertura (GPS ok, ruas guardadas) ==
+  Android até o primeiro quadro (TotalTime): —
+  não aconteceu nos 20 s: primeira tela desenhada, posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
+  mapa com ruas visível pela foto da tela: — (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 
+  imagens do mapa pela rede: nenhuma (vieram do guardado do celular)
+
+== r3 terceira abertura (igual a r2) ==
+  Android até o primeiro quadro (TotalTime): —
+  não aconteceu nos 20 s: primeira tela desenhada, posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
+  mapa com ruas visível pela foto da tela: — (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 
+  imagens do mapa pela rede: nenhuma (vieram do guardado do celular)
+
+Resumo (mapa na tela / ruas pelo app / ruas pela foto / GPS / carros / todas as ruas da tela):
+  r1: — / — / — / — / — / —
+  r2: — / — / — / — / — / —
+  r3: — / — / — / — / — / —
