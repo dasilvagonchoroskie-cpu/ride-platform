@@ -71,5 +71,7 @@ if [ "$ENVIAR" = 1 ]; then
   git add "$DIR"
   git commit -q -m "App do operador $OPERADOR ($NOME)" || true
   for t in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 3; done
-  gh workflow run app-operador.yml -f operador="$OPERADOR" && echo "Esteira \"App de operador\" iniciada para $OPERADOR."
+  REPO="$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##')"
+  gh api -X POST "repos/$REPO/actions/workflows/app-operador.yml/dispatches" -f ref=main -f "inputs[operador]=$OPERADOR" \
+    && echo "Esteira \"App de operador\" iniciada para $OPERADOR."
 fi
