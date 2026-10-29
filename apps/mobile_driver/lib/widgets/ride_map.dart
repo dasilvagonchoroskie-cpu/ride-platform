@@ -484,10 +484,15 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             ),
 
           // Atribuicao obrigatoria da TomTom. O Google poe o logo dele sozinho.
+          // Mapa de tela cheia (sem altura fixa): o canto de baixo fica atras
+          // do painel da tela, entao a atribuicao vai no alto, a esquerda,
+          // abaixo da barra de cima; mapa pequeno: canto de baixo.
           if (!_google)
             Positioned(
-              right: 4,
-              bottom: 2,
+              right: widget.height == null ? null : 4,
+              bottom: widget.height == null ? null : 2,
+              left: widget.height == null ? 6 : null,
+              top: widget.height == null ? MediaQuery.paddingOf(context).top + 72 : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
