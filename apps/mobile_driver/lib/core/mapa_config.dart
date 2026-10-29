@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -93,7 +94,13 @@ class MapaConfig {
       final guardado = prefs.getString(_chave);
       if (guardado != null && guardado.isNotEmpty) {
         final m = jsonDecode(guardado);
-        if (m is Map) _usarComChave(m);
+        // So vale o guardado da TomTom (montagem 244 em diante, que grava
+        // "tamanho"). O da montagem 241 era o OpenStreetMap: apaga.
+        if (m is Map && m.containsKey('tamanho') && (m['provedor'] == 'tomtom' || m['provedor'] == 'google')) {
+          _usarComChave(m);
+        } else {
+          await prefs.remove(_chave);
+        }
       }
     } catch (_) {
       // Copia corrompida: espera a do servidor.
@@ -113,26 +120,52 @@ class MapaConfig {
 
   static bool _pedindo = false;
   static DateTime? _pedidoEm;
+  static Timer? _novaTentativa;
+  static int _falhas = 0;
+  static Future<dynamic> Function(String caminho)? _pedir;
 
-  /// Pede ao servidor o endereco das imagens (com login). No maximo uma vez a
-  /// cada 10 minutos (ou de novo depois de um limite).
+  /// Nos testes automaticos (flutter test) nao agenda nova tentativa: o teste
+  /// reclama de relogio pendurado no fim.
+  static final bool _emTesteAutomatico = () {
+    try {
+      return Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (_) {
+      return false;
+    }
+  }();
+
+  /// Pede ao servidor o endereco das imagens (com login). Depois de dar
+  /// certo, no maximo uma vez a cada 10 minutos (ou de novo depois de um
+  /// limite). Se falhar (sem rede, servidor acordando), tenta de novo logo:
+  /// 2, 4, 8, 16 e 30 s — antes esperava 10 minutos e o mapa ficava sem ruas.
   static Future<void> atualizarComLogin(Future<dynamic> Function(String caminho) pedir) async {
+    _pedir = pedir;
     final ultimo = _pedidoEm;
     if (_pedindo || (ultimo != null && DateTime.now().difference(ultimo) < const Duration(minutes: 10) && !limiteDasImagens)) {
       return;
     }
     _pedindo = true;
-    _pedidoEm = DateTime.now();
     try {
       final d = await pedir('/geo/mapa');
       if (d is Map) {
+        _pedidoEm = DateTime.now();
+        _falhas = 0;
+        _novaTentativa?.cancel();
         _usarComChave(d);
         limiteDasImagens = d['parado'] == true && limiteDasImagens;
         _avisar();
         unawaited(_guardar());
       }
     } catch (_) {
-      // Sem rede ou servidor antigo: fica o guardado.
+      // Sem rede ou servidor antigo: fica o guardado e tenta de novo logo.
+      _falhas++;
+      if (_falhas <= 8 && !_emTesteAutomatico) {
+        _novaTentativa?.cancel();
+        _novaTentativa = Timer(Duration(seconds: _falhas >= 5 ? 30 : 1 << _falhas), () {
+          final p = _pedir;
+          if (p != null) unawaited(atualizarComLogin(p));
+        });
+      }
     } finally {
       _pedindo = false;
     }
@@ -174,6 +207,9 @@ class MapaConfig {
   static Future<void> esquecer() async {
     tiles = null;
     _pedidoEm = null;
+    _pedir = null;
+    _falhas = 0;
+    _novaTentativa?.cancel();
     _avisar();
     try {
       final prefs = await SharedPreferences.getInstance();

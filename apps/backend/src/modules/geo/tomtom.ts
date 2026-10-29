@@ -23,10 +23,19 @@ export interface RotaDoProvedor {
 
 export type ServicoTomTom = 'geocode' | 'reverse' | 'routing' | 'search';
 
-/** A TomTom disse que a cota acabou ou recusou a chave (429/403). */
+/**
+ * A TomTom recusou: 403 = chave recusada ou cota acabada; 429 = pedidos
+ * demais no mesmo segundo (mesmo depois de esperar e tentar de novo); 0 = a
+ * fila do ritmo estava longa demais.
+ */
 export class LimiteDoMapa extends Error {
   constructor(public readonly status: number) {
     super(`limite do mapa (${status})`);
+  }
+
+  /** So "devagar" (429 ou fila): passa em segundos, nao e a cota. */
+  get passageiro(): boolean {
+    return this.status !== 403;
   }
 }
 
@@ -37,6 +46,8 @@ export interface ProvedorGeo {
   enderecoDoPonto(lat: number, lng: number): Promise<LugarDoProvedor | null>;
   rota(de: { latitude: number; longitude: number }, para: { latitude: number; longitude: number }): Promise<RotaDoProvedor | null>;
 }
+
+import { Ritmo } from './ritmo';
 
 const API = 'https://api.tomtom.com';
 
@@ -115,6 +126,9 @@ export function pontosDaRota(corpo: unknown): RotaDoProvedor | null {
 
 type Buscar = (url: string, init?: { signal?: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
+/** Busca (geocode, endereco, lugares) e rota tem 5 pedidos/s cada na TomTom: usamos 4. */
+const RITMO_PADRAO = (): Record<'busca' | 'rota', Ritmo> => ({ busca: new Ritmo(4), rota: new Ritmo(4) });
+
 export class TomTomGeo implements ProvedorGeo {
   readonly nome = 'tomtom';
 
@@ -123,6 +137,8 @@ export class TomTomGeo implements ProvedorGeo {
     private readonly aoPedir: (s: ServicoTomTom) => void = () => {},
     private readonly buscar: Buscar = (url, init) => fetch(url, init),
     private readonly aviso: (msg: string) => void = () => {},
+    private readonly ritmo: Record<'busca' | 'rota', Ritmo> = RITMO_PADRAO(),
+    private readonly dormir: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
   ) {}
 
   static daVariavel(env: Record<string, string | undefined> = process.env): string | null {
@@ -181,26 +197,37 @@ export class TomTomGeo implements ProvedorGeo {
     return r.map(paraLugar).filter((l): l is LugarDoProvedor => l !== null);
   }
 
-  /** Um pedido; 429/403 viram LimiteDoMapa; outros erros, null. */
+  /**
+   * Um pedido, no ritmo da TomTom. 429 ("devagar"): espera e tenta mais uma
+   * vez. 403 ou 429 de novo viram LimiteDoMapa; outros erros, null.
+   */
   private async pedir(servico: ServicoTomTom, caminho: string): Promise<unknown> {
     const url = `${API}${caminho}${caminho.includes('?') ? '&' : '?'}key=${encodeURIComponent(this.chave)}`;
-    this.aoPedir(servico);
-    const controle = new AbortController();
-    const relogio = setTimeout(() => controle.abort(), 9000);
-    try {
-      const resp = await this.buscar(url, { signal: controle.signal });
-      if (resp.status === 429 || resp.status === 403) throw new LimiteDoMapa(resp.status);
-      if (!resp.ok) {
-        this.aviso(`TomTom respondeu ${resp.status} em ${semChave(caminho).split('?')[0]}`);
+    const ritmo = servico === 'routing' ? this.ritmo.rota : this.ritmo.busca;
+    for (let tentativa = 0; ; tentativa++) {
+      if (!(await ritmo.vez())) throw new LimiteDoMapa(0);
+      this.aoPedir(servico);
+      const controle = new AbortController();
+      const relogio = setTimeout(() => controle.abort(), 9000);
+      try {
+        const resp = await this.buscar(url, { signal: controle.signal });
+        if (resp.status === 429 && tentativa === 0) {
+          await this.dormir(600 + Math.floor(Math.random() * 400));
+          continue;
+        }
+        if (resp.status === 429 || resp.status === 403) throw new LimiteDoMapa(resp.status);
+        if (!resp.ok) {
+          this.aviso(`TomTom respondeu ${resp.status} em ${semChave(caminho).split('?')[0]}`);
+          return null;
+        }
+        return await resp.json();
+      } catch (e) {
+        if (e instanceof LimiteDoMapa) throw e;
+        this.aviso(`TomTom sem resposta em ${caminho.split('/').slice(0, 3).join('/')}: ${(e as Error).name}`);
         return null;
+      } finally {
+        clearTimeout(relogio);
       }
-      return await resp.json();
-    } catch (e) {
-      if (e instanceof LimiteDoMapa) throw e;
-      this.aviso(`TomTom sem resposta em ${caminho.split('/').slice(0, 3).join('/')}: ${(e as Error).name}`);
-      return null;
-    } finally {
-      clearTimeout(relogio);
     }
   }
 }

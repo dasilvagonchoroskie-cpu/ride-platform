@@ -14,8 +14,11 @@ import { PrismaService } from '../../database/prisma.service';
  * - "economia": passou de 80% da parte do dia (cota do mes / 30) ou de 80%
  *   do mes -> o servidor deixa de fazer os pedidos que nao sao essenciais
  *   (busca de lugares, a segunda busca no Brasil todo, rota so para desenhar).
- * - "parado": chegou a 98% do mes, ou a TomTom respondeu 429/403 -> nao pede
- *   mais nada a TomTom ate o dia seguinte; os apps mostram a contingencia.
+ * - "parado": chegou a 98% do mes, ou a TomTom recusou a chave (403) -> nao
+ *   pede mais nada a TomTom por 30 minutos (depois tenta de novo); os apps
+ *   mostram a contingencia. O 429 da TomTom e "pedidos demais no mesmo
+ *   segundo" (nao e a cota): o ritmo.ts espera e tenta de novo, e aqui so
+ *   conta (rajadas), sem parar nada.
  *
  * Gravado na tabela settings (chave mapa.uso) a cada minuto: o servidor
  * gratis reinicia e nao pode esquecer o que ja gastou.
@@ -37,8 +40,10 @@ export interface EstadoDoUso {
   mes: string;
   hoje: Record<ServicoDoMapa, number>;
   noMes: Record<ServicoDoMapa, number>;
-  /** TomTom respondeu limite (429/403): parado ate este instante (ms). */
+  /** TomTom recusou (403): parado ate este instante (ms). */
   paradoAte: number;
+  /** Vezes no dia em que a TomTom pediu "devagar" (429) mesmo com o ritmo. */
+  rajadas?: number;
 }
 
 const zerado = (): Record<ServicoDoMapa, number> => ({ geocode: 0, reverse: 0, routing: 0, search: 0 });
@@ -49,12 +54,8 @@ export function diaDeBrasilia(agora = new Date()): { dia: string; mes: string } 
   return { dia: d.slice(0, 10), mes: d.slice(0, 7) };
 }
 
-/** Meia-noite (Brasilia) seguinte, em ms. */
-function proximaMeiaNoite(agora = Date.now()): number {
-  const b = new Date(agora - 3 * 3600 * 1000);
-  b.setUTCHours(24, 0, 0, 0);
-  return b.getTime() + 3 * 3600 * 1000;
-}
+/** Depois de um 403 da TomTom, espera 30 minutos e tenta de novo. */
+export const PAUSA_DEPOIS_DO_403_MS = 30 * 60 * 1000;
 
 /** Limites do mes (variavel TOMTOM_COTA_MES no Render, ex.: {"search":5000}). */
 export function cotaDoMes(env: Record<string, string | undefined> = process.env): Record<ServicoDoMapa, number> {
@@ -89,7 +90,7 @@ export class ContaDoUso {
     if (this.estado.mes !== mes) {
       this.estado = { dia, mes, hoje: zerado(), noMes: zerado(), paradoAte: 0 };
     } else if (this.estado.dia !== dia) {
-      this.estado = { ...this.estado, dia, hoje: zerado() };
+      this.estado = { ...this.estado, dia, hoje: zerado(), rajadas: 0 };
     }
   }
 
@@ -118,9 +119,16 @@ export class ContaDoUso {
     this.estado.noMes[s] += 1;
   }
 
-  /** A TomTom disse que acabou (429/403): para ate a meia-noite. */
-  limiteDaTomTom(agora = Date.now()): void {
-    this.estado.paradoAte = proximaMeiaNoite(agora);
+  /**
+   * A TomTom recusou. 403 (chave ou cota): para 30 minutos. 429 / fila
+   * (pedidos demais no mesmo segundo): so conta — passa sozinho.
+   */
+  limiteDaTomTom(status = 403, agora = Date.now()): void {
+    if (status === 403) {
+      this.estado.paradoAte = agora + PAUSA_DEPOIS_DO_403_MS;
+    } else {
+      this.estado.rajadas = (this.estado.rajadas ?? 0) + 1;
+    }
   }
 
   resumo() {
@@ -130,6 +138,7 @@ export class ContaDoUso {
       economia: this.economia(),
       parado: SERVICOS.some((s) => this.parado(s)),
       paradoAte: this.estado.paradoAte > Date.now() ? new Date(this.estado.paradoAte).toISOString() : null,
+      rajadas: this.estado.rajadas ?? 0,
       servicos: SERVICOS.map((s) => ({
         servico: s,
         hoje: this.estado.hoje[s],
@@ -161,6 +170,7 @@ export class UsoDoMapaService implements OnModuleInit, OnModuleDestroy {
           hoje: { ...zerado(), ...(v.hoje ?? {}) },
           noMes: { ...zerado(), ...(v.noMes ?? {}) },
           paradoAte: Number(v.paradoAte) || 0,
+          rajadas: Number(v.rajadas) || 0,
         };
       }
     } catch (e) {
@@ -187,10 +197,10 @@ export class UsoDoMapaService implements OnModuleInit, OnModuleDestroy {
     this.mudou = true;
   }
 
-  limiteDaTomTom(): void {
-    this.conta.limiteDaTomTom();
+  limiteDaTomTom(status = 403): void {
+    this.conta.limiteDaTomTom(status);
     this.mudou = true;
-    void this.gravar();
+    if (status === 403) void this.gravar();
   }
 
   economia(): boolean {

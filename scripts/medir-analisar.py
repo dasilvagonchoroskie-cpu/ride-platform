@@ -60,6 +60,20 @@ def diferenca(a, b):
     return sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3
 
 
+def ler_imagens(nome):
+    """Imagens do mapa que vieram da rede: (status, bytes, ms, instante)."""
+    lista = []
+    try:
+        linhas = open(os.path.join(PASTA, f'{nome}-log.txt'), encoding='utf-8', errors='replace').read().splitlines()
+    except FileNotFoundError:
+        return lista
+    for l in linhas:
+        m = re.search(r'MEDIDA_IMG (\d+) (\d+)b (\d+)ms em=(\d+)', l)
+        if m:
+            lista.append(tuple(int(x) for x in m.groups()))
+    return lista
+
+
 def ler_eventos(nome):
     ev, api = {}, []
     try:
@@ -109,7 +123,11 @@ except FileNotFoundError:
     pass
 p(f'Medicao do mapa — {APP} — "{ROTULO}"')
 p(f'Aparelho de teste: emulador Android da esteira do GitHub ({info})')
-p('Rede: a da esteira (EUA). Num celular no Brasil, com 4G, os tempos de rede tendem a ser maiores.')
+REDE = os.environ.get('MEDIR_REDE', 'normal')
+if REDE == '4g':
+    p('Rede: a da esteira (EUA) LIMITADA como um 4G fraco: 6 Mbit/s para baixar, 1,5 para subir, 100 a 250 ms de atraso.')
+else:
+    p('Rede: a da esteira (EUA). Num celular no Brasil, com 4G, os tempos de rede tendem a ser maiores.')
 p('')
 NOMES = {'r1': 'r1 primeira abertura, GPS sem sinal nos primeiros 8 s',
          'r2': 'r2 segunda abertura (GPS ok, ruas guardadas)',
@@ -137,8 +155,20 @@ for nome in ('r1', 'r2', 'r3'):
     p('  fotos (instante: cores/diferença da 1ª foto): ' + ', '.join(f'{t / 1000:.1f}s:{n}/{d:.0f}' for t, n, d in serie[::2]))
     if api:
         p('  servidor (1º pedido de cada caminho): ' + '; '.join(f'{c} {ms} ms ({s})' for c, ms, s, _ in api[:12]))
+    imgs = ler_imagens(nome)
+    finais = [i for i in imgs if i[1] > 0 or i[0] not in (429, 502, 503, 504)]
+    devagar = [i for i in imgs if i[0] == 429]
+    boas = [i for i in finais if i[0] == 200]
+    # "todas as ruas da tela": a ultima imagem boa da primeira leva (antes de 15 s)
+    leva = [i for i in boas if i[3] <= 15000]
+    ultima = max((i[3] for i in leva), default=None)
+    if imgs:
+        p(f'  imagens do mapa pela rede: {len(boas)} certas, {len(finais) - len(boas)} com erro, {len(devagar)} respostas 429 ("devagar"), '
+          f'{sum(i[1] for i in boas) // 1024} KB; última imagem da tela aos {seg(ultima)}')
+    else:
+        p('  imagens do mapa pela rede: nenhuma (vieram do guardado do celular)')
     p('')
-    resumo[nome] = (ev.get('mapa'), ev.get('ruas'), primeira_com_mapa, ev.get('gps'), ev.get('marcadores'))
+    resumo[nome] = (ev.get('mapa'), ev.get('ruas'), primeira_com_mapa, ev.get('gps'), ev.get('marcadores'), ultima)
     if GUARDAR_FOTOS and lista:
         for alvo in INSTANTES:
             t, c = min(lista, key=lambda x: abs(x[0] - alvo))
@@ -149,8 +179,8 @@ for nome in ('r1', 'r2', 'r3'):
             except Exception:
                 pass
 
-p('Resumo (mapa na tela / ruas pelo app / ruas pela foto / GPS / carros):')
-for nome, (a, b, c, d, e) in resumo.items():
-    p(f'  {nome}: {seg(a)} / {seg(b)} / {seg(c)} / {seg(d)} / {seg(e)}')
+p('Resumo (mapa na tela / ruas pelo app / ruas pela foto / GPS / carros / todas as ruas da tela):')
+for nome, (a, b, c, d, e, f) in resumo.items():
+    p(f'  {nome}: {seg(a)} / {seg(b)} / {seg(c)} / {seg(d)} / {seg(e)} / {seg(f)}')
 open(os.path.join(SAIDA, 'relatorio.txt'), 'w', encoding='utf-8').write('\n'.join(saida) + '\n')
 print('\n'.join(saida))

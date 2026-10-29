@@ -42,6 +42,14 @@ class Medida {
     print('MEDIDA_API ${caminho.split('?').first} ${ms}ms status=$status em=${_relogio.elapsedMilliseconds}');
   }
 
+  /// Cada imagem do mapa que veio da rede: status, tamanho e tempo (sem o
+  /// endereco, que tem a chave). [bytes] 0 = resposta descartada (vai tentar de novo).
+  static void imagem(int status, int bytes, int ms) {
+    if (!ligada) return;
+    // ignore: avoid_print
+    print('MEDIDA_IMG $status ${bytes}b ${ms}ms em=${_relogio.elapsedMilliseconds}');
+  }
+
   /// Marca "ruas" quando a primeira imagem do mapa chega na tela.
   static Widget construtorDeImagem(BuildContext context, Widget imagem, TileImage tile) {
     if (tile.imageInfo != null && !tile.loadError) marcar('ruas');

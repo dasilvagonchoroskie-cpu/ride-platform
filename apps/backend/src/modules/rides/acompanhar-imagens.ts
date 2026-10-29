@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { Ritmo } from '../geo/ritmo';
 import { TomTomGeo } from '../geo/tomtom';
 
 /**
@@ -10,6 +11,8 @@ export class ImagensDoAcompanhar {
   private readonly logger = new Logger('ImagensDoAcompanhar');
   private readonly guardadas = new Map<string, { quando: number; png: Buffer }>();
   private readonly porLink = new Map<string, { hora: number; n: number }>();
+  /** O mapa da TomTom aceita 10 pedidos/s para a chave toda (com os celulares): aqui no maximo 3. */
+  private readonly ritmo = new Ritmo(3, 3000);
 
   constructor(
     private readonly chave: string | null = TomTomGeo.daVariavel(),
@@ -30,9 +33,13 @@ export class ImagensDoAcompanhar {
     if (g && Date.now() - g.quando < 7 * 24 * 3600 * 1000) return g.png;
     if (!this.chave || !this.dentroDoLimite(token)) return null;
     try {
-      const resp = await this.buscarNaRede(
-        `https://api.tomtom.com/map/1/tile/basic/main/${k}.png?tileSize=256&language=pt-BR&key=${encodeURIComponent(this.chave)}`,
-      );
+      const endereco = `https://api.tomtom.com/map/1/tile/basic/main/${k}.png?tileSize=256&language=pt-BR&key=${encodeURIComponent(this.chave)}`;
+      if (!(await this.ritmo.vez())) return null;
+      let resp = await this.buscarNaRede(endereco);
+      if (resp.status === 429 && (await this.ritmo.vez())) {
+        await new Promise((r) => setTimeout(r, 700));
+        resp = await this.buscarNaRede(endereco);
+      }
       if (!resp.ok) {
         this.logger.warn(`TomTom respondeu ${resp.status} numa imagem do acompanhar`);
         return null;

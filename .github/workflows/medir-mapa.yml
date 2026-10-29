@@ -19,6 +19,10 @@ on:
         description: 'Commit a medir (vazio = o mais novo do main)'
         required: false
         default: ''
+      rede:
+        description: 'Rede do emulador: normal ou 4g (4G fraco: 6 Mbit/s, 100-250 ms)'
+        required: false
+        default: 'normal'
 
 permissions:
   contents: write
@@ -57,6 +61,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+
+      - name: Scripts de medicao do main (mesmo quando o app medido e antigo)
+        if: inputs.ref != ''
+        run: git checkout ${{ github.sha }} -- scripts/medir-mapa.sh scripts/medir-analisar.py scripts/medir-contas.sh
 
       - name: Ligar a aceleracao do emulador (KVM)
         run: |
@@ -145,13 +154,13 @@ jobs:
           force-avd-creation: true
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -skin 540x1200
-          script: bash scripts/medir-mapa.sh ${{ steps.app.outputs.pkg }} "$RUNNER_TEMP/medir.apk" "$RUNNER_TEMP/medida"
+          script: bash scripts/medir-mapa.sh ${{ steps.app.outputs.pkg }} "$RUNNER_TEMP/medir.apk" "$RUNNER_TEMP/medida" "${{ inputs.rede || 'normal' }}"
 
       - name: Relatorio
         if: always()
         run: |
           pip install --quiet pillow
-          python3 scripts/medir-analisar.py "$RUNNER_TEMP/medida" "${{ matrix.app }}" "${{ inputs.rotulo }}" \
+          MEDIR_REDE="${{ inputs.rede || 'normal' }}" python3 scripts/medir-analisar.py "$RUNNER_TEMP/medida" "${{ matrix.app }}" "${{ inputs.rotulo }}" \
             "logs/medir-mapa/${{ inputs.rotulo }}/${{ matrix.app }}" ${{ steps.app.outputs.fotos }} || true
           cp "$RUNNER_TEMP/medida/erros.txt" "logs/medir-mapa/${{ inputs.rotulo }}/${{ matrix.app }}/erros-do-android.txt" 2>/dev/null || true
 

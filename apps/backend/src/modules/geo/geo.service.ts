@@ -139,8 +139,12 @@ export class GeoService {
       if (this.uso.pode('geocode', false)) brasil = await p.geocodificar(q, null, null);
     } catch (e) {
       if (!(e instanceof LimiteDoMapa)) throw e;
-      this.logger.warn(`TomTom no limite (${e.status}) na busca: parado ate a meia-noite.`);
-      this.uso.limiteDaTomTom();
+      this.logger.warn(
+        e.passageiro
+          ? `TomTom pediu "devagar" (${e.status}) na busca: este pedido usa a reserva.`
+          : `TomTom recusou (403) na busca: parado por 30 minutos.`,
+      );
+      this.uso.limiteDaTomTom(e.status);
       if (regiao.length + lugares.length + brasil.length === 0) throw this.limite();
     }
     const vistos = new Set<string>();
@@ -179,8 +183,12 @@ export class GeoService {
       return lugar;
     } catch (e) {
       if (!(e instanceof LimiteDoMapa)) throw e;
-      this.logger.warn(`TomTom no limite (${e.status}) no endereco: parado ate a meia-noite.`);
-      this.uso.limiteDaTomTom();
+      this.logger.warn(
+        e.passageiro
+          ? `TomTom pediu "devagar" (${e.status}) no endereco: este pedido usa a reserva.`
+          : `TomTom recusou (403) no endereco: parado por 30 minutos.`,
+      );
+      this.uso.limiteDaTomTom(e.status);
       return { ...ponto, limite: true };
     }
   }
@@ -210,8 +218,12 @@ export class GeoService {
       return rota;
     } catch (e) {
       if (!(e instanceof LimiteDoMapa)) throw e;
-      this.logger.warn(`TomTom no limite (${e.status}) na rota: parado ate a meia-noite.`);
-      this.uso.limiteDaTomTom();
+      this.logger.warn(
+        e.passageiro
+          ? `TomTom pediu "devagar" (${e.status}) na rota: este pedido usa a reserva.`
+          : `TomTom recusou (403) na rota: parado por 30 minutos.`,
+      );
+      this.uso.limiteDaTomTom(e.status);
       return null;
     }
   }

@@ -12,12 +12,19 @@
 #   r3  terceira abertura, igual a r2 (para ver se repete).
 # Em cada uma: fotos da tela por 20 s e os registros "MEDIDA" do app.
 set -u
-PKG="$1"; APK="$2"; OUT="$3"
+PKG="$1"; APK="$2"; OUT="$3"; REDE="${4:-normal}"
 LAT=-18.0125; LNG=-49.3547
 mkdir -p "$OUT/fotos"
 agora() { date +%s%3N; }
 
 adb wait-for-device
+if [ "$REDE" = "4g" ]; then
+  # 4G fraco, como numa cidade do interior: 6 Mbit/s para baixar, 1,5 para
+  # subir e 100 a 250 ms de atraso em cada ida e volta.
+  adb emu network speed 1500:6000 >/dev/null 2>&1 || true
+  adb emu network delay 100:250 >/dev/null 2>&1 || true
+  echo "Rede: 4G fraco (1500:6000 kbit/s, 100-250 ms)" | tee -a "$OUT/info.txt"
+fi
 adb shell cmd location set-location-enabled true >/dev/null 2>&1 || adb shell settings put secure location_mode 3
 adb install -r -g "$APK" > "$OUT/instalar.txt" 2>&1 || { cat "$OUT/instalar.txt"; exit 1; }
 # Autorizacoes especiais do motorista (as normais o -g ja libera).

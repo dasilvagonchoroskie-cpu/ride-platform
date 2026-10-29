@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -94,6 +96,50 @@ void main() {
       expect(MapaConfig.economia, isFalse);
       await MapaConfig.atualizarComLogin((_) async => {'tiles': _falso, 'economia': true});
       expect(MapaConfig.economia, isTrue);
+    });
+  });
+
+  group('Imagens do mapa (ritmo da TomTom)', () {
+    test('429 ("devagar"): espera e tenta de novo; a imagem chega', () async {
+      var n = 0;
+      final c = ContadorDeImagens(
+        interno: MockClient((r) async {
+          n++;
+          return n < 3 ? http.Response('', 429) : http.Response.bytes(List<int>.filled(1000, 7), 200);
+        }),
+      );
+      final r = await http.Response.fromStream(await c.send(http.Request('GET', Uri.parse('https://exemplo.com/1/2/3.png'))));
+      expect(r.statusCode, 200);
+      expect(r.bodyBytes.length, 1000);
+      expect(n, 3);
+      expect(MapaConfig.limiteDasImagens, isFalse);
+      expect(UsoLocal.hoje('imagens'), 3);
+    });
+
+    test('403: aviso de contingencia no mapa', () async {
+      final c = ContadorDeImagens(interno: MockClient((r) async => http.Response('', 403)));
+      final r = await http.Response.fromStream(await c.send(http.Request('GET', Uri.parse('https://exemplo.com/1/2/3.png'))));
+      expect(r.statusCode, 403);
+      expect(MapaConfig.limiteDasImagens, isTrue);
+    });
+
+    test('no maximo 6 imagens baixando ao mesmo tempo', () async {
+      var agora = 0;
+      var maximo = 0;
+      final c = ContadorDeImagens(
+        interno: MockClient((r) async {
+          agora++;
+          if (agora > maximo) maximo = agora;
+          await Future<void>.delayed(const Duration(milliseconds: 30));
+          agora--;
+          return http.Response.bytes(List<int>.filled(10, 1), 200);
+        }),
+      );
+      await Future.wait([
+        for (var i = 0; i < 14; i++)
+          c.send(http.Request('GET', Uri.parse('https://exemplo.com/$i.png'))).then(http.Response.fromStream),
+      ]);
+      expect(maximo, lessThanOrEqualTo(ContadorDeImagens.maximoJuntas));
     });
   });
 

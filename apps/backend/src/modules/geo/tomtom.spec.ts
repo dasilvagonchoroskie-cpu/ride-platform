@@ -1,6 +1,7 @@
 import { ContaDoUso, COTA_GRATIS_DO_MES, cotaDoMes, diaDeBrasilia, UsoDoMapaService } from './uso-do-mapa';
 import { GeoService } from './geo.service';
 import { LimiteDoMapa, paraLugar, pontosDaRota, ProvedorGeo, semChave, TomTomGeo } from './tomtom';
+import { Ritmo } from './ritmo';
 
 // Chave de mentira (formato das chaves da TomTom); a de verdade so no Render.
 const CHAVE_FALSA = 'abcdefghijklmnopqrstuvwxyz012345';
@@ -66,19 +67,78 @@ describe('TomTom: formato das respostas', () => {
     expect(TomTomGeo.daVariavel({})).toBeNull();
   });
 
-  it('429 e 403 da TomTom viram LimiteDoMapa; o pedido conta no contador', async () => {
+  it('429 da TomTom: espera, tenta de novo uma vez e so entao vira LimiteDoMapa passageiro', async () => {
     const contados: string[] = [];
     const urls: string[] = [];
-    const t = new TomTomGeo(CHAVE_FALSA, (s) => contados.push(s), async (url) => {
-      urls.push(url);
-      return { ok: false, status: 429, json: async () => ({}) };
-    });
-    await expect(t.geocodificar('Rua A', { lat: -18, lng: -49 }, 80000)).rejects.toBeInstanceOf(LimiteDoMapa);
-    expect(contados).toEqual(['geocode']);
+    const t = new TomTomGeo(
+      CHAVE_FALSA,
+      (s) => contados.push(s),
+      async (url) => {
+        urls.push(url);
+        return { ok: false, status: 429, json: async () => ({}) };
+      },
+      undefined,
+      { busca: new Ritmo(4), rota: new Ritmo(4) },
+      async () => undefined,
+    );
+    const erro = await t.geocodificar('Rua A', { lat: -18, lng: -49 }, 80000).catch((e: unknown) => e);
+    expect(erro).toBeInstanceOf(LimiteDoMapa);
+    expect((erro as LimiteDoMapa).passageiro).toBe(true);
+    expect(contados).toEqual(['geocode', 'geocode']);
     expect(urls[0]).toContain('countrySet=BR');
     expect(urls[0]).toContain('radius=80000');
     const t403 = new TomTomGeo(CHAVE_FALSA, undefined, async () => ({ ok: false, status: 403, json: async () => ({}) }));
-    await expect(t403.rota({ latitude: -18, longitude: -49 }, { latitude: -18.1, longitude: -49.1 })).rejects.toBeInstanceOf(LimiteDoMapa);
+    const e403 = await t403.rota({ latitude: -18, longitude: -49 }, { latitude: -18.1, longitude: -49.1 }).catch((e: unknown) => e);
+    expect((e403 as LimiteDoMapa).passageiro).toBe(false);
+  });
+
+  it('429 seguido de resposta boa: a busca funciona (o usuario nem percebe)', async () => {
+    let n = 0;
+    const t = new TomTomGeo(
+      CHAVE_FALSA,
+      undefined,
+      async () => {
+        n++;
+        return n === 1
+          ? { ok: false, status: 429, json: async () => ({}) }
+          : {
+              ok: true,
+              status: 200,
+              json: async () => ({
+                results: [{ type: 'Street', address: { streetName: 'Rua Goiás', municipality: 'Goiatuba', countrySubdivisionCode: 'GO' }, position: { lat: -18, lon: -49.3 } }],
+              }),
+            };
+      },
+      undefined,
+      { busca: new Ritmo(4), rota: new Ritmo(4) },
+      async () => undefined,
+    );
+    const r = await t.geocodificar('Rua Goias', { lat: -18, lng: -49 }, 80000);
+    expect(r[0].address).toBe('Rua Goiás');
+    expect(n).toBe(2);
+  });
+});
+
+describe('Ritmo (pedidos por segundo da TomTom, para a plataforma toda)', () => {
+  it('deixa sair no maximo N por segundo e os outros esperam', async () => {
+    let agora = 0;
+    const r = new Ritmo(4, 4000, () => agora, async (ms) => {
+      agora += ms;
+    });
+    const saidas: number[] = [];
+    await Promise.all(Array.from({ length: 10 }, () => r.vez().then((ok) => ok && saidas.push(agora))));
+    expect(saidas.length).toBe(10);
+    // em cada janela de 1 s, no maximo 4
+    for (const t of saidas) expect(saidas.filter((u) => u > t - 1000 && u <= t).length).toBeLessThanOrEqual(4);
+  });
+
+  it('fila longa demais: desiste em vez de travar', async () => {
+    let agora = 0;
+    const r = new Ritmo(1, 1500, () => agora, async (ms) => {
+      agora += ms;
+    });
+    const res = await Promise.all([r.vez(), r.vez(), r.vez(), r.vez()]);
+    expect(res.filter((x) => !x).length).toBeGreaterThan(0);
   });
 });
 
@@ -100,14 +160,19 @@ describe('Contador da TomTom (cota da chave, para todos)', () => {
     expect(c.pode('routing', false)).toBe(true);
   });
 
-  it('a 98% do mes para tudo; 429 da TomTom para ate a meia-noite', () => {
+  it('a 98% do mes para tudo; 403 da TomTom para 30 minutos; 429 so conta', () => {
     const c = new ContaDoUso(ContaDoUso.vazio(), cota);
     c.estado.noMes.search = 2450;
     expect(c.pode('search', true)).toBe(false);
     const d = new ContaDoUso(ContaDoUso.vazio(), cota);
-    d.limiteDaTomTom();
-    expect(d.pode('reverse', true)).toBe(false);
-    expect(d.estado.paradoAte).toBeGreaterThan(Date.now());
+    const t0 = Date.now();
+    d.limiteDaTomTom(403, t0);
+    expect(d.pode('reverse', true, t0 + 60_000)).toBe(false);
+    expect(d.pode('reverse', true, t0 + 31 * 60_000)).toBe(true);
+    const e = new ContaDoUso(ContaDoUso.vazio(), cota);
+    e.limiteDaTomTom(429);
+    expect(e.pode('reverse', true)).toBe(true);
+    expect(e.estado.rajadas).toBe(1);
   });
 
   it('virada do dia zera o dia; virada do mes zera tudo', () => {
@@ -154,15 +219,15 @@ describe('GeoService com a TomTom', () => {
     expect(pedidos).toBe(antes);
   });
 
-  it('TomTom no limite: busca devolve MAPA_LIMITE (o app mostra a contingencia)', async () => {
+  it('TomTom recusou (403): busca devolve MAPA_LIMITE e para por 30 min', async () => {
     const p: ProvedorGeo = {
       nome: 'falso',
       geocodificar: async () => {
-        throw new LimiteDoMapa(429);
+        throw new LimiteDoMapa(403);
       },
       lugares: async () => [],
       enderecoDoPonto: async () => {
-        throw new LimiteDoMapa(429);
+        throw new LimiteDoMapa(403);
       },
       rota: async () => null,
     };
@@ -171,6 +236,26 @@ describe('GeoService com a TomTom', () => {
     const e = await g.endereco(-18, -49);
     expect(e.limite).toBe(true);
     expect(g.parado()).toBe(true);
+  });
+
+  it('TomTom "devagar" (429): so aquele pedido usa a reserva; nada fica parado', async () => {
+    let n = 0;
+    const p: ProvedorGeo = {
+      nome: 'falso',
+      geocodificar: async () => {
+        n++;
+        if (n === 1) throw new LimiteDoMapa(429);
+        return [lugar('Rua A', -18.0, -49.0)];
+      },
+      lugares: async () => [],
+      enderecoDoPonto: async () => null,
+      rota: async () => null,
+    };
+    const g = GeoService.comProvedor(uso(), p);
+    await expect(g.buscar('Rua A', -18, -49)).rejects.toMatchObject({ response: { code: 'MAPA_LIMITE' } });
+    expect(g.parado()).toBe(false);
+    const r = await g.buscar('Rua A', -18, -49);
+    expect(r.length).toBeGreaterThan(0);
   });
 
   it('sem chave: busca em contingencia, rota em linha reta (null)', async () => {

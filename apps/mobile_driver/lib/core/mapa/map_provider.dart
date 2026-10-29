@@ -1,7 +1,10 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/retry.dart';
 
 import '../mapa_config.dart';
 import '../medida.dart';
@@ -29,19 +32,124 @@ abstract class MapProvider {
   Widget camadaDeRuas({required String pacote, double maxZoom = 19});
 }
 
-/// Conta cada imagem que sai do celular para a TomTom (as do guardado nao
-/// passam aqui) e percebe o limite (429/403).
+/// Cliente das imagens do mapa (TomTom). Conta cada imagem que sai do
+/// celular (as do guardado nao passam aqui) e respeita o ritmo da TomTom.
+///
+/// Por que (Evandro, 29/10/2026: "tá demorando demais para carregar"): a
+/// chave da TomTom aceita uns 10 pedidos de imagem POR SEGUNDO para a
+/// plataforma inteira. O mapa pedia ~20 imagens de uma vez na abertura; as
+/// que passavam do limite voltavam 429 ("devagar") e ficavam EM BRANCO ate o
+/// mapa mexer. Agora:
+/// - no maximo [maximoJuntas] imagens baixando ao mesmo tempo (as do meio da
+///   tela primeiro — o flutter_map pede nessa ordem) e no maximo
+///   [maximoPorSegundo] novas por segundo;
+/// - 429/502/503/504: espera um pouco e tenta de novo (ate 4 vezes);
+/// - 403 (chave recusada ou cota acabada): aviso de contingencia no mapa.
 class ContadorDeImagens extends http.BaseClient {
-  ContadorDeImagens() : _interno = RetryClient(http.Client());
+  ContadorDeImagens({http.Client? interno}) : _interno = interno ?? http.Client();
+
+  static const int maximoJuntas = 6;
+  static const int maximoPorSegundo = 8;
 
   final http.Client _interno;
+  final math.Random _sorte = math.Random();
+  final Queue<Completer<void>> _fila = Queue<Completer<void>>();
+  final Queue<DateTime> _saidas = Queue<DateTime>();
+  int _baixando = 0;
+
+  Future<void> _vez() async {
+    if (_baixando < maximoJuntas) {
+      _baixando++;
+    } else {
+      final c = Completer<void>();
+      _fila.add(c);
+      await c.future; // a vaga passa direto de quem terminou para este
+    }
+    // Ritmo: no maximo [maximoPorSegundo] saidas em 1 segundo.
+    for (;;) {
+      final agora = DateTime.now();
+      while (_saidas.isNotEmpty && agora.difference(_saidas.first) >= const Duration(seconds: 1)) {
+        _saidas.removeFirst();
+      }
+      if (_saidas.length < maximoPorSegundo) {
+        _saidas.add(agora);
+        return;
+      }
+      await Future<void>.delayed(const Duration(seconds: 1) - agora.difference(_saidas.first) + const Duration(milliseconds: 5));
+    }
+  }
+
+  void _liberar() {
+    if (_fila.isNotEmpty) {
+      _fila.removeFirst().complete();
+    } else if (_baixando > 0) {
+      _baixando--;
+    }
+  }
+
+  static bool _tentarDeNovo(int status) => status == 429 || status == 502 || status == 503 || status == 504;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    UsoLocal.contar('imagens');
-    final r = await _interno.send(request);
-    if (r.statusCode == 429 || r.statusCode == 403) MapaConfig.marcarLimite();
-    return r;
+    await _vez();
+    var liberado = false;
+    void liberar() {
+      if (liberado) return;
+      liberado = true;
+      _liberar();
+    }
+
+    try {
+      final inicio = DateTime.now();
+      var pedido = request;
+      for (var tentativa = 0;; tentativa++) {
+        UsoLocal.contar('imagens');
+        final r = await _interno.send(pedido);
+        if (_tentarDeNovo(r.statusCode) && tentativa < 4) {
+          await r.stream.drain<void>().catchError((_) {});
+          Medida.imagem(r.statusCode, 0, DateTime.now().difference(inicio).inMilliseconds);
+          await Future<void>.delayed(Duration(milliseconds: 500 * (1 << tentativa) + _sorte.nextInt(400)));
+          // Um pedido HTTP so sai uma vez: copia para a nova tentativa.
+          pedido = http.Request(request.method, request.url)..headers.addAll(request.headers);
+          continue;
+        }
+        if (r.statusCode == 403) MapaConfig.marcarLimite();
+        // O corpo da imagem ainda vai chegar: a vaga so libera no fim dele.
+        var bytes = 0;
+        final corpo = r.stream.transform(
+          StreamTransformer<List<int>, List<int>>.fromHandlers(
+            handleData: (dados, saida) {
+              bytes += dados.length;
+              saida.add(dados);
+            },
+            handleError: (erro, pilha, saida) {
+              liberar();
+              saida.addError(erro, pilha);
+            },
+            handleDone: (saida) {
+              liberar();
+              Medida.imagem(r.statusCode, bytes, DateTime.now().difference(inicio).inMilliseconds);
+              saida.close();
+            },
+          ),
+        );
+        // Se ninguem ler o corpo (imagem que saiu da tela), libera em 20 s.
+        Timer(const Duration(seconds: 20), liberar);
+        return http.StreamedResponse(
+          corpo,
+          r.statusCode,
+          contentLength: r.contentLength,
+          request: r.request,
+          headers: r.headers,
+          isRedirect: r.isRedirect,
+          persistentConnection: r.persistentConnection,
+          reasonPhrase: r.reasonPhrase,
+        );
+      }
+    } catch (e) {
+      liberar();
+      rethrow;
+    }
   }
 }
 
@@ -54,6 +162,9 @@ class TomTomMapProvider implements MapProvider {
   static final TomTomMapProvider instancia = TomTomMapProvider._();
 
   static final ContadorDeImagens _cliente = ContadorDeImagens();
+
+  /// Um so fornecedor de imagens para todos os mapas (criado uma vez).
+  static final NetworkTileProvider _imagens = NetworkTileProvider(httpClient: _cliente);
 
   @override
   String get id => 'tomtom';
@@ -83,8 +194,10 @@ class TomTomMapProvider implements MapProvider {
                 zoomOffset: MapaConfig.tamanho >= 512 ? -1 : 0,
                 maxZoom: teto,
                 keepBuffer: economia ? 1 : 2,
-                panBuffer: economia ? 0 : 1,
-                tileProvider: NetworkTileProvider(httpClient: _cliente),
+                // So as imagens que aparecem na tela (antes: mais uma volta
+                // em cada lado, ~3 vezes mais imagens na abertura).
+                panBuffer: 0,
+                tileProvider: _imagens,
                 tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
                 errorTileCallback: (tile, error, stackTrace) {
                   // Imagem que nao veio fica no fundo, sem quebrar o mapa.
