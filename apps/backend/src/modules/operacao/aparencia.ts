@@ -21,7 +21,8 @@ export const CHAVE_APARENCIA = 'aparencia';
 
 export const APARENCIA_PADRAO: Aparencia = {
   nome: 'Fortaleza Mov',
-  cor: '#0070B8',
+  // Azul da marca dos apps (AppColors.brand).
+  cor: '#1E5BB8',
   bannerAtivo: false,
   bannerTexto: '',
   logoId: null,
@@ -63,6 +64,9 @@ export async function gravarAparencia(db: Db, nova: Partial<Aparencia>, adminId:
 /** O que vai no /app/config publico. */
 export function aparenciaDoApp(a: Aparencia) {
   return {
+    // false: a Central ainda nao mexeu; o app fica com o nome e a cor da
+    // propria montagem (app de outro operador).
+    definida: a.atualizadoEm !== null,
     nome: a.nome,
     cor: a.cor,
     banner: a.bannerAtivo ? { texto: a.bannerTexto } : null,

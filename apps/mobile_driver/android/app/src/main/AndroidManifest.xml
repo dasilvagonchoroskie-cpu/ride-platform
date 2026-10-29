@@ -22,7 +22,7 @@
          motorista tira a restricao de bateria nos ajustes do app (11/10/2026). -->
 
     <application
-        android:label="Fortaleza Mov Motorista"
+        android:label="${NOME_DO_APP}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps: chave restrita aos 3 apps (pacote + SHA-1) e ao Maps SDK. -->

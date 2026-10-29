@@ -9,6 +9,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../state/auth_state.dart';
 import '../widgets/form_ui.dart';
+import '../core/marca.dart';
 
 /// "(64) 99268-6632" a partir de "+5564992686632" (e-mail fica como esta).
 String telefoneLegivel(String numero) {
@@ -146,7 +147,7 @@ class _OtpScreenState extends State<OtpScreen> {
           if (_codigoTeste == null)
             Text(
               'Não chegou? Olhe também a caixa de Spam (lixo eletrônico). '
-              'Nunca passe este código para ninguém: a Fortaleza Mov nunca pede o seu código.',
+              'Nunca passe este código para ninguém: a ${Marca.nome} nunca pede o seu código.',
               style: AppText.body.copyWith(fontSize: 15, color: AppColors.textMuted, height: 1.4),
             ),
           const SizedBox(height: Spacing.lg),

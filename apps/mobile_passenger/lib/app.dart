@@ -27,6 +27,9 @@ class RideApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Etapa 6: cor e nome que a Central escolheu (so reconstroi quando mudam).
+    final cor = context.select<ConfigState, Color>((c) => c.corDaMarca);
+    final nome = context.select<ConfigState, String>((c) => c.nomeDoApp);
     return MaterialApp(
       locale: const Locale('pt', 'BR'),
       supportedLocales: const [Locale('pt', 'BR')],
@@ -39,9 +42,9 @@ class RideApp extends StatelessWidget {
         child: SafeArea(top: false, left: false, right: false, child: child ?? const SizedBox.shrink()),
       ),
       scaffoldMessengerKey: avisos,
-      title: 'Fortaleza Mov',
+      title: nome,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.comCor(cor),
       // Logo ao instalar: autorizacoes antes de qualquer outra tela.
       home: PortaoPermissoes(
         itens: const [

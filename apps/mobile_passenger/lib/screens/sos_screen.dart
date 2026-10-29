@@ -9,6 +9,7 @@ import '../data/models/models.dart';
 import '../state/app_state.dart';
 import '../state/ride_state.dart';
 import 'contatos_emergencia_screen.dart';
+import '../core/marca.dart';
 
 /// Botao vermelho "SOS" que fica sobre o mapa durante a corrida.
 class BotaoSos extends StatelessWidget {
@@ -85,7 +86,7 @@ class _SosScreenState extends State<SosScreen> {
     final corrida = context.read<RideState>().activeRide;
     final m = corrida?.driver;
     final linhas = [
-      'SOS! Estou numa corrida da Fortaleza Mov e preciso de ajuda.',
+      'SOS! Estou numa corrida da ${Marca.nome} e preciso de ajuda.',
       'Minha localização: https://maps.google.com/?q=${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}',
       if (m != null) 'Motorista: ${m.name} · ${m.vehicle} ${m.color} · placa ${m.plate}',
       if (corrida != null) 'Corrida ${corrida.code}: de ${corrida.pickup.address} para ${corrida.dropoff.address}',

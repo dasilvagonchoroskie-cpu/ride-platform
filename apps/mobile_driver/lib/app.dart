@@ -17,6 +17,7 @@ import 'state/driver_state.dart';
 import 'core/avisos.dart';
 import 'core/native/corridas_nativo.dart';
 import 'screens/locating_screen.dart';
+import 'core/marca.dart';
 
 class DriverApp extends StatelessWidget {
   const DriverApp({super.key});
@@ -35,7 +36,7 @@ class DriverApp extends StatelessWidget {
         child: SafeArea(top: false, left: false, right: false, child: child ?? const SizedBox.shrink()),
       ),
       scaffoldMessengerKey: avisos,
-      title: 'Fortaleza Mov Motorista',
+      title: '${Marca.nome} Motorista',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: const _Root(),

@@ -19,6 +19,7 @@ import 'agendadas_screen.dart';
 import 'confirm_screen.dart';
 import 'destino_sheet.dart';
 import '../core/mapa_config.dart';
+import '../core/marca.dart';
 
 /// Tela Inicio: mapa em tela cheia, carros disponiveis por perto (de
 /// verdade, do servidor), sino de avisos e o "Buscar destino" embaixo.
@@ -183,7 +184,11 @@ class _HomeScreenState extends State<HomeScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, 0),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
@@ -195,15 +200,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Material(
-                    color: AppColors.brand,
+                    // Etapa 6: nome, cor e logo escolhidos na Central.
+                    color: Marca.cor,
                     elevation: 3,
                     shadowColor: const Color(0x55000000),
                     borderRadius: BorderRadius.circular(Radii.pill),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                      child: Text(
-                        'Fortaleza Mov',
-                        style: AppText.heading.copyWith(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
+                      padding: EdgeInsets.fromLTRB(Marca.logoUrl != null ? 8 : 22, Marca.logoUrl != null ? 8 : 14, 22, Marca.logoUrl != null ? 8 : 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (Marca.logoUrl != null) ...[
+                            const BrandLogo(size: 40),
+                            const SizedBox(width: 10),
+                          ],
+                          Text(
+                            Marca.nome,
+                            style: AppText.heading.copyWith(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -225,6 +240,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     marcado: config.temAvisoNovo,
                     onTap: () => _abrir(const AvisosScreen()),
                   ),
+                ],
+              ),
+              // Faixa de aviso da Central (promocao, horario especial...).
+              if (Marca.faixa != null) ...[
+                const SizedBox(height: Spacing.sm),
+                FaixaDaCentral(texto: Marca.faixa!),
+              ],
                 ],
               ),
             ),
@@ -404,6 +426,51 @@ class _AvisoGps extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppText.body.copyWith(fontSize: 14, color: AppColors.text),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Faixa de aviso do Inicio (Central > Configuracoes > Aparencia do app).
+class FaixaDaCentral extends StatelessWidget {
+  const FaixaDaCentral({super.key, required this.texto});
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: const Color(0x55000000),
+      borderRadius: BorderRadius.circular(Radii.md),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 5, color: Marca.cor),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.sm, Spacing.md, Spacing.sm),
+                child: Row(
+                  children: [
+                    Icon(Icons.campaign, color: Marca.cor, size: 22),
+                    const SizedBox(width: Spacing.sm),
+                    Expanded(
+                      child: Text(
+                        texto,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body.copyWith(fontWeight: FontWeight.w600, color: AppColors.text),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -33,7 +33,11 @@ android {
         // Nome definitivo na Google Play (aprovado pelo Evandro em 09/10/2026).
         // Depois de publicado NAO muda nunca. O codigo continua no pacote
         // com.rideplatform.mobile_passenger (namespace acima), que nao aparece para ninguem.
-        applicationId = "br.com.fortalezamov.passageiro"
+        // App de outro operador (etapa 6, scripts/novo-app.sh): a esteira
+        // "App de operador" passa MARCA_ID_APP e MARCA_NOME_APP. Sem eles,
+        // e o app da Fortaleza Mov (o de sempre).
+        applicationId = System.getenv("MARCA_ID_APP")?.takeIf { it.isNotBlank() } ?: "br.com.fortalezamov.passageiro"
+        manifestPlaceholders["NOME_DO_APP"] = System.getenv("MARCA_NOME_APP")?.takeIf { it.isNotBlank() } ?: "Fortaleza Mov"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -159,7 +159,10 @@ class AppText {
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData get light {
+  static ThemeData get light => comCor(AppColors.brand);
+
+  /// Tema com a cor da marca escolhida na Central (etapa 6).
+  static ThemeData comCor(Color marca) {
     final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
@@ -172,10 +175,10 @@ class AppTheme {
       // "tonais", as abas selecionadas e os cartoes vinham no lilas padrao
       // do Flutter (as fotos das telas pegaram em 10/10/2026).
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.brand,
+        seedColor: marca,
         brightness: Brightness.light,
       ).copyWith(
-        primary: AppColors.brand,
+        primary: marca,
         secondary: AppColors.gold,
         surface: AppColors.surface,
         error: AppColors.danger,
@@ -205,7 +208,7 @@ class AppTheme {
         displayColor: AppColors.text,
       ),
       dividerColor: AppColors.border,
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.brand),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: marca),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(

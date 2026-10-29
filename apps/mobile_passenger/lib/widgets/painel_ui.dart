@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/marca.dart';
 import '../core/theme/app_theme.dart';
 
 /// Logo redondo da Fortaleza Mov (icone do motorista).
@@ -8,26 +9,35 @@ class BrandLogo extends StatelessWidget {
 
   final double size;
 
+  Widget _logoDoApp() => Image.asset(
+        'assets/brand/logo_redondo.png',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: AppColors.brandDark,
+          alignment: Alignment.center,
+          child: Icon(Icons.local_taxi, color: AppColors.gold, size: size * 0.5),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: SweepGradient(colors: [AppColors.brand, AppColors.gold, AppColors.brandDark, AppColors.brand]),
+        gradient: SweepGradient(colors: [Marca.cor, AppColors.gold, AppColors.brandDark, Marca.cor]),
       ),
       padding: const EdgeInsets.all(2.5),
       child: ClipOval(
-        child: Image.asset(
-          'assets/brand/logo_redondo.png',
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
-            color: AppColors.brandDark,
-            alignment: Alignment.center,
-            child: Icon(Icons.local_taxi, color: AppColors.gold, size: size * 0.5),
-          ),
-        ),
+        // Etapa 6: logo trocado pela Central (sem rede ou com erro: o do app).
+        child: Marca.logoUrl != null
+            ? Image.network(
+                Marca.logoUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _logoDoApp(),
+              )
+            : _logoDoApp(),
       ),
     );
   }

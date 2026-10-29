@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 <application
-        android:label="Fortaleza Mov"
+        android:label="${NOME_DO_APP}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps: chave restrita aos 3 apps (pacote + SHA-1) e ao Maps SDK. -->

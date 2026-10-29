@@ -7,6 +7,7 @@ import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
 import '../state/central_state.dart';
+import '../widgets/aparencia_app.dart';
 import '../widgets/operacao_passageiros.dart';
 import '../widgets/ui.dart';
 
@@ -53,6 +54,10 @@ class SettingsScreen extends StatelessWidget {
           const _StatusDasConexoes(),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'App do passageiro'),
+          if (AppConfig.hasApi) ...[
+            const AparenciaDoApp(),
+            const SizedBox(height: Spacing.md),
+          ],
           const OperacaoPassageiros(),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Diagnostico'),

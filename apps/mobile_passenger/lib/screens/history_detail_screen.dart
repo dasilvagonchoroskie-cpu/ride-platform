@@ -7,6 +7,7 @@ import '../data/models/models.dart';
 import '../widgets/compartilhar_viagem.dart';
 import '../widgets/map_canvas.dart';
 import '../widgets/ui.dart';
+import '../core/marca.dart';
 
 class HistoryDetailScreen extends StatelessWidget {
   const HistoryDetailScreen({super.key, required this.ride});
@@ -191,7 +192,7 @@ class _DetailRow extends StatelessWidget {
 /// Recibo em texto (vai pelo WhatsApp ou copiado).
 String textoDoRecibo(Ride ride) {
   final b = StringBuffer()
-    ..writeln('Recibo Fortaleza Mov - corrida ${ride.code}')
+    ..writeln('Recibo ${Marca.nome} - corrida ${ride.code}')
     ..writeln('Data: ${formatDateTime(ride.finishedAt ?? ride.createdAt)}')
     ..writeln('Embarque: ${ride.pickup.address}')
     ..writeln('Destino: ${ride.dropoff.address}')

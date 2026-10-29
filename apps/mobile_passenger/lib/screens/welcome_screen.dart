@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/marca.dart';
 import '../core/theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../state/auth_state.dart';
@@ -17,6 +18,8 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+    // Nome, cor e logo da Central (etapa 6) chegam com a configuracao.
+    context.watch<ConfigState>();
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -30,9 +33,9 @@ class WelcomeScreen extends StatelessWidget {
               const Center(child: BrandLogo(size: 132)),
               const SizedBox(height: Spacing.xl),
               Text(
-                'Fortaleza Mov',
+                Marca.nome,
                 textAlign: TextAlign.center,
-                style: AppText.display.copyWith(fontSize: 36, color: AppColors.brand),
+                style: AppText.display.copyWith(fontSize: 36, color: Marca.cor),
               ),
               const SizedBox(height: Spacing.sm),
               Text(

@@ -14,6 +14,7 @@ import '../widgets/motorista_ui.dart';
 import 'sos_screen.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
+import '../core/marca.dart';
 
 /// Valor no canto da tela durante a viagem: o taximetro (quando a Central
 /// cobra assim) ou o preco combinado.
@@ -190,7 +191,7 @@ class RideScreen extends StatelessWidget {
                     TextButton.icon(
                       onPressed: () => falarComCentral(
                         whatsapp,
-                        mensagem: 'Olá! Estou na corrida ${corrida.code} da Fortaleza Mov e preciso de ajuda.',
+                        mensagem: 'Olá! Estou na corrida ${corrida.code} da ${Marca.nome} e preciso de ajuda.',
                       ),
                       icon: const Icon(Icons.support_agent, color: AppColors.brand),
                       label: Text('Preciso de ajuda', style: AppText.bodyStrong.copyWith(color: AppColors.brand)),

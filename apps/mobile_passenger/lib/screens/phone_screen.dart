@@ -13,6 +13,7 @@ import '../widgets/form_ui.dart';
 import 'email_login_screen.dart';
 import 'legal_screen.dart';
 import 'otp_screen.dart';
+import '../core/marca.dart';
 
 /// Entrada pelo telefone, com as outras formas de entrar embaixo.
 class PhoneScreen extends StatefulWidget {
@@ -92,7 +93,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
     final config = context.watch<ConfigState>();
 
     return TelaFormulario(
-      titulo: 'Fortaleza Mov',
+      titulo: Marca.nome,
       linha: false,
       rodape: const _RodapePrivacidade(),
       child: ListView(

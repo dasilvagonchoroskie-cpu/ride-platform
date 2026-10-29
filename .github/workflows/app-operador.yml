@@ -1,0 +1,147 @@
+name: App de operador
+
+# Etapa 6 (Evandro, 29/10/2026): app de outro operador com o mesmo codigo.
+# Le operadores/<operador>/app.env (criado por scripts/novo-app.sh) e
+# compila o passageiro e o motorista com o nome, a cor, os icones e o pacote
+# do operador. Os APKs ficam nos arquivos desta execucao (7 dias); com
+# publicar=sim, tambem numa versao (release) do GitHub.
+on:
+  workflow_dispatch:
+    inputs:
+      operador:
+        description: 'Pasta em operadores/ (ex.: exemplo)'
+        required: true
+      publicar:
+        description: 'Publicar numa versao do GitHub (sim/nao)'
+        required: false
+        default: 'nao'
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+  JAVA_VERSION: '17'
+
+jobs:
+  apk:
+    name: APK ${{ matrix.app }} (${{ inputs.operador }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [mobile_passenger, mobile_driver]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ler o operador
+        env:
+          OPERADOR: ${{ inputs.operador }}
+          APP: ${{ matrix.app }}
+        run: |
+          set -euo pipefail
+          [[ "$OPERADOR" =~ ^[a-z][a-z0-9-]{1,30}$ ]] || { echo "::error::Operador invalido"; exit 1; }
+          F="operadores/$OPERADOR/app.env"
+          [ -f "$F" ] || { echo "::error::Nao existe $F (rode scripts/novo-app.sh)"; exit 1; }
+          # Le sem executar o arquivo.
+          val() { grep -E "^$1=" "$F" | head -n1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
+          NOME="$(val MARCA_NOME)"; COR="$(val MARCA_COR)"; FUNDO="$(val ICONE_FUNDO)"; API="$(val API_URL)"
+          if [ "$APP" = mobile_passenger ]; then ID="$(val ID_PASSAGEIRO)"; PAPEL=passageiro; ROTULO="$NOME"; else ID="$(val ID_MOTORISTA)"; PAPEL=motorista; ROTULO="$NOME Motorista"; fi
+          [[ "$COR" =~ ^#[0-9A-Fa-f]{6}$ ]] && [[ "$FUNDO" =~ ^#[0-9A-Fa-f]{6}$ ]] || { echo "::error::Cor invalida"; exit 1; }
+          [[ "$ID" =~ ^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$ ]] || { echo "::error::Pacote invalido: $ID"; exit 1; }
+          [[ "$API" =~ ^https://[A-Za-z0-9.-]+(/.*)?$ ]] || { echo "::error::API_URL invalida"; exit 1; }
+          case "$NOME" in *'"'*|*'$'*|*'`'*|*'\'*|'') echo "::error::Nome invalido"; exit 1 ;; esac
+          {
+            echo "MARCA_NOME=$NOME"; echo "MARCA_COR=$COR"; echo "ICONE_FUNDO=$FUNDO"; echo "API_URL=$API"
+            echo "MARCA_ID_APP=$ID"; echo "MARCA_NOME_APP=$ROTULO"; echo "PAPEL=$PAPEL"
+          } >> "$GITHUB_ENV"
+          echo "Operador $OPERADOR: $ROTULO ($ID), cor $COR, servidor $API"
+
+      - name: Icones do operador
+        run: |
+          set -euo pipefail
+          S="operadores/${{ inputs.operador }}/icone-$PAPEL.png"
+          if [ -f "$S" ]; then
+            pip install --quiet pillow
+            python3 scripts/gerar-icones.py "$S" "apps/${{ matrix.app }}" --fundo "$ICONE_FUNDO"
+          else
+            echo "Sem $S: fica o icone da Fortaleza Mov."
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Assinatura
+        env:
+          CHAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SENHA_LOJA: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SENHA_CHAVE: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APELIDO: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          echo "$CHAVE" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/assinatura.jks" "$SENHA_LOJA" "$APELIDO" "$SENHA_CHAVE" > "apps/${{ matrix.app }}/android/key.properties"
+
+      # Push: so com o app do operador registrado no Firebase (o arquivo de
+      # configuracao da Fortaleza Mov nao serve para outro pacote).
+      - name: Compilar
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter build apk --release --split-per-abi --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} \
+            --dart-define=API_URL="$API_URL" --dart-define=MARCA_NOME="$MARCA_NOME" --dart-define=MARCA_COR="$MARCA_COR" \
+            2>&1 | tail -n 15
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp build/app/outputs/flutter-apk/*arm64-v8a*.apk "$GITHUB_WORKSPACE/dist/${{ inputs.operador }}-$PAPEL-${{ github.run_number }}.apk"
+          ls -la "$GITHUB_WORKSPACE/dist"
+
+      - name: Conferir o APK (pacote e nome)
+        run: |
+          set -euo pipefail
+          AAPT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n1)aapt2"
+          "$AAPT" dump badging "dist/${{ inputs.operador }}-$PAPEL-${{ github.run_number }}.apk" > "$RUNNER_TEMP/badging.txt" 2>/dev/null || \
+            "$(dirname "$AAPT")/aapt" dump badging "dist/${{ inputs.operador }}-$PAPEL-${{ github.run_number }}.apk" > "$RUNNER_TEMP/badging.txt"
+          grep -E "^package:|^application-label:" "$RUNNER_TEMP/badging.txt"
+          grep -q "package: name='$MARCA_ID_APP'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Pacote errado no APK"; exit 1; }
+          grep -q "application-label:'$MARCA_NOME_APP'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Nome errado no APK"; exit 1; }
+          mkdir -p "logs/operadores/${{ inputs.operador }}"
+          { echo "Execucao ${{ github.run_number }} ($(date -u +%Y-%m-%dT%H:%MZ))"; grep -E "^package:|^application-label:|^sdkVersion|^targetSdkVersion" "$RUNNER_TEMP/badging.txt"; ls -la dist; } \
+            > "logs/operadores/${{ inputs.operador }}/apk-$PAPEL.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.operador }}-${{ matrix.app }}-${{ github.run_number }}
+          path: dist/*.apk
+          retention-days: 7
+
+      - name: Publicar numa versao do GitHub
+        if: inputs.publicar == 'sim'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="apk-${{ inputs.operador }}-$PAPEL-mais-recente"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$MARCA_NOME_APP (mais recente)" --notes "App do operador ${{ inputs.operador }}."
+          gh release upload "$TAG" dist/*.apk --clobber
+
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          [ -d logs/operadores ] || exit 0
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          git add logs/operadores
+          git commit -m "relatorio: app do operador ${{ inputs.operador }} ($PAPEL) [skip ci]" || exit 0
+          for t in 1 2 3 4 5; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done

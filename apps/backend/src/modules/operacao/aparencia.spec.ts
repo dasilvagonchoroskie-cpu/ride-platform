@@ -20,7 +20,8 @@ describe('Aparencia do app (etapa 6)', () => {
     const app = aparenciaDoApp(lerAparenciaDe({ logoId: id, bannerAtivo: true, bannerTexto: 'Corrida 10% off' }));
     expect(app.logoUrl).toBe('/app/logo?v=0f8fad5b');
     expect(app.banner).toEqual({ texto: 'Corrida 10% off' });
-    expect(aparenciaDoApp(APARENCIA_PADRAO)).toEqual({ nome: 'Fortaleza Mov', cor: '#0070B8', banner: null, logoUrl: null });
+    expect(aparenciaDoApp(APARENCIA_PADRAO)).toEqual({ definida: false, nome: 'Fortaleza Mov', cor: '#1E5BB8', banner: null, logoUrl: null });
+    expect(aparenciaDoApp(lerAparenciaDe({ atualizadoEm: '2026-10-29T18:00:00Z' })).definida).toBe(true);
   });
 
   it('gravar junta com o que ja tinha e marca quem mudou', async () => {

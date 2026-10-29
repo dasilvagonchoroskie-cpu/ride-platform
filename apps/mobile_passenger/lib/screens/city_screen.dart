@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../state/auth_state.dart';
 import '../state/config_state.dart';
 import '../widgets/form_ui.dart';
+import '../core/marca.dart';
 
 /// "goiatúba" acha "Goiatuba - GO".
 String semAcento(String texto) {
@@ -92,8 +93,8 @@ class _CityScreenState extends State<CityScreen> {
       );
     }
     if (lista.isEmpty) {
-      return const _Mensagem(
-        texto: 'Nenhuma cidade com esse nome. A Fortaleza Mov ainda não atende essa cidade.',
+      return _Mensagem(
+        texto: 'Nenhuma cidade com esse nome. A ${Marca.nome} ainda não atende essa cidade.',
       );
     }
     return ListView.separated(

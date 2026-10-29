@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 
+
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
+import '../core/marca.dart';
 import '../core/mapa_config.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
@@ -39,6 +42,10 @@ class ConfigState extends ChangeNotifier {
   bool falhou = false;
 
   String? _ultimoVisto;
+
+  /// Cor e nome da marca (a Central troca em Configuracoes > Aparencia).
+  Color get corDaMarca => Marca.cor;
+  String get nomeDoApp => Marca.nome;
 
   /// Ha aviso mais novo do que o ultimo que a pessoa abriu.
   bool get temAvisoNovo => avisos.isNotEmpty && avisos.first.id != _ultimoVisto;
@@ -109,6 +116,8 @@ class ConfigState extends ChangeNotifier {
     ];
     // Fornecedor e atribuicao do mapa (a chave so vem com login, /geo/mapa).
     MapaConfig.aplicar(data);
+    // Etapa 6: nome, cor, logo e faixa do Inicio escolhidos na Central.
+    Marca.aplicar(data['aparencia']);
   }
 
   /// Centro da cidade do cadastro ("Goiatuba - GO"), se ela for uma praca.

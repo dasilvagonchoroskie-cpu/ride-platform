@@ -1,8 +1,10 @@
 import 'avisos.dart';
 import 'permissoes_nativas.dart';
+import 'marca.dart';
 
 /// Abre a conversa com a Central no WhatsApp.
-Future<void> falarComCentral(String? numero, {String mensagem = 'Olá! Preciso de ajuda com o aplicativo Fortaleza Mov.'}) async {
+Future<void> falarComCentral(String? numero, {String? mensagem}) async {
+  mensagem ??= 'Olá! Preciso de ajuda com o aplicativo ${Marca.nome}.';
   final digitos = (numero ?? '').replaceAll(RegExp(r'\D'), '');
   if (digitos.isEmpty) {
     avisar('O contato da Central ainda não foi configurado.');
