@@ -14,6 +14,10 @@ class AppStorage {
   /// Taximetro da viagem em andamento (sobrevive ao app fechar).
   static const String taximetro = 'ride.taximetro';
 
+  /// Ultima posicao do GPS: o mapa abre nela na hora, enquanto o GPS acerta
+  /// (pedido do Evandro, 29/10/2026).
+  static const String ultimaPosicao = 'ride.ultimaPosicao';
+
   static Future<void> write(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
@@ -39,6 +43,7 @@ class AppStorage {
     await prefs.remove(vehicle);
     await prefs.remove(activeRide);
     await prefs.remove(taximetro);
+    await prefs.remove(ultimaPosicao);
   }
 
   static Future<void> clearSession() async {

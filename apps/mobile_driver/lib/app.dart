@@ -68,8 +68,9 @@ class _Root extends StatelessWidget {
     if (!driver.isOnboarded) return const OnboardingScreen();
     if (profile.approval != DriverApproval.approved) return const PendingScreen();
 
-    // O mapa so abre com a posicao real do aparelho.
-    if (!driver.posicaoReal) {
+    // Mapa primeiro (29/10/2026): abre na ultima posicao deste celular
+    // enquanto o GPS acerta; sem posicao nenhuma ainda, espera o GPS.
+    if (!driver.temPosicao) {
       return LocatingScreen(
         tentarDeNovo: () => driver.lerPosicaoInicial(),
         ligarGps: () => CorridasNativo.pedir('gps'),

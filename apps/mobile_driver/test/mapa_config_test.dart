@@ -41,4 +41,16 @@ void main() {
       expect(MapaConfig.atribuicao, MapaConfig.padraoAtribuicao);
     }
   });
+
+  test('o servidor pode voltar todo mundo para o OpenStreetMap (mapa.provedor)', () {
+    expect(MapaConfig.provedor, 'google');
+    MapaConfig.aplicar({
+      'mapa': {'tiles': MapaConfig.padraoTiles, 'provedor': 'osm'},
+    });
+    expect(MapaConfig.provedor, 'osm');
+    MapaConfig.aplicar({
+      'mapa': {'tiles': MapaConfig.padraoTiles},
+    });
+    expect(MapaConfig.provedor, 'google');
+  });
 }

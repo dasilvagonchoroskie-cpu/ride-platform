@@ -95,8 +95,14 @@ class _Root extends StatelessWidget {
       if (active.status.isActive) return const SearchingScreen();
     }
 
-    // O mapa so abre com a posicao real do aparelho.
-    if (!app.localizacaoReal) {
+    // Mapa primeiro (29/10/2026): abre na ultima posicao conhecida deste
+    // celular enquanto o GPS acerta. Sem posicao nenhuma (primeira vez e GPS
+    // sem sinal), abre no centro da cidade do cadastro; sem cidade, espera.
+    if (!app.temPosicao) {
+      final centro = config.centroDaCidade(auth.user!.cidade);
+      if (centro != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => app.usarCentroDaCidade(centro));
+      }
       return LocatingScreen(
         tentarDeNovo: () => app.atualizarLocalizacao(),
         ligarGps: () => PermissoesNativas.pedir('gps'),

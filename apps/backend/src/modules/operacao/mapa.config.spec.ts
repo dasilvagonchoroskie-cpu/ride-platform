@@ -12,7 +12,7 @@ describe('mapa dos aplicativos', () => {
         MAPA_ATRIBUICAO: '© Exemplo',
         MAPA_MAX_ZOOM: '18',
       }),
-    ).toEqual({ tiles: 'https://tiles.exemplo.com.br/{z}/{x}/{y}.png', atribuicao: '© Exemplo', maxZoom: 18 });
+    ).toEqual({ tiles: 'https://tiles.exemplo.com.br/{z}/{x}/{y}.png', atribuicao: '© Exemplo', maxZoom: 18, provedor: 'google' });
   });
 
   it('endereco errado nao quebra o mapa: volta para o OpenStreetMap', () => {
@@ -20,6 +20,12 @@ describe('mapa dos aplicativos', () => {
       expect(enderecoDeMapaValido(ruim)).toBe(false);
       expect(mapaDoApp({ MAPA_TILES_URL: ruim })).toEqual(MAPA_PADRAO);
     }
+  });
+
+  it('MAPA_PROVEDOR=osm volta todos os apps para o OpenStreetMap', () => {
+    expect(mapaDoApp({ MAPA_PROVEDOR: 'OSM' }).provedor).toBe('osm');
+    expect(mapaDoApp({ MAPA_PROVEDOR: 'qualquer' }).provedor).toBe('google');
+    expect(mapaDoApp({}).provedor).toBe('google');
   });
 
   it('zoom fora do normal fica no padrao', () => {

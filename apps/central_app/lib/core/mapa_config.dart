@@ -27,6 +27,9 @@ class MapaConfig {
   static String atribuicao = padraoAtribuicao;
   static int maxZoom = padraoMaxZoom;
 
+  /// 'google' (padrao, quando o APK tem a chave) ou 'osm'.
+  static String provedor = 'google';
+
   /// So https, com {z}, {x} e {y}, sem espacos e de tamanho razoavel.
   static bool enderecoValido(Object? url) {
     if (url is! String) return false;
@@ -44,6 +47,7 @@ class MapaConfig {
     tiles = padraoTiles;
     atribuicao = padraoAtribuicao;
     maxZoom = padraoMaxZoom;
+    provedor = 'google';
   }
 
   /// Na abertura do app: limita o guardado do mapa, le o endereco guardado e,
@@ -82,16 +86,20 @@ class MapaConfig {
     unawaited(() async {
       try {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_chave, jsonEncode({'tiles': tiles, 'atribuicao': atribuicao, 'maxZoom': maxZoom}));
+        await prefs.setString(_chave, jsonEncode({'tiles': tiles, 'atribuicao': atribuicao, 'maxZoom': maxZoom, 'provedor': provedor}));
       } catch (_) {}
     }());
   }
 
   static void _usar(Object? mapa) {
+    final p = mapa is Map ? mapa['provedor'] : null;
+    final novoProvedor = p == 'osm' ? 'osm' : 'google';
     if (mapa is! Map || !enderecoValido(mapa['tiles'])) {
       padrao();
+      provedor = novoProvedor;
       return;
     }
+    provedor = novoProvedor;
     tiles = (mapa['tiles'] as String).trim();
     final a = mapa['atribuicao'];
     atribuicao = a is String && a.trim().isNotEmpty ? a.trim() : padraoAtribuicao;

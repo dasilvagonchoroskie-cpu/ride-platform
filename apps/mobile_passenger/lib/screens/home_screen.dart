@@ -107,6 +107,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final app = context.read<AppState>();
     final ride = context.read<RideState>();
 
+    // O embarque e a posicao do GPS: se ele ainda nao respondeu nesta
+    // abertura, espera um pouco antes de calcular a corrida.
+    if (!app.localizacaoReal) {
+      avisar('Confirmando o seu local de embarque pelo GPS…');
+      final ok = await app.esperarGps(const Duration(seconds: 10));
+      if (!mounted) return;
+      if (!ok && app.centroDaCidade) {
+        avisar('Ainda não achamos você no mapa. Confira se o GPS está ligado e tente de novo perto de uma janela.');
+        return;
+      }
+      if (!ok) avisar('O GPS ainda não respondeu: confira o endereço de embarque antes de confirmar.');
+    }
+
     await app.addDestinoRecente(alvo);
     await app.addRecentPlace(alvo.fullAddress);
     await ride.estimate(app.coords, alvo.coords, dropoffAddress: alvo.fullAddress);
@@ -121,9 +134,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _abrir(Widget tela) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => tela));
 
+  /// O mapa abriu na ultima posicao conhecida; quando o GPS de verdade
+  /// chega, o mapa vai ate ele e os carros por perto sao buscados de novo.
+  bool _gpsVisto = false;
+
+  void _conferirGps(AppState app) {
+    if (_gpsVisto || !app.localizacaoReal) return;
+    _gpsVisto = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _recentrar++);
+      _atualizarCarros();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+    _conferirGps(app);
     final auth = context.watch<AuthState>();
     final ride = context.watch<RideState>();
     final config = context.watch<ConfigState>();
@@ -131,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final agendarPara = ride.agendarPara;
 
     final markers = <MapMarker>[
-      MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
+      if (!app.centroDaCidade) MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
       for (final driver in ride.nearbyDrivers)
         MapMarker(id: driver.id, coords: driver.position, kind: driver.moto ? MarkerKind.moto : MarkerKind.car),
     ];
@@ -201,6 +229,13 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (!app.localizacaoReal)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: Spacing.sm),
+                      child: _AvisoGps(soCidade: app.centroDaCidade),
+                    ),
+                  ),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Padding(
@@ -505,6 +540,41 @@ class _DestinationSheetState extends State<_DestinationSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Aviso pequeno em cima do "Buscar destino" enquanto o GPS acerta.
+class _AvisoGps extends StatelessWidget {
+  const _AvisoGps({required this.soCidade});
+
+  final bool soCidade;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      elevation: 2,
+      borderRadius: BorderRadius.circular(Radii.pill),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icone parado (sem animacao): o aviso pode ficar varios segundos.
+            const Icon(Icons.gps_not_fixed, size: 16, color: AppColors.brand),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                soCidade ? 'Procurando você no mapa…' : 'Atualizando sua localização…',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body.copyWith(fontSize: 14, color: AppColors.text),
+              ),
+            ),
+          ],
         ),
       ),
     );

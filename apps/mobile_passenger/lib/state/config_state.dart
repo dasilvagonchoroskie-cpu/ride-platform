@@ -6,6 +6,7 @@ import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/mapa_config.dart';
 import '../core/storage/app_storage.dart';
+import '../core/utils/geo.dart';
 import '../data/models/models.dart';
 
 /// O que a Central configura e o aplicativo le do servidor: cidades
@@ -20,6 +21,10 @@ class ConfigState extends ChangeNotifier {
   List<String> cidades = const [];
   String? whatsapp;
   List<AvisoCentral> avisos = const [];
+
+  /// Cidades da operacao com o centro (para abrir o mapa na cidade do
+  /// cadastro quando o celular ainda nao tem posicao nenhuma).
+  List<({String nome, String uf, Coords centro})> pracas = const [];
 
   /// Formas de entrar que funcionam agora. Telefone so com SMS (ou em
   /// teste); e-mail quando o envio esta ligado no servidor.
@@ -93,7 +98,35 @@ class ConfigState extends ChangeNotifier {
       for (final a in (data['avisos'] as List<dynamic>? ?? const []))
         if (a is Map<String, dynamic>) AvisoCentral.fromJson(a),
     ];
+    pracas = [
+      for (final p in (data['pracas'] as List<dynamic>? ?? const []))
+        if (p is Map && p['latitude'] is num && p['longitude'] is num)
+          (
+            nome: p['nome']?.toString() ?? '',
+            uf: p['uf']?.toString() ?? '',
+            centro: Coords((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()),
+          ),
+    ];
     // Endereco das imagens do mapa (padrao OpenStreetMap).
     MapaConfig.aplicar(data);
+  }
+
+  /// Centro da cidade do cadastro ("Goiatuba - GO"), se ela for uma praca.
+  Coords? centroDaCidade(String? cidade) {
+    if (cidade == null || cidade.trim().isEmpty) return null;
+    String limpo(String t) => t
+        .toLowerCase()
+        .replaceAll(RegExp('[áàâã]'), 'a')
+        .replaceAll(RegExp('[éê]'), 'e')
+        .replaceAll('í', 'i')
+        .replaceAll(RegExp('[óôõ]'), 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll(RegExp(r'[^a-z]'), '');
+    final alvo = limpo(cidade);
+    for (final p in pracas) {
+      if (limpo('${p.nome}${p.uf}') == alvo || limpo(p.nome) == alvo) return p.centro;
+    }
+    return null;
   }
 }

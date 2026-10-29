@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// some na compilacao: nao grava, nao imprime, nao muda nada.
 ///
 /// Cada evento sai uma vez no registro do Android como
-/// "MEDIDA <evento> <milissegundos desde o inicio do app>".
+/// `MEDIDA evento milissegundos` (milissegundos desde o inicio do app).
 class Medida {
   const Medida._();
 

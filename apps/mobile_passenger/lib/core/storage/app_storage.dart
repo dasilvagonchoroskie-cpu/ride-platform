@@ -13,6 +13,10 @@ class AppStorage {
   static const String configApp = 'ride.configApp';
   static const String avisoVisto = 'ride.avisoVisto';
 
+  /// Ultima posicao do GPS neste aparelho: o mapa abre nela na hora,
+  /// enquanto o GPS acerta (pedido do Evandro, 29/10/2026).
+  static const String ultimaPosicao = 'ride.ultimaPosicao';
+
   /// Conta dona dos dados guardados no aparelho (historico, destinos).
   static const String donoDosDados = 'ride.donoDosDados';
 
@@ -41,5 +45,6 @@ class AppStorage {
     await prefs.remove(recentPlaces);
     await prefs.remove(recentDestinations);
     await prefs.remove(donoDosDados);
+    await prefs.remove(ultimaPosicao);
   }
 }

@@ -43,9 +43,19 @@ class AppState extends ChangeNotifier {
   Coords coords = fallbackCoords;
   bool locationGranted = false;
 
-  /// true so quando o aparelho informou a posicao REAL. Ate la o mapa nao
-  /// abre — nada de cidade fixa na tela.
+  /// true quando o GPS deu a posicao AGORA (nesta abertura do app).
   bool localizacaoReal = false;
+
+  /// Mapa primeiro (pedido do Evandro, 29/10/2026: "o mapa deve aparecer
+  /// primeiro, com a ultima localizacao conhecida"). Enquanto o GPS acerta:
+  /// [posicaoGuardada] = a ultima posicao deste aparelho (guardada aqui ou
+  /// a do Android); [centroDaCidade] = so o centro da cidade do cadastro
+  /// (primeira vez, GPS sem sinal): o mapa abre, mas o embarque espera o GPS.
+  bool posicaoGuardada = false;
+  bool centroDaCidade = false;
+
+  /// Ja da para abrir o mapa.
+  bool get temPosicao => localizacaoReal || posicaoGuardada || centroDaCidade;
 
   /// Margem de erro da melhor leitura ate agora.
   double? accuracyMeters;
@@ -59,19 +69,13 @@ class AppState extends ChangeNotifier {
   bool get isDemo => dataSource != DataSource.api;
 
   Future<void> bootstrap() async {
-    final location = await _resolveLocation();
-    coords = location.coords;
-    locationGranted = location.granted;
-    accuracyMeters = location.accuracyMeters;
-    localizacaoReal = !location.mocked;
-    if (localizacaoReal) Medida.marcar('gps');
-
-    // A primeira leitura do GPS costuma vir torta — as vezes com centenas
-    // de metros de erro. Em vez de congelar nela, o aparelho segue
-    // ouvindo e so troca quando chega leitura MELHOR. Assim o ponto de
-    // embarque vai se acertando sozinho enquanto o passageiro digita o
-    // destino.
-    if (location.granted) _vigiarPosicao();
+    // 1) Abre na hora com a ultima posicao conhecida. Antes o app esperava
+    //    o GPS (ate 15 s dentro de casa) com a tela "Localizando voce".
+    final ultima = await _ultimaPosicaoConhecida();
+    if (ultima != null) {
+      coords = ultima;
+      posicaoGuardada = true;
+    }
 
     if (!AppConfig.hasApi) {
       dataSource = DataSource.demo;
@@ -103,6 +107,89 @@ class AppState extends ChangeNotifier {
 
     bootstrapped = true;
     notifyListeners();
+
+    // 2) O GPS acerta em segundo plano. A primeira leitura costuma vir torta
+    //    (centenas de metros): o aparelho segue ouvindo e so troca quando
+    //    chega leitura MELHOR — o embarque vai se acertando sozinho.
+    unawaited(_lerGps());
+  }
+
+  /// Sem posicao nenhuma ainda (primeira vez no aparelho e GPS sem sinal):
+  /// abre o mapa no centro da cidade do cadastro (vem do servidor).
+  void usarCentroDaCidade(Coords centro) {
+    if (temPosicao) return;
+    coords = centro;
+    centroDaCidade = true;
+    notifyListeners();
+  }
+
+  /// Espera a posicao do GPS (antes de calcular a corrida) ate [limite].
+  Future<bool> esperarGps(Duration limite) async {
+    final fim = DateTime.now().add(limite);
+    while (!localizacaoReal && DateTime.now().isBefore(fim)) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    return localizacaoReal;
+  }
+
+  /// Ultima posicao conhecida: a guardada pelo app ou a do Android, a mais
+  /// nova das duas. Nao liga o GPS (e instantaneo).
+  Future<Coords?> _ultimaPosicaoConhecida() async {
+    Coords? daqui;
+    DateTime? quando;
+    try {
+      final raw = await AppStorage.read(AppStorage.ultimaPosicao);
+      if (raw != null && raw.isNotEmpty) {
+        final m = jsonDecode(raw) as Map<String, dynamic>;
+        daqui = Coords((m['lat'] as num).toDouble(), (m['lng'] as num).toDouble());
+        quando = DateTime.tryParse(m['em'] as String? ?? '');
+      }
+    } catch (_) {
+      daqui = null;
+    }
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final p = await Geolocator.getLastKnownPosition().timeout(const Duration(seconds: 2));
+        if (p != null && (daqui == null || quando == null || p.timestamp.isAfter(quando))) {
+          return Coords(p.latitude, p.longitude);
+        }
+      }
+    } catch (_) {
+      // Sem a do Android: fica a guardada (ou nenhuma).
+    }
+    return daqui;
+  }
+
+  Future<void> _lerGps() async {
+    final r = await _resolveLocation();
+    locationGranted = r.granted;
+    if (!r.mocked) _usarLeitura(r.coords, r.accuracyMeters);
+    if (r.granted && _vigia == null) _vigiarPosicao();
+    notifyListeners();
+  }
+
+  void _usarLeitura(Coords c, double? precisao) {
+    coords = c;
+    accuracyMeters = precisao;
+    localizacaoReal = true;
+    centroDaCidade = false;
+    Medida.marcar('gps');
+    _guardarPosicao(c);
+  }
+
+  DateTime? _guardadaEm;
+
+  /// Guarda a posicao para a proxima abertura (no maximo 1 vez por minuto).
+  void _guardarPosicao(Coords c) {
+    final agora = DateTime.now();
+    final antes = _guardadaEm;
+    if (antes != null && agora.difference(antes) < const Duration(minutes: 1)) return;
+    _guardadaEm = agora;
+    unawaited(AppStorage.write(
+      AppStorage.ultimaPosicao,
+      jsonEncode({'lat': c.latitude, 'lng': c.longitude, 'em': agora.toIso8601String()}),
+    ));
   }
 
   void forceDemo() {
@@ -117,6 +204,9 @@ class AppState extends ChangeNotifier {
     destinosRecentes = [];
     await AppStorage.remove(AppStorage.recentPlaces);
     await AppStorage.remove(AppStorage.recentDestinations);
+    // A posicao guardada e da pessoa que estava usando o celular.
+    await AppStorage.remove(AppStorage.ultimaPosicao);
+    _guardadaEm = null;
     notifyListeners();
   }
 
@@ -142,16 +232,16 @@ class AppState extends ChangeNotifier {
   /// ficam liberados — e pelo botao "Tentar de novo".
   Future<void> atualizarLocalizacao() async {
     if (localizacaoReal) return;
-    final r = await _resolveLocation();
-    locationGranted = r.granted;
-    if (!r.mocked) {
-      coords = r.coords;
-      accuracyMeters = r.accuracyMeters;
-      localizacaoReal = true;
-      Medida.marcar('gps');
+    // Acabou de liberar a localizacao: a ultima posicao do Android ja abre o mapa.
+    if (!posicaoGuardada) {
+      final ultima = await _ultimaPosicaoConhecida();
+      if (ultima != null && !localizacaoReal) {
+        coords = ultima;
+        posicaoGuardada = true;
+        notifyListeners();
+      }
     }
-    if (r.granted && _vigia == null) _vigiarPosicao();
-    notifyListeners();
+    await _lerGps();
   }
 
   Future<LocationResult> _resolveLocation() async {
@@ -166,13 +256,14 @@ class AppState extends ChangeNotifier {
       if (!await Geolocator.isLocationServiceEnabled()) {
         return const LocationResult(coords: fallbackCoords, granted: false, mocked: true);
       }
-      // Com teto de tempo: dentro de casa o GPS pode demorar muito. Se nao
-      // vier, usa a ultima posicao conhecida e o vigia acerta depois.
+      // Com teto de tempo: dentro de casa o GPS pode demorar muito. A ultima
+      // posicao conhecida ja abriu o mapa; aqui so vale leitura nova. Sem
+      // sinal em 15 s, o vigia continua ouvindo e acerta depois.
       Position? position;
       try {
         position = await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
       } catch (_) {
-        position = await Geolocator.getLastKnownPosition();
+        position = null;
       }
       if (position == null) {
         return const LocationResult(coords: fallbackCoords, granted: true, mocked: true);
@@ -199,14 +290,11 @@ class AppState extends ChangeNotifier {
       ).listen((position) {
         final atual = accuracyMeters;
         // So aceita a leitura nova se ela for mais precisa que a que ja
-        // temos, ou se a antiga estiver velha demais para confiar.
-        final melhorou = atual == null || position.accuracy <= atual;
+        // temos (a primeira do GPS sempre entra).
+        final melhorou = !localizacaoReal || atual == null || position.accuracy <= atual;
         if (!melhorou) return;
 
-        coords = Coords(position.latitude, position.longitude);
-          localizacaoReal = true;
-        Medida.marcar('gps');
-        accuracyMeters = position.accuracy;
+        _usarLeitura(Coords(position.latitude, position.longitude), position.accuracy);
         notifyListeners();
       }, onError: (_) {});
     } catch (_) {

@@ -109,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Bussola automatica e centralizar (Evandro, 08/10/2026).
               minhaPosicao: driver.position,
               bussolaAutomatica: true,
+              recentrar: driver.recentrarMapa,
             ),
           ),
 

@@ -62,8 +62,18 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   Map<String, bool> permissoes = const {};
   bool? permissoesOk;
 
-  /// true so quando o aparelho informou a posicao REAL.
+  /// true quando o GPS deu a posicao AGORA (nesta abertura do app).
   bool posicaoReal = false;
+
+  /// Mapa primeiro (29/10/2026): a ultima posicao deste celular abre o mapa
+  /// na hora; o GPS acerta depois. O envio ao servidor e o taximetro usam so
+  /// a posicao do GPS ([posicaoReal]).
+  bool posicaoGuardada = false;
+  bool get temPosicao => posicaoReal || posicaoGuardada;
+
+  /// Sobe quando o GPS de verdade chega depois de o mapa abrir na posicao
+  /// guardada: o mapa vai ate o lugar certo.
+  int recentrarMapa = 0;
   StreamSubscription<Position>? _gps;
 
   // ---- Oferta recebida ----
@@ -193,6 +203,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (activeRide != null) await _lerTaximetro();
+    // Mapa primeiro: a ultima posicao guardada ja abre o mapa.
+    await _lerPosicaoGuardada();
 
     WidgetsBinding.instance.addObserver(this);
     // Recados do vigia nativo: chamado novo (busca agora) e corrida aceita
@@ -352,15 +364,63 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// motorista esta, nunca numa cidade fixa.
   Future<void> lerPosicaoInicial() async {
     if (posicaoReal) return;
+    // 1) A ultima posicao do Android abre o mapa na hora (sem ligar o GPS).
+    if (!posicaoGuardada) {
+      try {
+        final p = await Geolocator.getLastKnownPosition().timeout(const Duration(seconds: 2));
+        if (p != null && !posicaoReal) {
+          position = Coords(p.latitude, p.longitude);
+          posicaoGuardada = true;
+          notifyListeners();
+        }
+      } catch (_) {
+        // Sem a do Android: fica a guardada pelo app (se houver).
+      }
+    }
+    // 2) A posicao de agora, pelo GPS.
     try {
-      final p = await Geolocator.getLastKnownPosition() ??
-          await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
-      position = Coords(p.latitude, p.longitude);
-      posicaoReal = true;
-      Medida.marcar('gps');
+      final p = await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
+      if (!posicaoReal) _usarLeituraDoGps(Coords(p.latitude, p.longitude), p.accuracy);
       notifyListeners();
     } catch (_) {
-      // Sem sinal agora; a tela "Localizando" oferece tentar de novo.
+      // Sem sinal agora; com a posicao guardada o mapa ja esta aberto, e a
+      // tela "Localizando" (sem posicao nenhuma) oferece tentar de novo.
+    }
+  }
+
+  void _usarLeituraDoGps(Coords c, double? precisao) {
+    final eraGuardada = !posicaoReal && posicaoGuardada;
+    position = c;
+    positionAccuracy = precisao;
+    posicaoReal = true;
+    Medida.marcar('gps');
+    if (eraGuardada) recentrarMapa++;
+    _guardarPosicao(c);
+  }
+
+  DateTime? _posicaoGuardadaEm;
+
+  /// Guarda a posicao para a proxima abertura (no maximo 1 vez por minuto).
+  void _guardarPosicao(Coords c) {
+    final agora = DateTime.now();
+    final antes = _posicaoGuardadaEm;
+    if (antes != null && agora.difference(antes) < const Duration(minutes: 1)) return;
+    _posicaoGuardadaEm = agora;
+    unawaited(AppStorage.write(
+      AppStorage.ultimaPosicao,
+      jsonEncode({'lat': c.latitude, 'lng': c.longitude, 'em': agora.toIso8601String()}),
+    ));
+  }
+
+  Future<void> _lerPosicaoGuardada() async {
+    try {
+      final raw = await AppStorage.read(AppStorage.ultimaPosicao);
+      if (raw == null || raw.isEmpty) return;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      position = Coords((m['lat'] as num).toDouble(), (m['lng'] as num).toDouble());
+      posicaoGuardada = true;
+    } catch (_) {
+      // Copia corrompida: espera o GPS.
     }
   }
 
@@ -1138,9 +1198,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15),
       ).listen((p) {
         if (p.accuracy > 60) return; // leitura ruim demais: descarta
-        position = Coords(p.latitude, p.longitude);
-        posicaoReal = true;
-        positionAccuracy = p.accuracy;
+        _usarLeituraDoGps(Coords(p.latitude, p.longitude), p.accuracy);
         _naCorrida(position, p.accuracy);
         notifyListeners();
         _talvezMandarPosicao(p);
