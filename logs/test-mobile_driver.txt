@@ -15,8 +15,8 @@
 00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:01 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:01 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
-00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
+00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
 00:02 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
 00:02 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
@@ -26,13 +26,13 @@
 00:02 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
 00:02 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
 00:02 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Ja era motorista (reinstalou o app): segue para o veiculo
-00:03 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:03 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: E-mail de outra conta: mostra o motivo e NAO segue para o veiculo
+00:03 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: CPF de outra conta: mostra o motivo e NAO segue para o veiculo
+00:03 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Ja era motorista (reinstalou o app): segue para o veiculo
+00:03 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro aceito: manda o veiculo depois do motorista
 00:03 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:03 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
+00:04 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
 00:05 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 01 entrada, telefone e e-mail
 00:05 +34 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 04 termos, cadastro e em analise
 00:05 +34 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 07 inicio desconectado e conectado
@@ -65,8 +65,8 @@
 00:07 +55 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
 00:07 +56 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
 00:07 +57 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
-00:07 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
-00:08 +59 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
-00:08 +60 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: sem posicao guardada: espera o GPS (tela Localizando)
-00:08 +61 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: a posicao guardada some ao sair da conta
+00:07 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: SOS: botao de panico e 190/192
+00:07 +59 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: SOS: botao de panico e 190/192
+00:07 +60 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: SOS: botao de panico e 190/192
+00:08 +61 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: PIX Copia e Cola no padrao do Banco Central
 00:08 +62 ~7: All tests passed!
