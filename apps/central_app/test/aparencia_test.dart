@@ -62,9 +62,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Fortaleza Mov'), 'Goiatuba Mov');
     await tester.tap(find.text('Verde'));
-    await tester.tap(find.text('Faixa de aviso no Início'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, 'Feriado: corridas até 2h');
+    // A janela rola: no celular a chave da faixa fica mais para baixo.
+    await tester.ensureVisible(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    final campoDaFaixa = find.widgetWithText(TextField, 'Ex.: Feriado: corridas até as 2h da manhã');
+    await tester.ensureVisible(campoDaFaixa);
+    await tester.enterText(campoDaFaixa, 'Feriado: corridas até 2h');
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
