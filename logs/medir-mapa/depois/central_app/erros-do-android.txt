@@ -1,0 +1,5 @@
+10-29 13:00:19.994  6448  6539 I Google Maps Android API: Validating conditions for requesting maps_core feature. [CONTEXT service_id=71 ]
+10-29 13:00:20.005  6448  6539 I Google Maps Android API: Is maps_core feature installed? 2 [CONTEXT service_id=71 ]
+10-29 13:00:20.008  6448  6539 I Google Maps Android API: cutoffSize=2147483648, internalFreeBytes=5206319104
+10-29 13:00:20.009  6448  6539 I Google Maps Android API: Eligible to request maps_core feature. [CONTEXT service_id=71 ]
+10-29 13:00:20.020  6448  6539 I Google Maps Android API: maps_core feature request succeeded. [CONTEXT service_id=71 ]
