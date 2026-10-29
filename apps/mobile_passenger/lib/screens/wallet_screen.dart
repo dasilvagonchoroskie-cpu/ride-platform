@@ -106,10 +106,14 @@ class WalletScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      // Wrap: num celular estreito o selo desce para a linha de
+                      // baixo (na Row ele estourava a largura, pego no teste).
+                      Wrap(
+                        spacing: Spacing.sm,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text('Pagar pelo app', style: AppText.bodyStrong.copyWith(fontSize: 16)),
-                          const SizedBox(width: Spacing.sm),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(color: AppColors.brandSoft, borderRadius: BorderRadius.circular(Radii.pill)),
