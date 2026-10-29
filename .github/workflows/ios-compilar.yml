@@ -1,0 +1,103 @@
+name: Compilar para iPhone (sem publicar)
+
+# Etapa 8 (Evandro, 29/10/2026): "iPhone: so compilar no GitHub, sem
+# publicar". Nao ha Mac nem conta Apple: esta esteira, num Mac do GitHub
+# (gratis em repositorio publico), cria a pasta ios de cada app, compila
+# para iPhone SEM assinatura e guarda o resultado em logs/ios-<app>.txt.
+# Nada vai para a App Store.
+on:
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: 'Apps, separados por virgula'
+        required: false
+        default: 'mobile_passenger,mobile_driver,central_app'
+  schedule:
+    - cron: '17 9 * * 1'   # toda segunda, 06:17 em Brasilia
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.a.outputs.apps }}
+    steps:
+      - id: a
+        run: echo "apps=$(echo '${{ inputs.apps || 'mobile_passenger,mobile_driver,central_app' }}' | tr -d ' ' | jq -Rc 'split(",") | map(select(length>0))')" >> "$GITHUB_OUTPUT"
+
+  ios:
+    name: iPhone ${{ matrix.app }}
+    needs: preparar
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        app: ${{ fromJson(needs.preparar.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Criar a pasta ios (so nesta maquina)
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          set -eu
+          [ -d ios ] || flutter create --platforms=ios --org br.com.fortalezamov . > /dev/null
+          flutter pub get > /dev/null
+          # Gera o Podfile e acerta a versao minima (Google Maps pede iOS 15+).
+          flutter build ios --config-only --no-codesign > /dev/null 2>&1 || true
+          if [ -f ios/Podfile ]; then
+            sed -i '' "s/^# platform :ios, .*/platform :ios, '15.0'/" ios/Podfile
+            if ! grep -q "^platform :ios" ios/Podfile; then
+              { echo "platform :ios, '15.0'"; cat ios/Podfile; } > "$RUNNER_TEMP/Podfile" && mv "$RUNNER_TEMP/Podfile" ios/Podfile
+            fi
+          fi
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = 1[0-4].0;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj || true
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Para mostrar onde você está no mapa e chamar o carro.'" ios/Runner/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Para a foto de perfil e dos documentos.'" ios/Runner/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'Para escolher a foto de perfil e dos documentos.'" ios/Runner/Info.plist || true
+
+      - name: Compilar para iPhone (sem assinatura)
+        id: compilar
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/ios"
+          flutter pub get > /dev/null
+          if flutter build ios --release --no-codesign 2>&1 | tee "$RUNNER_TEMP/ios/saida.txt"; then
+            echo "ok=sim" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=nao" >> "$GITHUB_OUTPUT"
+          fi
+          du -sh build/ios/iphoneos/Runner.app 2>/dev/null | tee -a "$RUNNER_TEMP/ios/saida.txt" || true
+
+      - name: Guardar o relatorio
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs
+          {
+            echo "Compilacao para iPhone — ${{ matrix.app }} — $(date -u '+%d/%m/%Y %H:%M UTC') — commit ${GITHUB_SHA:0:7}"
+            echo "Resultado: ${{ steps.compilar.outputs.ok == 'sim' && 'COMPILOU (sem assinatura, nao publicado)' || 'NAO COMPILOU' }}"
+            echo
+            tail -n 60 "$RUNNER_TEMP/ios/saida.txt" 2>/dev/null || echo "(sem saida)"
+          } > "logs/ios-${{ matrix.app }}.txt"
+          git add "logs/ios-${{ matrix.app }}.txt"
+          git commit -m "relatorio: compilacao iPhone (${{ matrix.app }}) [skip ci]" || exit 0
+          for t in 1 2 3 4 5; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
+
+      - name: Falhar se nao compilou
+        if: steps.compilar.outputs.ok != 'sim'
+        run: exit 1
