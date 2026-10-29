@@ -121,9 +121,10 @@ for nome in ('r1', 'r2', 'r3'):
     # A primeira foto ainda e a tela inicial do Android (cheia de cores):
     # mapa visivel = muitas cores E diferente dessa primeira foto.
     regioes = [(t, regiao_do_mapa(c)) for t, c in lista]
-    base = regioes[0][1] if regioes else None
+    caminho_base = os.path.join(PASTA, 'fotos', f'{nome}-base.png')
+    base = regiao_do_mapa(caminho_base) if os.path.exists(caminho_base) else (regioes[0][1] if regioes else None)
     serie = [(t, cores(r), diferenca(r, base)) for t, r in regioes]
-    primeira_com_mapa = next((t for t, n, d in serie[1:] if n >= LIMIAR_CORES and d >= LIMIAR_DIFERENCA), None)
+    primeira_com_mapa = next((t for t, n, d in serie if n >= LIMIAR_CORES and d >= LIMIAR_DIFERENCA), None)
     p(f'== {NOMES[nome]} ==')
     p(f'  Android até o primeiro quadro (TotalTime): {seg(tempo_android(nome))}')
     for chave, texto in EVENTOS:

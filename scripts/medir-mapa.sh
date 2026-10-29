@@ -40,6 +40,8 @@ rodada() {
   local nome="$1" atraso="$2" t0 fim t am
   adb shell am force-stop "$PKG"
   sleep 2
+  # Foto de referencia: a tela do Android antes de abrir o app.
+  adb exec-out screencap -p > "$OUT/fotos/$nome-base.png" 2>/dev/null
   adb logcat -c
   t0=$(agora)
   echo "$t0" > "$OUT/$nome-inicio.txt"
