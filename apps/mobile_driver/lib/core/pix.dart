@@ -22,7 +22,7 @@ String pixCopiaECola({required String chave, required String nome, String cidade
       '${campo('52', '0000')}'
       '${campo('53', '986')}'
       '${campo('58', 'BR')}'
-      '${campo('59', limpar(nome.isEmpty ? 'FORTALEZA MOV' : nome, 25))}'
+      '${campo('59', limpar(nome.isEmpty ? 'FORTALEZA MOVE' : nome, 25))}'
       '${campo('60', limpar(cidade, 15))}'
       '${campo('62', campo('05', '***'))}'
       '6304';

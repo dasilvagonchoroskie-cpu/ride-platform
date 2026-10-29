@@ -115,7 +115,7 @@ if [ "$(echo "$A" | jq -r '.data.definida')" = "true" ]; then
   # Ja personalizada pela Central: grava de volta o mesmo (nao muda o app).
   X=$(put /admin/aparencia "$(echo "$A" | jq -c '.data | {nome, cor, bannerAtivo, bannerTexto}')" "$TA")
   # Igual ao padrao de fabrica (sobra de um teste antigo): volta ao padrao.
-  if [ "$(echo "$X" | jq -r '[.data.nome, .data.cor, .data.bannerAtivo, .data.logoId] | @json')" = '["Fortaleza Mov","#1E5BB8",false,null]' ]; then
+  if [ "$(echo "$X" | jq -r '[.data.nome, .data.cor, .data.bannerAtivo, .data.logoId] | @json')" = '["Fortaleza Move","#1E5BB8",false,null]' ]; then
     X=$(curl -s -m 90 -X DELETE "$API/admin/aparencia" -H "Authorization: Bearer $TA")
   fi
 fi
@@ -378,7 +378,7 @@ X=$(post /admin/passengers/excluir "{\"ids\":[\"$MUID\"]}" "$TA")
 X=$(post /admin/passengers/excluir "{\"ids\":[\"$PXID\"]}" "$TM"); sucesso "$X" && falha "Seguranca: motorista excluiu passageiro" "$X" || ok "Seguranca: so a Central exclui passageiro"
 
 # Excluir a propria conta (exigencia da Google Play, 09/10/2026).
-X=$(curl -s -m 60 "$API/conta/exclusao"); echo "$X" | grep -q "Excluir sua conta da Fortaleza Mov" && echo "$X" | grep -q '<form method="post"' && ok "Pagina publica de exclusao de conta no ar" || falha "Pagina de exclusao de conta" "$(echo "$X" | head -c 200)"
+X=$(curl -s -m 60 "$API/conta/exclusao"); echo "$X" | grep -q "Excluir sua conta da Fortaleza Move" && echo "$X" | grep -q '<form method="post"' && ok "Pagina publica de exclusao de conta no ar" || falha "Pagina de exclusao de conta" "$(echo "$X" | head -c 200)"
 X=$(curl -s -m 60 "$API/legal/privacidade"); echo "$X" | grep -q "<h1>" && echo "$X" | grep -qi "LGPD" && ok "Politica de privacidade em pagina de internet" || falha "Pagina da politica de privacidade" "$(echo "$X" | head -c 200)"
 TXX=$(entrar "+55649${SUF}84" PASSENGER)
 X=$(post /conta/excluir '{}' "$TXX"); sucesso "$X" && falha "Excluir conta sem confirmar deveria ser recusado" "$X" || ok "Seguranca: exclusao da conta pede confirmacao"

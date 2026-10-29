@@ -34,7 +34,7 @@ void main() {
   test('Central ainda nao mexeu: fica o nome e a cor da montagem', () {
     final mudou = Marca.aplicar({'definida': false, 'nome': 'Outro', 'cor': '#FF0000', 'banner': null, 'logoUrl': null});
     expect(mudou, isFalse);
-    expect(Marca.nome, 'Fortaleza Mov');
+    expect(Marca.nome, 'Fortaleza Move');
     expect(Marca.cor, AppColors.brand);
   });
 

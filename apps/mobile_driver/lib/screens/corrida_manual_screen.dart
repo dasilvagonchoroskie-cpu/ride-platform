@@ -93,7 +93,7 @@ class _CorridaManualScreenState extends State<CorridaManualScreen> {
   Future<void> _mandarApp() async {
     var so = _contato.text.replaceAll(RegExp(r'\D'), '');
     if (!so.startsWith('55')) so = '55$so';
-    final texto = 'Olá! Baixe o app Fortaleza Mov (passageiro) e crie sua conta com este telefone: '
+    final texto = 'Olá! Baixe o app Fortaleza Move (passageiro) e crie sua conta com este telefone: '
         '$linkDoAppDoPassageiro\nAs suas corridas comigo já vão aparecer no seu histórico.';
     final abriu = await launchUrl(
       Uri.parse('https://wa.me/$so?text=${Uri.encodeComponent(texto)}'),
@@ -138,7 +138,7 @@ class _CorridaManualScreenState extends State<CorridaManualScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.verified_user, color: AppColors.primary),
                   title: Text(_primeiroNome ?? 'Passageiro'),
-                  subtitle: const Text('Tem conta no Fortaleza Mov. A corrida vai aparecer no app dele.'),
+                  subtitle: const Text('Tem conta no Fortaleza Move. A corrida vai aparecer no app dele.'),
                 ),
               ),
               const SizedBox(height: Spacing.md),

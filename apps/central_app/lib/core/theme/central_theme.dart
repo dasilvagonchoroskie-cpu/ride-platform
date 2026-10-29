@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Identidade visual da Central — a MESMA dos aplicativos do passageiro e do
 /// motorista (Evandro, 09/10/2026: "deixar bonita que nem os aplicativos"):
 /// fundo cinza bem claro, cartoes brancos com sombra leve, azul do icone da
-/// Fortaleza Mov nas acoes e o dourado das asas nos detalhes.
+/// Fortaleza Move nas acoes e o dourado das asas nos detalhes.
 ///
 /// Os nomes das cores continuam os mesmos de antes (as telas nao mudam de
 /// codigo); so os valores trocaram do tema escuro para o claro.
@@ -23,7 +23,7 @@ class AppColors {
   /// Texto e icone por cima das cores fortes (botao azul, faixa vermelha).
   static const Color onPrimary = Color(0xFFFFFFFF);
 
-  // ---- Marca Fortaleza Mov: azul do icone + dourado das asas ----
+  // ---- Marca Fortaleza Move: azul do icone + dourado das asas ----
   static const Color brand = Color(0xFF1E5BB8);
   static const Color brandDark = Color(0xFF143E80);
   static const Color brandSoft = Color(0x1A1E5BB8);

@@ -22,10 +22,10 @@ describe('Verificacao em duas etapas (TOTP, Google Authenticator)', () => {
   });
 
   it('base32 vai e volta (o que o Google Authenticator digita)', () => {
-    const b = Buffer.from('ola fortaleza mov 123', 'utf8');
+    const b = Buffer.from('ola fortaleza move 123', 'utf8');
     expect(deBase32(base32(b)).equals(b)).toBe(true);
     expect(deBase32('gezd gnbv').toString()).toBe(deBase32('GEZDGNBV').toString());
-    expect(linkDoAutenticador('ABCD', 'dono@exemplo.com')).toContain('otpauth://totp/Fortaleza%20Mov%3Adono%40exemplo.com?secret=ABCD');
+    expect(linkDoAutenticador('ABCD', 'dono@exemplo.com')).toContain('otpauth://totp/Fortaleza%20Move%3Adono%40exemplo.com?secret=ABCD');
   });
 
   it('o segredo guardado vai cifrado e nao abre com outra chave nem alterado', () => {

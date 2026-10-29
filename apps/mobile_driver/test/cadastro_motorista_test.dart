@@ -126,7 +126,7 @@ void main() {
           'success': false,
           'error': {
             'code': 'CONTA_EXISTENTE',
-            'message': 'Voce ja tem conta na Fortaleza Mov com estes dados (telefone terminado em 6632).',
+            'message': 'Voce ja tem conta na Fortaleza Move com estes dados (telefone terminado em 6632).',
             'details': {'destino': 'telefone terminado em 6632'},
           },
         };

@@ -92,7 +92,7 @@ class _OtpScreenState extends State<OtpScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Conta nova'),
         content: Text(
-          'O número ${telefoneBonito(widget.phone)} ainda não tinha conta no Fortaleza Mov.\n\n'
+          'O número ${telefoneBonito(widget.phone)} ainda não tinha conta no Fortaleza Move.\n\n'
           'Se você já é motorista ou usa o app do passageiro, entre com o MESMO número de lá: '
           'a conta é a mesma para os dois aplicativos e o cadastro aprovado abre direto.',
         ),
@@ -143,7 +143,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 const SizedBox(height: Spacing.sm),
                 Text(
                   'Não chegou? Olhe também a caixa de Spam (lixo eletrônico). '
-                  'Nunca passe este código para ninguém: a Fortaleza Mov nunca pede o seu código.',
+                  'Nunca passe este código para ninguém: a Fortaleza Move nunca pede o seu código.',
                   style: AppText.caption.copyWith(color: AppColors.textMuted),
                 ),
               ],

@@ -59,7 +59,7 @@ fi
 
 X=$(get "/admin/drivers/$DID" "$TA")
 if [ "$(echo "$X" | jq -r '.data.status')" != "APPROVED" ]; then
-  X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conta de teste da Fortaleza Mov (conferencia presencial dispensada)."}' "$TA")
+  X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conta de teste da Fortaleza Move (conferencia presencial dispensada)."}' "$TA")
   echo "$X" | jq -e '.success == true' >/dev/null || erro "aprovacao da Central" "$X"
   diz "OK    aprovado pela Central"
 else

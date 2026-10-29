@@ -89,7 +89,7 @@ export function conferirTotp(segredo: Buffer, codigo: string, ms = Date.now()): 
 }
 
 /** Link que o Google Authenticator abre (otpauth://). */
-export function linkDoAutenticador(segredoB32: string, conta: string, emissor = 'Fortaleza Mov'): string {
+export function linkDoAutenticador(segredoB32: string, conta: string, emissor = 'Fortaleza Move'): string {
   const rotulo = encodeURIComponent(`${emissor}:${conta}`);
   return `otpauth://totp/${rotulo}?secret=${segredoB32}&issuer=${encodeURIComponent(emissor)}&algorithm=SHA1&digits=6&period=30`;
 }

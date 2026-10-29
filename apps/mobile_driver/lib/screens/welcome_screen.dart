@@ -39,7 +39,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const Text(
-                'MOV  -  MOTORISTA',
+                'MOVE  -  MOTORISTA',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppText.family,

@@ -15,8 +15,8 @@ bash scripts/novo-app.sh --operador goiatuba --nome "Goiatuba Mov" --cor "#12AB3
 - Ícones: PNG com fundo transparente (só o desenho). A esteira monta o ícone
   adaptativo com o símbolo a ~60% sobre `--fundo` (padrão #0070B8); no
   motorista o símbolo fica menor (50%) e centralizado. Sem ícone, fica o da
-  Fortaleza Mov.
-- `--api`: servidor do operador (padrão: o da Fortaleza Mov).
+  Fortaleza Move.
+- `--api`: servidor do operador (padrão: o da Fortaleza Move).
 - `--enviar`: grava no GitHub e roda a esteira **App de operador**.
 
 A esteira compila os dois APKs e confere dentro do APK o pacote e o nome que

@@ -1,4 +1,4 @@
-"""Sons proprios da Fortaleza Mov (sintetizados aqui, sem copiar nenhum som
+"""Sons proprios da Fortaleza Move (sintetizados aqui, sem copiar nenhum som
 de outro aplicativo): assobio de chamado, aviso curto e alerta de SOS."""
 import sys, wave
 import numpy as np

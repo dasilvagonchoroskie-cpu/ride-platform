@@ -31,7 +31,7 @@ class MenuScreen extends StatelessWidget {
     final contato = await driver.contatoCentral();
     await abrirWhatsApp(
       contato?.whatsapp,
-      'Olá! Sou o motorista ${driver.profile?.name ?? ''} da Fortaleza Mov e preciso de ajuda.',
+      'Olá! Sou o motorista ${driver.profile?.name ?? ''} da Fortaleza Move e preciso de ajuda.',
     );
   }
 

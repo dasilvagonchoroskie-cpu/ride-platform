@@ -442,7 +442,7 @@ class HourlyBarChart extends StatelessWidget {
   }
 }
 
-/// Logo redondo da Fortaleza Mov (icone da Central), com o aro azul e
+/// Logo redondo da Fortaleza Move (icone da Central), com o aro azul e
 /// dourado igual ao dos aplicativos do passageiro e do motorista.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.size = 44});

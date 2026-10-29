@@ -3,5 +3,5 @@
 class Marca {
   Marca._();
 
-  static const String nome = String.fromEnvironment('MARCA_NOME', defaultValue: 'Fortaleza Mov');
+  static const String nome = String.fromEnvironment('MARCA_NOME', defaultValue: 'Fortaleza Move');
 }

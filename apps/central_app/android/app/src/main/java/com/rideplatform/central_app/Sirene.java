@@ -88,7 +88,7 @@ public final class Sirene {
         } catch (Exception ignored) {
             // Alguns aparelhos no "Nao perturbe" total recusam: toca no volume que estiver.
         }
-        // Som proprio da Fortaleza Mov (alerta de SOS, res/raw/alerta.ogg): igual
+        // Som proprio da Fortaleza Move (alerta de SOS, res/raw/alerta.ogg): igual
         // em qualquer celular. O alarme do aparelho fica so de reserva.
         Uri[] sons = {
                 Uri.parse("android.resource://" + app.getPackageName() + "/" + R.raw.alerta),

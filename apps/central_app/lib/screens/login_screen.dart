@@ -107,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: AppText.display.copyWith(fontSize: 40, letterSpacing: -1.2),
                   ),
                   Text(
-                    'MOV  -  CENTRAL',
+                    'MOVE  -  CENTRAL',
                     textAlign: TextAlign.center,
                     style: AppText.label.copyWith(color: AppColors.brand, fontSize: 13, letterSpacing: 3, fontWeight: FontWeight.w700),
                   ),
@@ -407,7 +407,7 @@ class _SegundaEtapaState extends State<_SegundaEtapa> {
           Text(
             _recuperacao
                 ? 'Digite um dos códigos de recuperação que você guardou (ex.: ABCD-EFGH). Cada um vale uma vez.'
-                : 'Abra o Google Authenticator e digite o código de 6 números da Fortaleza Mov.',
+                : 'Abra o Google Authenticator e digite o código de 6 números da Fortaleza Move.',
             style: AppText.body.copyWith(color: AppColors.textMuted),
           ),
           const SizedBox(height: Spacing.md),

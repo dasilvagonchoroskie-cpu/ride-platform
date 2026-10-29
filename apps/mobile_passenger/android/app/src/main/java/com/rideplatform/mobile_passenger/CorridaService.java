@@ -392,7 +392,7 @@ public class CorridaService extends Service {
     private Notification avisoFixo(String texto) {
         return new NotificationCompat.Builder(this, CANAL_FIXO)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-                .setContentTitle("Fortaleza Mov — sua corrida")
+                .setContentTitle("Fortaleza Move — sua corrida")
                 .setContentText(texto)
                 .setOngoing(true)
                 .setContentIntent(abrirApp(1))

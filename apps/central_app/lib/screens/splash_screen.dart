@@ -28,7 +28,7 @@ class SplashScreen extends StatelessWidget {
             ),
             SizedBox(height: Spacing.xs),
             Text(
-              'MOV  -  CENTRAL',
+              'MOVE  -  CENTRAL',
               style: TextStyle(
                 fontFamily: AppText.family,
                 color: AppColors.brand,

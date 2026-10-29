@@ -18,7 +18,7 @@ class BotaoCompartilharViagem extends StatelessWidget {
     final estado = context.read<RideState>();
     final link = await estado.linkDeAcompanhar();
     if (link == null || !context.mounted) return;
-    final mensagem = 'Acompanhe a minha viagem na Fortaleza Mov, ao vivo no mapa: $link';
+    final mensagem = 'Acompanhe a minha viagem na Fortaleza Move, ao vivo no mapa: $link';
     await compartilharTexto(
       context,
       titulo: 'Compartilhar viagem',

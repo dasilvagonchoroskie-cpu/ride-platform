@@ -30,7 +30,7 @@ class _Item {
 const _itens = [
   // Aviso claro exigido pela Google Play para localizacao com o app fechado.
   _Item('localizacao', 'Localização',
-      'A Fortaleza Mov Motorista usa a sua localização para mandar corridas perto de você e mostrar ao passageiro onde o carro está — '
+      'A Fortaleza Move Motorista usa a sua localização para mandar corridas perto de você e mostrar ao passageiro onde o carro está — '
       'também com o aplicativo fechado ou a tela desligada, enquanto você estiver Disponível ou em corrida (fica um aviso fixo na barra do celular). '
       'Ao ficar Offline, para.'),
   _Item('gps', 'GPS do celular ligado',
@@ -144,7 +144,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
           Padding(
             padding: const EdgeInsets.only(top: Spacing.xs),
             child: Text(
-              'Em celulares Xiaomi, Redmi, Poco, Oppo, Vivo e Samsung: ligue o Fortaleza Mov em "Início automático" '
+              'Em celulares Xiaomi, Redmi, Poco, Oppo, Vivo e Samsung: ligue o Fortaleza Move em "Início automático" '
               'e deixe a bateria em "Sem restrições". Sem isso o aparelho fecha o aplicativo e o chamado não chega.',
               style: AppText.caption.copyWith(color: AppColors.textMuted),
             ),

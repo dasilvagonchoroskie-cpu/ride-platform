@@ -1,6 +1,6 @@
 # central_app
 
-Central administradora da plataforma Fortaleza Mov
+Central administradora da plataforma Fortaleza Move
 
 ## Getting Started
 

@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
-        android:label="Fortaleza Mov Central"
+        android:label="Fortaleza Move Central"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps: chave restrita aos 3 apps (pacote + SHA-1) e ao Maps SDK. -->

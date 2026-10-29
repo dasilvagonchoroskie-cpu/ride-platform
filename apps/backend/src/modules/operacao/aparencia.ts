@@ -20,7 +20,7 @@ export interface Aparencia {
 export const CHAVE_APARENCIA = 'aparencia';
 
 export const APARENCIA_PADRAO: Aparencia = {
-  nome: 'Fortaleza Mov',
+  nome: 'Fortaleza Move',
   // Azul da marca dos apps (AppColors.brand).
   cor: '#1E5BB8',
   bannerAtivo: false,

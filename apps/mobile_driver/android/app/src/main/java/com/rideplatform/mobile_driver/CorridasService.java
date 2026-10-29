@@ -599,7 +599,7 @@ public class CorridasService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CANAL_FIXO)
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-                .setContentTitle("Fortaleza Mov — disponível")
+                .setContentTitle("Fortaleza Move — disponível")
                 .setContentText(texto)
                 .setOngoing(true)
                 .setContentIntent(toque)

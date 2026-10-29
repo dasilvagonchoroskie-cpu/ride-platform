@@ -171,10 +171,10 @@ export class OtpService {
         userId: paraEmail,
         channel: NotificationChannel.EMAIL,
         to: paraEmail,
-        title: `${code} é o seu código Fortaleza Mov`,
+        title: `${code} é o seu código Fortaleza Move`,
         body:
-          `Seu código de acesso Fortaleza Mov é ${code}. Ele vale por ${minutos} minutos.\n\n` +
-          'Não passe este código para ninguém. A Fortaleza Mov nunca pede o seu código por telefone, WhatsApp ou mensagem.\n' +
+          `Seu código de acesso Fortaleza Move é ${code}. Ele vale por ${minutos} minutos.\n\n` +
+          'Não passe este código para ninguém. A Fortaleza Move nunca pede o seu código por telefone, WhatsApp ou mensagem.\n' +
           'Se não foi você que pediu, ignore este e-mail: sem o código ninguém entra na sua conta.',
         data: { html: htmlDoCodigo(code, minutos) },
       });
@@ -235,11 +235,11 @@ export class OtpService {
 /** E-mail simples, legivel no celular, com o codigo bem grande. */
 function htmlDoCodigo(code: string, minutos: number): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#14181F">
-  <div style="background:#1E5BB8;color:#fff;font-size:22px;font-weight:bold;padding:14px 20px;border-radius:999px;display:inline-block">Fortaleza Mov</div>
+  <div style="background:#1E5BB8;color:#fff;font-size:22px;font-weight:bold;padding:14px 20px;border-radius:999px;display:inline-block">Fortaleza Move</div>
   <p style="font-size:17px;margin-top:24px">Seu código de acesso:</p>
   <p style="font-size:40px;font-weight:bold;letter-spacing:8px;margin:8px 0;color:#1E5BB8">${code}</p>
   <p style="font-size:15px;color:#667085">Ele vale por ${minutos} minutos.</p>
-  <p style="font-size:15px;color:#B42318;font-weight:bold">Não passe este código para ninguém. A Fortaleza Mov nunca pede o seu código por telefone, WhatsApp ou mensagem.</p>
+  <p style="font-size:15px;color:#B42318;font-weight:bold">Não passe este código para ninguém. A Fortaleza Move nunca pede o seu código por telefone, WhatsApp ou mensagem.</p>
   <p style="font-size:14px;color:#667085">Se não foi você que pediu, ignore este e-mail: sem o código ninguém entra na sua conta.</p>
 </div>`;
 }

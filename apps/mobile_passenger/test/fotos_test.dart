@@ -127,7 +127,7 @@ Object? _resposta(String metodo, String caminho, Map<String, dynamic>? corpo) {
         'cidades': ['Goiatuba - GO', 'Bom Jesus de Goiás - GO'],
         'whatsapp': '+5564999991234',
         'avisos': [
-          {'id': 'a1', 'titulo': 'Bem-vindo à Fortaleza Mov', 'texto': 'Corridas com motoristas da cidade, preço justo e segurança.', 'criadoEm': '2026-10-09T12:00:00.000Z'},
+          {'id': 'a1', 'titulo': 'Bem-vindo à Fortaleza Move', 'texto': 'Corridas com motoristas da cidade, preço justo e segurança.', 'criadoEm': '2026-10-09T12:00:00.000Z'},
         ],
         'pracas': [],
       };
@@ -192,7 +192,7 @@ Object? _resposta(String metodo, String caminho, Map<String, dynamic>? corpo) {
       return {
         'version': '2026-10-01',
         'title': caminho.endsWith('terms') ? 'Termos de Uso' : 'Política de Privacidade',
-        'content': 'Ao usar a Fortaleza Mov você concorda com estas regras.\n\n1. A corrida é paga direto ao motorista.\n2. Seus dados são usados só para a corrida e a sua segurança.',
+        'content': 'Ao usar a Fortaleza Move você concorda com estas regras.\n\n1. A corrida é paga direto ao motorista.\n2. Seus dados são usados só para a corrida e a sua segurança.',
       };
   }
   if (caminho.endsWith('/messages')) return {'podeEscrever': true, 'items': <Object>[]};

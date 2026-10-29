@@ -297,7 +297,7 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(tester.getTopLeft(find.text('Fortaleza Mov')).dy, lessThan(120));
+    expect(tester.getTopLeft(find.text('Fortaleza Move')).dy, lessThan(120));
     expect(find.byIcon(Icons.confirmation_number), findsOneWidget);
     expect(find.byIcon(Icons.notifications), findsOneWidget);
     expect(find.byTooltip('Minha localização'), findsOneWidget);

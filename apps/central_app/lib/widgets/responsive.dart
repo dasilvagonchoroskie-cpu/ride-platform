@@ -190,7 +190,7 @@ class _DrawerHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'MOV  -  CENTRAL',
+                  'MOVE  -  CENTRAL',
                   style: AppText.label.copyWith(color: AppColors.gold, fontSize: 11, letterSpacing: 2.4, fontWeight: FontWeight.w700),
                 ),
               ],

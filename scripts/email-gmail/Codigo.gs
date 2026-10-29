@@ -1,5 +1,5 @@
 /**
- * Fortaleza Mov — envia os codigos de acesso pelo Gmail (gratis).
+ * Fortaleza Move — envia os codigos de acesso pelo Gmail (gratis).
  *
  * O servidor (Render) chama este script por HTTPS; o script manda o e-mail
  * pela conta Google em que ele foi publicado. Sem SMTP (o plano gratis do
@@ -22,9 +22,9 @@ function doPost(e) {
     if (!d || d.segredo !== SEGREDO) return saida({ ok: false, erro: 'segredo' });
     const para = String(d.para || '').trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(para)) return saida({ ok: false, erro: 'para' });
-    const opcoes = { name: String(d.nome || 'Fortaleza Mov').slice(0, 60) };
+    const opcoes = { name: String(d.nome || 'Fortaleza Move').slice(0, 60) };
     if (d.html) opcoes.htmlBody = String(d.html);
-    MailApp.sendEmail(para, String(d.assunto || 'Fortaleza Mov').slice(0, 200), String(d.texto || ''), opcoes);
+    MailApp.sendEmail(para, String(d.assunto || 'Fortaleza Move').slice(0, 200), String(d.texto || ''), opcoes);
     return saida({ ok: true, restantes: MailApp.getRemainingDailyQuota() });
   } catch (err) {
     return saida({ ok: false, erro: String(err).slice(0, 300) });
@@ -33,7 +33,7 @@ function doPost(e) {
 
 /** Abrir a URL no navegador mostra se o script esta no ar. */
 function doGet() {
-  return saida({ ok: true, servico: 'Fortaleza Mov - e-mail', restantes: MailApp.getRemainingDailyQuota() });
+  return saida({ ok: true, servico: 'Fortaleza Move - e-mail', restantes: MailApp.getRemainingDailyQuota() });
 }
 
 function saida(o) {

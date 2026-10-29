@@ -63,7 +63,7 @@ export function pagina(titulo: string, corpo: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapar(titulo)} — Fortaleza Mov</title>
+<title>${escapar(titulo)} — Fortaleza Move</title>
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.55;
@@ -82,10 +82,10 @@ export function pagina(titulo: string, corpo: string): string {
 </style>
 </head>
 <body>
-<header><strong>Fortaleza Mov</strong></header>
+<header><strong>Fortaleza Move</strong></header>
 <main>
 ${corpo}
-<p class="fraco">Fortaleza Mov — Goiatuba (GO). Contato: fortalezadigitalsecurity@gmail.com</p>
+<p class="fraco">Fortaleza Move — Goiatuba (GO). Contato: fortalezadigitalsecurity@gmail.com</p>
 </main>
 </body>
 </html>`;
