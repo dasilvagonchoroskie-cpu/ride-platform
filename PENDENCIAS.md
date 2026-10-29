@@ -1,26 +1,26 @@
 # PENDÊNCIAS — Fortaleza Mov
 
-Atualizado em 29/10/2026 (tarde), etapa 2 (mapa e desempenho) do "Pedido de atualização da plataforma" + troca do mapa para a TomTom (montagem 242).
+Atualizado em 29/10/2026 (tarde), etapa 2 (mapa e desempenho) do "Pedido de atualização da plataforma" + troca do mapa para a TomTom (montagem 244).
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**. Fica atualizado a cada etapa.
 
 Legenda: **[REAL]** testado de verdade (servidor real ou aparelho real) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
 
 ---
 
-## 1. Resultado real dos testes (29/10/2026, tarde — montagem 242, mapa TomTom)
+## 1. Resultado real dos testes (29/10/2026, tarde — montagens 242 e 244, mapa TomTom)
 
 | O quê | Resultado | Onde ver |
 |---|---|---|
 | Servidor: compilação TypeScript | 0 erros | rodado aqui (`tsc --noEmit`) |
 | Servidor: testes automáticos | 47 passaram, 0 falharam (7 grupos; novo: tomtom.spec) | rodado aqui (`jest`) |
-| App do passageiro: análise | nenhum problema | logs/analyze-mobile_passenger.txt (montagem 242) |
+| App do passageiro: análise | nenhum problema | logs/analyze-mobile_passenger.txt (montagem 244; igual na 242) |
 | App do passageiro: testes de tela | 55 passaram, 0 falharam, 12 pulados (fotos de tela, que rodam em outra esteira) | logs/test-mobile_passenger.txt |
 | App do motorista: análise | nenhum problema | logs/analyze-mobile_driver.txt |
 | App do motorista: testes de tela | 62 passaram, 0 falharam, 7 pulados (fotos) | logs/test-mobile_driver.txt |
 | Central: análise | nenhum problema | logs/analyze-central_app.txt |
 | Central: testes de tela | 38 passaram, 0 falharam, 1 pulado (fotos) | logs/test-central_app.txt |
 | Teste de ponta a ponta no servidor real (execução 60, já com a TomTom) | 256 etapas, 0 falhas | logs/teste-ponta-a-ponta.txt |
-| APKs 242 conferidos por dentro | versão 1.0.242, alvo 36, mínimo 24, mesma assinatura (SHA-1 F2:70:…:96:C3), mesmas permissões da 241; a chave da TomTom NÃO está dentro; nenhum endereço do OpenStreetMap | rodado aqui |
+| APKs 244 conferidos por dentro | versão 1.0.244, alvo 36, mínimo 24, mesma assinatura (SHA-1 F2:70:…:96:C3), mesmas permissões da 241; a chave da TomTom NÃO está dentro (procurada byte a byte); nenhum endereço do OpenStreetMap | rodado aqui |
 | Medição do mapa num Android de teste (esteira "Medir o mapa") | antes e depois, 3 aberturas por app (seção 4) | logs/medir-mapa/ |
 | Falhas de segurança nas bibliotecas do servidor (`pnpm audit`) | 5: 1 alta (zod), 4 moderadas (qs, file-type ×2, @nestjs/core) — corrigir na etapa 7 | rodado aqui |
 
@@ -57,7 +57,7 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo 
 
 ## 3. O que já existe para cada parte do pedido (para não refazer)
 
-- **A) Mapa:** flutter_map com imagens da **TomTom** nos 3 apps (desde 29/10, montagem 242), atrás da interface `MapProvider`; endereço das imagens com a chave só com login (`/geo/mapa`); guardado de 200 MB. Google Maps continua no código, desligado (o servidor liga com `MAPA_PROVEDOR=google` quando houver a chave).
+- **A) Mapa:** flutter_map com imagens da **TomTom** nos 3 apps (desde 29/10, montagem 244), atrás da interface `MapProvider`; endereço das imagens com a chave só com login (`/geo/mapa`); guardado de 200 MB. Google Maps continua no código, desligado (o servidor liga com `MAPA_PROVEDOR=google` quando houver a chave).
 - **B) Destino e busca:**
   - JÁ TEM: pino fixo no centro ("Marcar no mapa") com uma consulta 0,7 s depois de parar; busca digitada com mínimo de 3 letras ÚTEIS (rua/av./travessa não contam) e espera de 0,5 s (desde 29/10); 1 rota por etapa da corrida (desde 29/10); busca passando pelo servidor (`/geo/search`, `/geo/reverse`, `/geo/rota`); viés pela posição; preço final calculado no servidor; motoristas favoritos.
   - FALTA: "Não informar destino", parada extra, "Meus favoritos" de endereço; o Confirmar ainda libera enquanto o endereço é buscado (vai como "Ponto marcado no mapa") e não tem Editar; não tem token de sessão; fonte da busca por cidade e base própria de ruas no PostGIS.
@@ -111,11 +111,11 @@ A Central **não mudou nesta etapa** (já não esperava o GPS); a diferença é 
 
 ---
 
-## 5. Troca do mapa para a TomTom (29/10/2026, montagem 242)
+## 5. Troca do mapa para a TomTom (29/10/2026, montagens 242–244)
 
 **Pedido do Evandro (10:59):** mapa, busca e rotas pela TomTom; interface MapProvider; economia (3+ letras, 500 ms, guardado, 1 rota por corrida, guardado de imagens); posição pelo FusedLocationProvider; contador diário local; contingência para 429/403 com "Abrir no Google Maps"; tirar o OpenStreetMap público. Respostas: APIs web da TomTom dentro dos apps Flutter atuais (não o SDK nativo Kotlin), busca e rota pelo servidor, chave entregue pelo servidor a quem está logado.
 
-**Onde está a chave:** só na variável `TOMTOM_API_KEY` do Render e no `.env` do computador do Claude (fora do Git: `.env` e `local.properties` estão no `.gitignore`). Conferido: não está no código, nos testes, nos registros, no histórico do Git nem dentro dos APKs 242.
+**Onde está a chave:** só na variável `TOMTOM_API_KEY` do Render e no `.env` do computador do Claude (fora do Git: `.env` e `local.properties` estão no `.gitignore`). Conferido: não está no código, nos testes, nos registros, no histórico do Git nem dentro dos APKs 242 e 244.
 
 | O quê | Situação |
 |---|---|
@@ -150,4 +150,4 @@ A Central **não mudou nesta etapa** (já não esperava o GPS); a diferença é 
 
 Comparando com o OpenStreetMap (montagem 241, seção 4): passageiro 4,3 / 2,6 / 1,9 s até as ruas → 4,1 / 3,0 / 2,0 s com a TomTom (praticamente igual; na 1ª abertura a TomTom ainda pede o endereço das imagens ao servidor, /geo/mapa, 0,2 a 1 s). Central 3,1 / 2,1 / 1,8 s → 4,0 / 2,9 / 2,5 s (um pouco mais lenta nesta rodada; a rede do emulador varia ~1 s entre rodadas). Motorista: a 1ª abertura sem posição nenhuma continua esperando o GPS (igual antes).
 
-**APKs antigos (até 241):** não acham mais o endereço das imagens no /app/config e continuam com o mapa antigo (OpenStreetMap) até instalar a 242.
+**APKs antigos (até 241):** não acham mais o endereço das imagens no /app/config e continuam com o mapa antigo (OpenStreetMap) até instalar a 244.
