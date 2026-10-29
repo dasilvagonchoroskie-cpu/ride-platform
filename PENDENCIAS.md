@@ -1,71 +1,67 @@
 # PENDÊNCIAS — Fortaleza Mov
 
-Atualizado em 29/10/2026 (tarde), etapa 2 (mapa e desempenho) do "Pedido de atualização da plataforma" + troca do mapa para a TomTom (montagem 244).
+Atualizado em 29/10/2026 (noite): etapas 3 a 8 do "Pedido de atualização da plataforma" + aceleração do mapa da TomTom (montagem 256).
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**. Fica atualizado a cada etapa.
 
-Legenda: **[REAL]** testado de verdade (servidor real ou aparelho real) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
+Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou esteira) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
 
 ---
 
-## 1. Resultado real dos testes (29/10/2026, tarde — montagens 242 e 244, mapa TomTom)
+## 1. Resultado real dos testes (29/10/2026, noite)
 
 | O quê | Resultado | Onde ver |
 |---|---|---|
 | Servidor: compilação TypeScript | 0 erros | rodado aqui (`tsc --noEmit`) |
-| Servidor: testes automáticos | 47 passaram, 0 falharam (7 grupos; novo: tomtom.spec) | rodado aqui (`jest`) |
-| App do passageiro: análise | nenhum problema | logs/analyze-mobile_passenger.txt (montagem 244; igual na 242) |
-| App do passageiro: testes de tela | 55 passaram, 0 falharam, 12 pulados (fotos de tela, que rodam em outra esteira) | logs/test-mobile_passenger.txt |
-| App do motorista: análise | nenhum problema | logs/analyze-mobile_driver.txt |
-| App do motorista: testes de tela | 62 passaram, 0 falharam, 7 pulados (fotos) | logs/test-mobile_driver.txt |
-| Central: análise | nenhum problema | logs/analyze-central_app.txt |
-| Central: testes de tela | 38 passaram, 0 falharam, 1 pulado (fotos) | logs/test-central_app.txt |
-| Teste de ponta a ponta no servidor real (execução 60, já com a TomTom) | 256 etapas, 0 falhas | logs/teste-ponta-a-ponta.txt |
-| APKs 244 conferidos por dentro | versão 1.0.244, alvo 36, mínimo 24, mesma assinatura (SHA-1 F2:70:…:96:C3), mesmas permissões da 241; a chave da TomTom NÃO está dentro (procurada byte a byte); nenhum endereço do OpenStreetMap | rodado aqui |
-| Medição do mapa num Android de teste (esteira "Medir o mapa") | antes e depois, 3 aberturas por app (seção 4) | logs/medir-mapa/ |
-| Falhas de segurança nas bibliotecas do servidor (`pnpm audit`) | 5: 1 alta (zod), 4 moderadas (qs, file-type ×2, @nestjs/core) — corrigir na etapa 7 | rodado aqui |
+| Servidor: testes automáticos | 63 passaram, 0 falharam (10 grupos) | rodado aqui (`jest`) |
+| App do passageiro: análise / testes de tela | nenhum problema / 69 passaram, 0 falharam, 12 pulados (fotos de tela, outra esteira) | logs/analyze-mobile_passenger.txt, logs/test-mobile_passenger.txt |
+| App do motorista: análise / testes de tela | nenhum problema / 68 passaram, 0 falharam, 7 pulados (fotos) | logs/analyze-mobile_driver.txt, logs/test-mobile_driver.txt |
+| Central: análise / testes de tela | nenhum problema / 44 passaram, 0 falharam, 1 pulado (fotos) | logs/analyze-central_app.txt, logs/test-central_app.txt |
+| Teste de ponta a ponta no servidor real | **283 etapas, 0 falhas** (29/10, 22:21 UTC; servidor com as etapas 3, 6 e 7 no ar) | logs/teste-ponta-a-ponta.txt |
+| iPhone: compilar os 3 apps (sem assinar, sem publicar) | os 3 compilaram (Xcode, ~41 MB cada) | logs/ios-*.txt |
+| App de outro operador ("exemplo") | passageiro e motorista compilados; dentro do APK: pacote br.com.exemplomov.teste.passageiro / .motorista e nome "Exemplo Mov" / "Exemplo Mov Motorista" | logs/operadores/exemplo/ |
+| Mapa no 4G fraco (Android de teste, antes x depois) | seção 6 | logs/medir-mapa/4g-antes, 4g-depois, 4g-final |
+| APKs 256 conferidos por dentro | versão 1.0.256, alvo 36, mínimo 24, mesma assinatura (SHA-1 F2:70:…:96:C3), mesmas permissões da 244; a chave da TomTom NÃO está dentro (procurada byte a byte); as telas novas estão compiladas dentro (conferido pelos textos) | rodado aqui |
+| `pnpm audit --prod` | 4 (1 alta zod, 3 moderadas Nest/file-type) — a do qs foi corrigida | rodado aqui |
 
-Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo que é Flutter (análise, testes, APK, AAB) roda no GitHub Actions (esteira `android-apks.yml`, Flutter 3.47.5), que já existe e funciona.
+Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo que é Flutter roda no GitHub Actions.
 
 ---
 
 ## 2. Riscos em ordem (maior primeiro)
 
-1. **Pagamento com cartão — [NÃO EXISTE].** Hoje o passageiro paga direto ao motorista (dinheiro, Pix ou maquininha) e a comissão sai da carteira pré-paga do motorista. **O app do passageiro NÃO tem "Meus Cartões"**: o menu mostra "Pagamento: Direto ao motorista". Nenhum gateway, nenhuma tokenização, nenhum webhook. Gateway exige CNPJ (ainda não tem).
-2. **Chamado com a tela apagada / app fechado — [AUTO].** O vigia nativo e a tela cheia do chamado foram testados só com testes automáticos e na montagem; falta o teste de rua com dois celulares.
-3. **Notificação push chegando no celular — [SEM TESTE] no aparelho.** O servidor aceita a chave do Firebase (verificado no /api/health em todo teste de ponta a ponta), mas a entrega no celular não tem teste automático.
-4. **GPS na rua, taxímetro e posição — [AUTO].** Envio de posição no máximo a cada 4 s (desde 23/10) testado só com leituras de mentira. Desde a montagem 241 o mapa abre na última posição guardada e o GPS acerta depois: o embarque espera o GPS até 10 s antes de calcular a corrida; testado no emulador, falta na rua.
-5. **Cota grátis da TomTom é POR MÊS, não por dia — [REAL no servidor].** Busca, endereço e rota: 20 mil cada por mês; busca de lugares com nome: 2,5 mil; imagens do mapa: 200 mil. Passando, a TomTom responde 429 e o app mostra a contingência ("Abrir no Google Maps"). O servidor conta tudo (Central → Configurações → Mapa) e entra em economia a 80% da parte do dia; as imagens saem direto do celular e só o contador local de cada celular as vê. Com muitos passageiros, as **imagens** tendem a acabar primeiro (cada abertura do mapa sem guardado baixa algumas dezenas; reaberturas usam o guardado do celular).
-6. **Chave da TomTom chega ao celular de quem está logado — [REAL].** Necessário para o celular baixar as imagens; não está no APK nem no Git, sai do celular ao sair da conta, e sem login o servidor recusa (teste de ponta a ponta confere o 401). Quem tiver uma conta e um celular com root consegue ler a chave. **Proteção que falta (o Evandro faz no painel da TomTom):** restringir a chave aos apps/domínio e pôr alerta de uso. Trocar a chave no Render troca em todos os celulares sem APK novo.
-7. **Termos da TomTom sobre guardar dados — [SEM TESTE].** O servidor guarda busca 3 dias, endereço 7 dias e rota 1 dia; o celular guarda imagens (200 MB). Não conferi se o plano grátis da TomTom permite guardar por esse tempo; se não permitir, basta baixar os prazos (variáveis no código do servidor).
-8. **Mapa num celular de verdade — [SEM TESTE].** A TomTom foi testada no servidor real (busca, endereço, rota, imagens com login) e no Android de teste (seção 5); falta o teste de rua em Goiatuba.
-9. **Administrador sem verificação em duas etapas — [NÃO EXISTE].** Entra com senha (ou código por e-mail). Ele controla todas as cidades e o dinheiro.
-10. **Dependências do servidor:** zod (alta: consumo de memória com listas enormes; a correção só existe no zod 4, troca grande — hoje mitigado pelo limite de 4 MB por pedido), qs (moderada, corrige sem risco), file-type e @nestjs/core (moderadas; só com o Nest 11).
-11. **Operador sem troca de senha obrigatória no 1º acesso — [NÃO EXISTE].** O dono define a senha e ela vale direto.
-12. **Isolamento entre cidades — [REAL].** O teste de ponta a ponta cria um operador de Goiatuba e confere que ele vê só a cidade dele (visão geral, carteiras, relatório), não muda tarifas e não acessa a limpeza de dados. Falta teste dedicado de "operador tenta abrir dado de outra cidade pelo endereço direto" (etapa 7).
-13. **Endereços recentes/favoritos do passageiro — ficam SÓ NO CELULAR.** Não existe histórico de endereços no servidor nem lixeira que apague no servidor (etapa 4). O histórico de CORRIDAS fica no servidor e é só da conta [REAL].
-14. **"Excluir minha conta" — [REAL].** O teste de ponta a ponta exclui a conta do passageiro pelo app e confere que ela não entra mais; ao excluir um motorista, o histórico de corridas do passageiro continua. Ainda não existe "Apagar tudo" separado; cartões não existem.
-15. **Banco grátis de 500 MB com as fotos dentro.** Aperta perto de 250–300 motoristas com documentos.
-16. **E-mail só pelo Gmail (~100 por dia).** A Brevo (reserva grátis) ainda não tem conta.
-17. **Aparência pela Central (logo, cores, nome, banner) — [NÃO EXISTE].**
-18. **Ícones novos — não recebidos.** No repositório estão os ícones atuais (assets/icones/fortaleza-mov-*.png). Os arquivos central.png, motorista.png, passageiro.png e os 3 *-simbolo.png ainda não chegaram.
-19. **Flavors por operador e script de app novo — [NÃO EXISTE].** iOS: não existe a pasta ios nos apps e não dá para compilar iOS sem Mac e conta Apple.
-20. **Itumbiara no cadastro de operador.** Está cadastrada (o teste de hoje vê as 6 cidades: Goiatuba, Teutônia, Bom Jesus de Goiás, Buriti Alegre, Joviânia, Itumbiara). Na janela "Novo operador" ela é a última da lista: suspeita de rolagem; confirmar com teste de tela na etapa 7.
-21. **Cópia do banco — [REAL].** Cópia diária criptografada funcionando (19 cópias, a última em 28/10). A restauração foi testada só com cópia de teste, não num banco de verdade.
-22. **Documentação de contas e hospedagem — falta** (etapa 7). Já conferido hoje: o Render está na conta dasilvagonchoroskie@gmail.com; o conector do Supabase usado pelo Claude está ligado na conta gestaodefrota2027@gmail.com (só o projeto da frota) e **não alcança o banco da Fortaleza Mov** (projeto fortaleza-mov-eua). O servidor continua acessando o banco normalmente.
+1. **Chamado com a tela apagada / app fechado — [AUTO].** Falta o teste de rua com dois celulares.
+2. **Notificação push chegando no celular — [SEM TESTE] no aparelho.** O servidor aceita a chave do Firebase (conferido em todo ponta a ponta).
+3. **GPS na rua, taxímetro e posição — [AUTO].** Falta corrida de rua.
+4. **Mapa num celular de verdade em Goiatuba — [SEM TESTE].** Medido só no Android de teste, inclusive com 4G fraco simulado (seção 6).
+5. **Cota grátis da TomTom é POR MÊS — [REAL no servidor].** E a TomTom aceita só ~10 imagens por segundo para a chave inteira (plataforma toda): os apps agora vão no ritmo (seção 6). Com muitos passageiros abrindo o mapa ao mesmo tempo, alguns esperam 1–2 s pelas ruas (nunca ficam em branco: tentam de novo).
+6. **Chave da TomTom chega ao celular de quem está logado — [REAL].** Falta (Evandro, no painel da TomTom): restringir a chave e pôr alerta de uso.
+7. **Verificação em duas etapas da Central — [REAL], mas DESLIGADA na conta do dono.** Testada de ponta a ponta na conta do operador de teste (seção 7). O Evandro liga em Central → Configurações ("Settings") → Segurança.
+8. **Termos da TomTom sobre guardar dados — [SEM TESTE].** Prazos no servidor: busca 3 dias, endereço 7, rota 1; celular guarda imagens (200 MB).
+9. **Restauração da cópia do banco num banco de verdade — [SEM TESTE].** Precisa da chave privada da cópia, que só o Evandro tem (procedimento em docs/CONTAS.md).
+10. **Dependências do servidor:** zod (alta, só no zod 4; mitigado pelo limite de 4 MB por pedido), @nestjs/core e file-type (moderadas, só com o Nest 11). Troca grande: só com autorização.
+11. **Pagamento com cartão — [NÃO EXISTE], por decisão.** "Meus cartões" mostra só "Em breve"; nenhum número de cartão é digitado ou guardado; pagamento direto ao motorista.
+12. **Banco grátis de 500 MB com as fotos dentro.** Aperta perto de 250–300 motoristas com documentos.
+13. **E-mail só pelo Gmail (~100 por dia).** A Brevo (reserva grátis) ainda não tem conta.
+14. **Ícones novos — não recebidos.** O gerador está pronto (scripts/gerar-icones.py: símbolo a ~60% sobre #0070B8; motorista 50% e centralizado; ícone 512 da loja). Falta o Evandro mandar os símbolos (PNG com fundo transparente).
+15. **20 ruas de Goiatuba para o teste da busca — não recebidas.** A busca real foi testada com "Avenida Brasília" e com o endereço do GPS.
+16. **App de outro operador — [REAL na esteira].** Compila e confere pacote e nome; o aviso push e a loja ficam com o operador (registrar os pacotes no Firebase; conta na Play).
+17. **iPhone — [REAL na esteira], só compila.** Sem assinatura, sem conta Apple, sem publicar (decisão do Evandro).
 
 ---
 
-## 3. O que já existe para cada parte do pedido (para não refazer)
+## 3. Situação de cada etapa do pedido
 
-- **A) Mapa:** flutter_map com imagens da **TomTom** nos 3 apps (desde 29/10, montagem 244), atrás da interface `MapProvider`; endereço das imagens com a chave só com login (`/geo/mapa`); guardado de 200 MB. Google Maps continua no código, desligado (o servidor liga com `MAPA_PROVEDOR=google` quando houver a chave).
-- **B) Destino e busca:**
-  - JÁ TEM: pino fixo no centro ("Marcar no mapa") com uma consulta 0,7 s depois de parar; busca digitada com mínimo de 3 letras ÚTEIS (rua/av./travessa não contam) e espera de 0,5 s (desde 29/10); 1 rota por etapa da corrida (desde 29/10); busca passando pelo servidor (`/geo/search`, `/geo/reverse`, `/geo/rota`); viés pela posição; preço final calculado no servidor; motoristas favoritos.
-  - FALTA: "Não informar destino", parada extra, "Meus favoritos" de endereço; o Confirmar ainda libera enquanto o endereço é buscado (vai como "Ponto marcado no mapa") e não tem Editar; não tem token de sessão; fonte da busca por cidade e base própria de ruas no PostGIS.
-- **C) Histórico:** corridas no servidor, só da conta. Endereços recentes só no celular.
-- **D) Aparência:** nada na Central. Ícones atuais no repositório.
-- **E) Pagamentos:** carteira pré-paga do motorista (centavos, extrato, comissão), cupom pago pela plataforma, saque PIX manual pela Central. Sem cartão e sem gateway.
-- **F) Segurança:** dono x operador por cidade (já existe e é testado); log de auditoria (audit_logs) já grava aprovações, carteira e exclusões.
-- **G) CI:** esteira dos APKs/AAB assinados, teste de ponta a ponta, fotos das telas, cópia do banco e auditoria das dependências já existem.
+| Etapa | Situação |
+|---|---|
+| 1. Ler o projeto e testes | FEITA (manhã) |
+| 2. Mapa e desempenho | FEITA + TomTom (tarde) + aceleração da 1ª abertura (noite, seção 6) |
+| 3. Destino e busca | FEITA (seção 7) — falta só o teste com as 20 ruas do Evandro |
+| 4. Histórico e privacidade | FEITA (seção 7) |
+| 5. Pagamentos | FEITA como decidido: só a tela "Em breve" + pagamento direto ao motorista |
+| 6. Aparência, ícones e flavors | FEITA (seção 7) — ícones esperando os arquivos |
+| 7. Segurança e operação | FEITA (seção 7) — falta o Evandro ligar as duas etapas na conta dele e o teste de restauração com a chave dele |
+| 8. CI e APKs | FEITA: APKs 256; iPhone compila; esteira de app de operador |
+
 
 ---
 
@@ -106,7 +102,7 @@ A Central **não mudou nesta etapa** (já não esperava o GPS); a diferença é 
 
 ### Pendente da etapa 2
 - (Atualizado 29/10 tarde) O mapa passou para a TomTom (seção 5). A chave do Google Maps virou opcional: com ela, o servidor pode trocar para o Google (`MAPA_PROVEDOR=google`) sem reescrever as telas.
-- Primeira abertura do motorista num celular sem posição nenhuma ainda espera o GPS (ele precisa do GPS para trabalhar).
+- ~~Primeira abertura do motorista num celular sem posição nenhuma ainda espera o GPS~~ — corrigido na montagem 256 (seção 6): abre na última posição conhecida pelo servidor ou no centro da cidade dele.
 - Medir num celular de verdade em Goiatuba (teste de rua).
 
 ---
@@ -148,6 +144,52 @@ A Central **não mudou nesta etapa** (já não esperava o GPS); a diferença é 
 | Central | r2 | 1,9 s | 2,9 s | 3,4 s |
 | Central | r3 | 1,5 s | 2,5 s | 3,2 s |
 
-Comparando com o OpenStreetMap (montagem 241, seção 4): passageiro 4,3 / 2,6 / 1,9 s até as ruas → 4,1 / 3,0 / 2,0 s com a TomTom (praticamente igual; na 1ª abertura a TomTom ainda pede o endereço das imagens ao servidor, /geo/mapa, 0,2 a 1 s). Central 3,1 / 2,1 / 1,8 s → 4,0 / 2,9 / 2,5 s (um pouco mais lenta nesta rodada; a rede do emulador varia ~1 s entre rodadas). Motorista: a 1ª abertura sem posição nenhuma continua esperando o GPS (igual antes).
+Comparando com o OpenStreetMap (montagem 241, seção 4): passageiro 4,3 / 2,6 / 1,9 s até as ruas → 4,1 / 3,0 / 2,0 s com a TomTom (praticamente igual; na 1ª abertura a TomTom ainda pede o endereço das imagens ao servidor, /geo/mapa, 0,2 a 1 s). Central 3,1 / 2,1 / 1,8 s → 4,0 / 2,9 / 2,5 s (um pouco mais lenta nesta rodada; a rede do emulador varia ~1 s entre rodadas). Motorista: a 1ª abertura sem posição nenhuma continuava esperando o GPS (corrigido na 256, seção 6).
 
 **APKs antigos (até 241):** não acham mais o endereço das imagens no /app/config e continuam com o mapa antigo (OpenStreetMap) até instalar a 244.
+
+---
+
+## 6. Primeira abertura do mapa mais rápida (pedido do Evandro, 29/10 14:28: "achei até que não ia aparecer as ruas")
+
+**Causa achada:** a chave da TomTom aceita só ~10 pedidos de imagem por segundo para a plataforma inteira (e 5 por segundo de busca e de rota). A abertura do mapa pedia ~20 imagens de uma vez: as que passavam do limite voltavam 429 ("devagar") e ficavam em branco até mexer no mapa. No servidor, um 429 parava a busca até a meia-noite. No motorista, na primeira vez num celular sem posição nenhuma, o app ficava em "Localizando você…" até o GPS responder (20 s ou mais dentro de casa).
+
+**O que mudou:**
+- Apps: só as imagens da tela (~6 em vez de ~20); no máximo 6 baixando juntas e 8 novas por segundo; 429/502/503/504 esperam e tentam de novo (até 4 vezes); um fornecedor de imagens só para todos os mapas; o endereço das imagens (/geo/mapa) que falha tenta de novo em 2, 4, 8, 16 e 30 s (antes: 10 min sem ruas).
+- Servidor: fila de 4 pedidos por segundo para busca e rota; 429 espera e tenta de novo e não para mais nada; 403 pausa 30 min.
+- Motorista: o cadastro (/drivers/me) traz a última posição que o servidor conhece e o centro da cidade dele; o mapa abre ali e vai para a posição certa quando o GPS chega.
+
+**Medição (Android de teste com a rede limitada a um 4G fraco: 6 Mbit/s, 100–250 ms; tempo desde o início do app):**
+
+| App | Abertura | Antes (244) | Depois (código da 256, medição "4g-final") |
+|---|---|---|---|
+| Passageiro | 1ª abertura (instalado agora, GPS sem sinal 8 s) | mapa 4,9 s; 1ª rua 6,9 s | **mapa 3,1 s; todas as ruas da tela 4,4 s; 6 imagens, 0 respostas 429** (rodada anterior: 2,8 s / 3,9 s) |
+| Passageiro | reaberturas | ruas 3,8 s; na 3ª abertura as ruas **não carregaram em 20 s** | ruas **1,8 s e 2,3 s** |
+| Motorista | 1ª abertura (GPS não respondeu nos 20 s) | ficava em "Localizando você…" até o GPS (9,7 s numa rodada; **mais de 20 s** em outra) | **mapa 2,7 s; todas as ruas da tela 3,8 s; 0 respostas 429** — mesmo sem o GPS (foto da tela: ruas de Goiatuba) |
+| Motorista | reaberturas | ruas 2,0 s e 2,4 s | ruas 3,2 s e 2,5 s (igual: variação da rede) |
+
+Limites: emulador nos EUA, não celular em Goiatuba; serve para comparar antes x depois.
+
+---
+
+## 7. Etapas 3 a 8 (29/10/2026, tarde e noite)
+
+| O quê | Situação |
+|---|---|
+| **Etapa 3** — corrida sem destino (taxímetro; o app mostra que o valor é ESTIMADO) | **[REAL]** servidor (preço sem destino, recusa sem marcar a opção) + **[AUTO]** tela |
+| Parada extra (até 2) no caminho e no preço | **[REAL]** servidor (a distância aumenta com a parada) + **[AUTO]** |
+| "Escolher no mapa" e "Ir sem destino" na busca do destino | **[AUTO]** |
+| Busca com token de sessão e fonte da busca por cidade (Central → Cidades) | **[REAL]** servidor + **[AUTO]** |
+| Endereços salvos (Casa, Trabalho) no servidor | **[REAL]** |
+| **Etapa 4** — destinos recentes vêm do servidor, só da conta; lixeira apaga no servidor e só depois muda a tela; "Apagar histórico de destinos" | **[REAL]** servidor + **[AUTO]** tela (sem rede, nada muda) |
+| **Etapa 5** — "Meus cartões" só com "Em breve"; nenhum campo de cartão; pagamento direto ao motorista | **[AUTO]** (o teste pegou o selo "EM BREVE" estourando a largura num celular estreito: corrigido) |
+| **Etapa 6** — aparência pela Central: nome, cor, logo e faixa de aviso do app do passageiro (Central → Configurações → App do passageiro → Aparência do app; só o dono grava) | **[REAL]** servidor (operador não muda; app recebe nome e cor; logo público) + **[AUTO]** telas dos 2 apps. A Central ainda não mexeu: o app continua igual até alguém salvar |
+| App de outro operador (scripts/novo-app.sh + esteira "App de operador") | **[REAL na esteira]** (exemplo compilado e conferido por dentro) |
+| Ícones (scripts/gerar-icones.py) | pronto e testado com um símbolo de exemplo; **esperando os arquivos do Evandro** |
+| **Etapa 7** — verificação em duas etapas da Central (Google Authenticator) | **[REAL]** na conta do operador de teste: liga com o código, a senha sozinha não entra, código repetido e desafio alterado são recusados, código de recuperação vale uma vez, desliga |
+| Senha provisória do operador (troca obrigatória no 1º acesso; até trocar o servidor recusa a Central) | **[REAL]** |
+| Isolamento entre cidades pelo endereço direto (operador de outra cidade não abre motorista nem carteira pelo id) | **[REAL]** |
+| Itumbiara na janela "Novo operador" (6 cidades, rolagem) | **[AUTO]** teste de tela rola até Itumbiara e escolhe |
+| Documentação de contas e restauração | feita: docs/CONTAS.md (sem nenhuma senha; o repositório é público) |
+| Dependências | qs corrigido (6.16.1); sobram 4 que exigem troca grande |
+| **Etapa 8** — iPhone | **[REAL na esteira]** os 3 apps compilam (sem assinar) |
