@@ -238,7 +238,9 @@ X=$(post /admin/drivers "{\"name\":\"Passageiro Vira Motorista\",\"phone\":\"$FO
 DIDW=$(echo "$X" | jq -r '.data.id // empty')
 [ -n "$TPW" ] && [ "$(echo "$X" | jq -r '.data.contaExistente')" = "true" ] && [ "$(get /auth/me "$TPW" | jq -r '.data.id')" = "$(echo "$X" | jq -r '.data.userId')" ] && ok "Central: motorista com o telefone de um passageiro usa a mesma conta" || falha "Central: motorista na conta de passageiro" "$X"
 
-X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"}" "$TM")
+# Com mais de uma cidade, o app pergunta onde o motorista vai trabalhar e
+# manda a cidade no cadastro (aqui: a mesma do operador de teste).
+X=$(post /drivers/onboarding "{\"name\":\"Motorista Teste Automatico\",\"cpf\":\"$CPF\",\"birthDate\":\"1990-05-10\",\"cnhNumber\":\"$CNH\",\"cnhCategory\":\"B\",\"cnhExpiresAt\":\"2031-01-01\"${PRACA:+,\"praca\":\"$PRACA\"}}" "$TM")
 DID=$(echo "$X" | jq -r '.data.id // .data.driver.id // empty')
 sucesso "$X" && ok "Motorista: cadastro (nome, CPF e CNH) aceito" || falha "Motorista: cadastro" "$X"
 X=$(get /auth/me "$TM"); [ "$(echo "$X" | jq -r '.data.name')" = "Motorista Teste Automatico" ] && ok "Central ve o nome do motorista (nao mais \"Passageiro 1234\")" || falha "Motorista: nome no cadastro" "$X"
