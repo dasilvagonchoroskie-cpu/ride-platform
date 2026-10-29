@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: aac914c (Apps: mapa TomTom (MapProvider), economia da cota e contingencia 429/403)
-No ar agora: b9d4478
+Ultima mudanca do servidor no GitHub: 84ddf46 (Motorista: mapa abre sem esperar o GPS na primeira vez)
+No ar agora: 5a1dff6
 OK: servidor em dia.
-Teste de ponta a ponta - 29/10/2026 16:26 UTC
+Teste de ponta a ponta - 29/10/2026 22:13 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -13,11 +13,15 @@ OK     Central carrega /admin/tariffs
 OK     Central: painel ao vivo (livres 1, em viagem 0, corridas hoje 0)
 OK     Central: conta do dono ve todas as cidades (Goiatuba, Teutônia, Bom Jesus de Goiás, Buriti Alegre, Joviânia, Itumbiara)
 OK     Central: conta de operador da cidade goiatuba criada (equipe)
+OK     Operador: primeiro acesso pede para trocar a senha provisoria
+OK     Seguranca: com a senha provisoria o operador nao usa a Central
+OK     Operador: trocou a senha provisoria e entrou com a nova
 OK     Operador: entra na mesma Central e ve so a cidade dele
 OK     Operador: visao geral da cidade dele
 OK     Operador: carteiras / recargas da cidade
 OK     Operador: nao muda tarifas, cupons e comissao (so o dono)
 OK     Operador: nao acessa a limpeza de dados
+OK     Operador: nao muda a aparencia do app (so o dono)
 OK     Operador: relatorio da frota sai so com a cidade dele
 OK     Central: limpeza de dados (0 contas de teste, 21 corridas)
 OK     Passageiro: login pelo codigo de teste
@@ -26,6 +30,9 @@ OK     App: entrada por codigo no e-mail disponivel (telefone: true)
 OK     App: configuracao publica (6 cidade(s), WhatsApp 5564996472794)
 OK     App: configuracao publica do mapa (TomTom) sem a chave
 OK     Central: cidades e avisos carregados
+OK     Central: aparencia do app (nome Fortaleza Mov, cor #1E5BB8, faixa desligada)
+OK     App: nome e cor do app vem da Central
+OK     App: logo publico (sem logo, usa o padrao: 404)
 OK     Passageiro: cadastro completo gravado (cidade: Goiatuba - GO)
 OK     Passageiro: cadastro repetido recusado
 OK     Passageiro: entra pelo e-mail e senha
@@ -34,6 +41,10 @@ OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
 OK     Passageiro: preco por categoria (Carro)
+OK     Passageiro: preco sem destino (estimado, pelo taximetro: a partir de 1000 centavos)
+OK     Passageiro: sem destino so com a opcao marcada
+OK     Passageiro: parada extra entra no caminho (1375 m -> 2884 m)
+OK     Passageiro: busca com token de sessao
 OK     Passageiro: carros perto dizem se sao moto (0 perto)
 OK     Passageiro: busca de destino real (12 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Mapa: imagens da TomTom com login (512 px, economia: false)
@@ -51,7 +62,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST7096)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST4728)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -65,10 +76,15 @@ OK     Motorista: toque duplo no envio nao da erro (mesmo carro)
 OK     Central: aviso de motorista novo aguardando aprovacao (1 pendente(s))
 OK     Central: lista de pendentes com a foto do documento (antes a lista nem abria)
 OK     Central: detalhe do motorista com a foto do documento
+FALHA  Seguranca: operador de teutonia-rs abriu motorista de outra cidade pelo id
+       resposta: null
+OK     Seguranca: operador de outra cidade nao abre a carteira pelo id
 OK     Central: abre a foto do documento
 OK     Seguranca: passageiro nao abre documento de motorista
 OK     Central: motorista aprovado com conferencia presencial
 OK     App do motorista ve a aprovacao (botao Atualizar status)
+FALHA  Motorista: onde abrir o mapa sem GPS
+       resposta: {"praca":null,"ultimaPosicao":null}
 OK     Motorista: primeira foto de perfil ja aparece
 OK     Central: aprova a foto de perfil
 OK     Motorista: troca a foto; o passageiro continua vendo a aprovada ate a Central conferir
@@ -118,23 +134,23 @@ OK     Central: recarga de R$ 50,00 (credito no extrato)
 OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
-OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1895 km)
+OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1902 km)
 OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 119 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 118 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE16262622 criado (R$ 3,00)
+OK     Central: cupom TESTE2213361 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 863 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (863 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 952 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (958 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 1504 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 4480 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -152,9 +168,9 @@ OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (13h, diurna: 1000 centavos)
+OK     Bandeira certa pela hora de Brasilia (19h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 18s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 20s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -163,6 +179,10 @@ OK     Central: recarga lancada, saldo agora 6220 centavos
 OK     Central: contato de recarga carregado
 OK     Passageiro: avaliou o motorista com 5 estrelas
 OK     Passageiro: recibo da corrida concluida com a nota
+OK     Passageiro: destinos recentes no servidor (1, 1o: Rodoviaria de Goiatuba)
+OK     Passageiro: lixeira tirou o destino no servidor
+OK     Passageiro: destino apagado nao volta
+OK     Passageiro: Apagar tudo limpou os destinos
 OK     Chat: fecha quando a corrida termina
 OK     Motorista: avaliou o passageiro com 4 estrelas
 OK     Motorista: historico de hoje com totais e desempenho (aceitacao 100%, taxa 80)
@@ -254,9 +274,11 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 12/666, reverse 2/666, routing 10/666, search 0/83)
+OK     Central: uso da TomTom hoje (geocode 18/666, reverse 3/666, routing 15/666, search 0/83)
 OK     Seguranca: so a Central ve o uso da TomTom
+OK     Central: verificacao em duas etapas disponivel (ligada: false)
+OK     Seguranca: so a Central usa a verificacao em duas etapas
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 7 contas deste teste e 9 corridas delas
 
-Resultado: 0 falha(s).
+Resultado: 2 falha(s).
