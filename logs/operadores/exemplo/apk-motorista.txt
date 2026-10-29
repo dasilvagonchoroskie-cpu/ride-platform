@@ -1,0 +1,8 @@
+Execucao 1 (2026-10-29T22:15Z)
+package: name='br.com.exemplomov.teste.motorista' versionCode='2001' versionName='1.0.1' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+targetSdkVersion:'36'
+application-label:'Exemplo Mov Motorista'
+total 21548
+drwxr-xr-x  2 runner runner     4096 Oct 29 22:15 .
+drwxr-xr-x 15 runner runner     4096 Oct 29 22:15 ..
+-rw-r--r--  1 runner runner 22056903 Oct 29 22:15 exemplo-motorista-1.apk
