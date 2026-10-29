@@ -7,60 +7,66 @@
 00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero digitado errado (6631): avisa "Conta nova" e desfaz
-00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Conta nova de verdade: "Esta certo" segue para o cadastro
+00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Conta nova de verdade: "Esta certo" segue para o cadastro
 00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
 00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: sem nada do servidor, o mapa e o OpenStreetMap
-00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: servidor antigo (sem "mapa") nao muda nada
-00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: usa o endereco que o servidor mandar quando ele e valido
-00:02 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: endereco errado volta para o OpenStreetMap (o mapa nunca quebra)
-00:02 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: o servidor pode voltar todo mundo para o OpenStreetMap (mapa.provedor)
-00:02 +21: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart
-00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: E-mail de outra conta: mostra o motivo e NAO segue para o veiculo
-00:03 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: CPF de outra conta: mostra o motivo e NAO segue para o veiculo
-00:03 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Ja era motorista (reinstalou o app): segue para o veiculo
-00:03 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro aceito: manda o veiculo depois do motorista
-00:03 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:04 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
-00:05 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 01 entrada, telefone e e-mail
-00:05 +27 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 04 termos, cadastro e em analise
-00:05 +27 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 07 inicio desconectado e conectado
-00:05 +27 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 09 chamado
-00:05 +27 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 10 corrida: a caminho, esperando, viagem e fim
-00:05 +27 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 16 menu, atividades, carteira e historico
-00:05 +27 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 24 meus dados
-00:05 +27 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: (tearDownAll)
-00:05 +27 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Pede o link do PDF com o periodo e devolve o endereco completo
-00:05 +28 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Cidades da operacao vem da configuracao do servidor
-00:05 +29 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:06 +30 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:06 +31 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:06 +32 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:06 +33 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:06 +34 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
-00:07 +35 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
-00:07 +36 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +37 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +38 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +39 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +40 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +41 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +42 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +43 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:07 +44 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:07 +45 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:07 +46 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:07 +47 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:07 +48 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:08 +49 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
-00:08 +50 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: SOS: botao de panico e 190/192
-00:08 +51 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: PIX Copia e Cola no padrao do Banco Central
-00:08 +52 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
-00:08 +53 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: sem posicao guardada: espera o GPS (tela Localizando)
-00:08 +54 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: a posicao guardada some ao sair da conta
-00:08 +55 ~7: All tests passed!
+00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:01 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:01 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:01 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
+00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
+00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
+00:02 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
+00:02 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
+00:02 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
+00:02 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:02 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:02 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:02 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:02 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:03 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:03 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:03 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Ja era motorista (reinstalou o app): segue para o veiculo
+00:03 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
+00:03 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
+00:05 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 01 entrada, telefone e e-mail
+00:05 +34 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 04 termos, cadastro e em analise
+00:05 +34 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 07 inicio desconectado e conectado
+00:05 +34 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 09 chamado
+00:05 +34 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 10 corrida: a caminho, esperando, viagem e fim
+00:05 +34 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 16 menu, atividades, carteira e historico
+00:05 +34 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 24 meus dados
+00:05 +34 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: (tearDownAll)
+00:05 +34 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Pede o link do PDF com o periodo e devolve o endereco completo
+00:05 +35 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Cidades da operacao vem da configuracao do servidor
+00:05 +36 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:05 +37 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:05 +38 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:05 +39 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:05 +40 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:06 +41 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +42 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +43 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +44 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +45 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +46 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +47 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +48 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +49 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:06 +50 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:06 +51 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:06 +52 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:07 +53 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:07 +54 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
+00:07 +55 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
+00:07 +56 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
+00:07 +57 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
+00:07 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
+00:08 +59 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: abre com a ultima posicao guardada, sem esperar o GPS
+00:08 +60 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: sem posicao guardada: espera o GPS (tela Localizando)
+00:08 +61 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_primeiro_test.dart: a posicao guardada some ao sair da conta
+00:08 +62 ~7: All tests passed!
