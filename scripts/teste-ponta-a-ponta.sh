@@ -87,6 +87,7 @@ X=$(get /admin/overview "$TO"); sucesso "$X" && ok "Operador: visao geral da cid
 X=$(get /admin/wallets "$TO"); sucesso "$X" && ok "Operador: carteiras / recargas da cidade" || falha "Operador: carteiras" "$X"
 X=$(put /admin/tariffs/cobranca '{"modo":"TAXIMETRO"}' "$TO"); sucesso "$X" && falha "Operador nao deveria mudar tarifas" "$X" || ok "Operador: nao muda tarifas, cupons e comissao (so o dono)"
 X=$(get /admin/limpeza "$TO"); sucesso "$X" && falha "Operador nao deveria acessar a limpeza" "$X" || ok "Operador: nao acessa a limpeza de dados"
+X=$(put /admin/aparencia '{"nome":"Teste","cor":"#000000","bannerAtivo":false,"bannerTexto":""}' "$TO"); sucesso "$X" && falha "Operador nao deveria mudar a aparencia do app" "$X" || ok "Operador: nao muda a aparencia do app (so o dono)"
 X=$(get "/admin/relatorio?tipo=frota&de=$HOJE&ate=$HOJE" "$TO")
 echo "$X" | jq -r '.data.arquivo // empty' | grep -q '^relatorio-praca-' && ok "Operador: relatorio da frota sai so com a cidade dele" || falha "Operador: relatorio da cidade" "$X"
 X=$(get /admin/limpeza "$TA"); sucesso "$X" && ok "Central: limpeza de dados ($(echo "$X" | jq -r '.data.contasTeste') contas de teste, $(echo "$X" | jq -r '.data.corridas') corridas)" || falha "Central: resumo da limpeza" "$X"
@@ -105,6 +106,14 @@ sucesso "$X" && ok "App: configuracao publica ($(echo "$X" | jq -r '.data.cidade
 # do que vem do /geo/mapa e impresso aqui (o relatorio e publico).
 [ "$(echo "$X" | jq -r '.data.mapa.provedor')" = "tomtom" ] && ! echo "$X" | grep -q 'key=' && ok "App: configuracao publica do mapa (TomTom) sem a chave" || falha "App: mapa na configuracao publica" "$(echo "$X" | jq -c '.data.mapa | {provedor, atribuicao, temTiles: has("tiles")}')"
 X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos carregados" || falha "Central: cidades e avisos" "$X"
+# Etapa 6 (29/10/2026): nome, cor, logo e faixa do app pela Central. O teste
+# grava de volta o mesmo que ja estava (nao muda o app de verdade).
+A=$(get /admin/aparencia "$TA"); NOME_APP=$(echo "$A" | jq -r '.data.nome // empty')
+X=$(put /admin/aparencia "$(echo "$A" | jq -c '.data | {nome, cor, bannerAtivo, bannerTexto}')" "$TA")
+[ -n "$NOME_APP" ] && [ "$(echo "$X" | jq -r '.data.nome')" = "$NOME_APP" ] && ok "Central: aparencia do app (nome $NOME_APP, cor $(echo "$X" | jq -r '.data.cor'), faixa $(echo "$X" | jq -r 'if .data.bannerAtivo then "ligada" else "desligada" end'))" || falha "Central: aparencia do app" "$A $X"
+X=$(get /app/config); [ "$(echo "$X" | jq -r '.data.aparencia.nome')" = "$NOME_APP" ] && [ "$(echo "$X" | jq -r '.data.aparencia.cor' | grep -cE '^#[0-9A-F]{6}$')" = "1" ] && ok "App: nome e cor do app vem da Central" || falha "App: aparencia na configuracao publica" "$(echo "$X" | jq -c '.data.aparencia')"
+LOGO=$(echo "$X" | jq -r '.data.aparencia.logoUrl // empty'); C=$(curl -s -o /dev/null -w "%{http_code}" "$API${LOGO:-/app/logo}")
+{ [ -n "$LOGO" ] && [ "$C" = "200" ]; } || { [ -z "$LOGO" ] && [ "$C" = "404" ]; } && ok "App: logo publico (${LOGO:-sem logo, usa o padrao}: $C)" || falha "App: logo publico" "$LOGO $C"
 CPFP=$(python3 -c "
 import random
 n=[random.randint(0,9) for _ in range(9)]

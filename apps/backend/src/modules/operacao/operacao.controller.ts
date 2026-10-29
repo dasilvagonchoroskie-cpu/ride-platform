@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { Body, Controller, Delete, Get, Param, Post, Put, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -10,6 +12,8 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { PracasService } from '../pracas/pracas.service';
+import { decodificarFoto } from '../arquivos/arquivos.service';
+import { aparenciaDoApp, gravarAparencia, lerAparencia } from './aparencia';
 import { mapaDoApp } from './mapa.config';
 import { apagarAviso, gravarCidades, lerAvisos, lerCidades, publicarAviso, whatsappDaCentral } from './operacao.store';
 
@@ -53,7 +57,80 @@ export class AppPublicoController {
       // Mapa: provedor e atribuicao (TomTom). A chave das imagens vem so com
       // login, em GET /geo/mapa.
       mapa: mapaDoApp(),
+      // Etapa 6: nome, cor, logo e faixa de aviso do app (pela Central).
+      aparencia: aparenciaDoApp(await lerAparencia(this.prisma)),
     };
+  }
+
+  @Get('logo')
+  @ApiOperation({ summary: 'Logo do app (publico; troca pela Central em Aparencia)' })
+  async logo(@Res() res: Response): Promise<void> {
+    const a = await lerAparencia(this.prisma);
+    const arq = a.logoId ? await this.prisma.arquivo.findUnique({ where: { id: a.logoId } }) : null;
+    if (!arq || arq.tipo !== 'LOGO') {
+      res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Sem logo.' } });
+      return;
+    }
+    res.setHeader('Content-Type', arq.mime);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(arq.dados));
+  }
+}
+
+const aparenciaSchema = z.object({
+  nome: z.string().trim().min(2, 'Nome com 2 ou mais letras.').max(30),
+  cor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor no formato #RRGGBB.'),
+  bannerAtivo: z.boolean(),
+  bannerTexto: z.string().trim().max(140, 'A faixa tem no maximo 140 letras.'),
+});
+
+const logoSchema = z.object({
+  mime: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  dados: z.string().min(16).max(1_400_000),
+});
+
+/** Aparencia do app pela Central (so o dono grava). */
+@ApiTags('Admin - Aparencia')
+@ApiBearerAuth()
+@Roles(UserRole.ADMIN)
+@UseGuards(DonoGravaGuard)
+@Controller('admin/aparencia')
+export class AdminAparenciaController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Nome, cor, logo e faixa de aviso do app do passageiro' })
+  async ler() {
+    const a = await lerAparencia(this.prisma);
+    return { ...a, ...aparenciaDoApp(a) };
+  }
+
+  @Put()
+  @ApiOperation({ summary: 'Troca nome, cor e faixa de aviso' })
+  async gravar(@CurrentUser('id') adminId: string, @Body(new ZodValidationPipe(aparenciaSchema)) body: z.infer<typeof aparenciaSchema>) {
+    const a = await gravarAparencia(this.prisma, body, adminId);
+    return { ...a, ...aparenciaDoApp(a) };
+  }
+
+  @Post('logo')
+  @ApiOperation({ summary: 'Troca o logo (JPG, PNG ou WEBP, ate ~1 MB)' })
+  async logo(@CurrentUser('id') adminId: string, @Body(new ZodValidationPipe(logoSchema)) body: z.infer<typeof logoSchema>) {
+    const dados = decodificarFoto(body.mime, body.dados);
+    const antes = await lerAparencia(this.prisma);
+    const id = randomUUID();
+    await this.prisma.arquivo.create({ data: { id, ownerId: adminId, tipo: 'LOGO', mime: body.mime, tamanho: dados.length, dados } });
+    const a = await gravarAparencia(this.prisma, { logoId: id }, adminId);
+    if (antes.logoId) await this.prisma.arquivo.deleteMany({ where: { id: antes.logoId, tipo: 'LOGO' } });
+    return { ...a, ...aparenciaDoApp(a) };
+  }
+
+  @Delete('logo')
+  @ApiOperation({ summary: 'Volta para o logo padrao do app' })
+  async tirarLogo(@CurrentUser('id') adminId: string) {
+    const antes = await lerAparencia(this.prisma);
+    const a = await gravarAparencia(this.prisma, { logoId: null }, adminId);
+    if (antes.logoId) await this.prisma.arquivo.deleteMany({ where: { id: antes.logoId, tipo: 'LOGO' } });
+    return { ...a, ...aparenciaDoApp(a) };
   }
 }
 

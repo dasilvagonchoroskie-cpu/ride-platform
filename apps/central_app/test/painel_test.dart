@@ -772,12 +772,15 @@ void main() {
     await tester.tap(find.text('Operador'));
     await tester.pumpAndSettle();
     expect(find.text('Operador de uma cidade'), findsOneWidget);
-    final rolagem = find.descendant(of: find.byType(AlertDialog), matching: find.byType(Scrollable));
-    await tester.scrollUntilVisible(find.text('Itumbiara - GO'), 80, scrollable: rolagem.first);
-    await tester.tap(find.text('Itumbiara - GO'));
+    // A lista de cidades da tela (atras da janela) tambem tem "Itumbiara - GO":
+    // procura so dentro da janela.
+    final dialogo = find.byType(AlertDialog);
+    final rolagem = find.descendant(of: dialogo, matching: find.byType(Scrollable));
+    final itumbiara = find.descendant(of: dialogo, matching: find.widgetWithText(ChoiceChip, 'Itumbiara - GO'));
+    await tester.scrollUntilVisible(itumbiara, 80, scrollable: rolagem.first);
+    await tester.tap(itumbiara);
     await tester.pumpAndSettle();
-    final chip = tester.widget<ChoiceChip>(find.ancestor(of: find.text('Itumbiara - GO'), matching: find.byType(ChoiceChip)));
-    expect(chip.selected, isTrue);
+    expect(tester.widget<ChoiceChip>(itumbiara).selected, isTrue);
   });
 
   testWidgets('Limpeza de dados: resumo, apagar teste com confirmacao e contas', (tester) async {
