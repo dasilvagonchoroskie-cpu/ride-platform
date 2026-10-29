@@ -13,7 +13,7 @@ import { AuthService } from '../auth/auth.service';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { PracasService } from '../pracas/pracas.service';
 import { decodificarFoto } from '../arquivos/arquivos.service';
-import { aparenciaDoApp, gravarAparencia, lerAparencia } from './aparencia';
+import { aparenciaDoApp, CHAVE_APARENCIA, gravarAparencia, lerAparencia } from './aparencia';
 import { mapaDoApp } from './mapa.config';
 import { apagarAviso, gravarCidades, lerAvisos, lerCidades, publicarAviso, whatsappDaCentral } from './operacao.store';
 
@@ -121,6 +121,16 @@ export class AdminAparenciaController {
     await this.prisma.arquivo.create({ data: { id, ownerId: adminId, tipo: 'LOGO', mime: body.mime, tamanho: dados.length, dados } });
     const a = await gravarAparencia(this.prisma, { logoId: id }, adminId);
     if (antes.logoId) await this.prisma.arquivo.deleteMany({ where: { id: antes.logoId, tipo: 'LOGO' } });
+    return { ...a, ...aparenciaDoApp(a) };
+  }
+
+  @Delete()
+  @ApiOperation({ summary: 'Volta tudo ao padrao da montagem do app (nome, cor, logo e faixa)' })
+  async voltarAoPadrao() {
+    const antes = await lerAparencia(this.prisma);
+    await this.prisma.setting.deleteMany({ where: { key: CHAVE_APARENCIA } });
+    if (antes.logoId) await this.prisma.arquivo.deleteMany({ where: { id: antes.logoId, tipo: 'LOGO' } });
+    const a = await lerAparencia(this.prisma);
     return { ...a, ...aparenciaDoApp(a) };
   }
 

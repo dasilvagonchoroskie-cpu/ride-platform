@@ -184,6 +184,23 @@ class _AparenciaDoAppState extends State<AparenciaDoApp> {
     });
   }
 
+  Future<void> _voltarAoPadrao() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Voltar ao padrão?', style: AppText.heading),
+        content: Text('O app do passageiro volta ao nome, à cor e ao logo de fábrica, e a faixa some.', style: AppText.body),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Voltar ao padrão')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _enviar('DELETE', '/admin/aparencia', null, 'Pronto: o app do passageiro volta ao padrão na próxima vez que abrir.');
+  }
+
   Future<void> _trocarLogo() async {
     final logo = await (widget.escolherLogo ?? _logoDaGaleria)(context);
     if (!mounted) return;
@@ -270,6 +287,12 @@ class _AparenciaDoAppState extends State<AparenciaDoApp> {
                   onPressed: _gravando ? null : () => _enviar('DELETE', '/admin/aparencia/logo', null, 'Logo tirado: o app volta ao logo padrão.'),
                   icon: const Icon(Icons.hide_image_outlined),
                   label: const Text('Tirar logo'),
+                ),
+              if (a['definida'] == true)
+                TextButton.icon(
+                  onPressed: _gravando ? null : _voltarAoPadrao,
+                  icon: const Icon(Icons.restart_alt),
+                  label: const Text('Voltar ao padrão'),
                 ),
             ],
           ),

@@ -38,6 +38,8 @@ void main() {
       pedidos['${r.method} ${r.url.path}'] = corpo;
       if (r.url.path.endsWith('/admin/aparencia') && r.method == 'PUT') {
         atual = {...atual, ...?corpo, 'definida': true};
+      } else if (r.url.path.endsWith('/admin/aparencia') && r.method == 'DELETE') {
+        atual = {'nome': 'Fortaleza Mov', 'cor': '#1E5BB8', 'bannerAtivo': false, 'bannerTexto': '', 'logoId': null, 'logoUrl': null, 'definida': false};
       } else if (r.url.path.endsWith('/admin/aparencia/logo')) {
         atual = {...atual, 'logoId': r.method == 'POST' ? 'id' : null, 'logoUrl': r.method == 'POST' ? '/app/logo?v=abcd1234' : null};
       }
@@ -92,6 +94,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(pedidos.containsKey('DELETE /api/admin/aparencia/logo'), isTrue);
     expect(find.text('Pôr logo'), findsOneWidget);
+
+    // Voltar ao padrao (so aparece depois que a Central salvou algo).
+    await tester.tap(find.text('Voltar ao padrão'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Voltar ao padrão').last);
+    await tester.pumpAndSettle();
+    expect(pedidos.containsKey('DELETE /api/admin/aparencia'), isTrue);
+    expect(find.text('Fortaleza Mov'), findsOneWidget);
+    expect(find.text('Voltar ao padrão'), findsNothing);
   });
 
   testWidgets('Operador (nao dono): o servidor recusa e a Central mostra o motivo', (tester) async {

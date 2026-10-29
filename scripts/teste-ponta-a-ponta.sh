@@ -109,8 +109,17 @@ X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos ca
 # Etapa 6 (29/10/2026): nome, cor, logo e faixa do app pela Central. O teste
 # grava de volta o mesmo que ja estava (nao muda o app de verdade).
 A=$(get /admin/aparencia "$TA"); NOME_APP=$(echo "$A" | jq -r '.data.nome // empty')
-X=$(put /admin/aparencia "$(echo "$A" | jq -c '.data | {nome, cor, bannerAtivo, bannerTexto}')" "$TA")
-[ -n "$NOME_APP" ] && [ "$(echo "$X" | jq -r '.data.nome')" = "$NOME_APP" ] && ok "Central: aparencia do app (nome $NOME_APP, cor $(echo "$X" | jq -r '.data.cor'), faixa $(echo "$X" | jq -r 'if .data.bannerAtivo then "ligada" else "desligada" end'))" || falha "Central: aparencia do app" "$A $X"
+X=$(put /admin/aparencia '{"nome":"x","cor":"azul","bannerAtivo":false,"bannerTexto":""}' "$TA"); sucesso "$X" && falha "Aparencia: nome e cor invalidos deveriam ser recusados" "$X" || ok "Central: aparencia recusa nome curto e cor fora do formato #RRGGBB"
+X="$A"
+if [ "$(echo "$A" | jq -r '.data.definida')" = "true" ]; then
+  # Ja personalizada pela Central: grava de volta o mesmo (nao muda o app).
+  X=$(put /admin/aparencia "$(echo "$A" | jq -c '.data | {nome, cor, bannerAtivo, bannerTexto}')" "$TA")
+  # Igual ao padrao de fabrica (sobra de um teste antigo): volta ao padrao.
+  if [ "$(echo "$X" | jq -r '[.data.nome, .data.cor, .data.bannerAtivo, .data.logoId] | @json')" = '["Fortaleza Mov","#1E5BB8",false,null]' ]; then
+    X=$(curl -s -m 90 -X DELETE "$API/admin/aparencia" -H "Authorization: Bearer $TA")
+  fi
+fi
+[ -n "$NOME_APP" ] && sucesso "$X" && [ "$(echo "$X" | jq -r '.data.nome')" = "$NOME_APP" ] && ok "Central: aparencia do app (nome $NOME_APP, cor $(echo "$X" | jq -r '.data.cor'), faixa $(echo "$X" | jq -r 'if .data.bannerAtivo then "ligada" else "desligada" end'), personalizada: $(echo "$X" | jq -r '.data.definida'))" || falha "Central: aparencia do app" "$A $X"
 X=$(get /app/config); [ "$(echo "$X" | jq -r '.data.aparencia.nome')" = "$NOME_APP" ] && [ "$(echo "$X" | jq -r '.data.aparencia.cor' | grep -cE '^#[0-9A-F]{6}$')" = "1" ] && ok "App: nome e cor do app vem da Central" || falha "App: aparencia na configuracao publica" "$(echo "$X" | jq -c '.data.aparencia')"
 LOGO=$(echo "$X" | jq -r '.data.aparencia.logoUrl // empty'); C=$(curl -s -o /dev/null -w "%{http_code}" "$API${LOGO:-/app/logo}")
 { [ -n "$LOGO" ] && [ "$C" = "200" ]; } || { [ -z "$LOGO" ] && [ "$C" = "404" ]; } && ok "App: logo publico (${LOGO:-sem logo, usa o padrao}: $C)" || falha "App: logo publico" "$LOGO $C"
