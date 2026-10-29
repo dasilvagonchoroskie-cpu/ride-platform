@@ -6,139 +6,42 @@
 00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
 00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-
-Warning: A call to tap() with finder "Found 1 widget with text "Faixa de aviso no Início": [
-  Text("Faixa de aviso no Início", inherit: true, family: Inter, size: 15.0, weight: 600, dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(142.0, 712.5)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderParagraph#c8d38 relayoutBoundary=up30
-The hit test result at that offset is: HitTestResult(_RenderInkFeatures#ebfe5@Offset(102.0, 688.5), RenderCustomPaint#d8361@Offset(102.0, 688.5), RenderPhysicalShape#9a9b4@Offset(102.0, 688.5), RenderConstrainedBox#41fe4@Offset(102.0, 688.5), RenderPositionedBox#aaa77@Offset(102.0, 688.5), RenderPadding#ef1ac@Offset(142.0, 712.5), RenderSemanticsAnnotations#0b66b@Offset(142.0, 712.5), RenderPadding#f8be6@Offset(142.0, 712.5), RenderSemanticsAnnotations#a3835@Offset(142.0, 712.5), RenderPadding#64a6b@Offset(142.0, 712.5), RenderSemanticsAnnotations#bfb8c@Offset(142.0, 712.5), RenderRepaintBoundary#f8bb8@Offset(142.0, 712.5), RenderIgnorePointer#c4d34@Offset(142.0, 712.5), RenderAnimatedOpacity#0935b@Offset(142.0, 712.5), RenderRepaintBoundary#3eb23@Offset(142.0, 712.5), RenderSemanticsAnnotations#b9971@Offset(142.0, 712.5), RenderOffstage#67224@Offset(142.0, 712.5), RenderSemanticsAnnotations#47534@Offset(142.0, 712.5), _RenderTheater#37a80@Offset(142.0, 712.5), RenderAbsorbPointer#76779@Offset(142.0, 712.5), RenderPointerListener#3af98@Offset(142.0, 712.5), RenderSemanticsAnnotations#2a7a8@Offset(142.0, 712.5), RenderCustomPaint#e940c@Offset(142.0, 712.5), RenderSemanticsAnnotations#d3beb@Offset(142.0, 712.5), RenderSemanticsAnnotations#d67df@Offset(142.0, 712.5), RenderSemanticsAnnotations#f99e6@Offset(142.0, 712.5), RenderTapRegionSurface#cdd13@Offset(142.0, 712.5), RenderSemanticsAnnotations#29c7e@Offset(142.0, 712.5), RenderSemanticsAnnotations#7ea17@Offset(142.0, 712.5), HitTestEntry<HitTestTarget>#b9e44(_ReusableRenderView#033d6), HitTestEntry<HitTestTarget>#ee593(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart:65:18)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 146 pixels on the right.
-
-The relevant error-causing widget was:
-  Row
-  Row:file:///home/runner/work/ride-platform/ride-platform/apps/central_app/lib/widgets/aparencia_app.dart:234:22
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#1e0fd relayoutBoundary=up17 OVERFLOWING:
-  creator: Row ← Padding ← DecoratedBox ← Container-[<'previa-marca'>] ← Align ← Column ← Padding ←
-    DecoratedBox ← ConstrainedBox ← Container ← AppCard ← AparenciaDoApp ← ⋯
-  parentData: offset=Offset(18.0, 8.0) (can use size)
-  constraints: BoxConstraints(0.0<=w<=292.0, 0.0<=h<=Infinity)
-  size: Size(292.0, 26.0)
-  direction: horizontal
-  mainAxisAlignment: start
-  mainAxisSize: min
-  crossAxisAlignment: center
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: {
-            'nome': 'Goiatuba Mov',
-            'cor': '#2E9E5B',
-            'bannerAtivo': true,
-            'bannerTexto': 'Feriado: corridas até 2h'
-          }
-  Actual: {
-            'nome': 'Feriado: corridas até 2h',
-            'cor': '#2E9E5B',
-            'bannerAtivo': false,
-            'bannerTexto': ''
-          }
-   Which: at location ['nome'] is 'Feriado: corridas até 2h' instead of 'Goiatuba Mov'
-
-When the exception was thrown, this was the stack:
-#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart:72:5)
-<asynchronous suspension>
-#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided one frame from package:stack_trace)
-
-This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart line 72
-The test description was:
-  Editar nome, cor e faixa; trocar e tirar o logo
-════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following message was thrown:
-Multiple exceptions (2) were detected during the running of the current test, and at least one was
-unexpected.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:01 +6 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +6 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo [E]
-  Test failed. See exception logs above.
-  The test description was: Editar nome, cor e faixa; trocar e tirar o logo
-  
-00:01 +7 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +8 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
-00:01 +9 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:02 +10 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
-00:02 +11 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
-00:02 +12 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
-00:02 +13 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
-00:02 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +15 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +16 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:03 +17 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:06 +18 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:06 +19 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
-00:07 +20 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
-00:08 +21 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
-00:08 +22 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:09 +23 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:09 +24 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:10 +25 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:11 +26 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:11 +27 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
-00:12 +28 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
-00:12 +29 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:13 +30 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:14 +31 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:14 +32 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
-00:14 +33 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:15 +34 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:16 +35 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:16 +36 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:17 +37 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:17 +38 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
-00:17 +38 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
-00:18 +39 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:18 +40 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
-00:18 +41 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
-00:19 +42 ~1 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:19 +43 ~1 -1: Some tests failed.
-
-Failing tests:
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
+00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
+00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:05 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:06 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
+00:06 +22: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:06 +23: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
+00:07 +24: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:07 +25: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:08 +26: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
+00:08 +27: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
+00:09 +28: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
+00:09 +29: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
+00:10 +30: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:10 +31: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
+00:11 +32: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
+00:11 +33: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
+00:11 +34: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+00:12 +35: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:13 +36: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
+00:13 +37: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
+00:13 +38: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
+00:13 +39: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
+00:13 +39 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
+00:14 +40 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
+00:14 +41 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
+00:15 +42 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+00:15 +43 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
+00:15 +44 ~1: All tests passed!
