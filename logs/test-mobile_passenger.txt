@@ -4,9 +4,9 @@
 00:01 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:01 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:01 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:01 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
+00:02 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
@@ -14,50 +14,57 @@
 00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Cadastro ja vem com o telefone digitado antes
-00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 01 entrada
-00:03 +19 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 02 telefone
-00:03 +19 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 03 entrar com e-mail
-00:03 +19 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 04 esqueci a senha
-00:03 +19 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 05 cidade e cadastro
-00:03 +19 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 07 termos
-00:03 +19 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 08 inicio, destino, atividade e conta
-00:03 +19 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 13 confirmar viagem com Carro e Moto
-00:03 +19 ~8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 15 procurando, a caminho, chegou, em viagem e fim
-00:03 +19 ~9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 23 recibo
-00:03 +19 ~10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 25 meus dados e trocar telefone
-00:03 +19 ~11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 27 telas da conta
-00:03 +19 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: (tearDownAll)
-00:04 +19 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Horario da corrida agendada de 30 minutos a 7 dias a frente
-00:04 +20 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Horario da corrida agendada texto do horario: hoje, amanha e dia da semana
-00:04 +21 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
-00:05 +22 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista a caminho: tempo, chat, fotos, nota, viagens, carro, placa e Cancelar
-00:05 +23 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
-00:05 +24 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
-00:05 +25 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Corridas agendadas: horario, endereco, valor e cancelar sem multa
-00:05 +26 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
-00:05 +27 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
-00:05 +28 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
-00:05 +29 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
-00:05 +30 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: taximetro correndo no canto da tela
-00:05 +31 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS: panico manda a posicao e a corrida; avisar contatos; 190 e 192
-00:06 +32 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
-00:06 +33 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
-00:06 +34 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
-00:06 +35 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
-00:06 +36 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
-00:06 +37 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
-00:06 +38 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: telefone incompleto nao salva
-00:06 +39 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Conta: foto com lapis, agendadas e contatos de emergencia
-00:07 +40 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:07 +41 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:07 +42 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:07 +43 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:07 +44 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:07 +45 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:08 +46 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:08 +47 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: a posicao guardada e da pessoa: some ao sair da conta
-00:08 +48 ~12: All tests passed!
+00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Cadastro ja vem com o telefone digitado antes
+00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF aceita CPF valido com ou sem pontuacao
+00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF recusa digito errado, numeros repetidos e tamanho errado
+00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: CPF mascara enquanto digita
+00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: senha segue a mesma regra do servidor
+00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: nome e sobrenome
+00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: e-mail
+00:03 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: busca de cidade ignora acento e maiuscula
+00:03 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: telefone legivel
+00:03 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: saudacao pela hora
+00:03 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: perfil antigo guardado no aparelho pede o cadastro
+00:04 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 01 entrada
+00:04 +26 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 02 telefone
+00:04 +26 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 03 entrar com e-mail
+00:04 +26 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 04 esqueci a senha
+00:04 +26 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 05 cidade e cadastro
+00:04 +26 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 07 termos
+00:04 +26 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 08 inicio, destino, atividade e conta
+00:04 +26 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 13 confirmar viagem com Carro e Moto
+00:04 +26 ~8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 15 procurando, a caminho, chegou, em viagem e fim
+00:04 +26 ~9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 23 recibo
+00:04 +26 ~10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 25 meus dados e trocar telefone
+00:04 +26 ~11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: 27 telas da conta
+00:04 +26 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: (tearDownAll)
+00:04 +26 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Horario da corrida agendada de 30 minutos a 7 dias a frente
+00:04 +27 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Horario da corrida agendada texto do horario: hoje, amanha e dia da semana
+00:04 +28 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario ao lado de Buscar destino e faixa do horario escolhido
+00:05 +29 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista a caminho: tempo, chat, fotos, nota, viagens, carro, placa e Cancelar
+00:05 +30 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
+00:05 +31 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
+00:06 +32 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
+00:06 +33 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
+00:06 +34 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Favoritar avisa o servidor e o coracao fica marcado
+00:06 +35 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS: panico manda a posicao e a corrida; avisar contatos; 190 e 192
+00:06 +36 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS: panico manda a posicao e a corrida; avisar contatos; 190 e 192
+00:06 +37 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: painel do motorista e chat continuam
+00:06 +38 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: SOS sem contatos: botao para cadastrar
+00:06 +39 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Em viagem: taximetro correndo no canto da tela
+00:06 +40 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
+00:06 +41 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: mostra, adiciona e salva
+00:06 +42 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
+00:07 +43 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Contatos de emergencia: telefone incompleto nao salva
+00:07 +44 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
+00:07 +45 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Conta: foto com lapis, agendadas e contatos de emergencia
+00:07 +46 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Inicio: marca no topo, cupom, sino, minha localizacao e Buscar destino
+00:08 +47 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
+00:08 +48 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
+00:08 +49 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
+00:08 +50 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: primeira vez no celular: o mapa abre no centro da cidade do cadastro (vindo do servidor)
+00:08 +51 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Sem enquadrar (zoom fixo antigo): o destino longe ficava fora
+00:08 +52 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
+00:09 +53 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
+00:09 +54 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: a posicao guardada e da pessoa: some ao sair da conta
+00:09 +55 ~12: All tests passed!
