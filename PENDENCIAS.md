@@ -47,7 +47,7 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo 
 17. **Flavors por operador e script de app novo — [NÃO EXISTE].** iOS: não existe a pasta ios nos apps e não dá para compilar iOS sem Mac e conta Apple.
 18. **Itumbiara no cadastro de operador.** Está cadastrada (o teste de hoje vê as 6 cidades: Goiatuba, Teutônia, Bom Jesus de Goiás, Buriti Alegre, Joviânia, Itumbiara). Na janela "Novo operador" ela é a última da lista: suspeita de rolagem; confirmar com teste de tela na etapa 7.
 19. **Cópia do banco — [REAL].** Cópia diária criptografada funcionando (19 cópias, a última em 28/10). A restauração foi testada só com cópia de teste, não num banco de verdade.
-20. **Documentação de contas e hospedagem — falta** (etapa 7).
+20. **Documentação de contas e hospedagem — falta** (etapa 7). Já conferido hoje: o Render está na conta dasilvagonchoroskie@gmail.com; o conector do Supabase usado pelo Claude está ligado na conta gestaodefrota2027@gmail.com (só o projeto da frota) e **não alcança o banco da Fortaleza Mov** (projeto fortaleza-mov-eua). O servidor continua acessando o banco normalmente.
 
 ---
 
