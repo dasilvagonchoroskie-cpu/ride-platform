@@ -1,4 +1,5 @@
-import { base32, cifrar, codigoTotp, conferirTotp, deBase32, decifrar, DoisFatoresService, linkDoAutenticador } from './dois-fatores';
+import { createHash } from 'crypto';
+import { base32, cifrar, codigoTotp, conferirTotp, deBase32, decifrar, DoisFatoresService, linkDoAutenticador, passoDoTotp } from './dois-fatores';
 
 describe('Verificacao em duas etapas (TOTP, Google Authenticator)', () => {
   const rfc = Buffer.from('12345678901234567890', 'ascii');
@@ -43,5 +44,30 @@ describe('Verificacao em duas etapas (TOTP, Google Authenticator)', () => {
     expect(s.lerDesafio(d, 1_000_000 + 60_000)).toBe('usuario-1');
     expect(() => s.lerDesafio(d, 1_000_000 + 6 * 60_000)).toThrow();
     expect(() => s.lerDesafio(d.slice(0, -2) + 'xx', 1_000_000)).toThrow();
+  });
+
+  it('o mesmo codigo nao entra duas vezes; recuperacao vale uma vez so', async () => {
+    const mestre = 'chave-mestra-de-teste-com-32-letras!!';
+    const update = jest.fn(async () => ({}));
+    const s = new DoisFatoresService({ user: { update } } as never, { jwt: { accessSecret: mestre } } as never);
+    const segredo = base32(Buffer.from('segredo-de-teste-20b'));
+    const agora = Date.now();
+    const codigo = codigoTotp(deBase32(segredo), agora);
+    const passo = passoDoTotp(deBase32(segredo), codigo, agora);
+    expect(passo).toBe(Math.floor(agora / 30_000));
+    const recuperacao = 'ABCD-EFGH';
+    const resumoRec = createHash('sha256').update('ABCDEFGH').digest('hex');
+    const meta = { doisFatores: { ativo: true, segredo: cifrar(segredo, mestre), recuperacao: [resumoRec], ultimoPasso: (passo as number) - 1 } };
+    expect(await s.conferirEGastar('u1', meta, codigo)).toBe(true);
+    const gravado = (update.mock.calls[0] as unknown as [{ data: { metadata: typeof meta } }])[0].data.metadata;
+    expect(gravado.doisFatores.ultimoPasso).toBe(passo);
+    expect(await s.conferirEGastar('u1', gravado, codigo)).toBe(false);
+    expect(await s.conferirEGastar('u1', gravado, 'abcd efgh')).toBe(true);
+    const semRec = (update.mock.calls[1] as unknown as [{ data: { metadata: typeof meta } }])[0].data.metadata;
+    expect(semRec.doisFatores.recuperacao).toEqual([]);
+    expect(await s.conferirEGastar('u1', semRec, 'ABCD-EFGH')).toBe(false);
+    // Chave mestra trocada: o codigo do aplicativo nao abre (sem erro 500).
+    const outra = new DoisFatoresService({ user: { update } } as never, { jwt: { accessSecret: 'outra-chave-mestra-de-teste-32-letras' } } as never);
+    expect(await outra.conferirEGastar('u1', meta, codigoTotp(deBase32(segredo), Date.now()))).toBe(false);
   });
 });

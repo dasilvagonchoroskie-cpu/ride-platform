@@ -787,6 +787,29 @@ X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso
 # rota existe e responde a situacao; ligar de verdade e na Central.
 X=$(get /auth/2fa "$TA"); [ "$(echo "$X" | jq -r '.data.ativo | type')" = "boolean" ] && ok "Central: verificacao em duas etapas disponivel (ligada: $(echo "$X" | jq -r '.data.ativo'))" || falha "Central: verificacao em duas etapas" "$X"
 X=$(get /auth/2fa "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver a verificacao da Central" "$X" || ok "Seguranca: so a Central usa a verificacao em duas etapas"
+# Fluxo completo das duas etapas na conta do OPERADOR de teste (a do dono
+# nao e mexida): ligar com o codigo do autenticador, senha sozinha nao
+# entra, mesmo codigo nao entra duas vezes, recuperacao vale uma vez.
+totp() { python3 -c "import base64,hmac,hashlib,struct,sys,time; k=base64.b32decode(sys.argv[1].replace(' ','').upper()); c=int(time.time())//30; h=hmac.new(k,struct.pack('>Q',c),hashlib.sha1).digest(); o=h[-1]&15; print('%06d'%((struct.unpack('>I',h[o:o+4])[0]&0x7fffffff)%1000000))" "$1"; }
+if [ -n "${OPID:-}" ]; then
+  L=$(post /auth/password/login "{\"email\":\"$EMAILO\",\"password\":\"$SENHA_OP2\"}"); TO=$(echo "$L" | jq -r '.data.accessToken // empty')
+  X=$(post /auth/2fa/iniciar '{}' "$TO"); SEG=$(echo "$X" | jq -r '.data.segredo // empty')
+  if [ -n "$SEG" ] && echo "$X" | jq -r '.data.link' | grep -q '^otpauth://totp/'; then
+    C2=$(totp "$SEG"); X=$(post /auth/2fa/ativar "{\"codigo\":\"$C2\"}" "$TO")
+    R1=$(echo "$X" | jq -r '.data.recuperacao[0] // empty'); R2=$(echo "$X" | jq -r '.data.recuperacao[1] // empty')
+    [ "$(echo "$X" | jq -r '.data.ativo')" = "true" ] && [ "$(echo "$X" | jq -r '.data.recuperacao | length')" = "8" ] && ok "Operador: ligou as duas etapas com o codigo do autenticador (8 codigos de recuperacao)" || falha "Operador: ligar as duas etapas" "$X"
+    L=$(post /auth/password/login "{\"email\":\"$EMAILO\",\"password\":\"$SENHA_OP2\"}"); DES=$(echo "$L" | jq -r '.data.desafio // empty')
+    [ "$(echo "$L" | jq -r '.data.precisa2fa')" = "true" ] && [ -z "$(echo "$L" | jq -r '.data.accessToken // empty')" ] && [ -n "$DES" ] && ok "Seguranca: com as duas etapas ligadas, a senha sozinha nao entra" || falha "Seguranca: senha sozinha entrou com as duas etapas" "$(echo "$L" | jq -c '{precisa2fa: .data.precisa2fa, token: (.data.accessToken != null)}')"
+    X=$(post /auth/2fa/entrar "{\"desafio\":\"$DES\",\"codigo\":\"$C2\"}"); [ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "Seguranca: o mesmo codigo do autenticador nao entra duas vezes" || falha "Seguranca: codigo repetido entrou" "$(echo "$X" | jq -c '.success')"
+    X=$(post /auth/2fa/entrar "{\"desafio\":\"$DES\",\"codigo\":\"$R1\"}"); TO2=$(echo "$X" | jq -r '.data.accessToken // empty')
+    [ -n "$TO2" ] && ok "Operador: entrou com senha + codigo de recuperacao" || falha "Operador: entrar com o codigo de recuperacao" "$X"
+    X=$(post /auth/2fa/entrar "{\"desafio\":\"$DES\",\"codigo\":\"$R1\"}"); [ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "Seguranca: codigo de recuperacao vale uma vez so" || falha "Seguranca: recuperacao usada duas vezes" "$(echo "$X" | jq -c '.success')"
+    X=$(post /auth/2fa/entrar "{\"desafio\":\"x${DES}\",\"codigo\":\"$R2\"}"); [ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "Seguranca: desafio do login alterado e recusado" || falha "Seguranca: desafio alterado entrou" "$(echo "$X" | jq -c '.success')"
+    X=$(post /auth/2fa/desligar "{\"codigo\":\"$R2\"}" "${TO2:-$TO}"); [ "$(echo "$X" | jq -r '.data.ativo')" = "false" ] && ok "Operador: desligou as duas etapas com um codigo valido" || falha "Operador: desligar as duas etapas" "$X"
+  else
+    falha "Operador: comecar a ligar as duas etapas" "$X"
+  fi
+fi
 # Limpeza: o teste apaga o que criou (contas de teste, corridas, cupons) e a
 # conta de operador, para nada de teste ficar no financeiro da Central.
 if [ -n "${OPID:-}" ]; then

@@ -68,15 +68,24 @@ export function codigoTotp(segredo: Buffer, ms: number, digitos = 6, passo = 30,
   return String(n % 10 ** digitos).padStart(digitos, '0');
 }
 
-/** Confere o codigo aceitando 30 s antes e depois (relogio do celular adiantado/atrasado). */
-export function conferirTotp(segredo: Buffer, codigo: string, ms = Date.now()): boolean {
+/**
+ * Passo de 30 s em que o codigo vale, aceitando 30 s antes e depois (relogio
+ * do celular adiantado/atrasado). null = codigo errado.
+ */
+export function passoDoTotp(segredo: Buffer, codigo: string, ms = Date.now()): number | null {
   const c = codigo.replace(/\D/g, '');
-  if (c.length !== 6) return false;
+  if (c.length !== 6) return null;
+  const agora = Math.floor(ms / 30_000);
   for (const d of [-1, 0, 1]) {
-    const esperado = codigoTotp(segredo, ms + d * 30_000);
-    if (timingSafeEqual(Buffer.from(esperado), Buffer.from(c))) return true;
+    const esperado = codigoTotp(segredo, (agora + d) * 30_000);
+    if (timingSafeEqual(Buffer.from(esperado), Buffer.from(c))) return agora + d;
   }
-  return false;
+  return null;
+}
+
+/** Confere o codigo aceitando 30 s antes e depois. */
+export function conferirTotp(segredo: Buffer, codigo: string, ms = Date.now()): boolean {
+  return passoDoTotp(segredo, codigo, ms) !== null;
 }
 
 /** Link que o Google Authenticator abre (otpauth://). */
@@ -115,6 +124,8 @@ interface DadosDoisFatores {
   segredo?: string;
   ativadoEm?: string;
   recuperacao?: string[];
+  /** Ultimo passo de 30 s usado: o mesmo codigo nao entra duas vezes. */
+  ultimoPasso?: number;
   pendente?: { segredo: string; criadoEm: string };
 }
 
@@ -176,7 +187,8 @@ export class DoisFatoresService {
     if (!p) throw BusinessException.validation('Comece de novo em "Ligar verificacao em duas etapas".');
     if (Date.now() - new Date(p.criadoEm).getTime() > 30 * 60_000) throw BusinessException.validation('Passou o tempo. Comece de novo.');
     const segredo = decifrar(p.segredo, this.mestre);
-    if (!conferirTotp(deBase32(segredo), codigo)) {
+    const passo = passoDoTotp(deBase32(segredo), codigo);
+    if (passo === null) {
       throw BusinessException.validation('Codigo errado. Confira se o relogio do celular esta certo e digite o codigo que aparece agora.');
     }
     const recuperacao = Array.from({ length: 8 }, () => {
@@ -188,6 +200,7 @@ export class DoisFatoresService {
       segredo: cifrar(segredo, this.mestre),
       ativadoEm: new Date().toISOString(),
       recuperacao: recuperacao.map(resumo),
+      ultimoPasso: passo,
     });
     return { ativo: true, recuperacao };
   }
@@ -207,7 +220,18 @@ export class DoisFatoresService {
     const d = meta.doisFatores;
     if (!d?.ativo || !d.segredo) return false;
     if (/^\d{6}$/.test(codigo.replace(/\s/g, ''))) {
-      return conferirTotp(deBase32(decifrar(d.segredo, this.mestre)), codigo);
+      let passo: number | null;
+      try {
+        passo = passoDoTotp(deBase32(decifrar(d.segredo, this.mestre)), codigo);
+      } catch {
+        // Segredo que nao abre (JWT_ACCESS_SECRET trocado): so os codigos de
+        // recuperacao entram (ver docs/CONTAS.md).
+        return false;
+      }
+      // Mesmo codigo de novo (alguem viu por cima do ombro): recusa.
+      if (passo === null || (d.ultimoPasso != null && passo <= d.ultimoPasso)) return false;
+      await this.gravar(userId, meta, { ...d, ultimoPasso: passo });
+      return true;
     }
     const r = resumo(codigo);
     const lista = d.recuperacao ?? [];
