@@ -168,6 +168,8 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
   bool _banco = false;
   bool _cache = false;
   String? _versao;
+  bool _mapa = false;
+  String _mapaTexto = 'TomTom';
 
   @override
   void initState() {
@@ -199,12 +201,23 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
     } catch (_) {
       // Sem resposta: tudo aparece como fora do ar, que e a verdade.
     }
+    var mapa = false;
+    var mapaTexto = 'TomTom: sem resposta do servidor';
+    try {
+      final u = await ApiClient().request('GET', '/geo/uso');
+      if (u is Map) {
+        mapa = u['ligado'] == true;
+        mapaTexto = textoDoUsoDoMapa(u);
+      }
+    } catch (_) {}
     if (!mounted) return;
     setState(() {
       _carregando = false;
       _servidor = servidor;
       _banco = banco;
       _cache = cache;
+      _mapa = mapa;
+      _mapaTexto = mapaTexto;
     });
   }
 
@@ -240,8 +253,8 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
           _IntegrationRow(
             icon: Icons.map_outlined,
             title: 'Mapa',
-            subtitle: 'OpenStreetMap público (tile.openstreetmap.org), sem chave',
-            connected: true,
+            subtitle: _carregando ? 'Verificando...' : _mapaTexto,
+            connected: _mapa,
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -254,4 +267,22 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
       ),
     );
   }
+}
+
+/// Resumo do GET /geo/uso para a Central (cota gratis da TomTom por MES).
+String textoDoUsoDoMapa(Map<dynamic, dynamic> u) {
+  if (u['ligado'] != true) return 'TomTom: chave não configurada no servidor';
+  const nomes = {'geocode': 'buscas', 'reverse': 'endereços', 'routing': 'rotas', 'search': 'lugares'};
+  final partes = <String>[];
+  for (final s in (u['servicos'] as List? ?? const [])) {
+    if (s is! Map) continue;
+    final nome = nomes[s['servico']] ?? '${s['servico']}';
+    partes.add('$nome ${s['noMes'] ?? 0}/${s['cotaDoMes'] ?? '?'}');
+  }
+  final estado = u['parado'] == true
+      ? ' · PARADO (limite)'
+      : u['economia'] == true
+          ? ' · modo economia'
+          : '';
+  return 'TomTom$estado · no mês: ${partes.join(', ')}';
 }

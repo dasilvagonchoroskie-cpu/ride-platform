@@ -1,5 +1,6 @@
 import '../core/api/api_client.dart';
 import '../core/utils/geo.dart';
+import '../core/mapa/uso_local.dart';
 
 // ---------------------------------------------------------------------------
 // Modelos simples do painel. Cada um le exatamente o que o servidor manda
@@ -1321,11 +1322,14 @@ class PainelApi {
   Future<void> cancelarCorrida(String rideId, String motivo) =>
       _c.request('POST', '/admin/rides/$rideId/cancel', body: {'reason': motivo});
 
-  Future<List<Lugar>> buscarEndereco(String texto, Coords perto) async => [
+  Future<List<Lugar>> buscarEndereco(String texto, Coords perto) async {
+    UsoLocal.contar('buscas');
+    return [
         for (final j in _lista(await _c.request('GET', '/geo/search',
             query: {'q': texto, 'lat': '${perto.latitude}', 'lng': '${perto.longitude}'})))
           Lugar.fromJson(j),
       ];
+  }
 
   // Motoristas
   Future<List<MotoristaCadastro>> motoristas(String status) async => [

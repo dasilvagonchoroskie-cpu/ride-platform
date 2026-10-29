@@ -234,7 +234,8 @@ jobs:
 
       # Google Maps (Evandro, 09/10/2026): a chave (restrita aos 3 apps e ao
       # Maps SDK, gratuito no celular) entra no manifesto; o app liga o mapa
-      # do Google. Sem a chave, fica o OpenStreetMap.
+      # do Google so se o servidor mandar (MAPA_PROVEDOR=google). Sem a chave,
+      # fica a TomTom (desde 29/10/2026; a chave da TomTom vem do servidor).
       - name: Chave do Google Maps
         run: |
           set -euo pipefail
@@ -244,7 +245,7 @@ jobs:
             echo "MAPA_DEFINE=--dart-define=MAPA_GOOGLE=true" >> "$GITHUB_ENV"
             echo "Google Maps ligado."
           else
-            echo "Sem chave: OpenStreetMap."
+            echo "Sem chave do Google: mapa TomTom."
           fi
 
       - name: Compilar o APK

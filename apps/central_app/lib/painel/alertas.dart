@@ -15,7 +15,6 @@ import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 import '../core/mapa_config.dart';
-import '../core/medida.dart';
 
 /// Aba Alertas e Seguranca: SOS abertos (ao vivo) e o historico.
 class Alertas extends StatefulWidget {
@@ -121,7 +120,7 @@ class _TelaSosState extends State<TelaSos> {
   gm.BitmapDescriptor? _pinoSos;
   LatLng? _ultima;
 
-  /// Mapa do Google nesta montagem (nos testes, sempre o OpenStreetMap).
+  /// Mapa do Google nesta montagem (nos testes, sempre o flutter_map).
   bool get _google => usarGoogleMaps && mostrarRuasNoMapa;
 
   @override
@@ -212,11 +211,7 @@ class _TelaSosState extends State<TelaSos> {
                     options: MapOptions(initialCenter: pos, initialZoom: 16),
                     children: [
                       if (mostrarRuasNoMapa)
-                        TileLayer(
-                          urlTemplate: MapaConfig.tiles,
-                                                    tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
-userAgentPackageName: 'com.rideplatform.central_app',
-                        ),
+                        MapaConfig.atual.camadaDeRuas(pacote: 'com.rideplatform.central_app', maxZoom: 19),
                       MarkerLayer(markers: [
                         Marker(
                           point: pos,

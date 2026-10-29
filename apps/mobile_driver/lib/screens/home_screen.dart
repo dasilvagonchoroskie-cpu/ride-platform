@@ -16,6 +16,7 @@ import 'menu_screen.dart';
 import 'rides_history_screen.dart';
 import 'sos_screen.dart';
 import 'wallet_screen.dart';
+import '../core/mapa_config.dart';
 
 /// Tela principal do motorista.
 ///
@@ -38,7 +39,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<DriverState>().atualizarPainel();
+      if (!mounted) return;
+      final d = context.read<DriverState>();
+      d.atualizarPainel();
+      // Endereco das imagens do mapa (TomTom, com a chave) so com login.
+      unawaited(MapaConfig.atualizarComLogin((c) => d.api.request('GET', c)));
     });
     // Ganho do dia e saldo em dia, sem o motorista precisar abrir nada.
     _relogio = Timer.periodic(const Duration(minutes: 2), (_) {

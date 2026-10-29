@@ -19,6 +19,10 @@ import '../core/avisos.dart';
 import 'agendadas_screen.dart';
 import 'confirm_screen.dart';
 import 'map_pick_screen.dart';
+import '../core/api/api_client.dart';
+import '../core/mapa/busca.dart';
+import '../core/mapa_config.dart';
+import '../widgets/contingencia_mapa.dart';
 
 /// Tela Inicio: mapa em tela cheia, carros disponiveis por perto (de
 /// verdade, do servidor), sino de avisos e o "Buscar destino" embaixo.
@@ -50,10 +54,17 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _atualizarCarros();
-      if (mounted) context.read<RideState>().carregarAgendadas();
+      if (!mounted) return;
+      final ride = context.read<RideState>();
+      ride.carregarAgendadas();
+      // Endereco das imagens do mapa (TomTom, com a chave) so com login.
+      unawaited(MapaConfig.atualizarComLogin((c) => ride.api.request('GET', c)));
     });
+    var voltas = 0;
     _relogio = Timer.periodic(const Duration(seconds: 30), (_) {
-      _atualizarCarros();
+      voltas++;
+      // Modo economia do mapa: os carros por perto a cada 90 s (antes 30 s).
+      if (!MapaConfig.economia || voltas % 3 == 0) _atualizarCarros();
       // Perto do horario de uma agendada, a corrida abre sozinha.
       if (mounted) context.read<RideState>().conferirAgendadas();
     });
@@ -370,7 +381,7 @@ String saudacao([DateTime? agora]) {
   return 'Boa noite';
 }
 
-/// Busca do destino: digita e o servidor procura no OpenStreetMap.
+/// Busca do destino: digita e o servidor procura na TomTom.
 /// Se nao achar, da para marcar no mapa.
 class _DestinationSheet extends StatefulWidget {
   const _DestinationSheet();
@@ -394,31 +405,57 @@ class _DestinationSheetState extends State<_DestinationSheet> {
     super.dispose();
   }
 
+  /// A TomTom esta no limite agora (MAPA_LIMITE): mostra a contingencia.
+  bool _limite = false;
+
+  /// Buscas desta abertura do app: a mesma busca nao vai ao servidor de novo.
+  static final BuscasGuardadas<PlaceSuggestion> _guardadas = BuscasGuardadas<PlaceSuggestion>();
+
   void _digitou(String texto) {
     _espera?.cancel();
     final t = texto.trim();
+    final pode = RegrasDaBusca.podeBuscar(t);
     setState(() {
       _busca = t;
       _falhou = false;
-      if (t.length < 3) {
+      _limite = false;
+      if (!pode) {
         _resultados = const [];
         _procurando = false;
       }
     });
-    if (t.length < 3) return;
-    // Espera a pessoa parar de digitar: cada busca e uma consulta ao mapa.
-    _espera = Timer(const Duration(milliseconds: 650), () => _procurar(t));
+    if (!pode) return;
+    // Economia (29/10/2026): 3 letras uteis (sem contar "rua", "av."...) e
+    // espera de 500 ms depois da ultima tecla — nunca uma busca por tecla.
+    _espera = Timer(RegrasDaBusca.espera, () => _procurar(t));
   }
 
   Future<void> _procurar(String texto) async {
+    final app = context.read<AppState>();
+    final chave = BuscasGuardadas.chave(texto, app.coords.latitude, app.coords.longitude);
+    final guardada = _guardadas.ler(chave);
+    if (guardada != null) {
+      setState(() {
+        _resultados = guardada;
+        _procurando = false;
+      });
+      return;
+    }
     setState(() => _procurando = true);
     try {
-      final app = context.read<AppState>();
       final lista = await context.read<RideState>().searchPlaces(texto, app.coords);
+      if (lista.isNotEmpty) _guardadas.gravar(chave, lista);
       if (!mounted || texto != _busca) return;
       setState(() {
         _resultados = lista;
         _procurando = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _procurando = false;
+        _limite = e.code == 'MAPA_LIMITE';
+        _falhou = !_limite;
       });
     } catch (_) {
       if (!mounted) return;
@@ -440,7 +477,7 @@ class _DestinationSheetState extends State<_DestinationSheet> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final mostrandoRecentes = _busca.length < 3;
+    final mostrandoRecentes = !RegrasDaBusca.podeBuscar(_busca);
     final lista = mostrandoRecentes ? app.destinosRecentes : _resultados;
 
     return Padding(
@@ -491,12 +528,22 @@ class _DestinationSheetState extends State<_DestinationSheet> {
                 ],
               ),
               const SizedBox(height: Spacing.sm),
+              if (_limite && !mostrandoRecentes) ...[
+                ContingenciaDoMapa(
+                  endereco: _busca,
+                  outraAcao: _marcarNoMapa,
+                  outraAcaoTexto: 'Escolher no mapa',
+                ),
+                const SizedBox(height: Spacing.sm),
+              ],
               Expanded(
                 child: lista.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.only(top: Spacing.lg),
                         child: Text(
-                          _falhou
+                          _limite
+                              ? ''
+                              : _falhou
                               ? 'Sem conexão para buscar agora. Tente de novo ou escolha no mapa.'
                               : mostrandoRecentes
                                   ? 'Digite pelo menos 3 letras do destino.'

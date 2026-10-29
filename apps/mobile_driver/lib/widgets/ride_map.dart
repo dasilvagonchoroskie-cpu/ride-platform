@@ -25,16 +25,16 @@ class MapMarker {
 }
 
 /// Desenho das ruas. Os testes automaticos desligam (la nao ha internet) —
-/// e com isso usam sempre o OpenStreetMap (o Google precisa do celular).
+/// e com isso usam sempre o flutter_map (o Google precisa do celular).
 bool mostrarRuasNoMapa = true;
 
 /// Mapa do app.
 ///
 /// - Montagem com a chave do Google (esteira): mapa do **Google Maps**
 ///   (Maps SDK, gratuito no celular), o mesmo dos apps de corrida grandes.
-/// - Sem a chave, ou nos testes automaticos: **OpenStreetMap** via
-///   flutter_map (servidor tile.openstreetmap.org, sem chave), com a
-///   atribuicao exigida pela licenca ODbL no canto.
+/// - Sem a chave, ou nos testes automaticos: **TomTom** via flutter_map
+///   (MapaConfig.atual; a chave vem do servidor so com login), com a
+///   atribuicao exigida pela TomTom no canto.
 class RideMap extends StatefulWidget {
   const RideMap({
     super.key,
@@ -264,7 +264,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   bool get _temEnquadramento =>
       widget.enquadrar.where((c) => c.latitude != 0 || c.longitude != 0).length >= 2;
 
-  /// Enquadramento da viagem inteira no OpenStreetMap (null = centro e zoom fixos).
+  /// Enquadramento da viagem inteira no flutter_map (null = centro e zoom fixos).
   CameraFit? _ajuste() {
     if (!_temEnquadramento) return null;
     return CameraFit.coordinates(
@@ -393,7 +393,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   }
 
   // ------------------------------------------------------------------
-  // OpenStreetMap
+  // flutter_map (ruas da TomTom)
   // ------------------------------------------------------------------
 
   Widget _mapaOsm() {
@@ -411,16 +411,7 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
       ),
       children: [
         if (mostrarRuasNoMapa)
-          TileLayer(
-            urlTemplate: MapaConfig.tiles,
-                        tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
-userAgentPackageName: 'br.com.fortalezamov.motorista',
-            maxZoom: MapaConfig.maxZoom.toDouble(),
-            tileProvider: NetworkTileProvider(),
-            errorTileCallback: (tile, error, stackTrace) {
-              // Tiles indisponiveis ficam no fundo, sem quebrar o mapa.
-            },
-          ),
+          MapaConfig.atual.camadaDeRuas(pacote: 'br.com.fortalezamov.motorista', maxZoom: MapaConfig.maxZoom.toDouble()),
 
         // Rota ate o passageiro (azul)
         if (widget.driverRoute.length > 1)
@@ -492,8 +483,7 @@ userAgentPackageName: 'br.com.fortalezamov.motorista',
               ),
             ),
 
-          // Atribuicao obrigatoria do OpenStreetMap (ODbL). O Google poe o
-          // logo dele sozinho.
+          // Atribuicao obrigatoria da TomTom. O Google poe o logo dele sozinho.
           if (!_google)
             Positioned(
               right: 4,

@@ -52,7 +52,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
   final ControleGoogle _controleGoogle = ControleGoogle();
   bool _centralizou = false;
 
-  /// Mapa do Google nesta montagem (nos testes, sempre o OpenStreetMap).
+  /// Mapa do Google nesta montagem (nos testes, sempre o flutter_map).
   bool get _google => usarGoogleMaps && mostrarRuasNoMapa;
 
   ControleDoMapa get _controle => _google ? _controleGoogle : _controleOsm;
@@ -239,12 +239,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
             options: MapOptions(initialCenter: _ll(p.centro), initialZoom: 14),
             children: [
               if (mostrarRuasNoMapa)
-                TileLayer(
-                  urlTemplate: MapaConfig.tiles,
-                                    tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
-userAgentPackageName: 'com.rideplatform.central_app',
-                  maxZoom: MapaConfig.maxZoom.toDouble(),
-                ),
+                MapaConfig.atual.camadaDeRuas(pacote: 'com.rideplatform.central_app', maxZoom: MapaConfig.maxZoom.toDouble()),
               MarkerLayer(markers: marcadores),
             ],
           ),

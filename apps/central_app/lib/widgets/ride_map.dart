@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import '../core/theme/central_theme.dart';
 import '../core/utils/geo.dart';
 import '../core/mapa_config.dart';
-import '../core/medida.dart';
 
 enum MarkerKind { pickup, dropoff, driver, car, passenger }
 
@@ -18,13 +17,9 @@ class MapMarker {
   final String? label;
 }
 
-/// Mapa do app, baseado em **OpenStreetMap** via `flutter_map`.
-///
-/// Usa o servidor padrao tile.openstreetmap.org: nao exige chave de API
-/// e nao tem limite de uso para volumes normais de aplicativo. (O CARTO
-/// Dark Matter foi usado antes para um visual escuro, mas passou a
-/// recusar requisicoes sem chave — por isso a troca.) A atribuicao
-/// exigida pela licenca ODbL fica visivel no canto inferior direito.
+/// Mapa do app via `flutter_map`, com as ruas do fornecedor em uso
+/// (MapaConfig.atual; desde 29/10/2026, TomTom). A atribuicao exigida pelo
+/// fornecedor fica visivel no canto inferior direito.
 class RideMap extends StatefulWidget {
   const RideMap({
     super.key,
@@ -143,20 +138,8 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
             backgroundColor: AppColors.mapBackground,
           ),
           children: [
-            // Tiles padrao do OpenStreetMap — servidor oficial, sem chave
-            // de API. O CARTO Dark Matter (tema escuro) exigia chave e
-            // travava o mapa com "API KEY REQUIRED"; a troca perde o tema
-            // escuro do mapa, mas garante que ele sempre carrega.
-            TileLayer(
-              urlTemplate: MapaConfig.tiles,
-                            tileBuilder: Medida.ligada ? Medida.construtorDeImagem : null,
-userAgentPackageName: 'com.rideplatform.central_app',
-              maxZoom: MapaConfig.maxZoom.toDouble(),
-              tileProvider: NetworkTileProvider(),
-              errorTileCallback: (tile, error, stackTrace) {
-                // Tiles indisponiveis ficam no fundo escuro, sem quebrar o mapa.
-              },
-            ),
+            // Ruas do fornecedor (TomTom), com o aviso de contingencia.
+            MapaConfig.atual.camadaDeRuas(pacote: 'com.rideplatform.central_app', maxZoom: MapaConfig.maxZoom.toDouble()),
 
             // Rota ate o passageiro (azul)
             if (widget.driverRoute.length > 1)
@@ -186,7 +169,7 @@ userAgentPackageName: 'com.rideplatform.central_app',
           ],
         ),
 
-        // Atribuicao obrigatoria: OpenStreetMap (ODbL) + CARTO.
+        // Atribuicao obrigatoria do fornecedor do mapa.
         Positioned(
           right: 4,
           bottom: 2,

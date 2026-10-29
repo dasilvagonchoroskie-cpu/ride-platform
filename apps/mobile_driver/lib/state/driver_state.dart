@@ -18,6 +18,8 @@ import '../data/demo/driver_demo.dart';
 import '../data/models/driver_models.dart';
 import '../core/avisos.dart';
 import '../core/medida.dart';
+import '../core/mapa_config.dart';
+import '../core/mapa/uso_local.dart';
 
 /// Estado do motorista: cadastro, documentos, status online, ofertas,
 /// corrida em andamento e carteira.
@@ -1420,10 +1422,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   // estrada certa, nao aquele risco verde que parece rota de aviao")
   // ------------------------------------------------------------------
 
-  /// Caminho pelas ruas entre dois pontos (servidor -> OpenStreetMap).
+  /// Caminho pelas ruas entre dois pontos (servidor -> TomTom).
   /// null = sem rota agora (sem rede ou o servico de rotas nao respondeu).
   Future<List<Coords>?> _rotaPelaRua(Coords de, Coords para) async {
     if (!AppConfig.hasApi) return buildRoute(de, para, steps: 30);
+    UsoLocal.contar('rotas');
     try {
       final r = await _client.request('GET', '/geo/rota', query: {
         'deLat': de.latitude.toStringAsFixed(6),
@@ -1442,8 +1445,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _rotasDaOferta(RideOffer o) async {
     rotaOfertaAteEmbarque = const [];
     rotaOfertaViagem = const [];
+    // A rota embarque -> destino ja foi calculada no orcamento e vem do
+    // guardado do servidor. No modo economia, ate o embarque fica a linha reta.
     final resultados = await Future.wait([
-      _rotaPelaRua(position, o.pickupCoords),
+      MapaConfig.economia ? Future<List<Coords>?>.value(null) : _rotaPelaRua(position, o.pickupCoords),
       _rotaPelaRua(o.pickupCoords, o.dropoffCoords),
     ]);
     if (offer?.id != o.id) return;
@@ -1452,13 +1457,28 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Busca (ou refaz) as rotas da corrida em andamento. Refaz quando o
-  /// motorista sai do caminho (no maximo a cada [intervalo] segundos).
-  Future<void> _buscarRotas({bool forcar = false, int intervalo = 30}) async {
+  /// Quantas vezes a rota desta etapa ja foi refeita (zera em cada etapa).
+  int _rotasRefeitas = 0;
+  static const int _maximoDeRotasRefeitas = 4;
+
+  /// Busca (ou refaz) as rotas da corrida em andamento.
+  ///
+  /// Economia da cota de rotas (29/10/2026: "rota pedida uma vez por
+  /// corrida, nao a cada atualizacao do GPS"): cada etapa (ate o embarque, a
+  /// viagem) pede a rota UMA vez ([forcar]); se o motorista sair do caminho,
+  /// refaz no maximo 4 vezes por etapa, com [intervalo] segundos entre uma e
+  /// outra, e nunca no modo economia.
+  Future<void> _buscarRotas({bool forcar = false, int intervalo = 60}) async {
     final ride = activeRide;
     if (ride == null || _buscandoRota) return;
     final agora = DateTime.now();
-    if (!forcar && agora.difference(_rotaPedidaEm).inSeconds < intervalo) return;
+    if (forcar) {
+      _rotasRefeitas = 0;
+    } else {
+      if (agora.difference(_rotaPedidaEm).inSeconds < intervalo) return;
+      if (MapaConfig.economia || _rotasRefeitas >= _maximoDeRotasRefeitas) return;
+      _rotasRefeitas++;
+    }
     _buscandoRota = true;
     _rotaPedidaEm = agora;
     try {
@@ -1512,7 +1532,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final limite = 40 + precisao.clamp(0, 40).toDouble();
     if (trechoMaisPerto(p, rota).$2 > limite) {
       _leiturasForaDaRota++;
-      if (_leiturasForaDaRota >= 2) unawaited(_buscarRotas(intervalo: 8));
+      if (_leiturasForaDaRota >= 2) unawaited(_buscarRotas());
     } else {
       _leiturasForaDaRota = 0;
     }
@@ -2095,6 +2115,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     telefonePassageiro = null;
     await CorridasNativo.parar();
     await AppStorage.clearDriverSession();
+    await MapaConfig.esquecer();
     profile = null;
     vehicle = null;
     documents = DriverDemo.initialDocuments();

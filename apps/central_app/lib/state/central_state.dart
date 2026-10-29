@@ -12,6 +12,7 @@ import '../data/repositories/central_repository.dart';
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import '../data/models/motorista_no_mapa.dart';
+import '../core/mapa_config.dart';
 
 /// Estado da Central: sessao, fila de aprovacoes, monitoramento, tarifas
 /// e metricas financeiras.
@@ -195,6 +196,8 @@ class CentralState extends ChangeNotifier {
     await AppStorage.remove(AppStorage.adminUser);
     await AppStorage.remove(AppStorage.accessToken);
     await AppStorage.remove(AppStorage.refreshToken);
+    // O endereco das imagens do mapa (com a chave) e so para quem esta logado.
+    await MapaConfig.esquecer();
     admin = null;
     pending = [];
     approved = [];

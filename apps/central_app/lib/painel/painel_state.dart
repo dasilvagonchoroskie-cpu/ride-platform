@@ -9,6 +9,7 @@ import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
 import '../core/medida.dart';
+import '../core/mapa_config.dart';
 
 /// Estado ao vivo do painel: mapa, fila de corridas e alertas de SOS.
 /// Pergunta ao servidor a cada 5 segundos enquanto a Central esta aberta.
@@ -85,6 +86,8 @@ class PainelState extends ChangeNotifier {
       await carregarEu();
       await atualizar();
     }());
+    // Endereco das imagens do mapa (TomTom, com a chave) so com login.
+    unawaited(MapaConfig.atualizarComLogin((c) => api.cliente.request('GET', c)));
     _vigia = Timer.periodic(const Duration(seconds: 5), (_) => atualizar());
   }
 

@@ -274,7 +274,8 @@ class AppState extends ChangeNotifier {
       // sinal em 15 s, o vigia continua ouvindo e acerta depois.
       Position? position;
       try {
-        position = await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 15));
+        position = await Geolocator.getCurrentPosition(locationSettings: _fused(LocationAccuracy.high))
+            .timeout(const Duration(seconds: 15));
       } catch (_) {
         position = null;
       }
@@ -292,14 +293,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Posicao pelo FusedLocationProvider do Google Play (pedido do Evandro,
+  /// 29/10/2026): junta GPS, Wi-Fi e antenas, acha o passageiro mais rapido e
+  /// gasta menos bateria. Celular sem Google Play cai sozinho no GPS puro.
+  static LocationSettings _fused(LocationAccuracy precisao, {int distanceFilter = 0}) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return AndroidSettings(
+        accuracy: precisao,
+        distanceFilter: distanceFilter,
+        forceLocationManager: false,
+        intervalDuration: const Duration(seconds: 5),
+      );
+    }
+    return LocationSettings(accuracy: precisao, distanceFilter: distanceFilter);
+  }
+
   void _vigiarPosicao() {
     _vigia?.cancel();
     try {
       _vigia = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 5,
-        ),
+        locationSettings: _fused(LocationAccuracy.best, distanceFilter: 5),
       ).listen((position) {
         final atual = accuracyMeters;
         // So aceita a leitura nova se ela for mais precisa que a que ja

@@ -3,6 +3,7 @@ import '../../core/config/app_config.dart';
 import '../../core/utils/geo.dart';
 import '../demo/demo_engine.dart';
 import '../models/models.dart';
+import '../../core/mapa/uso_local.dart';
 
 /// Acesso aos dados de corrida.
 ///
@@ -209,13 +210,14 @@ class RideRepository {
     }
   }
 
-  /// Busca de endereco (OpenStreetMap, pelo servidor).
+  /// Busca de endereco (TomTom, pelo servidor).
   Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin) async {
     if (_useDemo) {
       return DemoEngine.suggestions(origin)
           .where((s) => s.address.toLowerCase().contains(texto.toLowerCase()))
           .toList();
     }
+    UsoLocal.contar('buscas');
     final data = await _client.request('GET', '/geo/search', query: {
       'q': texto,
       'lat': '${origin.latitude}',
@@ -227,6 +229,7 @@ class RideRepository {
   /// Endereco escrito de um ponto (embarque pelo GPS, ponto escolhido no mapa).
   Future<PlaceSuggestion?> addressOf(Coords point) async {
     if (_useDemo) return null;
+    UsoLocal.contar('enderecos');
     try {
       final data = await _client.request('GET', '/geo/reverse', query: {
         'lat': '${point.latitude}',

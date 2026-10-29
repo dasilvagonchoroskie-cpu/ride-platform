@@ -10,6 +10,7 @@ import '../core/storage/app_storage.dart';
 import '../core/vigia_corrida.dart';
 import '../core/legal/legal_content.dart';
 import '../data/models/models.dart';
+import '../core/mapa_config.dart';
 
 /// Sessao do passageiro.
 ///
@@ -36,6 +37,8 @@ class AuthState extends ChangeNotifier {
   static final List<Future<void> Function()> aoTrocarDeConta = [];
 
   static Future<void> _limparDadosDaConta() async {
+    // O endereco das imagens do mapa (com a chave) e so para quem esta logado.
+    await MapaConfig.esquecer();
     for (final limpar in List.of(aoTrocarDeConta)) {
       try {
         await limpar();

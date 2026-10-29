@@ -12,13 +12,13 @@ import '../core/mapa_config.dart';
 /// Mapa do Google ligado nesta montagem (Evandro, 09/10/2026: "se for de
 /// graca, bota"). O Maps SDK no celular e gratuito sem limite; a chave fica
 /// no manifesto (esteira, infra/mapas.b64) e e restrita aos 3 apps. Sem a
-/// chave (montagem de teste), o app usa o OpenStreetMap.
+/// chave (montagem normal), o app usa a TomTom.
 const bool googleNaMontagem = bool.fromEnvironment('MAPA_GOOGLE');
 
-/// Google so quando a montagem tem a chave E o servidor nao mandou usar o
-/// OpenStreetMap (GET /app/config -> mapa.provedor). Assim da para voltar
-/// ao OSM pelo servidor, sem app novo, se o Google der problema.
-bool get usarGoogleMaps => googleNaMontagem && MapaConfig.provedor != 'osm';
+/// Google so quando a montagem tem a chave do Google E o servidor manda usar
+/// o Google (GET /app/config -> mapa.provedor = 'google'). Desde 29/10/2026
+/// o padrao e a TomTom (core/mapa/map_provider.dart).
+bool get usarGoogleMaps => googleNaMontagem && MapaConfig.provedor == 'google';
 
 gm.LatLng paraGoogle(Coords c) => gm.LatLng(c.latitude, c.longitude);
 
@@ -144,7 +144,7 @@ gm.CameraPosition cameraInicial({
 }
 
 /// Pino redondo da Central no mapa do Google: circulo colorido, borda
-/// branca e o icone branco no meio — o mesmo desenho do OpenStreetMap.
+/// branca e o icone branco no meio — o mesmo desenho do mapa do flutter_map.
 /// Guardado por cor/icone/tamanho (desenha uma vez so).
 final Map<String, Future<gm.BitmapDescriptor>> _pinos = {};
 

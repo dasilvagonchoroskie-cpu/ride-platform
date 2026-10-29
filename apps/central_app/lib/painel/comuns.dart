@@ -9,7 +9,7 @@ import '../core/theme/central_theme.dart';
 
 /// Pecas usadas em varias telas do painel.
 
-/// Desenho das ruas (OpenStreetMap). Os testes automaticos desligam porque
+/// Desenho das ruas (TomTom). Os testes automaticos desligam porque
 /// la nao ha internet; os carros e alertas continuam aparecendo.
 bool mostrarRuasNoMapa = true;
 
@@ -36,7 +36,12 @@ int? centavos(String texto) {
 String paraReais(int cents) => (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
 
 /// Texto do erro para mostrar na tela (o motivo que o servidor mandou).
-String mensagemDe(Object e) => e is ApiException ? e.message : '$e';
+String mensagemDe(Object e) {
+  if (e is ApiException && e.code == 'MAPA_LIMITE') {
+    return 'A busca de endereços está no limite agora e volta sozinha. Escreva rua, número e bairro completos ou confira no Google Maps.';
+  }
+  return e is ApiException ? e.message : '$e';
+}
 
 void avisar(BuildContext context, String texto, {bool erro = false}) {
   ScaffoldMessenger.of(context)

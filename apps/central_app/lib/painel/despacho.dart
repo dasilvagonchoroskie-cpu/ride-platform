@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api/api_client.dart';
+import '../core/mapa/busca.dart';
 import '../core/theme/central_theme.dart';
 import '../core/utils/geo.dart';
 import '../data/painel.dart';
+import '../widgets/contingencia_mapa.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
 
@@ -455,6 +458,10 @@ class _CampoEnderecoState extends State<_CampoEndereco> {
   List<Lugar> _sugestoes = const [];
   bool _buscando = false;
   String? _erro;
+  bool _limite = false;
+
+  /// Buscas ja feitas nesta tela (nao pergunta de novo ao servidor).
+  static final BuscasGuardadas<Lugar> _guardadas = BuscasGuardadas<Lugar>();
 
   @override
   void dispose() {
@@ -463,21 +470,48 @@ class _CampoEnderecoState extends State<_CampoEndereco> {
     super.dispose();
   }
 
-  void _digitou(String texto) {
+  /// Economia da cota (29/10/2026): so busca com 3 letras uteis e 500 ms
+  /// depois da ultima tecla; no teto do dia, so ao tocar Enter.
+  void _digitou(String texto, {bool toque = false}) {
     _espera?.cancel();
-    if (texto.trim().length < 3) {
-      setState(() => _sugestoes = const []);
+    if (!RegrasDaBusca.podeBuscar(texto)) {
+      setState(() {
+        _sugestoes = const [];
+        _limite = false;
+      });
       return;
     }
-    _espera = Timer(const Duration(milliseconds: 600), () async {
+    if (RegrasDaBusca.soComToque && !toque) return;
+    final chave = BuscasGuardadas.chave(texto, widget.perto.latitude, widget.perto.longitude);
+    final guardada = _guardadas.ler(chave);
+    if (guardada != null) {
+      setState(() {
+        _sugestoes = guardada;
+        _erro = guardada.isEmpty ? 'Nada encontrado na região. Tente o nome da rua e o bairro.' : null;
+      });
+      return;
+    }
+    _espera = Timer(toque ? Duration.zero : RegrasDaBusca.espera, () async {
       setState(() {
         _buscando = true;
         _erro = null;
+        _limite = false;
       });
       try {
         final r = await widget.api.buscarEndereco(texto, widget.perto);
+        _guardadas.gravar(chave, r);
         if (mounted) setState(() => _sugestoes = r);
         if (mounted && r.isEmpty) setState(() => _erro = 'Nada encontrado na região. Tente o nome da rua e o bairro.');
+      } on ApiException catch (e) {
+        if (!mounted) return;
+        if (e.code == 'MAPA_LIMITE') {
+          setState(() {
+            _limite = true;
+            _sugestoes = const [];
+          });
+        } else {
+          setState(() => _erro = 'Falha na busca: ${e.message}');
+        }
       } catch (e) {
         if (mounted) setState(() => _erro = 'Falha na busca: $e');
       } finally {
@@ -504,6 +538,8 @@ class _CampoEnderecoState extends State<_CampoEndereco> {
         TextField(
           controller: _campo,
           onChanged: _digitou,
+          onSubmitted: (t) => _digitou(t, toque: true),
+          textInputAction: TextInputAction.search,
           style: AppText.body,
           decoration: InputDecoration(
             labelText: widget.rotulo,
@@ -512,6 +548,14 @@ class _CampoEnderecoState extends State<_CampoEndereco> {
             suffixIcon: _buscando ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)) : null,
           ),
         ),
+        if (_limite)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: ContingenciaDoMapa(
+              endereco: _campo.text,
+              explicacao: 'A busca de endereços voltará sozinha. Confira o endereço no Google Maps e escreva rua, número e bairro completos.',
+            ),
+          ),
         for (final s in _sugestoes)
           ListTile(
             dense: true,

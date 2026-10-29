@@ -5,6 +5,7 @@ import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
+import '../core/mapa/busca.dart';
 
 /// Cidades e equipe (so o dono) — Evandro, 08/10/2026: "se eu abrir em
 /// Goiatuba e a minha sobrinha cuidar de Teutonia, como fica a Central?"
@@ -267,7 +268,7 @@ class _NovaCidadeState extends State<_NovaCidade> {
 
   Future<void> _buscar() async {
     final t = _busca.text.trim();
-    if (t.length < 3) return;
+    if (!RegrasDaBusca.podeBuscar(t)) return;
     setState(() {
       _buscando = true;
       _erro = null;

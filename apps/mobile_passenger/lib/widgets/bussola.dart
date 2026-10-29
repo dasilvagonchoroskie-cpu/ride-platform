@@ -22,7 +22,7 @@ class SensorDeDirecao {
       : const Stream<double>.empty();
 }
 
-/// O que a bussola precisa do mapa: funciona com o OpenStreetMap
+/// O que a bussola precisa do mapa: funciona com o flutter_map
 /// (flutter_map) e com o Google Maps (ControleGoogle, em mapa_google.dart).
 abstract class ControleDoMapa {
   /// Giro do mapa em graus, no sentido do flutter_map (o Google usa o oposto).
@@ -34,7 +34,7 @@ abstract class ControleDoMapa {
   void girar(double graus);
 }
 
-/// Controle do mapa OpenStreetMap (flutter_map).
+/// Controle do mapa do flutter_map (ruas da TomTom).
 class ControleFlutterMap implements ControleDoMapa {
   ControleFlutterMap(this.mapa);
 
@@ -100,7 +100,7 @@ class BotaoDoMapa extends StatelessWidget {
 class BotaoBussola extends StatefulWidget {
   const BotaoBussola({super.key, required this.controle, this.automatico = false, this.aoMudarModo});
 
-  /// O mapa que a bussola gira (OpenStreetMap ou Google).
+  /// O mapa que a bussola gira (flutter_map ou Google).
   final ControleDoMapa controle;
 
   /// Ja comeca no modo automatico.

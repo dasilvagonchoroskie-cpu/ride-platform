@@ -10,6 +10,8 @@ import 'state/app_state.dart';
 import 'state/auth_state.dart';
 import 'state/config_state.dart';
 import 'state/ride_state.dart';
+import 'core/mapa/map_provider.dart';
+import 'core/permissoes_nativas.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +19,9 @@ Future<void> main() async {
   // normal nao faz nada).
   Medida.iniciar();
   if (Medida.ligada) await Medida.semear();
-  // Mapa: guardado limitado a 200 MB e endereco guardado (o servidor manda
-  // o atual junto com a configuracao do app, em ConfigState).
+  // Mapa (TomTom): guardado limitado a 200 MB, contador do dia e o endereco
+  // das imagens guardado da ultima vez (o atual vem do servidor com login).
+  abrirLink = PermissoesNativas.abrirLink;
   unawaited(MapaConfig.iniciar());
 
   runApp(

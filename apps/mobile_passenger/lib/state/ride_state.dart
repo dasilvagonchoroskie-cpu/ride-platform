@@ -14,6 +14,8 @@ import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import 'auth_state.dart';
 import '../core/medida.dart';
+import '../core/mapa/uso_local.dart';
+import '../core/mapa_config.dart';
 
 /// Ciclo de vida da corrida: estimativa, pareamento, viagem, recibo e historico.
 class RideState extends ChangeNotifier {
@@ -318,9 +320,10 @@ class RideState extends ChangeNotifier {
   // estrada certa, nao aquele risco que parece rota de aviao").
   // ------------------------------------------------------------------
 
-  /// Caminho pelas ruas (servidor -> OpenStreetMap). null = sem rota agora.
+  /// Caminho pelas ruas (servidor -> TomTom). null = sem rota agora.
   Future<List<Coords>?> rotaPelaRua(Coords de, Coords para) async {
     if (_repository.isDemo) return buildRoute(de, para, steps: 30);
+    UsoLocal.contar('rotas');
     try {
       final r = await _repository.api.request('GET', '/geo/rota', query: {
         'deLat': de.latitude.toStringAsFixed(6),
@@ -347,9 +350,12 @@ class RideState extends ChangeNotifier {
 
   DateTime _rotaEm = DateTime.fromMillisecondsSinceEpoch(0);
   String? _rotaFase;
+  int _rotasRefeitas = 0;
 
   /// Carro vindo: rota do carro ao embarque. Em viagem: do carro ao destino.
-  /// Refaz quando o carro sai do caminho (ou a cada 90 s).
+  /// Economia (29/10/2026): UMA rota por etapa; so refaz se o carro sair do
+  /// caminho, no maximo 3 vezes por etapa, com 2 minutos entre uma e outra,
+  /// e nunca no modo economia.
   Future<void> _atualizarRotas(Ride r) async {
     final carro = r.driver;
     final emViagem = r.status == RideStatus.inProgress;
@@ -361,12 +367,17 @@ class RideState extends ChangeNotifier {
       }
       return;
     }
-    final fase = emViagem ? 'viagem' : 'vindo';
+    final fase = '${r.id}:${emViagem ? 'viagem' : 'vindo'}';
     final rota = emViagem ? tripRoute : driverRoute;
     final agora = DateTime.now();
     final segundos = agora.difference(_rotaEm).inSeconds;
     final saiu = rota.length < 2 || trechoMaisPerto(carro.position, rota).$2 > 150;
-    if (fase == _rotaFase && (segundos < 20 || (!saiu && segundos < 90))) return;
+    if (fase == _rotaFase) {
+      if (!saiu || segundos < 120 || _rotasRefeitas >= 3 || MapaConfig.economia) return;
+      _rotasRefeitas++;
+    } else {
+      _rotasRefeitas = 0;
+    }
     _rotaEm = agora;
     _rotaFase = fase;
     final pontos = await rotaPelaRua(carro.position, emViagem ? r.dropoff.coords : r.pickup.coords);

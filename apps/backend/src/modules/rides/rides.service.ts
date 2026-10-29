@@ -102,7 +102,7 @@ export class RidesService {
   ) {}
 
   /**
-   * Distancia e tempo pela estrada (OSRM). Sem rota por rua, a estimativa
+   * Distancia e tempo pela estrada (TomTom, pelo GeoService). Sem rota por rua, a estimativa
    * antiga (linha reta x 1,35 a 25 km/h) — que dava 479 min para Goiania.
    */
   private async medirRota(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/mapa/busca.dart';
 import '../core/theme/central_theme.dart';
 import '../widgets/ui.dart';
 import '../core/utils/geo.dart';
@@ -463,11 +464,15 @@ class _NovaZonaState extends State<_NovaZona> {
   }
 
   Future<void> _buscar() async {
+    if (!RegrasDaBusca.podeBuscar(_busca.text)) {
+      avisar(context, 'Escreva pelo menos 3 letras do endereço.', erro: true);
+      return;
+    }
     try {
       final r = await widget.api.buscarEndereco(_busca.text, widget.perto);
       if (mounted) setState(() => _achados = r);
     } catch (e) {
-      if (mounted) avisar(context, 'Falha na busca: $e', erro: true);
+      if (mounted) avisar(context, 'Falha na busca: ${mensagemDe(e)}', erro: true);
     }
   }
 

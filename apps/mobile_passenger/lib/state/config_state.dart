@@ -107,7 +107,7 @@ class ConfigState extends ChangeNotifier {
             centro: Coords((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()),
           ),
     ];
-    // Endereco das imagens do mapa (padrao OpenStreetMap).
+    // Fornecedor e atribuicao do mapa (a chave so vem com login, /geo/mapa).
     MapaConfig.aplicar(data);
   }
 

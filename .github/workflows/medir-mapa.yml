@@ -110,7 +110,7 @@ jobs:
             echo "MAPA_DEFINE=--dart-define=MAPA_GOOGLE=true" >> "$GITHUB_ENV"
             echo "Mapa: Google Maps"
           else
-            echo "Mapa: OpenStreetMap"
+            echo "Mapa: TomTom (chave vem do servidor com login)"
           fi
 
       - name: Contas de teste
