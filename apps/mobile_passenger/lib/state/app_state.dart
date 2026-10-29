@@ -71,9 +71,10 @@ class AppState extends ChangeNotifier {
   Future<void> bootstrap() async {
     // 1) Abre na hora com a ultima posicao conhecida. Antes o app esperava
     //    o GPS (ate 15 s dentro de casa) com a tela "Localizando voce".
-    final ultima = await _ultimaPosicaoConhecida();
-    if (ultima != null) {
-      coords = ultima;
+    //    A guardada pelo app e instantanea; a do Android vem logo depois.
+    final guardada = await _posicaoGuardadaPeloApp();
+    if (guardada != null) {
+      coords = guardada.coords;
       posicaoGuardada = true;
     }
 
@@ -106,7 +107,20 @@ class AppState extends ChangeNotifier {
     }
 
     bootstrapped = true;
+    Medida.marcar('pronto');
     notifyListeners();
+
+    // A ultima posicao do Android, se for mais nova que a guardada.
+    unawaited(() async {
+      final doAndroid = await _ultimaDoAndroid();
+      if (doAndroid == null || localizacaoReal) return;
+      final emDoAndroid = doAndroid.em;
+      final emGuardada = guardada?.em;
+      if (guardada != null && emGuardada != null && emDoAndroid != null && !emDoAndroid.isAfter(emGuardada)) return;
+      coords = doAndroid.coords;
+      posicaoGuardada = true;
+      notifyListeners();
+    }());
 
     // 2) O GPS acerta em segundo plano. A primeira leitura costuma vir torta
     //    (centenas de metros): o aparelho segue ouvindo e so troca quando
@@ -132,33 +146,32 @@ class AppState extends ChangeNotifier {
     return localizacaoReal;
   }
 
-  /// Ultima posicao conhecida: a guardada pelo app ou a do Android, a mais
-  /// nova das duas. Nao liga o GPS (e instantaneo).
-  Future<Coords?> _ultimaPosicaoConhecida() async {
-    Coords? daqui;
-    DateTime? quando;
+  /// Ultima posicao guardada pelo app (instantaneo, sem ligar o GPS).
+  Future<({Coords coords, DateTime? em})?> _posicaoGuardadaPeloApp() async {
     try {
       final raw = await AppStorage.read(AppStorage.ultimaPosicao);
-      if (raw != null && raw.isNotEmpty) {
-        final m = jsonDecode(raw) as Map<String, dynamic>;
-        daqui = Coords((m['lat'] as num).toDouble(), (m['lng'] as num).toDouble());
-        quando = DateTime.tryParse(m['em'] as String? ?? '');
-      }
+      if (raw == null || raw.isEmpty) return null;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      return (
+        coords: Coords((m['lat'] as num).toDouble(), (m['lng'] as num).toDouble()),
+        em: DateTime.tryParse(m['em'] as String? ?? ''),
+      );
     } catch (_) {
-      daqui = null;
+      return null;
     }
+  }
+
+  /// Ultima posicao que o Android guardou (de qualquer app), sem ligar o GPS.
+  Future<({Coords coords, DateTime? em})?> _ultimaDoAndroid() async {
     try {
       final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        final p = await Geolocator.getLastKnownPosition().timeout(const Duration(seconds: 2));
-        if (p != null && (daqui == null || quando == null || p.timestamp.isAfter(quando))) {
-          return Coords(p.latitude, p.longitude);
-        }
-      }
+      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) return null;
+      final p = await Geolocator.getLastKnownPosition().timeout(const Duration(seconds: 2));
+      if (p == null) return null;
+      return (coords: Coords(p.latitude, p.longitude), em: p.timestamp);
     } catch (_) {
-      // Sem a do Android: fica a guardada (ou nenhuma).
+      return null;
     }
-    return daqui;
   }
 
   Future<void> _lerGps() async {
@@ -234,9 +247,9 @@ class AppState extends ChangeNotifier {
     if (localizacaoReal) return;
     // Acabou de liberar a localizacao: a ultima posicao do Android ja abre o mapa.
     if (!posicaoGuardada) {
-      final ultima = await _ultimaPosicaoConhecida();
+      final ultima = await _ultimaDoAndroid();
       if (ultima != null && !localizacaoReal) {
-        coords = ultima;
+        coords = ultima.coords;
         posicaoGuardada = true;
         notifyListeners();
       }
