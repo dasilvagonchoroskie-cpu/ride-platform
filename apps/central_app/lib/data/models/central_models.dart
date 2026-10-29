@@ -38,25 +38,47 @@ enum DocumentType {
 }
 
 class AdminUser {
-  const AdminUser({required this.id, required this.name, required this.email, required this.role});
+  const AdminUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.trocarSenha = false,
+    this.doisFatores = false,
+  });
 
   final String id;
   final String name;
   final String email;
   final String role;
 
+  /// Operador com senha provisoria (etapa 7): troca antes de usar a Central.
+  final bool trocarSenha;
+
+  /// Verificacao em duas etapas (Google Authenticator) ligada nesta conta.
+  final bool doisFatores;
+
   String get initials {
     final parts = name.split(' ').where((p) => p.isNotEmpty).take(2);
     return parts.map((p) => p[0].toUpperCase()).join();
   }
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'email': email, 'role': role};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'role': role,
+        'trocarSenha': trocarSenha,
+        'doisFatores': doisFatores,
+      };
 
   factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
         id: json['id'] as String? ?? '',
         name: json['name'] as String? ?? 'Administrador',
         email: json['email'] as String? ?? '',
         role: json['role'] as String? ?? 'ADMIN',
+        trocarSenha: json['trocarSenha'] == true,
+        doisFatores: json['doisFatores'] == true,
       );
 }
 

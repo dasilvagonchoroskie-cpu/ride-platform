@@ -21,7 +21,7 @@ export class PracasService {
   constructor(private readonly prisma: PrismaService) {}
 
   private cache: { em: number; lista: Praca[] } | null = null;
-  private readonly escopos = new Map<string, { em: number; praca: string | null }>();
+  private readonly escopos = new Map<string, { em: number; praca: string | null; provisoria: boolean }>();
   private motoristas: { em: number; mapa: Map<string, string | null> } | null = null;
 
   // ------------------------------------------------------------------
@@ -62,13 +62,26 @@ export class PracasService {
 
   /** Praca do operador; null = dono (ve todas). */
   async escopoDe(userId: string): Promise<string | null> {
+    return (await this.contaDaCentral(userId)).praca;
+  }
+
+  /**
+   * Operador com senha provisoria (etapa 7, Evandro 29/10/2026): a senha que
+   * o dono criou (ou trocou) vale so para entrar e trocar por uma dele.
+   */
+  async senhaProvisoria(userId: string): Promise<boolean> {
+    return (await this.contaDaCentral(userId)).provisoria;
+  }
+
+  private async contaDaCentral(userId: string): Promise<{ praca: string | null; provisoria: boolean }> {
     const c = this.escopos.get(userId);
-    if (c && Date.now() - c.em < 60_000) return c.praca;
+    if (c && Date.now() - c.em < 60_000) return c;
     const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true, role: true } });
-    const meta = (u?.metadata ?? {}) as Meta;
+    const meta = (u?.metadata ?? {}) as Meta & { senhaProvisoria?: boolean };
     const praca = u?.role === UserRole.ADMIN && typeof meta.praca === 'string' && meta.praca ? meta.praca : null;
-    this.escopos.set(userId, { em: Date.now(), praca });
-    return praca;
+    const r = { em: Date.now(), praca, provisoria: u?.role === UserRole.ADMIN && meta.senhaProvisoria === true };
+    this.escopos.set(userId, r);
+    return r;
   }
 
   esquecerEscopo(userId: string): void {

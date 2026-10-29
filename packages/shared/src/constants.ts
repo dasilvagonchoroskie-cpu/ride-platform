@@ -65,6 +65,8 @@ export const ERROR_CODES = {
 
   /** Mapa (TomTom) no limite da cota ou fora do ar: o app mostra a contingencia. */
   MAPA_LIMITE: 'MAPA_LIMITE',
+  /** Operador da Central com senha provisoria: troque antes de usar (etapa 7). */
+  SENHA_PROVISORIA: 'SENHA_PROVISORIA',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

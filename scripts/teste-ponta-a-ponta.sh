@@ -73,6 +73,14 @@ X=$(post /admin/equipe "{\"name\":\"Operador Teste Automatico\",\"email\":\"$EMA
 OPID=$(echo "$X" | jq -r '.data.id // empty')
 [ -n "$OPID" ] && ok "Central: conta de operador da cidade $PRACA criada (equipe)" || falha "Central: criar operador" "$X"
 L=$(post /auth/password/login "{\"email\":\"$EMAILO\",\"password\":\"$SENHA_OP\"}"); TO=$(echo "$L" | jq -r '.data.accessToken // empty')
+# Etapa 7 (29/10/2026): a senha que o dono criou e provisoria — o operador
+# troca no primeiro acesso e, ate trocar, nao usa a Central.
+[ "$(echo "$L" | jq -r '.data.user.trocarSenha')" = "true" ] && ok "Operador: primeiro acesso pede para trocar a senha provisoria" || falha "Operador: senha provisoria no primeiro acesso" "$L"
+X=$(get /admin/overview "$TO"); [ "$(echo "$X" | jq -r '.error.code')" = "SENHA_PROVISORIA" ] && ok "Seguranca: com a senha provisoria o operador nao usa a Central" || falha "Seguranca: senha provisoria liberou a Central" "$X"
+SENHA_OP2="Nova${SUFO}cd"
+patch /auth/password "{\"currentPassword\":\"$SENHA_OP\",\"newPassword\":\"$SENHA_OP2\"}" "$TO" >/dev/null
+L=$(post /auth/password/login "{\"email\":\"$EMAILO\",\"password\":\"$SENHA_OP2\"}"); TO=$(echo "$L" | jq -r '.data.accessToken // empty')
+[ -n "$TO" ] && [ "$(echo "$L" | jq -r '.data.user.trocarSenha')" = "false" ] && ok "Operador: trocou a senha provisoria e entrou com a nova" || falha "Operador: troca da senha provisoria" "$L"
 X=$(get /admin/eu "$TO")
 [ "$(echo "$X" | jq -r '.data.dono')" = "false" ] && [ "$(echo "$X" | jq -r '.data.praca')" = "$PRACA" ] && ok "Operador: entra na mesma Central e ve so a cidade dele" || falha "Operador: escopo da cidade" "$X $L"
 X=$(get /admin/overview "$TO"); sucesso "$X" && ok "Operador: visao geral da cidade dele" || falha "Operador: visao geral" "$X"
@@ -245,6 +253,19 @@ X=$(get "/admin/drivers?status=PENDING&limit=50" "$TA")
 [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents | type] | first')" = "array" ] && [ "$(echo "$X" | jq -r --arg d "$DID" '[.data.items[] | select(.id==$d) | .documents[0].fileUrl] | first')" = "$DOCURL" ] \
   && ok "Central: lista de pendentes com a foto do documento (antes a lista nem abria)" || falha "Central: lista de pendentes" "$(echo "$X" | jq -c '.data.items[0].documents' 2>/dev/null)"
 X=$(get "/admin/drivers/$DID" "$TA"); [ "$(echo "$X" | jq -r '.data.documents[0].fileUrl')" = "$DOCURL" ] && ok "Central: detalhe do motorista com a foto do documento" || falha "Central: detalhe do motorista" "$(echo "$X" | jq -c '.data.documents' 2>/dev/null)"
+# Etapa 7: isolamento entre cidades pelo endereco direto — operador de OUTRA
+# cidade nao abre o motorista nem a carteira de Goiatuba digitando o id.
+PRACA2=$(get /admin/eu "$TA" | jq -r --arg p "$PRACA" '[.data.pracas[] | select(.id != $p)][0].id // empty')
+if [ -n "$PRACA2" ] && [ -n "${DID:-}" ]; then
+  EMAILO2="operador2.${SUFO}@teste.fortalezamov.com.br"
+  X=$(post /admin/equipe "{\"name\":\"Operador Teste Outra Cidade\",\"email\":\"$EMAILO2\",\"phone\":\"649${SUFO}77\",\"password\":\"$SENHA_OP\",\"praca\":\"$PRACA2\"}" "$TA"); OPID2=$(echo "$X" | jq -r '.data.id // empty')
+  L=$(post /auth/password/login "{\"email\":\"$EMAILO2\",\"password\":\"$SENHA_OP\"}"); TO2=$(echo "$L" | jq -r '.data.accessToken // empty')
+  patch /auth/password "{\"currentPassword\":\"$SENHA_OP\",\"newPassword\":\"$SENHA_OP2\"}" "$TO2" >/dev/null
+  TO2=$(post /auth/password/login "{\"email\":\"$EMAILO2\",\"password\":\"$SENHA_OP2\"}" | jq -r '.data.accessToken // empty')
+  X=$(get "/admin/drivers/$DID" "$TO2"); sucesso "$X" && falha "Seguranca: operador de $PRACA2 abriu motorista de outra cidade pelo id" "$(echo "$X" | jq -c '.data.praca')" || ok "Seguranca: operador de $PRACA2 nao abre motorista de outra cidade pelo id"
+  X=$(get "/admin/drivers/$DID/wallet" "$TO2"); sucesso "$X" && falha "Seguranca: operador de outra cidade abriu a carteira pelo id" "$(echo "$X" | jq -c '.data | keys')" || ok "Seguranca: operador de outra cidade nao abre a carteira pelo id"
+  [ -n "$OPID2" ] && curl -s -m 60 -X DELETE "$API/admin/equipe/$OPID2" -H "Authorization: Bearer $TA" >/dev/null
+fi
 C=$(curl -s -o /dev/null -w "%{http_code} %{content_type}" "$API$DOCURL" -H "Authorization: Bearer $TA"); [ "$C" = "200 image/jpeg" ] && ok "Central: abre a foto do documento" || falha "Central: abrir foto" "$C"
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API$DOCURL" -H "Authorization: Bearer $TP"); [ "$C" = "403" ] && ok "Seguranca: passageiro nao abre documento de motorista" || falha "Seguranca: foto de documento aberta" "$C"
 X=$(patch "/admin/drivers/$DID/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Conferencia presencial: teste automatico de ponta a ponta."}' "$TA")
@@ -751,6 +772,10 @@ X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] 
 CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
 X=$(get /geo/uso "$TA"); [ "$(echo "$X" | jq -r '.data.ligado')" = "true" ] && ok "Central: uso da TomTom hoje ($(echo "$X" | jq -r '[.data.servicos[] | "\(.servico) \(.hoje)/\(.parteDoDia)"] | join(", ")'))" || falha "Central: uso da TomTom" "$(echo "$X" | jq -c '{ligado: .data.ligado, erro: .error.code}')"
 X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso da TomTom" "$X" || ok "Seguranca: so a Central ve o uso da TomTom"
+# Etapa 7: verificacao em duas etapas da Central (Google Authenticator) — a
+# rota existe e responde a situacao; ligar de verdade e na Central.
+X=$(get /auth/2fa "$TA"); [ "$(echo "$X" | jq -r '.data.ativo | type')" = "boolean" ] && ok "Central: verificacao em duas etapas disponivel (ligada: $(echo "$X" | jq -r '.data.ativo'))" || falha "Central: verificacao em duas etapas" "$X"
+X=$(get /auth/2fa "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver a verificacao da Central" "$X" || ok "Seguranca: so a Central usa a verificacao em duas etapas"
 # Limpeza: o teste apaga o que criou (contas de teste, corridas, cupons) e a
 # conta de operador, para nada de teste ficar no financeiro da Central.
 if [ -n "${OPID:-}" ]; then

@@ -10,6 +10,7 @@ import 'state/central_state.dart';
 import 'core/avisos.dart';
 import 'core/posicao_aparelho.dart';
 import 'screens/permissoes_screen.dart';
+import 'screens/trocar_senha_screen.dart';
 
 class CentralApp extends StatelessWidget {
   const CentralApp({super.key});
@@ -57,6 +58,8 @@ class _Root extends StatelessWidget {
 
     if (!central.ready) return const SplashScreen();
     if (central.admin == null) return const LoginScreen();
+    // Operador com senha provisoria troca a senha antes de tudo (etapa 7).
+    if (central.admin!.trocarSenha) return const TrocarSenhaScreen();
 
     return const ShellScreen();
   }

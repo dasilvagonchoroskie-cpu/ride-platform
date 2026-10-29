@@ -189,7 +189,8 @@ export class PracasController {
         email: body.email,
         phone: body.phone,
         passwordHash: await hashPassword(body.password),
-        metadata: { praca: praca.id, operador: true } as never,
+        // Senha provisoria: no primeiro acesso o operador troca por uma dele.
+        metadata: { praca: praca.id, operador: true, senhaProvisoria: true } as never,
         termsAcceptedAt: new Date(),
       },
       select: { id: true, name: true, email: true },
@@ -212,6 +213,8 @@ export class PracasController {
       if (!p) throw BusinessException.validation('Cidade nao encontrada.');
       meta.praca = p.id;
     }
+    // Senha nova dada pelo dono tambem e provisoria.
+    if (body.password) meta.senhaProvisoria = true;
     await this.prisma.user.update({
       where: { id },
       data: {

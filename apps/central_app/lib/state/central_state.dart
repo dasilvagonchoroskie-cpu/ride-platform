@@ -65,6 +65,29 @@ class CentralState extends ChangeNotifier {
 
     ready = true;
     notifyListeners();
+    unawaited(conferirConta());
+  }
+
+  /// Confere no servidor se a senha desta conta e provisoria (etapa 7).
+  Future<void> conferirConta() async {
+    final a = admin;
+    if (a == null || !AppConfig.hasApi) return;
+    try {
+      final u = await _repository.minhaConta();
+      if (u['id'] == null) return;
+      admin = AdminUser(
+        id: a.id,
+        name: a.name,
+        email: a.email,
+        role: a.role,
+        trocarSenha: u['trocarSenha'] == true,
+        doisFatores: u['doisFatores'] == true,
+      );
+      await AppStorage.write(AppStorage.adminUser, jsonEncode(admin!.toJson()));
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: fica o que estava guardado.
+    }
   }
 
   /// O codigo pelo e-mail funciona (envio de verdade ligado no servidor).
@@ -94,6 +117,9 @@ class CentralState extends ChangeNotifier {
     notifyListeners();
     try {
       admin = await _repository.entrarComCodigo(email.trim().toLowerCase(), codigo);
+    } on PrecisaDoisFatores catch (d) {
+      _pedirSegundaEtapa(d, email);
+      return;
     } on ApiException catch (e) {
       error = e.message;
       loading = false;
@@ -133,6 +159,9 @@ class CentralState extends ChangeNotifier {
     notifyListeners();
     try {
       admin = await _repository.redefinirSenha(email.trim().toLowerCase(), codigo, senhaNova);
+    } on PrecisaDoisFatores catch (d) {
+      _pedirSegundaEtapa(d, email);
+      return;
     } on ApiException catch (e) {
       error = e.message;
       loading = false;
@@ -161,6 +190,9 @@ class CentralState extends ChangeNotifier {
       // dado real carregava e o painel ficava girando.
       try {
         admin = await _repository.login(email.trim(), password);
+      } on PrecisaDoisFatores catch (d) {
+        _pedirSegundaEtapa(d, email);
+        return;
       } on ApiException catch (e) {
         error = e.statusCode == 401 ? 'E-mail ou senha incorretos.' : e.message;
         loading = false;
@@ -189,10 +221,84 @@ class CentralState extends ChangeNotifier {
     await loadAll();
   }
 
+  // ------------------------------------------------------------------
+  // Verificacao em duas etapas e senha provisoria (etapa 7)
+  // ------------------------------------------------------------------
+
+  /// Login com as duas etapas ligadas: espera o codigo do Google Authenticator.
+  String? desafio2fa;
+  String _email2fa = '';
+
+  void _pedirSegundaEtapa(PrecisaDoisFatores d, String email) {
+    desafio2fa = d.desafio;
+    _email2fa = email.trim().toLowerCase();
+    error = null;
+    loading = false;
+    notifyListeners();
+  }
+
+  void cancelarSegundaEtapa() {
+    desafio2fa = null;
+    error = null;
+    notifyListeners();
+  }
+
+  /// Codigo de 6 numeros do Google Authenticator (ou um de recuperacao).
+  Future<void> entrarComDoisFatores(String codigo) async {
+    final desafio = desafio2fa;
+    if (desafio == null) return;
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      admin = await _repository.entrarComDoisFatores(desafio, codigo.trim(), _email2fa);
+    } on ApiException catch (e) {
+      error = e.message;
+      // Desafio vencido (5 min): volta para o comeco do login.
+      if (e.statusCode == 401 && e.message.contains('Entre de novo')) desafio2fa = null;
+      loading = false;
+      notifyListeners();
+      return;
+    } catch (_) {
+      error = 'Sem conexão com o servidor. Confira a internet e tente de novo.';
+      loading = false;
+      notifyListeners();
+      return;
+    }
+    desafio2fa = null;
+    await AppStorage.write(AppStorage.adminUser, jsonEncode(admin!.toJson()));
+    loading = false;
+    notifyListeners();
+    await loadAll();
+  }
+
+  // Ligar/desligar a verificacao em duas etapas (tela Configuracoes).
+  Future<Map<String, dynamic>> situacaoDoisFatores() => _repository.situacaoDoisFatores();
+  Future<Map<String, dynamic>> iniciarDoisFatores() => _repository.iniciarDoisFatores();
+  Future<List<String>> ativarDoisFatores(String codigo) => _repository.ativarDoisFatores(codigo);
+  Future<void> desligarDoisFatores(String codigo) => _repository.desligarDoisFatores(codigo);
+
+  /// Operador com senha provisoria: troca e entra de novo com a senha nova
+  /// (o servidor derruba os logins abertos ao trocar a senha).
+  Future<String?> trocarSenhaProvisoria(String atual, String nova) async {
+    final a = admin;
+    if (a == null) return 'Entre de novo.';
+    try {
+      await _repository.trocarSenha(atual, nova);
+    } on ApiException catch (e) {
+      return e.statusCode == 401 ? 'A senha atual está errada.' : e.message;
+    } catch (_) {
+      return 'Sem conexão com o servidor. Confira a internet e tente de novo.';
+    }
+    await login(a.email, nova);
+    return admin == null ? (error ?? 'Senha trocada. Entre com a senha nova.') : null;
+  }
+
   Future<void> logout() async {
     _monitorTimer?.cancel();
     // Sem login, o vigia com o app fechado tambem para.
     await VigiaCentral.parar();
+    desafio2fa = null;
     await AppStorage.remove(AppStorage.adminUser);
     await AppStorage.remove(AppStorage.accessToken);
     await AppStorage.remove(AppStorage.refreshToken);

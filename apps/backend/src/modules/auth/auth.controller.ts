@@ -26,7 +26,9 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { getClientIp, getUserAgent } from '../../common/utils/request.util';
-import { AuthService, AuthResult, Genero } from './auth.service';
+import { AuthService, AuthResult, DesafioDoisFatores, Genero } from './auth.service';
+import { DoisFatoresService } from './dois-fatores';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 const generoSchema = z.enum(['FEMININO', 'MASCULINO', 'OUTRO', 'NAO_INFORMAR'], {
   errorMap: () => ({ message: 'Selecione o genero.' }),
@@ -86,7 +88,10 @@ const vinculoSchema = z.object({
 @ApiTags('Autenticacao')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly doisFatores: DoisFatoresService,
+  ) {}
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -115,7 +120,7 @@ export class AuthController {
     body: { phone?: string; email?: string; code: string; purpose: string; role: UserRole; device?: DeviceInfoInput },
     @Req() req: Request,
     @Headers('x-chave-teste') chaveTeste?: string,
-  ): Promise<AuthResult> {
+  ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.verifyOtp({
       chaveTeste,
       phone: body.phone,
@@ -153,7 +158,7 @@ export class AuthController {
     @Body(new ZodValidationPipe(loginPasswordSchema))
     body: { phone?: string; email?: string; password: string; device?: DeviceInfoInput },
     @Req() req: Request,
-  ): Promise<AuthResult> {
+  ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.loginWithPassword({
       phone: body.phone,
       email: body.email,
@@ -174,7 +179,7 @@ export class AuthController {
     body: { phone?: string; email?: string; code: string; newPassword: string; device?: DeviceInfoInput },
     @Req() req: Request,
     @Headers('x-chave-teste') chaveTeste?: string,
-  ): Promise<AuthResult> {
+  ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.redefinirSenha({
       chaveTeste,
       phone: body.phone,
@@ -276,6 +281,69 @@ export class AuthController {
   async desfazerContaNova(@CurrentUser() user: AuthenticatedUser): Promise<{ desfeita: boolean }> {
     await this.auth.desfazerContaNova(user.id);
     return { desfeita: true };
+  }
+
+  // ------------------------------------------------------------------
+  // Verificacao em duas etapas da Central (etapa 7, Google Authenticator)
+  // ------------------------------------------------------------------
+
+  @Public()
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @Post('2fa/entrar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Segunda etapa do login da Central: codigo do Google Authenticator' })
+  entrarComDoisFatores(
+    @Body(
+      new ZodValidationPipe(
+        z.object({ desafio: z.string().min(10).max(600), codigo: z.string().trim().min(6).max(12), device: deviceInfoSchema.optional() }),
+      ),
+    )
+    body: { desafio: string; codigo: string; device?: DeviceInfoInput },
+    @Req() req: Request,
+  ): Promise<AuthResult> {
+    return this.auth.entrarComDoisFatores(
+      body.desafio,
+      body.codigo,
+      body.device ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) } : undefined,
+    );
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @Get('2fa')
+  @ApiOperation({ summary: 'Situacao da verificacao em duas etapas da Central' })
+  situacaoDoisFatores(@CurrentUser('id') userId: string) {
+    return this.doisFatores.situacao(userId);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @Post('2fa/iniciar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Comeca a ligar: segredo e link para o Google Authenticator' })
+  iniciarDoisFatores(@CurrentUser('id') userId: string) {
+    return this.doisFatores.iniciar(userId);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @Post('2fa/ativar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Liga com o primeiro codigo; devolve os codigos de recuperacao (uma vez so)' })
+  ativarDoisFatores(@CurrentUser('id') userId: string, @Body(new ZodValidationPipe(z.object({ codigo: z.string().trim().min(6).max(12) }))) body: { codigo: string }) {
+    return this.doisFatores.ativar(userId, body.codigo);
+  }
+
+  @ApiBearerAuth()
+  @Roles(UserRole.ADMIN)
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @Post('2fa/desligar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desliga (pede um codigo valido)' })
+  desligarDoisFatores(@CurrentUser('id') userId: string, @Body(new ZodValidationPipe(z.object({ codigo: z.string().trim().min(6).max(12) }))) body: { codigo: string }) {
+    return this.doisFatores.desligar(userId, body.codigo);
   }
 
   @ApiBearerAuth()

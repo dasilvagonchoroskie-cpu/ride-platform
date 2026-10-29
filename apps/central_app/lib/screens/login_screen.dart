@@ -118,6 +118,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: AppText.body.copyWith(color: AppColors.textMuted),
                   ),
                   const SizedBox(height: Spacing.xl),
+                  if (central.desafio2fa != null)
+                    _SegundaEtapa(central: central)
+                  else
                   AppCard(
                     padding: const EdgeInsets.all(Spacing.lg),
                     child: Column(
@@ -354,6 +357,90 @@ class _EsqueciSenhaState extends State<_EsqueciSenha> {
           child: Text(_enviado ? 'Salvar e entrar' : 'Receber código'),
         ),
       ],
+    );
+  }
+}
+
+/// Verificacao em duas etapas (etapa 7): o codigo de 6 numeros que aparece
+/// no Google Authenticator (ou um codigo de recuperacao).
+class _SegundaEtapa extends StatefulWidget {
+  const _SegundaEtapa({required this.central});
+
+  final CentralState central;
+
+  @override
+  State<_SegundaEtapa> createState() => _SegundaEtapaState();
+}
+
+class _SegundaEtapaState extends State<_SegundaEtapa> {
+  final TextEditingController _codigo = TextEditingController();
+  bool _recuperacao = false;
+
+  @override
+  void dispose() {
+    _codigo.dispose();
+    super.dispose();
+  }
+
+  void _entrar() {
+    final c = _codigo.text.trim();
+    if (c.length < 6) return;
+    widget.central.entrarComDoisFatores(c);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final central = widget.central;
+    return AppCard(
+      padding: const EdgeInsets.all(Spacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_user_outlined, color: AppColors.brand),
+              const SizedBox(width: Spacing.sm),
+              Expanded(child: Text('Verificação em duas etapas', style: AppText.heading)),
+            ],
+          ),
+          const SizedBox(height: Spacing.sm),
+          Text(
+            _recuperacao
+                ? 'Digite um dos códigos de recuperação que você guardou (ex.: ABCD-EFGH). Cada um vale uma vez.'
+                : 'Abra o Google Authenticator e digite o código de 6 números da Fortaleza Mov.',
+            style: AppText.body.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: Spacing.md),
+          TextField(
+            controller: _codigo,
+            autofocus: true,
+            keyboardType: _recuperacao ? TextInputType.text : TextInputType.number,
+            textCapitalization: TextCapitalization.characters,
+            maxLength: _recuperacao ? 9 : 6,
+            inputFormatters: _recuperacao ? null : [FilteringTextInputFormatter.digitsOnly],
+            style: AppText.title.copyWith(letterSpacing: _recuperacao ? 2 : 8),
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(counterText: '', hintText: _recuperacao ? 'ABCD-EFGH' : '000000'),
+            onChanged: (v) {
+              if (!_recuperacao && v.length == 6) _entrar();
+            },
+          ),
+          const SizedBox(height: Spacing.lg),
+          AppButton(label: 'Entrar na Central', loading: central.loading, onPressed: _entrar),
+          TextButton(
+            onPressed: () => setState(() {
+              _recuperacao = !_recuperacao;
+              _codigo.clear();
+            }),
+            child: Text(_recuperacao ? 'Usar o código do Google Authenticator' : 'Perdi o celular: usar código de recuperação'),
+          ),
+          TextButton(onPressed: central.cancelarSegundaEtapa, child: const Text('Voltar')),
+          if (central.error != null) ...[
+            const SizedBox(height: Spacing.sm),
+            Text(central.error!, style: AppText.caption.copyWith(color: AppColors.danger)),
+          ],
+        ],
+      ),
     );
   }
 }

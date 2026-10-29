@@ -753,6 +753,30 @@ void main() {
     expect(find.textContaining('Operador · Teutônia'), findsOneWidget);
   });
 
+  // Etapa 7 (Evandro, 29/10/2026): "Itumbiara: conferir a rolagem" — com as
+  // 6 cidades, a ultima (Itumbiara) aparece e da para escolher no celular.
+  testWidgets('Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida', (tester) async {
+    final extras = [
+      {'id': 'bom-jesus-de-goias-go', 'nome': 'Bom Jesus de Goiás', 'uf': 'GO', 'latitude': -18.2, 'longitude': -49.74, 'raioKm': 30, 'ativa': true, 'whatsapp': null},
+      {'id': 'buriti-alegre-go', 'nome': 'Buriti Alegre', 'uf': 'GO', 'latitude': -18.14, 'longitude': -49.04, 'raioKm': 30, 'ativa': true, 'whatsapp': null},
+      {'id': 'joviania-go', 'nome': 'Joviânia', 'uf': 'GO', 'latitude': -17.8, 'longitude': -49.6, 'raioKm': 30, 'ativa': true, 'whatsapp': null},
+      {'id': 'itumbiara-go', 'nome': 'Itumbiara', 'uf': 'GO', 'latitude': -18.42, 'longitude': -49.22, 'raioKm': 40, 'ativa': true, 'whatsapp': null},
+    ];
+    _pracasTeste.addAll(extras);
+    addTearDown(() => _pracasTeste.removeRange(2, _pracasTeste.length));
+    await _abrir(tester, const CidadesEquipeTela());
+    await _carregar(tester);
+    await tester.tap(find.text('Operador'));
+    await tester.pumpAndSettle();
+    expect(find.text('Operador de uma cidade'), findsOneWidget);
+    final rolagem = find.descendant(of: find.byType(AlertDialog), matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.text('Itumbiara - GO'), 80, scrollable: rolagem.first);
+    await tester.tap(find.text('Itumbiara - GO'));
+    await tester.pumpAndSettle();
+    final chip = tester.widget<ChoiceChip>(find.ancestor(of: find.text('Itumbiara - GO'), matching: find.byType(ChoiceChip)));
+    expect(chip.selected, isTrue);
+  });
+
   testWidgets('Limpeza de dados: resumo, apagar teste com confirmacao e contas', (tester) async {
     await _abrir(tester, const LimpezaTela());
     await _carregar(tester);

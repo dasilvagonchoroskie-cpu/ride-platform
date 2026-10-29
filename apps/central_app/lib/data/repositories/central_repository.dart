@@ -100,7 +100,47 @@ class CentralRepository {
     }
   }
 
+  /// Segunda etapa do login (etapa 7): o codigo do Google Authenticator.
+  Future<AdminUser> entrarComDoisFatores(String desafio, String codigo, String email) async {
+    final data = await _client.request('POST', '/auth/2fa/entrar', body: {
+      'desafio': desafio,
+      'codigo': codigo,
+      'device': {'deviceId': 'flutter-android-central', 'platform': 'ANDROID'},
+    }) as Map<String, dynamic>;
+    return _sessaoDaCentral(data, email);
+  }
+
+  /// A conta logada agora (para saber se a senha e provisoria).
+  Future<Map<String, dynamic>> minhaConta() async =>
+      (await _client.request('GET', '/auth/me') as Map).cast<String, dynamic>();
+
+  Future<Map<String, dynamic>> situacaoDoisFatores() async =>
+      (await _client.request('GET', '/auth/2fa') as Map).cast<String, dynamic>();
+
+  /// Comeca a ligar: {segredo, link (otpauth://)}.
+  Future<Map<String, dynamic>> iniciarDoisFatores() async =>
+      (await _client.request('POST', '/auth/2fa/iniciar', body: const {}) as Map).cast<String, dynamic>();
+
+  /// Liga com o primeiro codigo e devolve os codigos de recuperacao.
+  Future<List<String>> ativarDoisFatores(String codigo) async {
+    final d = await _client.request('POST', '/auth/2fa/ativar', body: {'codigo': codigo}) as Map;
+    return [for (final c in (d['recuperacao'] as List? ?? const [])) c.toString()];
+  }
+
+  Future<void> desligarDoisFatores(String codigo) async {
+    await _client.request('POST', '/auth/2fa/desligar', body: {'codigo': codigo});
+  }
+
+  /// Troca da senha (a provisoria do operador ou a de sempre).
+  Future<void> trocarSenha(String atual, String nova) async {
+    await _client.request('PATCH', '/auth/password', body: {'currentPassword': atual, 'newPassword': nova});
+  }
+
   Future<AdminUser> _sessaoDaCentral(Map<String, dynamic> data, String email) async {
+    // Central com as duas etapas ligadas: falta o codigo do autenticador.
+    if (data['precisa2fa'] == true) {
+      throw PrecisaDoisFatores(data['desafio']?.toString() ?? '', data['nome']?.toString() ?? '');
+    }
     final u = data['user'] as Map<String, dynamic>? ?? const {};
     // So a conta da Central entra aqui. Antes, um passageiro com senha
     // entrava e o painel ficava sem dados (o servidor recusava tudo).
@@ -117,6 +157,8 @@ class CentralRepository {
       name: u['name'] as String? ?? 'Administrador',
       email: u['email'] as String? ?? email,
       role: u['role'] as String? ?? 'ADMIN',
+      trocarSenha: u['trocarSenha'] == true,
+      doisFatores: u['doisFatores'] == true,
     );
   }
 
@@ -393,4 +435,13 @@ class CentralRepository {
     }
     return DocumentType.profilePhoto;
   }
+}
+
+/// A senha (ou o codigo do e-mail) estava certa; falta o codigo do Google
+/// Authenticator (verificacao em duas etapas, etapa 7).
+class PrecisaDoisFatores implements Exception {
+  const PrecisaDoisFatores(this.desafio, this.nome);
+
+  final String desafio;
+  final String nome;
 }

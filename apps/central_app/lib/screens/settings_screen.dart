@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../core/alarme.dart';
 import '../core/api/api_client.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
@@ -43,6 +45,9 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: Spacing.lg),
+          const SectionTitle(text: 'Segurança'),
+          if (AppConfig.hasApi) const _DoisFatores() else AppCard(child: Text('Disponível com o servidor ligado.', style: AppText.caption)),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Conexões'),
           const _StatusDasConexoes(),
@@ -285,4 +290,239 @@ String textoDoUsoDoMapa(Map<dynamic, dynamic> u) {
           ? ' · modo economia'
           : '';
   return 'TomTom$estado · no mês: ${partes.join(', ')}';
+}
+
+/// Verificacao em duas etapas da Central (etapa 7, Evandro 29/10/2026:
+/// "Google Authenticator"). No celular nao da para ler QR code da propria
+/// tela: o botao abre o Google Authenticator ja com a conta, e a chave
+/// aparece para digitar se precisar.
+class _DoisFatores extends StatefulWidget {
+  const _DoisFatores();
+
+  @override
+  State<_DoisFatores> createState() => _DoisFatoresState();
+}
+
+class _DoisFatoresState extends State<_DoisFatores> {
+  bool? _ativo;
+  int _restantes = 0;
+  String? _erro;
+  bool _ocupado = false;
+
+  /// Ligando: chave e link do Google Authenticator.
+  String? _segredo;
+  String? _link;
+  final TextEditingController _codigo = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
+  @override
+  void dispose() {
+    _codigo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _carregar() async {
+    try {
+      final d = await context.read<CentralState>().situacaoDoisFatores();
+      if (!mounted) return;
+      setState(() {
+        _ativo = d['ativo'] == true;
+        _restantes = (d['recuperacaoRestantes'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _erro = 'Sem resposta do servidor.');
+    }
+  }
+
+  Future<void> _comecar() async {
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    try {
+      final d = await context.read<CentralState>().iniciarDoisFatores();
+      if (!mounted) return;
+      setState(() {
+        _segredo = d['segredo']?.toString();
+        _link = d['link']?.toString();
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  Future<void> _ativar() async {
+    final c = _codigo.text.trim();
+    if (c.length != 6) {
+      setState(() => _erro = 'O código do Google Authenticator tem 6 números.');
+      return;
+    }
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    try {
+      final codigos = await context.read<CentralState>().ativarDoisFatores(c);
+      if (!mounted) return;
+      _codigo.clear();
+      setState(() {
+        _segredo = null;
+        _link = null;
+        _ativo = true;
+        _restantes = codigos.length;
+      });
+      await _mostrarRecuperacao(codigos);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  Future<void> _mostrarRecuperacao(List<String> codigos) async {
+    final texto = codigos.join('\n');
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => AlertDialog(
+        title: const Text('Guarde estes códigos'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Se perder o celular, cada código entra uma vez no lugar do Google Authenticator. Eles não aparecem de novo.'),
+            const SizedBox(height: Spacing.md),
+            SelectableText(texto, style: AppText.bodyStrong.copyWith(letterSpacing: 2)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: texto));
+              if (c.mounted) ScaffoldMessenger.maybeOf(c)?.showSnackBar(const SnackBar(content: Text('Códigos copiados.')));
+            },
+            child: const Text('Copiar'),
+          ),
+          FilledButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Já guardei')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _desligar() async {
+    final campo = TextEditingController();
+    final codigo = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Desligar a verificação em duas etapas?'),
+        content: TextField(
+          controller: campo,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Código do Google Authenticator (ou de recuperação)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Voltar')),
+          TextButton(onPressed: () => Navigator.of(c).pop(campo.text.trim()), child: const Text('Desligar')),
+        ],
+      ),
+    );
+    if (codigo == null || codigo.length < 6 || !mounted) return;
+    setState(() => _ocupado = true);
+    try {
+      await context.read<CentralState>().desligarDoisFatores(codigo);
+      if (mounted) setState(() => _ativo = false);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ativo = _ativo;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.verified_user_outlined, color: ativo == true ? AppColors.primary : AppColors.textFaint),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Verificação em duas etapas', style: AppText.bodyStrong),
+                    Text(
+                      ativo == null
+                          ? 'Verificando...'
+                          : ativo
+                              ? 'Ligada: o login pede o código do Google Authenticator ($_restantes códigos de recuperação sobrando).'
+                              : 'Desligada. Ligue para proteger a Central: além da senha, o login pede o código do Google Authenticator.',
+                      style: AppText.caption.copyWith(color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              if (ativo != null) AppBadge(text: ativo ? 'LIGADA' : 'DESLIGADA', tone: ativo ? AppBadgeTone.success : AppBadgeTone.neutral),
+            ],
+          ),
+          if (ativo == false && _segredo == null) ...[
+            const SizedBox(height: Spacing.md),
+            AppButton(label: 'Ligar com o Google Authenticator', icon: Icons.lock_outline, loading: _ocupado, onPressed: _comecar),
+          ],
+          if (_segredo != null) ...[
+            const SizedBox(height: Spacing.md),
+            Text('1. Instale o Google Authenticator (Play Store) e toque no botão abaixo:', style: AppText.caption),
+            const SizedBox(height: Spacing.xs),
+            AppButton(
+              label: 'Abrir no Google Authenticator',
+              icon: Icons.open_in_new,
+              variant: AppButtonVariant.secondary,
+              onPressed: () {
+                final l = _link;
+                if (l != null) Alarme.abrir(l);
+              },
+            ),
+            const SizedBox(height: Spacing.sm),
+            Text('Se não abrir: no Google Authenticator toque em "+" e "Enter a setup key" ("Inserir chave de configuração") e digite:', style: AppText.caption),
+            SelectableText(_segredo!, style: AppText.bodyStrong.copyWith(letterSpacing: 1.5)),
+            TextButton.icon(
+              onPressed: () => Clipboard.setData(ClipboardData(text: _segredo!.replaceAll(' ', ''))),
+              icon: const Icon(Icons.copy, size: 16),
+              label: const Text('Copiar a chave'),
+            ),
+            const SizedBox(height: Spacing.sm),
+            Text('2. Digite o código de 6 números que apareceu:', style: AppText.caption),
+            TextField(
+              controller: _codigo,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textAlign: TextAlign.center,
+              style: AppText.title.copyWith(letterSpacing: 8),
+              decoration: const InputDecoration(counterText: '', hintText: '000000'),
+            ),
+            AppButton(label: 'Ligar', loading: _ocupado, onPressed: _ativar),
+          ],
+          if (ativo == true) ...[
+            const SizedBox(height: Spacing.md),
+            AppButton(label: 'Desligar', variant: AppButtonVariant.secondary, loading: _ocupado, onPressed: _desligar),
+          ],
+          if (_erro != null) ...[
+            const SizedBox(height: Spacing.sm),
+            Text(_erro!, style: AppText.caption.copyWith(color: AppColors.danger)),
+          ],
+        ],
+      ),
+    );
+  }
 }

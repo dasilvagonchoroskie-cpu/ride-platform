@@ -6,6 +6,8 @@ import { comparePassword, hashPassword } from '../../common/utils/crypto.util';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { TokenService, DeviceContext, IssuedTokens } from './token.service';
 import { OtpService } from './otp.service';
+import { DoisFatoresService, doisFatoresLigado } from './dois-fatores';
+import { PracasService } from '../pracas/pracas.service';
 import { acharContaComOsMesmosDados, DadosDaPessoa, liberarTelefoneDeContaVazia } from './conta-existente';
 import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
 
@@ -74,8 +76,21 @@ export interface AuthResult extends IssuedTokens {
     temSenha: boolean;
     /** Entrou pelo e-mail e ainda nao informou o telefone. */
     telefonePendente: boolean;
+    trocarSenha: boolean;
+    doisFatores: boolean;
   };
   isNewUser: boolean;
+}
+
+/**
+ * Central com verificacao em duas etapas ligada (etapa 7): a senha (ou o
+ * codigo do e-mail) estava certa, mas os tokens so saem com o codigo do
+ * Google Authenticator em POST /auth/2fa/entrar.
+ */
+export interface DesafioDoisFatores {
+  precisa2fa: true;
+  desafio: string;
+  nome: string;
 }
 
 @Injectable()
@@ -86,7 +101,34 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly tokens: TokenService,
     private readonly otp: OtpService,
+    private readonly doisFatores: DoisFatoresService,
+    private readonly pracas: PracasService,
   ) {}
+
+  /** Central com as duas etapas ligadas: devolve o desafio no lugar dos tokens. */
+  private segundaEtapa(user: { id: string; role: UserRole; name: string; metadata?: unknown }): DesafioDoisFatores | null {
+    if (user.role !== UserRole.ADMIN || !doisFatoresLigado(user.metadata)) return null;
+    return { precisa2fa: true, desafio: this.doisFatores.criarDesafio(user.id), nome: user.name };
+  }
+
+  /** Segunda etapa: o codigo do Google Authenticator (ou um de recuperacao). */
+  async entrarComDoisFatores(desafio: string, codigo: string, device?: DeviceContext): Promise<AuthResult> {
+    const userId = this.doisFatores.lerDesafio(desafio);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { driver: { select: { id: true, status: true, isOnline: true } } },
+    });
+    if (!user) throw BusinessException.unauthorized('Credenciais invalidas.', ERROR_CODES.INVALID_CREDENTIALS);
+    this.assertUserActive(user.status);
+    const ok = await this.doisFatores.conferirEGastar(user.id, (user.metadata ?? {}) as Record<string, unknown>, codigo);
+    if (!ok) throw BusinessException.unauthorized('Codigo errado. Digite o codigo que aparece agora no Google Authenticator.', ERROR_CODES.INVALID_CREDENTIALS);
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    const issued = await this.tokens.issueTokens(
+      { id: user.id, role: user.role, name: user.name, phone: user.phone, email: user.email, driverId: user.driver?.id ?? null },
+      device,
+    );
+    return { ...issued, isNewUser: false, user: this.paraUsuario(user) };
+  }
 
   async requestOtp(params: { phone?: string; email?: string; purpose: OtpPurpose }, ip?: string, chaveTeste?: string) {
     return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip, chaveTeste);
@@ -122,7 +164,9 @@ export class AuthService {
     chaveTeste?: string,
   ): Promise<AuthResult> {
     const { alvo } = await this.contaParaVincular(userId, dados);
-    return this.verifyOtp({ ...alvo, code, purpose: 'LOGIN' as OtpPurpose, role: UserRole.DRIVER, device, chaveTeste });
+    const r = await this.verifyOtp({ ...alvo, code, purpose: 'LOGIN' as OtpPurpose, role: UserRole.DRIVER, device, chaveTeste });
+    if ('precisa2fa' in r) throw BusinessException.forbidden('A conta da Central nao se vincula pelo aplicativo.');
+    return r;
   }
 
   /** Canais de entrada que funcionam agora (telefone so com SMS ou em teste). */
@@ -139,7 +183,7 @@ export class AuthService {
     role: UserRole;
     device?: DeviceContext;
     chaveTeste?: string;
-  }): Promise<AuthResult> {
+  }): Promise<AuthResult | DesafioDoisFatores> {
     await this.otp.verify({
       phone: params.phone,
       email: params.email,
@@ -202,6 +246,13 @@ export class AuthService {
     // verdade, e motorista de teste nunca recebe corrida de verdade.
     if (this.otp.chaveTesteValida(params.chaveTeste) && user.role !== UserRole.ADMIN && metaDe(user).teste !== true) {
       await this.prisma.user.update({ where: { id: user.id }, data: { metadata: { ...metaDe(user), teste: true } as never } });
+    }
+
+    // Central com as duas etapas ligadas: falta o codigo do autenticador (a
+    // esteira de testes, com a chave do teste, passa direto).
+    if (!this.otp.chaveTesteValida(params.chaveTeste)) {
+      const desafio = this.segundaEtapa(user);
+      if (desafio) return desafio;
     }
 
     const issued = await this.tokens.issueTokens(
@@ -279,7 +330,7 @@ export class AuthService {
     email?: string;
     password: string;
     device?: DeviceContext;
-  }): Promise<AuthResult> {
+  }): Promise<AuthResult | DesafioDoisFatores> {
     const user = await this.prisma.user.findFirst({
       where: params.phone ? { phone: params.phone } : { email: params.email },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
@@ -295,6 +346,9 @@ export class AuthService {
     }
 
     this.assertUserActive(user.status);
+
+    const desafio = this.segundaEtapa(user);
+    if (desafio) return desafio;
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
@@ -328,10 +382,15 @@ export class AuthService {
       }
     }
 
+    // Trocar a senha tira a marca de "senha provisoria" do operador (etapa 7).
+    const meta = { ...metaDe(user) } as Record<string, unknown>;
+    const eraProvisoria = meta.senhaProvisoria === true;
+    delete meta.senhaProvisoria;
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: await hashPassword(newPassword) },
+      data: { passwordHash: await hashPassword(newPassword), ...(eraProvisoria ? { metadata: meta as never } : {}) },
     });
+    if (eraProvisoria) this.pracas.esquecerEscopo(userId);
 
     await this.tokens.revokeAllUserTokens(userId);
   }
@@ -411,6 +470,10 @@ export class AuthService {
       endereco: metaDe(user).endereco ?? null,
       temSenha: !!user.passwordHash,
       telefonePendente: telefonePendente(user.phone),
+      /** Operador da Central com senha provisoria: troca antes de usar (etapa 7). */
+      trocarSenha: user.role === UserRole.ADMIN && metaDe(user).senhaProvisoria === true,
+      /** Central: verificacao em duas etapas ligada. */
+      doisFatores: user.role === UserRole.ADMIN && doisFatoresLigado(user.metadata),
     };
   }
 
@@ -554,7 +617,7 @@ export class AuthService {
     newPassword: string;
     device?: DeviceContext;
     chaveTeste?: string;
-  }): Promise<AuthResult> {
+  }): Promise<AuthResult | DesafioDoisFatores> {
     const conta = await this.prisma.user.findFirst({
       where: params.phone ? { phone: params.phone } : { email: params.email },
     });
@@ -574,16 +637,31 @@ export class AuthService {
     if (!conta) throw BusinessException.notFound(params.phone ? 'Nao ha conta com este telefone.' : 'Nao ha conta com este e-mail.');
     this.assertUserActive(conta.status);
 
+    // Senha nova feita pela propria pessoa deixa de ser provisoria (etapa 7).
+    const meta = { ...metaDe(conta) } as Record<string, unknown>;
+    const eraProvisoria = meta.senhaProvisoria === true;
+    delete meta.senhaProvisoria;
     await this.prisma.user.update({
       where: { id: conta.id },
-      data: { passwordHash: await hashPassword(params.newPassword), lastLoginAt: new Date() },
+      data: {
+        passwordHash: await hashPassword(params.newPassword),
+        lastLoginAt: new Date(),
+        ...(eraProvisoria ? { metadata: meta as never } : {}),
+      },
     });
+    if (eraProvisoria) this.pracas.esquecerEscopo(conta.id);
     await this.tokens.revokeAllUserTokens(conta.id);
 
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: conta.id },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
     });
+    // Central com as duas etapas: trocar a senha pelo e-mail nao pula o
+    // codigo do Google Authenticator (a esteira de testes passa direto).
+    if (!this.otp.chaveTesteValida(params.chaveTeste)) {
+      const desafio = this.segundaEtapa(user);
+      if (desafio) return desafio;
+    }
     const issued = await this.tokens.issueTokens(
       {
         id: user.id,

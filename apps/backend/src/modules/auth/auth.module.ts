@@ -5,12 +5,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { OtpService } from './otp.service';
 import { TokenService } from './token.service';
+import { DoisFatoresService } from './dois-fatores';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [PassportModule.register({ defaultStrategy: 'jwt' }), JwtModule.register({})],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, TokenService, JwtStrategy],
+  providers: [AuthService, OtpService, TokenService, JwtStrategy, DoisFatoresService],
   exports: [AuthService, TokenService],
 })
 export class AuthModule {}
