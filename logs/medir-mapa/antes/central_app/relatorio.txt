@@ -1,0 +1,41 @@
+Medicao do mapa — central_app — "antes"
+Aparelho de teste: emulador Android da esteira do GitHub (Atividade: com.rideplatform.central_app/.MainActivity · Android: 14 · Physical size: 540x1200)
+Rede: a da esteira (EUA). Num celular no Brasil, com 4G, os tempos de rede tendem a ser maiores.
+
+== r1 primeira abertura, GPS sem sinal nos primeiros 8 s ==
+  Android até o primeiro quadro (TotalTime): 11.1 s
+  primeira tela desenhada: 1.7 s (desde o início do app)
+  mapa na tela: 2.4 s (desde o início do app)
+  primeira imagem de ruas carregada: 5.7 s (desde o início do app)
+  carros/motoristas no mapa: 6.6 s (desde o início do app)
+  não aconteceu nos 20 s: posição do GPS chegou
+  mapa com ruas visível pela foto da tela: 2.5 s (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 0.0s:32/0, 2.5s:132/211, 3.4s:132/211, 3.9s:132/211, 5.3s:132/211, 6.8s:132/211, 7.8s:132/211, 8.5s:132/211, 9.4s:132/211, 9.9s:132/211, 10.9s:132/211, 12.2s:132/211, 12.9s:1/201, 14.3s:186/206, 15.5s:1/201, 16.5s:101/202, 18.2s:101/202, 19.4s:101/202
+  servidor (1º pedido de cada caminho): /admin/eu 3116 ms (200); /admin/safety 806 ms (200); /admin/rides/active 818 ms (200); /admin/overview 852 ms (200); /admin/dispatch/drivers 902 ms (200)
+
+== r2 segunda abertura (GPS ok, ruas guardadas) ==
+  Android até o primeiro quadro (TotalTime): 4.6 s
+  primeira tela desenhada: 1.9 s (desde o início do app)
+  mapa na tela: 2.5 s (desde o início do app)
+  primeira imagem de ruas carregada: 3.8 s (desde o início do app)
+  carros/motoristas no mapa: 4.8 s (desde o início do app)
+  não aconteceu nos 20 s: posição do GPS chegou
+  mapa com ruas visível pela foto da tela: 1.7 s (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 0.0s:32/0, 2.3s:132/211, 3.2s:132/211, 4.3s:132/211, 5.9s:1/201, 7.1s:101/202, 8.8s:101/202, 9.9s:101/202, 10.9s:101/202, 12.1s:101/202, 13.3s:101/202, 14.4s:101/202, 15.6s:101/202, 16.6s:101/202, 17.7s:101/202, 18.6s:101/202, 20.0s:101/202
+  servidor (1º pedido de cada caminho): /admin/eu 1469 ms (200); /admin/overview 308 ms (200); /admin/rides/active 422 ms (200); /admin/safety 608 ms (200); /admin/dispatch/drivers 679 ms (200)
+
+== r3 terceira abertura (igual a r2) ==
+  Android até o primeiro quadro (TotalTime): 4.0 s
+  primeira tela desenhada: 0.1 s (desde o início do app)
+  mapa na tela: 1.7 s (desde o início do app)
+  primeira imagem de ruas carregada: 3.6 s (desde o início do app)
+  carros/motoristas no mapa: 4.1 s (desde o início do app)
+  não aconteceu nos 20 s: posição do GPS chegou
+  mapa com ruas visível pela foto da tela: 4.2 s (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 0.0s:132/0, 0.9s:132/0, 1.6s:132/0, 2.4s:132/0, 3.7s:132/0, 5.1s:101/43, 7.0s:101/43, 8.1s:101/43, 9.2s:101/43, 10.4s:101/43, 11.5s:101/43, 12.6s:101/43, 13.5s:101/43, 14.5s:101/43, 15.8s:101/43, 17.2s:101/43, 18.6s:101/43, 19.8s:101/43
+  servidor (1º pedido de cada caminho): /admin/eu 1499 ms (200); /admin/overview 385 ms (200); /admin/safety 495 ms (200); /admin/rides/active 549 ms (200); /admin/dispatch/drivers 784 ms (200)
+
+Resumo (mapa na tela / ruas pelo app / ruas pela foto / GPS / carros):
+  r1: 2.4 s / 5.7 s / 2.5 s / — / 6.6 s
+  r2: 2.5 s / 3.8 s / 1.7 s / — / 4.8 s
+  r3: 1.7 s / 3.6 s / 4.2 s / — / 4.1 s
