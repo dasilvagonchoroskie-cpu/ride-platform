@@ -1,8 +1,7 @@
 Ultima mudanca do servidor no GitHub: aac914c (Apps: mapa TomTom (MapProvider), economia da cota e contingencia 429/403)
-No ar agora: 1d1fa98
-SERVIDOR DESATUALIZADO: no ar 1d1fa98, falta publicar aac914c.
-Sem o segredo RENDER_DEPLOY_HOOK no GitHub, a publicacao nao e automatica.
-Teste de ponta a ponta - 29/10/2026 14:30 UTC
+No ar agora: b9d4478
+OK: servidor em dia.
+Teste de ponta a ponta - 29/10/2026 16:26 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -52,7 +51,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST6546)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST7096)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -123,19 +122,19 @@ OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1895 km)
 OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 118 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 119 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE14305938 criado (R$ 3,00)
+OK     Central: cupom TESTE16262622 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1138 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1186 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 863 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (863 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 7192 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 1504 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -153,9 +152,9 @@ OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (11h, diurna: 1000 centavos)
+OK     Bandeira certa pela hora de Brasilia (13h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 23s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 18s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -255,7 +254,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 6/666, reverse 1/666, routing 5/666, search 0/83)
+OK     Central: uso da TomTom hoje (geocode 12/666, reverse 2/666, routing 10/666, search 0/83)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 7 contas deste teste e 9 corridas delas
