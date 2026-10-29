@@ -1,26 +1,27 @@
 # PENDÊNCIAS — Fortaleza Mov
 
-Atualizado em 29/10/2026, etapa 1 do "Pedido de atualização da plataforma".
+Atualizado em 29/10/2026, etapa 2 (mapa e desempenho) do "Pedido de atualização da plataforma".
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**. Fica atualizado a cada etapa.
 
 Legenda: **[REAL]** testado de verdade (servidor real ou aparelho real) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
 
 ---
 
-## 1. Resultado real dos testes (29/10/2026, 08h, horário de Brasília)
+## 1. Resultado real dos testes (29/10/2026, tarde — montagem 241)
 
 | O quê | Resultado | Onde ver |
 |---|---|---|
 | Servidor: compilação TypeScript | 0 erros | rodado aqui (`tsc --noEmit`) |
-| Servidor: testes automáticos | 30 passaram, 0 falharam (6 grupos) | rodado aqui (`jest`) |
-| App do passageiro: análise | nenhum problema | logs/analyze-mobile_passenger.txt (montagem 238) |
-| App do passageiro: testes de tela | 42 passaram, 0 falharam, 12 pulados (são as fotos de tela, que rodam em outra esteira) | logs/test-mobile_passenger.txt |
+| Servidor: testes automáticos | 31 passaram, 0 falharam (6 grupos) | rodado aqui (`jest`) |
+| App do passageiro: análise | nenhum problema | logs/analyze-mobile_passenger.txt (montagem 241) |
+| App do passageiro: testes de tela | 48 passaram, 0 falharam, 12 pulados (fotos de tela, que rodam em outra esteira) | logs/test-mobile_passenger.txt |
 | App do motorista: análise | nenhum problema | logs/analyze-mobile_driver.txt |
-| App do motorista: testes de tela | 51 passaram, 0 falharam, 7 pulados (fotos) | logs/test-mobile_driver.txt |
+| App do motorista: testes de tela | 55 passaram, 0 falharam, 7 pulados (fotos) | logs/test-mobile_driver.txt |
 | Central: análise | nenhum problema | logs/analyze-central_app.txt |
-| Central: testes de tela | 30 passaram, 0 falharam, 1 pulado (fotos) | logs/test-central_app.txt |
-| Teste de ponta a ponta no servidor real (execução 57) | 252 etapas, 0 falhas | logs/teste-ponta-a-ponta.txt |
-| Falhas de segurança nas bibliotecas do servidor (`pnpm audit`) | 5: 1 alta (zod), 4 moderadas (qs, file-type ×2, @nestjs/core) | rodado aqui |
+| Central: testes de tela | 31 passaram, 0 falharam, 1 pulado (fotos) | logs/test-central_app.txt |
+| Teste de ponta a ponta no servidor real (execução 58) | 252 etapas, 0 falhas | logs/teste-ponta-a-ponta.txt |
+| Medição do mapa num Android de teste (esteira "Medir o mapa") | antes e depois, 3 aberturas por app (seção 4) | logs/medir-mapa/ |
+| Falhas de segurança nas bibliotecas do servidor (`pnpm audit`) | 5: 1 alta (zod), 4 moderadas (qs, file-type ×2, @nestjs/core) — corrigir na etapa 7 | rodado aqui |
 
 Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo que é Flutter (análise, testes, APK, AAB) roda no GitHub Actions (esteira `android-apks.yml`, Flutter 3.47.5), que já existe e funciona.
 
@@ -31,8 +32,8 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo 
 1. **Pagamento com cartão — [NÃO EXISTE].** Hoje o passageiro paga direto ao motorista (dinheiro, Pix ou maquininha) e a comissão sai da carteira pré-paga do motorista. **O app do passageiro NÃO tem "Meus Cartões"**: o menu mostra "Pagamento: Direto ao motorista". Nenhum gateway, nenhuma tokenização, nenhum webhook. Gateway exige CNPJ (ainda não tem).
 2. **Chamado com a tela apagada / app fechado — [AUTO].** O vigia nativo e a tela cheia do chamado foram testados só com testes automáticos e na montagem; falta o teste de rua com dois celulares.
 3. **Notificação push chegando no celular — [SEM TESTE] no aparelho.** O servidor aceita a chave do Firebase (verificado no /api/health em todo teste de ponta a ponta), mas a entrega no celular não tem teste automático.
-4. **GPS na rua, taxímetro e posição — [AUTO].** Envio de posição no máximo a cada 4 s (desde 23/10) testado só com leituras de mentira.
-5. **Mapa (imagens) — [SEM TESTE] de tempo.** Usa o servidor público `tile.openstreetmap.org`, que pela política do OSM não serve para uso comercial pesado. O tempo até o mapa aparecer **ainda não foi medido** (etapa 2). O endereço do mapa já vem do servidor (troca sem app novo) e o guardado no celular é de até 200 MB.
+4. **GPS na rua, taxímetro e posição — [AUTO].** Envio de posição no máximo a cada 4 s (desde 23/10) testado só com leituras de mentira. Desde a montagem 241 o mapa abre na última posição guardada e o GPS acerta depois: o embarque espera o GPS até 10 s antes de calcular a corrida; testado no emulador, falta na rua.
+5. **Mapa (imagens) — medido [REAL no emulador], falta celular de verdade.** Ainda usa o servidor público `tile.openstreetmap.org` (pela política do OSM, não serve para uso comercial pesado). O Google Maps (SDK do celular, grátis e sem limite) já está pronto no código e **espera a chave dos apps** do Evandro; o servidor escolhe qual usar (`MAPA_PROVEDOR`). Medição na seção 4. O tempo num celular de verdade, no 4G de Goiatuba, ainda não foi medido.
 6. **Busca de endereço e rota — [REAL], mas sem garantia.** Nominatim + Photon (reserva) e OSRM público: o teste de ponta a ponta faz consultas reais e passou hoje, mas são serviços gratuitos sem garantia; podem limitar ou bloquear a qualquer momento.
 7. **Administrador sem verificação em duas etapas — [NÃO EXISTE].** Entra com senha (ou código por e-mail). Ele controla todas as cidades e o dinheiro.
 8. **Dependências do servidor:** zod (alta: consumo de memória com listas enormes; a correção só existe no zod 4, troca grande — hoje mitigado pelo limite de 4 MB por pedido), qs (moderada, corrige sem risco), file-type e @nestjs/core (moderadas; só com o Nest 11).
@@ -62,3 +63,46 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude**. Tudo 
 - **E) Pagamentos:** carteira pré-paga do motorista (centavos, extrato, comissão), cupom pago pela plataforma, saque PIX manual pela Central. Sem cartão e sem gateway.
 - **F) Segurança:** dono x operador por cidade (já existe e é testado); log de auditoria (audit_logs) já grava aprovações, carteira e exclusões.
 - **G) CI:** esteira dos APKs/AAB assinados, teste de ponta a ponta, fotos das telas, cópia do banco e auditoria das dependências já existem.
+
+---
+
+## 4. Etapa 2 — Mapa e desempenho (medições reais, 29/10/2026)
+
+**Como foi medido.** Esteira nova "Medir o mapa" (`.github/workflows/medir-mapa.yml`): monta o app com um medidor (só nessa montagem; o APK normal não tem), instala num **Android 14 de teste (emulador do GitHub)** com internet de verdade e o servidor real, com contas de teste criadas e apagadas pela própria esteira. Três aberturas por app: **r1** primeira abertura com o GPS sem sinal nos primeiros 8 s (como dentro de casa); **r2** e **r3** reaberturas com o GPS respondendo e as ruas já guardadas. Os tempos são desde que o app começou a rodar (mesma régua antes e depois). Relatórios e fotos da tela: `logs/medir-mapa/antes`, `depois`, `depois-final`.
+
+**Limites da medição (o que NÃO foi medido):** é um emulador nos EUA, não um celular no Brasil; o GPS do emulador é mais lento e instável que o de um celular; a rede é a do GitHub. Serve para comparar antes e depois, não como tempo exato no celular do passageiro. As fotos da tela ficaram como prova visual; a contagem automática pelas fotos não ficou confiável e não foi usada nos números.
+
+### Passageiro — tempo até o mapa aparecer
+| Abertura | Antes (montagem 237) | Depois (montagem 241) |
+|---|---|---|
+| r1 primeira, GPS sem sinal 8 s | 13,8 s (ruas não carregaram em 20 s) | **3,0 s** no centro da cidade do cadastro; ruas 4,3 s; carros 4,5 s |
+| r2 reabertura | 12,5 s; ruas 13,8 s; carros 14,0 s | **2,0 s**; ruas 2,6 s; carros 2,8 s |
+| r3 reabertura | 7,1 s; ruas 7,6 s; carros 7,7 s | **1,3 s**; ruas 1,9 s; carros 2,5 s |
+
+### Motorista — tempo até o mapa aparecer
+| Abertura | Antes | Depois |
+|---|---|---|
+| r1 primeira, GPS sem sinal | não abriu em 20 s ("Localizando você") | não abriu em 20 s (igual: sem nenhuma posição no celular, espera o GPS) |
+| r2 | 3,0 s | 12,5 s (nesta rodada o Android não tinha posição guardada e o GPS do emulador demorou) |
+| r3 | 3,4 s | 2,4 s |
+O motorista já abria com a última posição do Android; agora também com a guardada pelo próprio app. **Melhora não comprovada no motorista**: as diferenças vieram do GPS do emulador.
+
+### Central — tempo até o mapa aparecer
+| Abertura | Antes | Depois |
+|---|---|---|
+| r1 | 2,4 s; ruas 5,7 s; carros 6,6 s | 2,3 s; ruas 3,1 s; carros 4,2 s |
+| r2 | 2,5 s; ruas 3,8 s; carros 4,8 s | 1,3 s; ruas 2,1 s; carros 2,7 s |
+| r3 | 1,7 s; ruas 3,6 s; carros 4,1 s | 1,1 s; ruas 1,8 s; carros 2,3 s |
+A Central **não mudou nesta etapa** (já não esperava o GPS); a diferença é variação da rede.
+
+### Causas encontradas
+1. **GPS (a maior):** o passageiro só mostrava o mapa depois do GPS responder (até 15 s de espera, com a tela "Localizando você"). Medido: o mapa aparecia junto com o GPS, de 7 a 14 s. **Corrigido:** o mapa abre na hora na última posição deste celular (guardada pelo app ou a do Android); na primeira vez, sem posição nenhuma, abre no centro da cidade do cadastro (vem do servidor). Aviso "Atualizando sua localização…" até o GPS chegar; aí o mapa vai até o lugar certo e os carros são buscados de novo. O embarque nunca usa posição velha sem avisar: antes de calcular a corrida o app espera o GPS até 10 s; sem GPS e só com o centro da cidade, não deixa pedir.
+2. **Imagens do mapa (OSM público):** chegam 0,5 a 3,3 s depois do mapa; na primeira abertura, numa rodada, não chegaram em 6 s. Sem garantia e fora da política de uso comercial. **Encaminhado:** Google Maps pronto, esperando a chave; OSM fica de reserva (troca pelo servidor).
+3. **Chamadas ao servidor:** 0,2 a 2,2 s cada (Central `/admin/eu` até 3 s na primeira). Não seguram o mapa (já eram feitas depois).
+4. **Marcadores:** já entravam depois do mapa; carros aparecem 0,2 a 1,1 s depois das ruas.
+
+### Pendente da etapa 2
+- Chave dos apps do Google Maps (Evandro) → montar com Google, medir de novo ("google") e decidir o padrão.
+- Primeira abertura do motorista num celular sem posição nenhuma ainda espera o GPS (ele precisa do GPS para trabalhar).
+- Medir num celular de verdade em Goiatuba (teste de rua).
+
