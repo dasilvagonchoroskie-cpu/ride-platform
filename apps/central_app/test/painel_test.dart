@@ -766,6 +766,9 @@ void main() {
     addTearDown(() => _pracasTeste.removeRange(2, _pracasTeste.length));
     await _abrir(tester, const CidadesEquipeTela());
     await _carregar(tester);
+    // Com 6 cidades, o botao "Operador" fica mais para baixo na lista.
+    await tester.scrollUntilVisible(find.text('Operador'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Operador'));
     await tester.pumpAndSettle();
     expect(find.text('Operador de uma cidade'), findsOneWidget);
