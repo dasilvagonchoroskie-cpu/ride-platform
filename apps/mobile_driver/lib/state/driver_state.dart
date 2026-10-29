@@ -514,6 +514,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'CREDIT_CARD' || 'DEBIT_CARD' => 'Cartão (maquininha)',
           _ => 'Dinheiro',
         },
+        paradas: ParadaDaCorrida.lista(c['paradas']),
+        semDestino: c['semDestino'] == true || c['dropoffPlaceId'] == 'SEM_DESTINO',
       );
       final fase = switch (c['status'] as String?) {
         'DRIVER_WAITING' => RidePhase.waitingPassenger,
@@ -1387,6 +1389,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           _ => 'Dinheiro',
         },
         expiresInSeconds: restam,
+        paradas: ParadaDaCorrida.lista(o['paradas']),
+        semDestino: o['semDestino'] == true,
       );
       offerSecondsLeft = restam;
       notifyListeners();
@@ -1442,6 +1446,19 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Caminho da viagem: [de] -> paradas -> destino (sem destino: so ate a
+  /// ultima parada). Cada trecho vem do guardado do servidor.
+  Future<List<Coords>> _rotaDaViagem(RideOffer o, Coords de) async {
+    final pontos = [de, for (final p in o.paradas) p.coords, if (!o.semDestino) o.dropoffCoords];
+    if (pontos.length < 2) return const [];
+    final caminho = <Coords>[];
+    for (var i = 1; i < pontos.length; i++) {
+      final r = await _rotaPelaRua(pontos[i - 1], pontos[i]);
+      caminho.addAll(r ?? [pontos[i - 1], pontos[i]]);
+    }
+    return caminho;
+  }
+
   Future<void> _rotasDaOferta(RideOffer o) async {
     rotaOfertaAteEmbarque = const [];
     rotaOfertaViagem = const [];
@@ -1449,7 +1466,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     // guardado do servidor. No modo economia, ate o embarque fica a linha reta.
     final resultados = await Future.wait([
       MapaConfig.economia ? Future<List<Coords>?>.value(null) : _rotaPelaRua(position, o.pickupCoords),
-      _rotaPelaRua(o.pickupCoords, o.dropoffCoords),
+      _rotaDaViagem(o, o.pickupCoords),
     ]);
     if (offer?.id != o.id) return;
     rotaOfertaAteEmbarque = resultados[0] ?? const [];
@@ -1486,11 +1503,16 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       switch (ride.phase) {
         case RidePhase.toPickup:
           routeToPickup = await _rotaPelaRua(position, o.pickupCoords) ?? (routeToPickup.length > 2 ? routeToPickup : [position, o.pickupCoords]);
-          if (tripRoute.length <= 2) tripRoute = await _rotaPelaRua(o.pickupCoords, o.dropoffCoords) ?? [o.pickupCoords, o.dropoffCoords];
+          if (tripRoute.length <= 2) tripRoute = await _rotaDaViagem(o, o.pickupCoords);
         case RidePhase.waitingPassenger:
-          if (tripRoute.length <= 2) tripRoute = await _rotaPelaRua(o.pickupCoords, o.dropoffCoords) ?? [o.pickupCoords, o.dropoffCoords];
+          if (tripRoute.length <= 2) tripRoute = await _rotaDaViagem(o, o.pickupCoords);
         case RidePhase.inProgress:
-          tripRoute = await _rotaPelaRua(position, o.dropoffCoords) ?? (tripRoute.length > 2 ? tripRoute : [position, o.dropoffCoords]);
+          // Com paradas, o caminho e sempre embarque -> paradas -> destino
+          // (vem do guardado do servidor); sem paradas, de onde o carro esta.
+          final r = o.paradas.isEmpty && !o.semDestino
+              ? await _rotaPelaRua(position, o.dropoffCoords)
+              : await _rotaDaViagem(o, o.pickupCoords);
+          tripRoute = (r != null && r.length >= 2) ? r : (tripRoute.length > 2 ? tripRoute : (o.semDestino ? const [] : [position, o.dropoffCoords]));
         case RidePhase.completed:
           break;
       }

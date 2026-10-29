@@ -35,6 +35,8 @@ class RideRepository {
     String? couponCode,
     DateTime? agendadaPara,
     String? category,
+    bool semDestino = false,
+    List<PlaceSuggestion> paradas = const [],
   }) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);
 
@@ -43,7 +45,8 @@ class RideRepository {
         // O servidor exige o endereco escrito em cada ponto. Sem ele,
         // TODO pedido de preco voltava "Dados invalidos".
         'pickup': {'address': pickupAddress, ...origin.toJson()},
-        'dropoff': {'address': dropoffAddress, ...destination.toJson()},
+        if (semDestino) 'semDestino': true else 'dropoff': {'address': dropoffAddress, ...destination.toJson()},
+        if (paradas.isNotEmpty) 'paradas': [for (final p in paradas) _ponto(p)],
         if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
         if (category != null) 'category': category,
@@ -69,6 +72,8 @@ class RideRepository {
     String? couponCode,
     DateTime? agendadaPara,
     String? category,
+    bool semDestino = false,
+    List<PlaceSuggestion> paradas = const [],
   }) async {
     if (_useDemo) {
       return DemoEngine.createRide(
@@ -83,7 +88,8 @@ class RideRepository {
     try {
       final data = await _client.request('POST', '/rides', body: {
         'pickup': {'address': pickupAddress, ...origin.toJson()},
-        'dropoff': {'address': dropoffAddress, ...destination.toJson()},
+        if (semDestino) 'semDestino': true else 'dropoff': {'address': dropoffAddress, ...destination.toJson()},
+        if (paradas.isNotEmpty) 'paradas': [for (final p in paradas) _ponto(p)],
         'paymentMethodType': paymentType,
         if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
@@ -104,6 +110,58 @@ class RideRepository {
         paymentMethod: paymentMethod,
       );
     }
+  }
+
+  /// Uma parada como o servidor espera (endereco escrito de ate 300 letras).
+  static Map<String, dynamic> _ponto(PlaceSuggestion p) {
+    final t = p.fullAddress.trim();
+    return {'address': t.length > 300 ? t.substring(0, 300) : (t.length < 3 ? 'Parada' : t), ...p.coords.toJson()};
+  }
+
+  // ------------------------------------------------------------------
+  // Destinos recentes (no servidor, so da conta) e enderecos salvos
+  // (Etapas 3 e 4, 29/10/2026).
+  // ------------------------------------------------------------------
+
+  Future<List<DestinoRecente>> destinosRecentes() async {
+    if (_useDemo) return const [];
+    final data = await _client.request('GET', '/rides/destinos');
+    return [for (final j in (data is List ? data : const []).whereType<Map<String, dynamic>>()) DestinoRecente.fromJson(j)];
+  }
+
+  /// Lixeira: apaga no servidor e devolve a lista nova (a tela so muda depois).
+  Future<List<DestinoRecente>> esconderDestino(String chave) async {
+    final data = await _client.request('DELETE', '/rides/destinos/${Uri.encodeComponent(chave)}');
+    return [for (final j in (data is List ? data : const []).whereType<Map<String, dynamic>>()) DestinoRecente.fromJson(j)];
+  }
+
+  Future<void> apagarDestinos() async {
+    if (_useDemo) return;
+    await _client.request('DELETE', '/rides/destinos');
+  }
+
+  Future<List<EnderecoSalvo>> enderecosSalvos() async {
+    if (_useDemo) return const [];
+    final data = await _client.request('GET', '/users/me/addresses');
+    return [for (final j in (data is List ? data : const []).whereType<Map<String, dynamic>>()) EnderecoSalvo.fromJson(j)];
+  }
+
+  /// Salva (ou troca, se ja existe um com o mesmo nome) um endereco.
+  Future<EnderecoSalvo> salvarEndereco(String rotulo, PlaceSuggestion lugar, {String? trocarId}) async {
+    final t = lugar.fullAddress.trim();
+    final corpo = {
+      'label': rotulo.trim().isEmpty ? 'Salvo' : rotulo.trim(),
+      'formattedAddress': t.length > 300 ? t.substring(0, 300) : t,
+      ...lugar.coords.toJson(),
+    };
+    final data = trocarId == null
+        ? await _client.request('POST', '/users/me/addresses', body: corpo)
+        : await _client.request('PATCH', '/users/me/addresses/$trocarId', body: corpo);
+    return EnderecoSalvo.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> apagarEnderecoSalvo(String id) async {
+    await _client.request('DELETE', '/users/me/addresses/$id');
   }
 
   Future<List<Ride>> history(Coords origin) async {
@@ -211,7 +269,7 @@ class RideRepository {
   }
 
   /// Busca de endereco (TomTom, pelo servidor).
-  Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin) async {
+  Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin, {String? sessao}) async {
     if (_useDemo) {
       return DemoEngine.suggestions(origin)
           .where((s) => s.address.toLowerCase().contains(texto.toLowerCase()))
@@ -222,6 +280,8 @@ class RideRepository {
       'q': texto,
       'lat': '${origin.latitude}',
       'lng': '${origin.longitude}',
+      // Token de sessao da tela de destino (etapa 3).
+      if (sessao != null) 'sessao': sessao,
     }) as List<dynamic>;
     return [for (final j in data) PlaceSuggestion.fromGeo(j as Map<String, dynamic>)];
   }

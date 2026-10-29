@@ -150,6 +150,14 @@ class RideScreen extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppText.body.copyWith(color: AppColors.textMuted),
                     ),
+                    // Etapa 3: paradas no caminho.
+                    for (var i = 0; i < corrida.paradas.length; i++)
+                      Text(
+                        'Parada ${i + 1}: ${corrida.paradas[i].address}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption.copyWith(color: AppColors.textMuted),
+                      ),
                     if (motorista != null) ...[
                       const SizedBox(height: Spacing.md),
                       PainelMotorista(corrida: corrida),

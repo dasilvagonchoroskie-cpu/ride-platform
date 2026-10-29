@@ -25,6 +25,11 @@ export interface Praca {
   ativa: boolean;
   /** WhatsApp da Central desta cidade (opcional; sem ele vale o geral). */
   whatsapp?: string | null;
+  /**
+   * De onde vem a busca de endereco nesta cidade (etapa 3): 'tomtom'
+   * (padrao) ou 'google' (quando houver a chave do Google no servidor).
+   */
+  fonteBusca?: 'tomtom' | 'google';
 }
 
 export const CHAVE_PRACAS = 'pracas';
@@ -69,6 +74,7 @@ export function lerListaDePracas(valor: unknown): Praca[] {
       raioKm: Math.min(Math.max(Number(p.raioKm) || 60, 5), 300),
       ativa: p.ativa !== false,
       whatsapp: typeof p.whatsapp === 'string' && p.whatsapp ? p.whatsapp : null,
+      fonteBusca: p.fonteBusca === 'google' ? 'google' : 'tomtom',
     });
   }
   return lista.length > 0 ? lista : [PRACA_PADRAO];

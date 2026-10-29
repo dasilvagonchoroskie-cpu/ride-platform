@@ -265,7 +265,9 @@ export class CentralService {
 
     const criada = await this.rides.pedir(passageiro.id, {
       pickup: input.pickup,
-      dropoff: input.dropoff ?? input.pickup,
+      dropoff: input.dropoff,
+      // Sem destino informado pelo motorista: vai pelo taximetro (etapa 3).
+      semDestino: !input.dropoff,
       paymentMethodType: 'CASH',
     } as never);
     const rideId = (criada as { ride: { id: string } }).ride.id;

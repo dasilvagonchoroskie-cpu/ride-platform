@@ -211,6 +211,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// "Apagar histórico de destinos": tira tambem os guardados neste celular.
+  Future<void> apagarDestinosDoCelular() async {
+    recentPlaces = [];
+    destinosRecentes = [];
+    await AppStorage.remove(AppStorage.recentPlaces);
+    await AppStorage.remove(AppStorage.recentDestinations);
+    notifyListeners();
+  }
+
   /// Saiu da conta (ou entrou com outra): destinos recentes sao da pessoa.
   Future<void> limparDaConta() async {
     recentPlaces = [];

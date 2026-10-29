@@ -80,6 +80,7 @@ export class UsersService {
 
   async createAddress(userId: string, input: CreateAddressInput) {
     const count = await this.prisma.userAddress.count({ where: { userId } });
+    if (count >= 20) throw BusinessException.validation('Você já tem 20 endereços salvos. Apague um para salvar outro.');
 
     if (input.label && count > 0) {
       const duplicate = await this.prisma.userAddress.findFirst({ where: { userId, label: input.label } });

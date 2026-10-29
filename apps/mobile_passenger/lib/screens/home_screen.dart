@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_theme.dart';
-import '../core/utils/geo.dart';
 import '../data/models/models.dart';
 import '../state/app_state.dart';
 import '../state/auth_state.dart';
@@ -18,11 +17,8 @@ import 'cupons_screen.dart';
 import '../core/avisos.dart';
 import 'agendadas_screen.dart';
 import 'confirm_screen.dart';
-import 'map_pick_screen.dart';
-import '../core/api/api_client.dart';
-import '../core/mapa/busca.dart';
+import 'destino_sheet.dart';
 import '../core/mapa_config.dart';
-import '../widgets/contingencia_mapa.dart';
 
 /// Tela Inicio: mapa em tela cheia, carros disponiveis por perto (de
 /// verdade, do servidor), sino de avisos e o "Buscar destino" embaixo.
@@ -103,13 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _escolherDestino() async {
-    final alvo = await showModalBottomSheet<PlaceSuggestion>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: const Color(0x66000000),
-      builder: (_) => const _DestinationSheet(),
-    );
+    final alvo = await DestinoSheet.abrir(context);
     if (alvo == null || !mounted) return;
     await _irPara(alvo);
   }
@@ -131,14 +121,21 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!ok) avisar('O GPS ainda não respondeu: confira o endereço de embarque antes de confirmar.');
     }
 
-    await app.addDestinoRecente(alvo);
-    await app.addRecentPlace(alvo.fullAddress);
-    await ride.estimate(app.coords, alvo.coords, dropoffAddress: alvo.fullAddress);
+    // Etapa 3: "Ir sem destino" — pelo taximetro, com valor estimado.
+    final semDestino = DestinoSheet.ehSemDestino(alvo);
+    ride.novaViagem(semDestino: semDestino);
+    if (!semDestino) {
+      await app.addDestinoRecente(alvo);
+      await app.addRecentPlace(alvo.fullAddress);
+    }
+    final destino = semDestino ? app.coords : alvo.coords;
+    final endereco = semDestino ? DestinoSheet.semDestino.address : alvo.fullAddress;
+    await ride.estimate(app.coords, destino, dropoffAddress: endereco);
 
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ConfirmScreen(destination: alvo.coords, address: alvo.fullAddress),
+        builder: (_) => ConfirmScreen(destination: destino, address: endereco, semDestino: semDestino),
       ),
     );
   }
@@ -379,218 +376,6 @@ String saudacao([DateTime? agora]) {
   if (h >= 5 && h < 12) return 'Bom dia';
   if (h >= 12 && h < 18) return 'Boa tarde';
   return 'Boa noite';
-}
-
-/// Busca do destino: digita e o servidor procura na TomTom.
-/// Se nao achar, da para marcar no mapa.
-class _DestinationSheet extends StatefulWidget {
-  const _DestinationSheet();
-
-  @override
-  State<_DestinationSheet> createState() => _DestinationSheetState();
-}
-
-class _DestinationSheetState extends State<_DestinationSheet> {
-  final TextEditingController _controller = TextEditingController();
-  Timer? _espera;
-  String _busca = '';
-  bool _procurando = false;
-  bool _falhou = false;
-  List<PlaceSuggestion> _resultados = const [];
-
-  @override
-  void dispose() {
-    _espera?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  /// A TomTom esta no limite agora (MAPA_LIMITE): mostra a contingencia.
-  bool _limite = false;
-
-  /// Buscas desta abertura do app: a mesma busca nao vai ao servidor de novo.
-  static final BuscasGuardadas<PlaceSuggestion> _guardadas = BuscasGuardadas<PlaceSuggestion>();
-
-  void _digitou(String texto) {
-    _espera?.cancel();
-    final t = texto.trim();
-    final pode = RegrasDaBusca.podeBuscar(t);
-    setState(() {
-      _busca = t;
-      _falhou = false;
-      _limite = false;
-      if (!pode) {
-        _resultados = const [];
-        _procurando = false;
-      }
-    });
-    if (!pode) return;
-    // Economia (29/10/2026): 3 letras uteis (sem contar "rua", "av."...) e
-    // espera de 500 ms depois da ultima tecla — nunca uma busca por tecla.
-    _espera = Timer(RegrasDaBusca.espera, () => _procurar(t));
-  }
-
-  Future<void> _procurar(String texto) async {
-    final app = context.read<AppState>();
-    final chave = BuscasGuardadas.chave(texto, app.coords.latitude, app.coords.longitude);
-    final guardada = _guardadas.ler(chave);
-    if (guardada != null) {
-      setState(() {
-        _resultados = guardada;
-        _procurando = false;
-      });
-      return;
-    }
-    setState(() => _procurando = true);
-    try {
-      final lista = await context.read<RideState>().searchPlaces(texto, app.coords);
-      if (lista.isNotEmpty) _guardadas.gravar(chave, lista);
-      if (!mounted || texto != _busca) return;
-      setState(() {
-        _resultados = lista;
-        _procurando = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _procurando = false;
-        _limite = e.code == 'MAPA_LIMITE';
-        _falhou = !_limite;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _procurando = false;
-        _falhou = true;
-      });
-    }
-  }
-
-  Future<void> _marcarNoMapa() async {
-    final origem = context.read<AppState>().coords;
-    final lugar = await Navigator.of(context).push<PlaceSuggestion>(
-      MaterialPageRoute<PlaceSuggestion>(builder: (_) => MapPickScreen(inicio: origem)),
-    );
-    if (lugar != null && mounted) Navigator.of(context).pop(lugar);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final mostrandoRecentes = !RegrasDaBusca.podeBuscar(_busca);
-    final lista = mostrandoRecentes ? app.destinosRecentes : _resultados;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SheetSurface(
-        padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.78,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.sheetBorder, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: Spacing.lg),
-              AppField(
-                hint: 'Digite o destino (rua, bairro ou lugar)',
-                controller: _controller,
-                autofocus: true,
-                onLight: true,
-                prefixIcon: Icons.search,
-                onChanged: _digitou,
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(color: AppColors.brandSoft, shape: BoxShape.circle),
-                  child: const Icon(Icons.map_outlined, color: AppColors.brand, size: 20),
-                ),
-                title: Text('Escolher no mapa', style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
-                subtitle: Text('Para quando a busca não achar o lugar', style: SheetText.muted),
-                onTap: _marcarNoMapa,
-              ),
-              const Divider(height: 1, color: AppColors.sheetBorder),
-              const SizedBox(height: Spacing.md),
-              Row(
-                children: [
-                  Text(mostrandoRecentes ? 'RECENTES' : 'RESULTADOS', style: SheetText.label),
-                  const Spacer(),
-                  if (_procurando)
-                    const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                ],
-              ),
-              const SizedBox(height: Spacing.sm),
-              if (_limite && !mostrandoRecentes) ...[
-                ContingenciaDoMapa(
-                  endereco: _busca,
-                  outraAcao: _marcarNoMapa,
-                  outraAcaoTexto: 'Escolher no mapa',
-                ),
-                const SizedBox(height: Spacing.sm),
-              ],
-              Expanded(
-                child: lista.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: Spacing.lg),
-                        child: Text(
-                          _limite
-                              ? ''
-                              : _falhou
-                              ? 'Sem conexão para buscar agora. Tente de novo ou escolha no mapa.'
-                              : mostrandoRecentes
-                                  ? 'Digite pelo menos 3 letras do destino.'
-                                  : _procurando
-                                      ? 'Procurando...'
-                                      : 'Nada encontrado com esse nome. Tente outro jeito de escrever ou escolha no mapa.',
-                          style: SheetText.muted,
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: EdgeInsets.zero,
-                        itemCount: lista.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.sheetBorder),
-                        itemBuilder: (context, index) {
-                          final item = lista[index];
-                          final longe = !mostrandoRecentes && item.distanceKm > 0
-                              ? '${formatDistance(item.distanceKm * 1000)} • '
-                              : '';
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(
-                              mostrandoRecentes ? Icons.schedule : Icons.location_on_outlined,
-                              color: AppColors.sheetMuted,
-                            ),
-                            title: Text(
-                              item.address,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(
-                              '$longe${item.detail}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: SheetText.muted,
-                            ),
-                            onTap: () => Navigator.of(context).pop(item),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Aviso pequeno em cima do "Buscar destino" enquanto o GPS acerta.

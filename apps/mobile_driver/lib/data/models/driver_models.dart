@@ -219,7 +219,15 @@ class RideOffer {
     required this.earningCents,
     required this.paymentMethod,
     this.expiresInSeconds = 30,
+    this.paradas = const [],
+    this.semDestino = false,
   });
+
+  /// Etapa 3 (29/10/2026): paradas no caminho, na ordem.
+  final List<ParadaDaCorrida> paradas;
+
+  /// Corrida sem destino: o passageiro diz no caminho; vai pelo taximetro.
+  final bool semDestino;
 
   final String id;
   final String code;
@@ -241,6 +249,26 @@ class RideOffer {
     final parts = passengerName.split(' ').where((p) => p.isNotEmpty).take(2);
     return parts.map((p) => p[0].toUpperCase()).join();
   }
+}
+
+/// Uma parada no caminho (etapa 3).
+class ParadaDaCorrida {
+  const ParadaDaCorrida({required this.address, required this.coords});
+
+  final String address;
+  final Coords coords;
+
+  /// Lista como o servidor manda: [{address, latitude, longitude}].
+  static List<ParadaDaCorrida> lista(Object? v) => [
+        for (final p in (v is List ? v : const []).whereType<Map>())
+          if (p['latitude'] is num && p['longitude'] is num)
+            ParadaDaCorrida(
+              address: p['address']?.toString() ?? 'Parada',
+              coords: Coords((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()),
+            ),
+      ];
+
+  Map<String, dynamic> toJson() => {'address': address, 'latitude': coords.latitude, 'longitude': coords.longitude};
 }
 
 /// Fases da corrida do ponto de vista do motorista.
@@ -280,6 +308,8 @@ class DriverRide {
         'passengerName': offer.passengerName,
         'pickupAddress': offer.pickupAddress,
         'dropoffAddress': offer.dropoffAddress,
+        'paradas': [for (final p in offer.paradas) p.toJson()],
+        'semDestino': offer.semDestino,
       };
 
   factory DriverRide.fromJson(Map<String, dynamic> json) => DriverRide(
@@ -298,6 +328,8 @@ class DriverRide {
           fareCents: 0,
           earningCents: (json['earningCents'] as num?)?.toInt() ?? 0,
           paymentMethod: 'Pix',
+          paradas: ParadaDaCorrida.lista(json['paradas']),
+          semDestino: json['semDestino'] == true,
         ),
         phase: RidePhase.values.firstWhere(
           (p) => p.name == json['phase'],

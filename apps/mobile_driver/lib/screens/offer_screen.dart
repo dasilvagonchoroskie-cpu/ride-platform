@@ -84,7 +84,9 @@ class OfferScreen extends StatelessWidget {
               markers: [
                 MapMarker(id: 'me', coords: driver.position, kind: driver.vehicle?.moto == true ? MarkerKind.moto : MarkerKind.car),
                 MapMarker(id: 'pickup', coords: offer.pickupCoords, kind: MarkerKind.pickup),
-                MapMarker(id: 'dropoff', coords: offer.dropoffCoords, kind: MarkerKind.dropoff),
+                for (var i = 0; i < offer.paradas.length; i++)
+                  MapMarker(id: 'parada$i', coords: offer.paradas[i].coords, kind: MarkerKind.dropoff),
+                if (!offer.semDestino) MapMarker(id: 'dropoff', coords: offer.dropoffCoords, kind: MarkerKind.dropoff),
               ],
             ),
           ),
@@ -254,8 +256,18 @@ class OfferScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('PARA ONDE VAI', style: SheetText.label),
+                                    // Etapa 3: paradas no caminho e corrida sem destino.
+                                    for (var i = 0; i < offer.paradas.length; i++)
+                                      Text(
+                                        'Parada ${i + 1}: ${offer.paradas[i].address}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: SheetText.muted,
+                                      ),
                                     Text(
-                                      offer.dropoffAddress,
+                                      offer.semDestino
+                                          ? 'Sem destino: o passageiro diz no caminho (vai pelo taxímetro)'
+                                          : offer.dropoffAddress,
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: SheetText.body,

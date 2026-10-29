@@ -118,6 +118,10 @@ class RideState extends ChangeNotifier {
     activeRide = null;
     history = [];
     quote = null;
+    salvos = [];
+    recentes = [];
+    recentesDoServidor = false;
+    novaViagem();
     driverRoute = [];
     tripRoute = [];
     await AppStorage.remove(AppStorage.activeRide);
@@ -132,8 +136,8 @@ class RideState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin) =>
-      _repository.searchPlaces(texto, origin);
+  Future<List<PlaceSuggestion>> searchPlaces(String texto, Coords origin, {String? sessao}) =>
+      _repository.searchPlaces(texto, origin, sessao: sessao);
 
   Future<PlaceSuggestion?> addressOf(Coords point) => _repository.addressOf(point);
 
@@ -159,6 +163,45 @@ class RideState extends ChangeNotifier {
     if (u != null) await estimate(u.$1, u.$2, pickupAddress: u.$3, dropoffAddress: u.$4);
   }
 
+  // ------------------------------------------------------------------
+  // Etapa 3 (29/10/2026): viagem sem destino e paradas no caminho.
+  // ------------------------------------------------------------------
+
+  /// A viagem que esta sendo confirmada vai sem destino (pelo taximetro).
+  bool semDestino = false;
+
+  /// Paradas no caminho (ate 2), na ordem.
+  List<PlaceSuggestion> paradas = [];
+
+  static const int maximoDeParadas = 2;
+
+  /// Comeca uma confirmacao nova: sem paradas; com ou sem destino.
+  void novaViagem({bool semDestino = false}) {
+    this.semDestino = semDestino;
+    paradas = [];
+    rotaPrevia = [];
+  }
+
+  /// Poe uma parada no caminho e refaz o preco.
+  Future<void> adicionarParada(PlaceSuggestion parada) async {
+    if (paradas.length >= maximoDeParadas) return;
+    paradas = [...paradas, parada];
+    notifyListeners();
+    await _refazerPreco();
+  }
+
+  Future<void> tirarParada(int indice) async {
+    if (indice < 0 || indice >= paradas.length) return;
+    paradas = [...paradas]..removeAt(indice);
+    notifyListeners();
+    await _refazerPreco();
+  }
+
+  Future<void> _refazerPreco() async {
+    final u = _ultimaCotacao;
+    if (u != null) await estimate(u.$1, u.$2, pickupAddress: u.$3, dropoffAddress: u.$4);
+  }
+
   Future<RideQuote?> estimate(
     Coords origin,
     Coords destination, {
@@ -175,7 +218,9 @@ class RideState extends ChangeNotifier {
           couponCode: cupomCodigo,
           // Agendada paga a bandeira do horario da viagem (23h = noturna).
           agendadaPara: agendarPara,
-          category: categoria);
+          category: categoria,
+          semDestino: semDestino,
+          paradas: paradas);
       quote = result.quote;
       unawaited(_buscarRotaPrevia(origin, destination));
       return result.quote;
@@ -216,9 +261,12 @@ class RideState extends ChangeNotifier {
       couponCode: cupomCodigo,
       agendadaPara: agendarPara,
       category: categoria,
+      semDestino: semDestino,
+      paradas: paradas,
     );
 
     cupomCodigo = null;
+    novaViagem();
     if (ride.status == RideStatus.scheduled) {
       // Agendada nao abre a tela de procura: fica na lista ate o horario.
       agendarPara = null;
@@ -339,13 +387,97 @@ class RideState extends ChangeNotifier {
     }
   }
 
+  /// Rota para desenhar na confirmacao: embarque -> paradas -> destino
+  /// (sem destino: so ate a ultima parada). Cada trecho vem do guardado do
+  /// servidor (o orcamento ja pediu).
   Future<void> _buscarRotaPrevia(Coords de, Coords para) async {
     rotaPrevia = [];
-    final r = await rotaPelaRua(de, para);
+    final pontos = [de, for (final p in paradas) p.coords, if (!semDestino) para];
+    if (pontos.length < 2) return;
+    final caminho = <Coords>[];
+    for (var i = 1; i < pontos.length; i++) {
+      final r = await rotaPelaRua(pontos[i - 1], pontos[i]);
+      if (r == null) return;
+      caminho.addAll(r);
+    }
     final u = _ultimaCotacao;
-    if (r == null || u == null || u.$1 != de || u.$2 != para) return;
-    rotaPrevia = r;
+    if (u == null || u.$1 != de || u.$2 != para) return;
+    rotaPrevia = caminho;
     notifyListeners();
+  }
+
+  // ------------------------------------------------------------------
+  // Enderecos salvos (Casa, Trabalho...) e destinos recentes — os dois no
+  // servidor, so da conta (etapas 3 e 4).
+  // ------------------------------------------------------------------
+
+  List<EnderecoSalvo> salvos = [];
+  List<DestinoRecente> recentes = [];
+
+  /// Ja veio do servidor nesta abertura (senao a tela usa os do celular).
+  bool recentesDoServidor = false;
+
+  Future<void> carregarEnderecos() async {
+    try {
+      final r = await Future.wait([_repository.enderecosSalvos(), _repository.destinosRecentes()]);
+      salvos = r[0] as List<EnderecoSalvo>;
+      recentes = r[1] as List<DestinoRecente>;
+      recentesDoServidor = !_repository.isDemo;
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: ficam os do celular.
+    }
+  }
+
+  /// Lixeira de um destino recente: apaga no servidor e SO depois a lista
+  /// da tela muda (pedido do Evandro). false = nao apagou (sem rede).
+  Future<bool> esconderDestino(String chave) async {
+    try {
+      recentes = await _repository.esconderDestino(chave);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Apagar tudo: destinos recentes no servidor.
+  Future<bool> apagarDestinos() async {
+    try {
+      await _repository.apagarDestinos();
+      recentes = [];
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Salva um endereco (Casa, Trabalho ou outro nome). Se ja existe um com o
+  /// mesmo nome, troca o endereco dele.
+  Future<String?> salvarEndereco(String rotulo, PlaceSuggestion lugar) async {
+    try {
+      final existente = salvos.where((e) => e.rotulo.toLowerCase() == rotulo.trim().toLowerCase()).firstOrNull;
+      final novo = await _repository.salvarEndereco(rotulo, lugar, trocarId: existente?.id);
+      salvos = [novo, ...salvos.where((e) => e.id != novo.id)];
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'Sem conexão. Tente de novo.';
+    }
+  }
+
+  Future<bool> apagarSalvo(String id) async {
+    try {
+      await _repository.apagarEnderecoSalvo(id);
+      salvos = salvos.where((e) => e.id != id).toList();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   DateTime _rotaEm = DateTime.fromMillisecondsSinceEpoch(0);

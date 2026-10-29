@@ -12,6 +12,7 @@ import '../state/app_state.dart';
 import '../state/ride_state.dart';
 import 'agendadas_screen.dart';
 import 'cupons_screen.dart';
+import 'destino_sheet.dart';
 import '../widgets/ride_map.dart';
 import '../widgets/ui.dart';
 
@@ -21,10 +22,13 @@ import '../widgets/ui.dart';
 /// vigente e o botao de confirmar. Com mais de uma categoria ativa (Carro e
 /// Moto), o passageiro escolhe antes, vendo o preco de cada uma.
 class ConfirmScreen extends StatefulWidget {
-  const ConfirmScreen({super.key, required this.destination, required this.address});
+  const ConfirmScreen({super.key, required this.destination, required this.address, this.semDestino = false});
 
   final Coords destination;
   final String address;
+
+  /// Etapa 3: corrida sem destino (taximetro; o valor mostrado e estimado).
+  final bool semDestino;
 
   @override
   State<ConfirmScreen> createState() => _ConfirmScreenState();
@@ -87,16 +91,32 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
     Navigator.of(context).pop();
   }
 
+  /// Parada no caminho (ate 2): escolhe como o destino e refaz o preco.
+  Future<void> _adicionarParada() async {
+    final p = await DestinoSheet.abrir(context, parada: true);
+    if (p == null || DestinoSheet.ehSemDestino(p) || !mounted) return;
+    await context.read<RideState>().adicionarParada(p);
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final ride = context.watch<RideState>();
     final quote = ride.quote;
+    final paradas = ride.paradas;
 
-    final center = Coords(
-      (app.coords.latitude + widget.destination.latitude) / 2,
-      (app.coords.longitude + widget.destination.longitude) / 2,
-    );
+    final center = widget.semDestino
+        ? app.coords
+        : Coords(
+            (app.coords.latitude + widget.destination.latitude) / 2,
+            (app.coords.longitude + widget.destination.longitude) / 2,
+          );
+    final enquadrar = <Coords>[
+      app.coords,
+      for (final p in paradas) p.coords,
+      if (!widget.semDestino) widget.destination,
+      ...ride.rotaPrevia,
+    ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -119,18 +139,21 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                     rounded: false,
                     // A viagem inteira na tela, perto ou longe (antes o zoom era
                     // fixo e Goiatuba → Rio Verde mostrava um pedaco vazio).
-                    enquadrar: [app.coords, widget.destination, ...ride.rotaPrevia],
-                    enquadrarChave: ride.rotaPrevia.length,
+                    enquadrar: enquadrar.length > 1 ? enquadrar : const [],
+                    enquadrarChave: ride.rotaPrevia.length + paradas.length * 1000,
                     enquadrarMargem: const EdgeInsets.fromLTRB(40, 72, 40, 36),
                     // Pelas ruas (aparece assim que o servidor responde).
                     route: ride.rotaPrevia,
                     markers: [
                       MapMarker(id: 'pickup', coords: app.coords, kind: MarkerKind.pickup),
-                      MapMarker(
-                        id: 'dropoff',
-                        coords: widget.destination,
-                        kind: MarkerKind.dropoff,
-                      ),
+                      for (var i = 0; i < paradas.length; i++)
+                        MapMarker(id: 'parada$i', coords: paradas[i].coords, kind: MarkerKind.dropoff),
+                      if (!widget.semDestino)
+                        MapMarker(
+                          id: 'dropoff',
+                          coords: widget.destination,
+                          kind: MarkerKind.dropoff,
+                        ),
                     ],
                   ),
                 ),
@@ -203,14 +226,37 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                                 ),
                               ],
                             ),
+                            // Paradas no caminho (etapa 3), cada uma com o X para tirar.
+                            for (var i = 0; i < paradas.length; i++)
+                              Row(
+                                children: [
+                                  const Icon(Icons.flag_outlined, size: 14, color: AppColors.sheetMuted),
+                                  const SizedBox(width: Spacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      'Parada ${i + 1}: ${paradas[i].fullAddress}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.muted,
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: ride.estimating ? null : () => ride.tirarParada(i),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(Icons.close, size: 16, color: AppColors.sheetMuted),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             const SizedBox(height: 2),
                             Row(
                               children: [
-                                const Icon(Icons.stop, size: 12, color: AppColors.danger),
+                                Icon(widget.semDestino ? Icons.local_taxi_outlined : Icons.stop, size: 12, color: AppColors.danger),
                                 const SizedBox(width: Spacing.sm),
                                 Expanded(
                                   child: Text(
-                                    widget.address,
+                                    widget.semDestino ? 'Sem destino: você diz ao motorista no caminho' : widget.address,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: SheetText.muted,
@@ -218,6 +264,21 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                                 ),
                               ],
                             ),
+                            if (paradas.length < RideState.maximoDeParadas)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: ride.estimating ? null : _adicionarParada,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.brand,
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 32),
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: Text(paradas.isEmpty ? 'Adicionar parada' : 'Adicionar outra parada'),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -464,7 +525,7 @@ class _PriceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(Radii.pill),
                 ),
                 child: Text(
-                  quote.taximetro ? 'APROXIMADO' : 'PREÇO FECHADO',
+                  quote.semDestino ? 'ESTIMADO · A PARTIR DE' : quote.taximetro ? 'APROXIMADO' : 'PREÇO FECHADO',
                   style: AppText.label.copyWith(
                     fontSize: 10,
                     color: quote.taximetro ? AppColors.brand : AppColors.primaryDark,
@@ -475,8 +536,10 @@ class _PriceCard extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.xs),
           Text(
-            '${formatDistance(quote.distanceMeters.toDouble())} - cerca de '
-            '${(quote.durationSeconds / 60).round()} min',
+            quote.semDestino && quote.distanceMeters <= 0
+                ? 'Sem destino: este é o valor da partida (bandeirada).'
+                : '${formatDistance(quote.distanceMeters.toDouble())} - cerca de '
+                    '${(quote.durationSeconds / 60).round()} min',
             style: SheetText.muted,
           ),
           const SizedBox(height: Spacing.xs),
@@ -521,7 +584,13 @@ class _PriceCard extends StatelessWidget {
                 : 'Tempo parado (espera no embarque e paradas que você pedir) só entra na conta depois de 3 minutos.',
             style: SheetText.muted,
           ),
-          if (quote.taximetro) ...[
+          if (quote.semDestino) ...[
+            const SizedBox(height: Spacing.xs),
+            Text(
+              'Valor ESTIMADO: sem destino, o valor final é o do taxímetro do motorista, pelo trajeto feito (km rodado e tempo parado).',
+              style: SheetText.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ] else if (quote.taximetro) ...[
             const SizedBox(height: Spacing.xs),
             Text(
               'O valor final é o do taxímetro do motorista, pelo trajeto feito: km rodado e tempo parado.',

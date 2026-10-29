@@ -7,11 +7,14 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { mapaComChave } from '../operacao/mapa.config';
 import { GeoService } from './geo.service';
 import { UsoDoMapaService } from './uso-do-mapa';
+import { PracasService } from '../pracas/pracas.service';
 
 const buscaSchema = z.object({
   q: z.string().trim().min(2).max(120),
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
+  /** Token de sessao da tela de destino (etapa 3). */
+  sessao: z.string().trim().max(64).optional(),
 });
 
 const pontoSchema = z.object({
@@ -34,12 +37,20 @@ export class GeoController {
   constructor(
     private readonly geo: GeoService,
     private readonly uso: UsoDoMapaService,
+    private readonly pracas: PracasService,
   ) {}
 
   @Get('search')
   @ApiOperation({ summary: 'Busca enderecos e lugares perto de um ponto (TomTom, pelo servidor)' })
-  buscar(@Query(new ZodValidationPipe(buscaSchema)) q: { q: string; lat: number; lng: number }) {
-    return this.geo.buscar(q.q, q.lat, q.lng);
+  async buscar(@Query(new ZodValidationPipe(buscaSchema)) q: { q: string; lat: number; lng: number; sessao?: string }) {
+    // Centro e limite da cidade (praca) de onde vem a busca; fonte da busca
+    // configuravel por cidade.
+    const praca = await this.pracas.doPonto({ latitude: q.lat, longitude: q.lng }).catch(() => null);
+    return this.geo.buscar(q.q, q.lat, q.lng, {
+      raioMetros: praca ? praca.raioKm * 1000 : undefined,
+      sessao: q.sessao,
+      fonte: praca?.fonteBusca,
+    });
   }
 
   @Get('rota')

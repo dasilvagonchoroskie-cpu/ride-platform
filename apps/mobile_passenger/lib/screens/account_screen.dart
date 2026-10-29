@@ -5,6 +5,7 @@ import '../core/avisos.dart';
 import '../core/config/app_config.dart';
 import '../core/fotos.dart';
 import '../core/theme/app_theme.dart';
+import '../state/app_state.dart';
 import '../state/auth_state.dart';
 import '../state/config_state.dart';
 import '../state/ride_state.dart';
@@ -55,6 +56,37 @@ class AccountScreen extends StatelessWidget {
     final corridas = context.read<RideState>();
     await context.read<AuthState>().logout();
     await corridas.limpar();
+  }
+
+  /// Etapa 4 (Evandro, 29/10/2026): "Apagar tudo" do historico de destinos.
+  /// Apaga no servidor; a tela so confirma depois da resposta. As corridas
+  /// continuam em Atividade (recibos), so os enderecos saem das sugestoes.
+  Future<void> _apagarHistorico(BuildContext context) async {
+    final certeza = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Apagar histórico de destinos?', style: AppText.heading),
+        content: Text(
+          'Os destinos recentes saem das sugestões neste e em qualquer outro celular. '
+          'Os recibos das corridas continuam em Atividade. Endereços salvos (Casa, Trabalho) não são apagados.',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Voltar')),
+          TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Apagar tudo')),
+        ],
+      ),
+    );
+    if (certeza != true || !context.mounted) return;
+    final ride = context.read<RideState>();
+    final app = context.read<AppState>();
+    final ok = await ride.apagarDestinos();
+    if (!ok) {
+      avisar('Não deu para apagar agora (sem conexão). Nada foi apagado; tente de novo.');
+      return;
+    }
+    await app.apagarDestinosDoCelular();
+    avisar('Histórico de destinos apagado.');
   }
 
   /// Excluir a propria conta (Google Play exige). Pede para escrever
@@ -254,6 +286,13 @@ class AccountScreen extends StatelessWidget {
               titulo: 'Avisos',
               selo: avisoNovo ? 'novo' : null,
               onTap: () => _abrir(context, const AvisosScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.history,
+              corIcone: AppColors.text,
+              titulo: 'Apagar histórico de destinos',
+              onTap: () => _apagarHistorico(context),
             ),
             separador,
             MenuLinha(

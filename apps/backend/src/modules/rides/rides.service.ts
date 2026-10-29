@@ -14,6 +14,7 @@ import { ehMoto, lerCategorias } from './categorias';
 import { distanciaDoTaximetro, lerCobranca, paradasQueValem } from './cobranca';
 import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
+import { HistoricoDeDestinos } from './destinos';
 import { PushService } from '../../integrations/notifications/push.service';
 import type {
   CancelRideInput,
@@ -21,6 +22,7 @@ import type {
   FinishRideInput,
   ListRidesInput,
   RequestRideInput,
+  RidePointInput,
 } from './dto';
 
 /**
@@ -77,6 +79,10 @@ const ACAO_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
 };
 
 /** Situacoes em que a corrida ainda ocupa o motorista e o passageiro. */
+/** Marca da corrida sem destino (no placeId do destino; sem mudar o banco). */
+export const SEM_DESTINO = 'SEM_DESTINO';
+export const TEXTO_SEM_DESTINO = 'Sem destino definido (pelo taxímetro)';
+
 const EM_ABERTO: RideStatus[] = [
   'REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS',
 ];
@@ -94,12 +100,55 @@ export class RidesService {
   // preferencia, em vez de sortear qualquer um da cidade.
   private static readonly RAIOS_METROS = [2000, 5000, 10000];
 
+  /** Destinos recentes do passageiro, no servidor (etapas 3 e 4). */
+  readonly destinos: HistoricoDeDestinos;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly fare: FareService,
     private readonly geo: GeoService,
     private readonly push: PushService,
-  ) {}
+  ) {
+    this.destinos = new HistoricoDeDestinos(prisma);
+  }
+
+  /**
+   * Destino da corrida. "Sem destino" (Evandro, 29/10/2026): o destino fica
+   * no proprio embarque, marcado com placeId SEM_DESTINO, e o valor sai pelo
+   * taximetro (o app mostra que o valor e estimado).
+   */
+  private destinoDe(input: { pickup: RidePointInput; dropoff?: RidePointInput; semDestino?: boolean }): RidePointInput {
+    if (input.semDestino || !input.dropoff) {
+      return {
+        address: TEXTO_SEM_DESTINO,
+        latitude: input.pickup.latitude,
+        longitude: input.pickup.longitude,
+        placeId: SEM_DESTINO,
+      };
+    }
+    return input.dropoff;
+  }
+
+  /**
+   * Distancia e tempo da viagem inteira: embarque -> paradas -> destino
+   * (cada trecho pela estrada e guardado). Sem destino: so ate a ultima
+   * parada (ou zero, so a bandeirada).
+   */
+  private async medirViagem(
+    pickup: { latitude: number; longitude: number },
+    paradas: Array<{ latitude: number; longitude: number }>,
+    destino: RidePointInput,
+  ): Promise<{ distanceMeters: number; durationSeconds: number }> {
+    const pontos = [pickup, ...paradas, ...(destino.placeId === SEM_DESTINO ? [] : [destino])];
+    let distanceMeters = 0;
+    let durationSeconds = 0;
+    for (let i = 1; i < pontos.length; i++) {
+      const t = await this.medirRota(pontos[i - 1], pontos[i]);
+      distanceMeters += t.distanceMeters;
+      durationSeconds += t.durationSeconds;
+    }
+    return { distanceMeters, durationSeconds };
+  }
 
   /**
    * Distancia e tempo pela estrada (TomTom, pelo GeoService). Sem rota por rua, a estimativa
@@ -122,7 +171,9 @@ export class RidesService {
   // pode ver quanto da uma corrida para qualquer lugar, mesmo fora da regiao.
 
   async estimar(input: EstimateRideInput, passengerId?: string) {
-    const rota = await this.medirRota(input.pickup, input.dropoff);
+    const destino = this.destinoDe(input);
+    const semDestino = destino.placeId === SEM_DESTINO;
+    const rota = await this.medirViagem(input.pickup, input.paradas ?? [], destino);
     const orcamento = await this.fare.calcular({
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
@@ -152,8 +203,11 @@ export class RidesService {
       durationSeconds: orcamento.durationSeconds,
       chargedDistanceMeters: orcamento.chargedDistanceMeters,
       minFareApplied: orcamento.minFareApplied,
-      /** TAXIMETRO: o valor final sai do trajeto feito; FECHADO: e este. */
-      cobranca: await lerCobranca(this.prisma),
+      /** TAXIMETRO: o valor final sai do trajeto feito; FECHADO: e este. Sem destino: sempre taximetro. */
+      cobranca: semDestino ? 'TAXIMETRO' : await lerCobranca(this.prisma),
+      /** Sem destino: o valor e so a partida (bandeirada) — o final sai do taximetro. */
+      semDestino,
+      paradas: (input.paradas ?? []).length,
       moto: ehMoto(orcamento.category),
       // Mototaxi (Evandro, 10/10/2026): o passageiro escolhe Carro ou Moto,
       // vendo o preco de cada categoria ativa.
@@ -232,7 +286,9 @@ export class RidesService {
       if (agendadas >= 3) throw BusinessException.validation('Você já tem 3 corridas agendadas.');
     }
 
-    const rota = await this.medirRota(input.pickup, input.dropoff);
+    const destino = this.destinoDe(input);
+    const paradas = input.paradas ?? [];
+    const rota = await this.medirViagem(input.pickup, paradas, destino);
     const pedidoEm = new Date();
     // A bandeira e a do horario da viagem: agendada para as 23h paga noturna.
     const orcamento = await this.fare.calcular({
@@ -265,10 +321,10 @@ export class RidesService {
           pickupLat: input.pickup.latitude,
           pickupLng: input.pickup.longitude,
           pickupPlaceId: input.pickup.placeId,
-          dropoffAddress: input.dropoff.address,
-          dropoffLat: input.dropoff.latitude,
-          dropoffLng: input.dropoff.longitude,
-          dropoffPlaceId: input.dropoff.placeId,
+          dropoffAddress: destino.address,
+          dropoffLat: destino.latitude,
+          dropoffLng: destino.longitude,
+          dropoffPlaceId: destino.placeId,
           distanceMeters: orcamento.distanceMeters,
           durationSeconds: orcamento.durationSeconds,
           estimatedFareCents: orcamento.totalCents,
@@ -276,6 +332,18 @@ export class RidesService {
           paymentMethodType: input.paymentMethodType,
         },
       });
+      if (paradas.length > 0) {
+        await tx.rideStop.createMany({
+          data: paradas.map((p, i) => ({
+            rideId: criada.id,
+            sequence: i + 1,
+            address: p.address,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            placeId: p.placeId ?? null,
+          })),
+        });
+      }
       await tx.rideStatusHistory.create({
         data: {
           rideId: criada.id,
@@ -415,10 +483,24 @@ export class RidesService {
         .updateMany({ where: { driverId, isOnline: true }, data: { lastSeenAt: agora } })
         .catch(() => undefined);
     }
-    const ofertas: Array<RideOffer & { ride: Ride & { passenger: { name: string } } }> =
+    const ofertas: Array<
+      RideOffer & {
+        ride: Ride & {
+          passenger: { name: string };
+          stops: Array<{ sequence: number; address: string; latitude: number; longitude: number }>;
+        };
+      }
+    > =
       await this.prisma.rideOffer.findMany({
       where: { driverId, status: OfferStatus.PENDING, expiresAt: { gt: agora } },
-      include: { ride: { include: { passenger: { select: { name: true } } } } },
+      include: {
+        ride: {
+          include: {
+            passenger: { select: { name: true } },
+            stops: { orderBy: { sequence: 'asc' }, select: { sequence: true, address: true, latitude: true, longitude: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
     const abertas = ofertas.filter((o) => o.ride.status === RideStatus.SEARCHING);
@@ -479,6 +561,9 @@ export class RidesService {
         passengerRating: notaDe(o.ride.passengerId),
         // O motorista precisa saber antes de aceitar como vai receber.
         paymentMethodType: o.ride.paymentMethodType,
+        /** Etapa 3: paradas no caminho e corrida sem destino (taximetro). */
+        paradas: o.ride.stops,
+        semDestino: o.ride.dropoffPlaceId === SEM_DESTINO,
       }));
   }
 
@@ -665,7 +750,7 @@ export class RidesService {
    * FECHADO: o estimado no pedido, sem espera.
    */
   private async medicaoFinal(corrida: Ride, input: FinishRideInput) {
-    const modo = await lerCobranca(this.prisma);
+    const modo = corrida.dropoffPlaceId === SEM_DESTINO ? 'TAXIMETRO' : await lerCobranca(this.prisma);
     if (modo === 'FECHADO') {
       return { modo, distanceMeters: corrida.distanceMeters, durationSeconds: corrida.durationSeconds, waitingSeconds: 0, paradasSeconds: 0 };
     }
@@ -706,7 +791,7 @@ export class RidesService {
    * do passageiro). Mesma conta do fim da corrida.
    */
   private async taximetroAoVivo(corrida: Ride) {
-    const modo = await lerCobranca(this.prisma);
+    const modo = corrida.dropoffPlaceId === SEM_DESTINO ? 'TAXIMETRO' : await lerCobranca(this.prisma);
     const tabela =
       (await this.prisma.fareConfig.findUnique({
         where: { category_flag: { category: corrida.category, flag: corrida.fareFlag } },
@@ -1368,6 +1453,7 @@ export class RidesService {
         },
         vehicle: { select: { plate: true, brand: true, model: true, color: true } },
         ratings: { select: { authorId: true, score: true, targetDriverId: true } },
+        stops: { orderBy: { sequence: 'asc' }, select: { sequence: true, address: true, latitude: true, longitude: true, arrivedAt: true } },
       },
     });
     if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
@@ -1395,7 +1481,7 @@ export class RidesService {
             (quem.papel === UserRole.DRIVER ? r.targetDriverId == null : r.targetDriverId != null),
         )?.score ?? null)
       : null;
-    const { ratings: _notas, ...semNotas } = corrida;
+    const { ratings: _notas, stops: paradas, ...semNotas } = corrida;
     // Foto do carro (de frente): a do carro desta corrida (carro cadastrado
     // depois, conferido pela Central) ou a que o motorista mandou nos documentos.
     const fotoDoCarro = corrida.vehicleId
@@ -1431,6 +1517,9 @@ export class RidesService {
         cobranca: aoVivo?.cobranca ?? null,
         tarifa: aoVivo?.tarifa ?? null,
         taximetro: aoVivo?.taximetro ?? null,
+        /** Etapa 3: paradas no caminho, na ordem, e "sem destino" (taximetro). */
+        paradas,
+        semDestino: corrida.dropoffPlaceId === SEM_DESTINO,
       },
     };
   }

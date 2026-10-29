@@ -125,6 +125,25 @@ export class RidesController {
     return this.rides.historico(userId, UserRole.PASSENGER, query);
   }
 
+  @Get('destinos')
+  @ApiOperation({ summary: 'Destinos recentes do passageiro (historico no servidor, so da conta)' })
+  destinos(@CurrentUser('id') userId: string) {
+    return this.rides.destinos.listar(userId);
+  }
+
+  @Delete('destinos')
+  @ApiOperation({ summary: 'Apagar todos os destinos recentes' })
+  apagarDestinos(@CurrentUser('id') userId: string) {
+    return this.rides.destinos.apagarTudo(userId);
+  }
+
+  @Delete('destinos/:chave')
+  @ApiOperation({ summary: 'Lixeira: tira um destino da lista (responde a lista nova)' })
+  esconderDestino(@CurrentUser('id') userId: string, @Param('chave') chave: string) {
+    if (!chave || chave.length > 140) throw BusinessException.validation('Destino invalido.');
+    return this.rides.destinos.esconder(userId, chave);
+  }
+
   @Get('nearby-drivers')
   @ApiOperation({ summary: 'Carros disponiveis perto do passageiro (posicao aproximada)' })
   nearby(@CurrentUser('id') userId: string, @Query(new ZodValidationPipe(pertoSchema)) q: { lat: number; lng: number }) {

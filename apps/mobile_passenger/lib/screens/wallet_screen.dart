@@ -80,6 +80,53 @@ class WalletScreen extends StatelessWidget {
             'antes de aceitar como você vai pagar.',
             style: AppText.body.copyWith(color: AppColors.textMuted),
           ),
+          const SizedBox(height: Spacing.xl),
+          // Etapa 5 (Evandro, 29/10/2026): "Meus Cartoes" so com "Em breve".
+          // NENHUM numero de cartao e guardado no celular nem no servidor; o
+          // cartao entra depois, pelo gateway de pagamento.
+          Text('Meus cartões', style: AppText.heading),
+          const SizedBox(height: Spacing.sm),
+          Container(
+            padding: const EdgeInsets.all(Spacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(Radii.sm),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(color: AppColors.surfaceElevated, shape: BoxShape.circle),
+                  child: const Icon(Icons.credit_card_off_outlined, color: AppColors.textMuted),
+                ),
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Pagar pelo app', style: AppText.bodyStrong.copyWith(fontSize: 16)),
+                          const SizedBox(width: Spacing.sm),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(color: AppColors.brandSoft, borderRadius: BorderRadius.circular(Radii.pill)),
+                            child: Text('EM BREVE', style: AppText.label.copyWith(fontSize: 10, color: AppColors.brand)),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Cartão de crédito e débito pelo aplicativo chega em breve. Por enquanto, o pagamento é direto ao motorista.',
+                        style: AppText.body.copyWith(color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

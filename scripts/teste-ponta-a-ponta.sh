@@ -130,6 +130,15 @@ X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP")
 sucesso "$X" && ok "Passageiro: preco da corrida calculado" || falha "Passageiro: preco da corrida" "$X"
 # Mototaxi (Evandro, 10/10/2026): o preco vem por categoria ativa.
 [ "$(echo "$X" | jq -r '[.data.opcoes[] | select(.category=="CARRO")] | length')" = "1" ] && [ "$(echo "$X" | jq -r '.data.moto')" = "false" ] && ok "Passageiro: preco por categoria (Carro$(echo "$X" | jq -r '[.data.opcoes[] | select(.category!="CARRO") | ", " + .nome] | join("")'))" || falha "Passageiro: preco por categoria" "$X"
+# Etapa 3 (29/10/2026): corrida sem destino (taximetro, valor estimado) e parada extra.
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"semDestino\":true}" "$TP")
+[ "$(echo "$X" | jq -r '.data.semDestino')" = "true" ] && [ "$(echo "$X" | jq -r '.data.cobranca')" = "TAXIMETRO" ] && [ "$(echo "$X" | jq -r '.data.estimatedFareCents > 0')" = "true" ] && ok "Passageiro: preco sem destino (estimado, pelo taximetro: a partir de $(echo "$X" | jq -r '.data.estimatedFareCents') centavos)" || falha "Passageiro: preco sem destino" "$X"
+X=$(post /rides/estimate "{\"pickup\":$EMB}" "$TP"); sucesso "$X" && falha "Sem destino e sem marcar 'sem destino' deveria ser recusado" "$X" || ok "Passageiro: sem destino so com a opcao marcada"
+SEM_PARADA=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP" | jq -r '.data.distanceMeters')
+PAR='{"latitude":-18.0180,"longitude":-49.3500,"address":"Parada de teste, Goiatuba"}'
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"paradas\":[$PAR]}" "$TP")
+[ "$(echo "$X" | jq -r '.data.paradas')" = "1" ] && [ "$(echo "$X" | jq -r --argjson s "${SEM_PARADA:-0}" '.data.distanceMeters > $s')" = "true" ] && ok "Passageiro: parada extra entra no caminho ($SEM_PARADA m -> $(echo "$X" | jq -r '.data.distanceMeters') m)" || falha "Passageiro: parada extra" "$X"
+X=$(get "/geo/search?q=Avenida%20Brasilia&lat=-18.0125&lng=-49.3547&sessao=e2e-$SUF" "$TP"); sucesso "$X" && ok "Passageiro: busca com token de sessao" || falha "Passageiro: busca com sessao" "$X"
 X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
 [ "$(echo "$X" | jq -r '.success')" = "true" ] && [ "$(echo "$X" | jq -r '[.data[] | select(has("moto") | not)] | length')" = "0" ] && ok "Passageiro: carros perto dizem se sao moto ($(echo "$X" | jq -r '.data | length') perto)" || falha "Passageiro: carros perto com categoria" "$X"
 X=$(get "/geo/search?q=Avenida%20Brasilia&lat=-18.0125&lng=-49.3547" "$TP")
@@ -483,6 +492,17 @@ X=$(get /admin/settings/central "$TA"); sucesso "$X" && ok "Central: contato de 
 X=$(post "/rides/$RID/rate" '{"score":5,"tags":["Carro limpo"]}' "$TP")
 [ "$(echo "$X" | jq -r '.data.score')" = "5" ] && ok "Passageiro: avaliou o motorista com 5 estrelas" || falha "Passageiro: avaliar" "$X"
 X=$(get "/rides/$RID" "$TP"); [ "$(echo "$X" | jq -r '.data.ride.status')" = "COMPLETED" ] && [ "$(echo "$X" | jq -r '.data.ride.minhaNota')" = "5" ] && ok "Passageiro: recibo da corrida concluida com a nota" || falha "Passageiro: recibo" "$X"
+# Etapas 3 e 4: destinos recentes ficam no servidor, so da conta; a lixeira apaga no servidor.
+X=$(get /rides/destinos "$TP"); CH=$(echo "$X" | jq -r '.data[0].chave // empty')
+[ -n "$CH" ] && ok "Passageiro: destinos recentes no servidor ($(echo "$X" | jq -r '.data | length'), 1o: $(echo "$X" | jq -r '.data[0].address'))" || falha "Passageiro: destinos recentes" "$X"
+if [ -n "$CH" ]; then
+  CHU=$(jq -rn --arg c "$CH" '$c|@uri')
+  X=$(curl -s -m 30 -X DELETE "$API/rides/destinos/$CHU" -H "Authorization: Bearer $TP")
+  [ "$(echo "$X" | jq -r --arg c "$CH" '[.data[] | select(.chave==$c)] | length')" = "0" ] && ok "Passageiro: lixeira tirou o destino no servidor" || falha "Passageiro: lixeira do destino" "$X"
+  X=$(get /rides/destinos "$TP"); [ "$(echo "$X" | jq -r --arg c "$CH" '[.data[] | select(.chave==$c)] | length')" = "0" ] && ok "Passageiro: destino apagado nao volta" || falha "Passageiro: destino apagado voltou" "$X"
+fi
+X=$(curl -s -m 30 -X DELETE "$API/rides/destinos" -H "Authorization: Bearer $TP"); X=$(get /rides/destinos "$TP")
+[ "$(echo "$X" | jq -r '.data | length')" = "0" ] && ok "Passageiro: Apagar tudo limpou os destinos" || falha "Passageiro: Apagar tudo dos destinos" "$X"
 X=$(post "/rides/$RID/messages" '{"texto":"oi"}' "$TP"); sucesso "$X" && falha "Chat deveria fechar depois da corrida" "$X" || ok "Chat: fecha quando a corrida termina"
 X=$(post "/driver/rides/$RID/rate" '{"score":4}' "$TM"); [ "$(echo "$X" | jq -r '.data.score')" = "4" ] && ok "Motorista: avaliou o passageiro com 4 estrelas" || falha "Motorista: avaliar passageiro" "$X"
 X=$(get "/driver/rides/history?period=day" "$TM")

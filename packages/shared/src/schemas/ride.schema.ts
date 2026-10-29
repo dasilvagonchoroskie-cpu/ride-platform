@@ -20,20 +20,33 @@ export const ridePointSchema = coordinatesSchema.extend({
  * A bandeira nao entra aqui de proposito: quem decide e a hora do
  * servidor, nunca o aparelho.
  */
+/**
+ * Etapa 3 (Evandro, 29/10/2026):
+ * - "Nao informar destino": semDestino = true, sem dropoff. A corrida vai
+ *   pelo taximetro e o app mostra que o valor e ESTIMADO.
+ * - Parada extra: ate 2 paradas no caminho (paradas), na ordem.
+ */
+const comDestinoOuSem = <T extends { dropoff?: unknown; semDestino?: boolean }>(v: T) => v.semDestino === true || v.dropoff != null;
+const AVISO_DESTINO = { message: 'Informe o destino ou escolha "sem destino".', path: ['dropoff'] };
+
 export const estimateRideSchema = z.object({
   pickup: ridePointSchema,
-  dropoff: ridePointSchema,
+  dropoff: ridePointSchema.optional(),
+  semDestino: z.boolean().optional(),
+  paradas: z.array(ridePointSchema).max(2, 'No maximo 2 paradas.').optional(),
   /** Para mostrar o preco da bandeira do horario agendado. */
   scheduledFor: z.coerce.date().optional(),
   /** Categoria do veiculo (CARRO, MOTO...). */
   category: z.string().trim().toUpperCase().max(20).optional(),
   /** Mostra o desconto do cupom antes de confirmar. */
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
-});
+}).refine(comDestinoOuSem, AVISO_DESTINO);
 
 export const requestRideSchema = z.object({
   pickup: ridePointSchema,
-  dropoff: ridePointSchema,
+  dropoff: ridePointSchema.optional(),
+  semDestino: z.boolean().optional(),
+  paradas: z.array(ridePointSchema).max(2, 'No maximo 2 paradas.').optional(),
   paymentMethodType: z
     .enum(['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'WALLET'])
     .default('CASH'),
@@ -43,7 +56,7 @@ export const requestRideSchema = z.object({
   category: z.string().trim().toUpperCase().max(20).optional(),
   /** Codigo do cupom de desconto (opcional). */
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
-});
+}).refine(comDestinoOuSem, AVISO_DESTINO);
 
 export const cancelRideSchema = z.object({
   reason: z.string().trim().max(300).optional(),

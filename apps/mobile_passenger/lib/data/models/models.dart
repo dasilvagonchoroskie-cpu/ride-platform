@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart' show IconData, Icons;
+
 import '../../core/utils/geo.dart';
 
 /// Situacao da corrida (espelha o enum RideStatus do servidor).
@@ -283,7 +285,15 @@ class RideQuote {
     this.category = 'CARRO',
     this.moto = false,
     this.opcoes = const [],
+    this.semDestino = false,
+    this.paradas = 0,
   });
+
+  /// Sem destino: o preco e so a partida (bandeirada); o final sai do taximetro.
+  final bool semDestino;
+
+  /// Quantas paradas entraram no caminho.
+  final int paradas;
 
   /// Categoria deste preco (CARRO, MOTO...) e se e mototaxi.
   final String category;
@@ -340,6 +350,8 @@ class RideQuote {
         opcoes: [
           for (final o in (json['opcoes'] as List? ?? const []).whereType<Map<String, dynamic>>()) OpcaoCategoria.fromJson(o),
         ],
+        semDestino: json['semDestino'] == true,
+        paradas: (json['paradas'] as num?)?.toInt() ?? 0,
       );
 
   Map<String, dynamic> toJson() => {
@@ -453,7 +465,16 @@ class Ride {
     this.taximetroMetros,
     this.cobranca,
     this.category,
+    this.semDestino = false,
+    this.paradas = const [],
   });
+
+  /// Etapa 3 (29/10/2026): corrida sem destino — vai pelo taximetro e o valor
+  /// mostrado e so estimado.
+  final bool semDestino;
+
+  /// Paradas no caminho (ate 2), na ordem.
+  final List<RidePlace> paradas;
 
   /// Categoria da corrida (CARRO, MOTO...).
   final String? category;
@@ -534,6 +555,8 @@ class Ride {
         taximetroMetros: taximetroMetros,
         cobranca: cobranca,
         category: category,
+        semDestino: semDestino,
+        paradas: paradas,
       );
 
   Map<String, dynamic> toJson() => {
@@ -570,6 +593,10 @@ class Ride {
         'discountCents': discountCents,
         'agendadaPara': agendadaPara,
         'category': category,
+        'semDestino': semDestino,
+        'paradas': [
+          for (final p in paradas) {'address': p.address, ...p.coords.toJson()},
+        ],
       };
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -629,8 +656,20 @@ class Ride {
       discountCents: (json['discountCents'] as num?)?.toInt() ?? 0,
       agendadaPara: json['agendadaPara'] as String?,
       category: json['category'] as String?,
+      semDestino: json['semDestino'] == true,
+      paradas: _lerParadas(json['paradas']),
     );
   }
+
+  /// Paradas como vem do servidor ou do guardado: [{address, latitude, longitude}].
+  static List<RidePlace> _lerParadas(Object? v) => [
+        for (final p in (v is List ? v : const []).whereType<Map>())
+          if (p['latitude'] is num && p['longitude'] is num)
+            RidePlace(
+              address: p['address']?.toString() ?? 'Parada',
+              coords: Coords((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()),
+            ),
+      ];
 
   /// Corrida como o servidor manda (GET /rides/:id, POST /rides, historico).
   /// Antes o aplicativo lia isto com o formato local e tudo vinha vazio:
@@ -687,6 +726,8 @@ class Ride {
       taximetroMetros: ((j['taximetro'] as Map?)?['distanceMeters'] as num?)?.toInt(),
       cobranca: j['cobranca'] as String?,
       category: j['category'] as String?,
+      semDestino: j['semDestino'] == true || j['dropoffPlaceId'] == 'SEM_DESTINO',
+      paradas: _lerParadas(j['paradas']),
     );
   }
 
@@ -882,4 +923,48 @@ class ContatoEmergencia {
     if (d.length == 10) return '(${d.substring(0, 2)}) ${d.substring(2, 6)}-${d.substring(6)}';
     return telefone;
   }
+}
+
+/// Endereco salvo pelo passageiro (Casa, Trabalho...). Fica no servidor
+/// (/users/me/addresses), so da conta.
+class EnderecoSalvo {
+  const EnderecoSalvo({required this.id, required this.rotulo, required this.endereco, required this.coords});
+
+  final String id;
+  final String rotulo;
+  final String endereco;
+  final Coords coords;
+
+  PlaceSuggestion get comoLugar => PlaceSuggestion(address: endereco, coords: coords, distanceKm: 0);
+
+  IconData get icone => switch (rotulo.toLowerCase()) {
+        'casa' => Icons.home_outlined,
+        'trabalho' => Icons.work_outline,
+        _ => Icons.star_outline,
+      };
+
+  factory EnderecoSalvo.fromJson(Map<String, dynamic> j) => EnderecoSalvo(
+        id: j['id']?.toString() ?? '',
+        rotulo: j['label']?.toString() ?? 'Salvo',
+        endereco: j['formattedAddress']?.toString() ?? '',
+        coords: Coords((j['latitude'] as num?)?.toDouble() ?? 0, (j['longitude'] as num?)?.toDouble() ?? 0),
+      );
+}
+
+/// Destino recente (historico no servidor, so da conta). [chave] e o que a
+/// lixeira manda para apagar.
+class DestinoRecente {
+  const DestinoRecente({required this.chave, required this.lugar});
+
+  final String chave;
+  final PlaceSuggestion lugar;
+
+  factory DestinoRecente.fromJson(Map<String, dynamic> j) => DestinoRecente(
+        chave: j['chave']?.toString() ?? '',
+        lugar: PlaceSuggestion(
+          address: j['address']?.toString() ?? 'Destino',
+          coords: Coords((j['latitude'] as num?)?.toDouble() ?? 0, (j['longitude'] as num?)?.toDouble() ?? 0),
+          distanceKm: 0,
+        ),
+      );
 }

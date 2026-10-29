@@ -28,6 +28,8 @@ const pracaSchema = z.object({
     .regex(/^\d{10,13}$/, 'WhatsApp so com numeros, com DDI e DDD.')
     .nullable()
     .optional(),
+  /** Fonte da busca de endereco nesta cidade (etapa 3). */
+  fonteBusca: z.enum(['tomtom', 'google']).default('tomtom'),
 });
 
 const operadorSchema = z.object({

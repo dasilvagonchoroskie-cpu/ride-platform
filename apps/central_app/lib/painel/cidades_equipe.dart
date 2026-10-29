@@ -378,6 +378,7 @@ class _EditarCidadeState extends State<_EditarCidade> {
   late final _raio = TextEditingController(text: widget.cidade.raioKm.round().toString());
   late final _whatsapp = TextEditingController(text: widget.cidade.whatsapp ?? '');
   late bool _ativa = widget.cidade.ativa;
+  late String _fonte = widget.cidade.fonteBusca;
   String? _erro;
 
   @override
@@ -396,6 +397,7 @@ class _EditarCidadeState extends State<_EditarCidade> {
       'raioKm': raio,
       'ativa': _ativa,
       'whatsapp': zap.isEmpty ? null : (zap.length <= 11 ? '55$zap' : zap),
+      'fonteBusca': _fonte,
     });
   }
 
@@ -418,6 +420,22 @@ class _EditarCidadeState extends State<_EditarCidade> {
               controller: _whatsapp,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(labelText: 'WhatsApp da Central desta cidade (opcional)', helperText: 'Sem ele, vale o WhatsApp geral.'),
+            ),
+            const SizedBox(height: Spacing.md),
+            // Etapa 3: fonte da busca de endereco por cidade.
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              initialValue: _fonte,
+              decoration: const InputDecoration(
+                labelText: 'Busca de endereço nesta cidade',
+                helperText: 'Google só funciona depois que a chave do Google estiver no servidor; até lá vale a TomTom.',
+                helperMaxLines: 3,
+              ),
+              items: const [
+                DropdownMenuItem(value: 'tomtom', child: Text('TomTom (padrão)')),
+                DropdownMenuItem(value: 'google', child: Text('Google')),
+              ],
+              onChanged: (v) => setState(() => _fonte = v ?? 'tomtom'),
             ),
             if (_erro != null) ...[
               const SizedBox(height: Spacing.sm),

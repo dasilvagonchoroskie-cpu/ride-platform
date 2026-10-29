@@ -69,7 +69,9 @@ class RideScreen extends StatelessWidget {
                     markers: [
                       MapMarker(id: 'me', coords: d.position, kind: d.vehicle?.moto == true ? MarkerKind.moto : MarkerKind.car),
                       MapMarker(id: 'pickup', coords: offer.pickupCoords, kind: MarkerKind.pickup),
-                      MapMarker(id: 'dropoff', coords: offer.dropoffCoords, kind: MarkerKind.dropoff),
+                      for (var i = 0; i < offer.paradas.length; i++)
+                        MapMarker(id: 'parada$i', coords: offer.paradas[i].coords, kind: MarkerKind.dropoff),
+                      if (!offer.semDestino) MapMarker(id: 'dropoff', coords: offer.dropoffCoords, kind: MarkerKind.dropoff),
                     ],
                   ),
                 ),
@@ -546,8 +548,17 @@ class _Viagem extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.md),
         _Passageiro(d: d, offer: offer),
-        _Endereco(rotulo: 'Destino', texto: offer.dropoffAddress, cor: AppColors.danger),
-        _BotoesNavegar(destino: offer.dropoffCoords),
+        // Etapa 3: paradas na ordem, cada uma com o seu caminho.
+        for (var i = 0; i < offer.paradas.length; i++) ...[
+          _Endereco(rotulo: 'Parada ${i + 1}', texto: offer.paradas[i].address, cor: AppColors.warning),
+          _BotoesNavegar(destino: offer.paradas[i].coords),
+        ],
+        if (offer.semDestino)
+          _Endereco(rotulo: 'Destino', texto: 'Sem destino: pergunte ao passageiro. O valor sai pelo taxímetro.', cor: AppColors.danger)
+        else ...[
+          _Endereco(rotulo: 'Destino', texto: offer.dropoffAddress, cor: AppColors.danger),
+          _BotoesNavegar(destino: offer.dropoffCoords),
+        ],
         const SizedBox(height: Spacing.lg),
         Deslizar(texto: 'FINALIZAR VIAGEM', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: d.finishRide),
       ],

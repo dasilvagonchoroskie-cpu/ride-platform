@@ -116,13 +116,49 @@ export class GeoService {
     );
   }
 
-  async buscar(texto: string, lat: number, lng: number): Promise<Lugar[]> {
+  /** Buscas por "sessao" de busca (uma abertura da tela de destino). */
+  private readonly sessoes = new Map<string, { n: number; em: number }>();
+  static readonly BUSCAS_POR_SESSAO = 40;
+
+  /**
+   * Token de sessao (etapa 3): o app manda o mesmo codigo enquanto a tela de
+   * destino esta aberta. Mais de 40 buscas na mesma sessao = alguem
+   * digitando sem parar (ou um robo): para, e o app mostra a contingencia.
+   */
+  private contarSessao(sessao: string | undefined): void {
+    if (!sessao) return;
+    const agora = Date.now();
+    if (this.sessoes.size > 5000) {
+      for (const [k, v] of this.sessoes) if (agora - v.em > 30 * 60_000) this.sessoes.delete(k);
+    }
+    const s = this.sessoes.get(sessao);
+    if (!s || agora - s.em > 30 * 60_000) {
+      this.sessoes.set(sessao, { n: 1, em: agora });
+      return;
+    }
+    s.n += 1;
+    if (s.n > GeoService.BUSCAS_POR_SESSAO) throw this.limite();
+  }
+
+  /**
+   * [raioMetros]: o raio da cidade (praca) de onde a busca vem — "Rua Sao
+   * Paulo" acha a da cidade primeiro. [fonte]: de onde vem a busca nesta
+   * cidade (hoje so a TomTom; o Google entra quando houver a chave).
+   */
+  async buscar(
+    texto: string,
+    lat: number,
+    lng: number,
+    opcoes: { raioMetros?: number; sessao?: string; fonte?: string } = {},
+  ): Promise<Lugar[]> {
     const q = texto.trim().replace(/\s+/g, ' ');
     const chave = `${semAcento(q)}:${lat.toFixed(2)}:${lng.toFixed(2)}`;
     const guardado = this.buscas.ler(chave);
     if (guardado) return this.comDistancia(guardado, lat, lng);
+    this.contarSessao(opcoes.sessao);
     const p = this.provedor;
     if (!p || !this.uso.pode('geocode', true)) throw this.limite();
+    const raio = Math.min(Math.max(opcoes.raioMetros ?? 80_000, 20_000), 300_000);
 
     const perto = { lat, lng };
     let regiao: LugarDoProvedor[] = [];
@@ -130,7 +166,7 @@ export class GeoService {
     let brasil: LugarDoProvedor[] = [];
     try {
       // 1) A regiao (uns 80 km): "Rua Sao Paulo" acha a da cidade primeiro.
-      regiao = await p.geocodificar(q, perto, 80_000);
+      regiao = await p.geocodificar(q, perto, raio);
       // 2) Lugares com nome (Rodoviaria, Hospital) — cota pequena (2.500/mes):
       //    so quando a regiao trouxe pouco e fora do modo economia.
       if (regiao.length < 3 && this.uso.pode('search', false)) lugares = await p.lugares(q, perto, 30_000);

@@ -1572,7 +1572,19 @@ class PainelApi {
 
 /// Cidade atendida (praca).
 class Praca {
-  const Praca({required this.id, required this.nome, required this.uf, required this.posicao, required this.raioKm, required this.ativa, this.whatsapp});
+  const Praca({
+    required this.id,
+    required this.nome,
+    required this.uf,
+    required this.posicao,
+    required this.raioKm,
+    required this.ativa,
+    this.whatsapp,
+    this.fonteBusca = 'tomtom',
+  });
+
+  /// De onde vem a busca de endereco nesta cidade (etapa 3): 'tomtom' ou 'google'.
+  final String fonteBusca;
 
   final String id;
   final String nome;
@@ -1592,6 +1604,7 @@ class Praca {
         raioKm: _num(j['raioKm']) ?? 60,
         ativa: j['ativa'] != false,
         whatsapp: j['whatsapp'] as String?,
+        fonteBusca: j['fonteBusca'] == 'google' ? 'google' : 'tomtom',
       );
 }
 
