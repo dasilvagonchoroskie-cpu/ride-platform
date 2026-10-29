@@ -170,9 +170,13 @@ jobs:
           git config user.name "CI Fortaleza"
           git config user.email "ci@fortalezadigitalsecurity.com.br"
           # O commit medido pode ser antigo: o relatorio vai por cima do main atual.
-          git stash push --include-untracked -- logs/medir-mapa >/dev/null 2>&1 || true
-          git fetch -q origin main && git checkout -q -B relatorio origin/main
-          git stash pop >/dev/null 2>&1 || true
+          DEST="logs/medir-mapa/${{ inputs.rotulo }}/${{ matrix.app }}"
+          [ -d "$DEST" ] || exit 0
+          rm -rf "$RUNNER_TEMP/rel" && mkdir -p "$RUNNER_TEMP/rel" && cp -r "$DEST/." "$RUNNER_TEMP/rel/"
+          git checkout -q -- . 2>/dev/null || true
+          git clean -fdq logs/medir-mapa 2>/dev/null || true
+          git fetch -q origin main && git checkout -q -f -B relatorio origin/main
+          rm -rf "$DEST" && mkdir -p "$DEST" && cp -r "$RUNNER_TEMP/rel/." "$DEST/"
           git add logs/medir-mapa || exit 0
           git commit -m "relatorio: medicao do mapa (${{ inputs.rotulo }}, ${{ matrix.app }}) [skip ci]" || exit 0
           for t in 1 2 3 4 5; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
