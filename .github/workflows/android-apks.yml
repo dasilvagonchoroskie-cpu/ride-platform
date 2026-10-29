@@ -21,8 +21,10 @@ on:
         default: 'release'
         type: choice
         options: ['release', 'debug']
+  # Envio de codigo (main ou a branch de trabalho): so analise e testes dos
+  # apps que mudaram. APK/AAB so pelo botao (economia de minutos, 29/10/2026).
   push:
-    branches: [main]
+    branches: [main, fortaleza-move]
     paths:
       - 'apps/mobile_*/**'
       - 'apps/central_app/**'
@@ -52,9 +54,27 @@ jobs:
       apps: ${{ steps.escolha.outputs.apps }}
       builds: ${{ steps.escolha.outputs.builds }}
     steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push'
+        with:
+          fetch-depth: 0
       - id: escolha
+        env:
+          ANTES: ${{ github.event.before }}
         run: |
           QUAL="${{ github.event.inputs.app }}"
+          # No envio de codigo: so os apps que mudaram (a esteira mudou = todos).
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if [ -n "$ANTES" ] && git cat-file -e "$ANTES^{commit}" 2>/dev/null; then
+              MUDOU=$(git diff --name-only "$ANTES" "${{ github.sha }}")
+            else
+              MUDOU=$(git show --name-only --format= "${{ github.sha }}")
+            fi
+            if echo "$MUDOU" | grep -q '^.github/workflows/android-apks.yml$'; then QUAL=all; else
+              QUAL=$(echo "$MUDOU" | sed -n 's#^apps/\(mobile_passenger\|mobile_driver\|central_app\)/.*#\1#p' | sort -u | paste -sd, -)
+            fi
+            [ -n "$QUAL" ] || QUAL=nenhum
+          fi
           [ -z "$QUAL" ] && QUAL=all
           python3 - "$QUAL" >> "$GITHUB_OUTPUT" <<'PY'
           import json, sys
@@ -75,6 +95,7 @@ jobs:
   # segredo RENDER_DEPLOY_HOOK). Roda em paralelo e nao atrasa os APKs.
   servidor:
     name: Servidor em dia
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,6 +116,7 @@ jobs:
     name: Validar ${{ matrix.app }}
     runs-on: ubuntu-latest
     needs: preparar
+    if: needs.preparar.outputs.apps != '[]'
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -154,7 +176,7 @@ jobs:
           git add "logs/analyze-${{ matrix.app }}.txt"
           git commit -m "relatorio de analise: ${{ matrix.app }} (execucao ${{ github.run_number }})" || exit 0
           for t in 1 2 3 4 5; do
-            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break
             echo "tentativa $t nao passou; repetindo"; sleep 5
           done
 
@@ -166,6 +188,7 @@ jobs:
     name: APK ${{ matrix.app }}
     runs-on: ubuntu-latest
     needs: [preparar, validate]
+    if: github.event_name == 'workflow_dispatch'
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -284,7 +307,7 @@ jobs:
           git add "logs/build-${{ matrix.app }}.txt"
           git commit -m "relatorio de build: ${{ matrix.app }} (execucao ${{ github.run_number }})" || exit 0
           for t in 1 2 3 4 5; do
-            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break
             echo "tentativa $t nao passou; repetindo"; sleep 5
           done
 
@@ -343,20 +366,8 @@ jobs:
           echo "path=$FINAL" >> "$GITHUB_OUTPUT"
           ls -la "$FINAL"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: |
-            ${{ steps.apk.outputs.path }}
-            ${{ steps.apk.outputs.path32 }}
-            ${{ steps.aab.outputs.path }}
-          if-no-files-found: error
-          retention-days: 30
-
-      # Artefato do GitHub Actions expira em 30 dias e so abre para quem
-      # esta logado no GitHub. Um asset de Release fica disponivel para
-      # sempre e a propria Actions API entrega o arquivo sem exigir
-      # login no navegador — e o link que de fato se entrega ao cliente.
+      # So o Release guarda os APKs/AAB (29/10/2026: o artefato da execucao
+      # duplicava tudo e passava de 4 GB; o plano gratis privado tem 500 MB).
       - name: Publicar no Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -396,5 +407,5 @@ jobs:
             echo "| Tipo | ${{ inputs.build_type || 'release' }} |"
             echo "| Commit | \`${{ github.sha }}\` |"
             echo ""
-            echo "Baixe em **Artifacts > ${{ matrix.artifact }}** nesta execucao."
+            echo "Baixe no Release **apk-${{ matrix.apk_name }}-mais-recente**."
           } >> "$GITHUB_STEP_SUMMARY"
