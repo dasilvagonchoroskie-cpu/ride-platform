@@ -1,26 +1,38 @@
 Medicao do mapa — mobile_driver — "antes"
-Aparelho de teste: emulador Android da esteira do GitHub ()
+Aparelho de teste: emulador Android da esteira do GitHub (Atividade: br.com.fortalezamov.motorista/com.rideplatform.mobile_driver.MainActivity · Android: 14 · Physical size: 540x1200)
 Rede: a da esteira (EUA). Num celular no Brasil, com 4G, os tempos de rede tendem a ser maiores.
 
 == r1 primeira abertura, GPS sem sinal nos primeiros 8 s ==
-  Android até o primeiro quadro (TotalTime): —
-  não aconteceu nos 20 s: primeira tela desenhada, posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
+  Android até o primeiro quadro (TotalTime): 6.7 s
+  primeira tela desenhada: 2.3 s (desde o início do app)
+  não aconteceu nos 20 s: posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
   mapa com ruas visível pela foto da tela: — (desde o toque no ícone)
-  cores na área do mapa (instante: cores): 
+  fotos (instante: cores/diferença da 1ª foto): 0.0s:148/0, 2.1s:148/0, 3.5s:148/0, 4.3s:148/0, 5.3s:148/0, 6.7s:148/0, 7.7s:52/32, 8.7s:52/32, 10.2s:48/32, 11.7s:52/32, 13.2s:47/32, 14.7s:44/32, 16.1s:49/32, 18.0s:48/32, 18.8s:48/32, 19.6s:48/32
+  servidor (1º pedido de cada caminho): /drivers/me 1552 ms (200); /driver/rides/current 1749 ms (200); /driver/wallet 1843 ms (200); /driver/activity 1906 ms (200); /vehicles/me 374 ms (200)
 
 == r2 segunda abertura (GPS ok, ruas guardadas) ==
-  Android até o primeiro quadro (TotalTime): —
-  não aconteceu nos 20 s: primeira tela desenhada, posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
-  mapa com ruas visível pela foto da tela: — (desde o toque no ícone)
-  cores na área do mapa (instante: cores): 
+  Android até o primeiro quadro (TotalTime): 4.0 s
+  primeira tela desenhada: 2.0 s (desde o início do app)
+  posição do GPS chegou: 2.4 s (desde o início do app)
+  mapa na tela: 3.0 s (desde o início do app)
+  primeira imagem de ruas carregada: 5.1 s (desde o início do app)
+  não aconteceu nos 20 s: carros/motoristas no mapa
+  mapa com ruas visível pela foto da tela: 7.0 s (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 0.0s:148/0, 1.4s:148/0, 2.3s:148/0, 3.9s:148/0, 5.5s:54/40, 7.0s:142/37, 8.2s:142/37, 9.1s:142/37, 10.3s:142/37, 11.5s:142/37, 12.6s:142/37, 13.5s:142/37, 14.4s:142/37, 15.3s:142/37, 16.2s:142/37, 17.2s:142/37, 18.2s:142/37, 19.2s:142/37, 19.9s:142/37
+  servidor (1º pedido de cada caminho): /driver/rides/current 2105 ms (200); /driver/activity 2206 ms (200); /driver/wallet 2208 ms (200); /drivers/me 2208 ms (200); /vehicles/me 667 ms (200)
 
 == r3 terceira abertura (igual a r2) ==
-  Android até o primeiro quadro (TotalTime): —
-  não aconteceu nos 20 s: primeira tela desenhada, posição do GPS chegou, mapa na tela, primeira imagem de ruas carregada, carros/motoristas no mapa
-  mapa com ruas visível pela foto da tela: — (desde o toque no ícone)
-  cores na área do mapa (instante: cores): 
+  Android até o primeiro quadro (TotalTime): 4.2 s
+  primeira tela desenhada: 0.2 s (desde o início do app)
+  posição do GPS chegou: 3.4 s (desde o início do app)
+  mapa na tela: 3.4 s (desde o início do app)
+  primeira imagem de ruas carregada: 4.4 s (desde o início do app)
+  não aconteceu nos 20 s: carros/motoristas no mapa
+  mapa com ruas visível pela foto da tela: 6.1 s (desde o toque no ícone)
+  fotos (instante: cores/diferença da 1ª foto): 0.0s:148/0, 0.8s:148/0, 1.7s:148/0, 2.7s:148/0, 4.1s:42/32, 5.4s:16/40, 6.7s:142/37, 7.8s:142/37, 8.5s:142/37, 9.6s:142/37, 10.6s:142/37, 11.4s:142/37, 12.4s:142/37, 13.5s:142/37, 14.7s:142/37, 15.8s:142/37, 17.1s:142/37, 18.1s:142/37, 19.1s:142/37
+  servidor (1º pedido de cada caminho): /driver/rides/current 808 ms (200); /drivers/me 814 ms (200); /driver/wallet 827 ms (200); /driver/activity 830 ms (200); /vehicles/me 187 ms (200)
 
 Resumo (mapa na tela / ruas pelo app / ruas pela foto / GPS / carros):
   r1: — / — / — / — / —
-  r2: — / — / — / — / —
-  r3: — / — / — / — / —
+  r2: 3.0 s / 5.1 s / 7.0 s / 2.4 s / —
+  r3: 3.4 s / 4.4 s / 6.1 s / 3.4 s / —
