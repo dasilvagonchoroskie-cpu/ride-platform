@@ -435,10 +435,25 @@ X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX inicial (teste)"}' "$TA")
 [ "$(echo "$X" | jq -r '.data.balanceCents')" = "5000" ] && ok "Central: recarga de R\$ 50,00 (credito no extrato)" || falha "Central: recarga inicial" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Motorista: ficou disponivel" || falha "Motorista: ficar disponivel" "$X"
-X=$(post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM"); sucesso "$X" && ok "Motorista: posicao enviada" || falha "Motorista: posicao" "$X"
+X=$(post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10,"heading":92,"speed":8}' "$TM"); sucesso "$X" && ok "Motorista: posicao enviada (com o rumo do GPS)" || falha "Motorista: posicao" "$X"
 X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
 N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 [ "${N:-0}" -ge 1 ] 2>/dev/null && ok "Passageiro: ve $N carro(s) disponivel(is) no mapa (dado real)" || falha "Passageiro: carros por perto" "$X"
+# 30/10/2026 (Evandro: "o carro nao acompanha o sentido da rua"): o carro vem
+# com o rumo (90 = andando para o leste), a situacao (livre) e um id que nao
+# muda entre uma consulta e outra (o app anima o mesmo carro).
+[ "$(echo "$X" | jq -r '[.data[] | select(.rumo == 90 and .situacao == "LIVRE")] | length')" -ge 1 ] 2>/dev/null \
+  && ok "Passageiro: carro por perto vem com o rumo do GPS (90 graus) e livre" || falha "Passageiro: rumo do carro por perto" "$(echo "$X" | jq -c '[.data[] | {rumo, situacao}]')"
+ID1=$(echo "$X" | jq -r '[.data[] | select(.rumo == 90)][0].id')
+X2=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
+[ -n "$ID1" ] && [ "$ID1" != "null" ] && [ "$(echo "$X2" | jq -r --arg i "$ID1" '[.data[] | select(.id == $i)] | length')" = "1" ] && [ "$(echo "$ID1" | grep -c -- "$DID")" = "0" ] \
+  && ok "Passageiro: o mesmo carro tem o mesmo id anonimo nas duas consultas (sem o id do motorista)" || falha "Passageiro: id estavel do carro" "$ID1"
+# Leitura ruim (300 m de erro, como a da rede de celular) logo depois de uma
+# boa nao tira o carro do lugar certo; e sem rumo, o rumo anterior fica.
+post /drivers/me/location '{"latitude":-18.0200,"longitude":-49.3700,"accuracy":300}' "$TM" >/dev/null
+X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
+[ "$(echo "$X" | jq -r --arg i "$ID1" '[.data[] | select(.id == $i and .latitude == -18.013 and .rumo == 90)] | length')" = "1" ] \
+  && ok "GPS: leitura imprecisa (300 m) nao tira o carro da posicao boa e o rumo continua" || falha "GPS: leitura imprecisa mexeu no carro" "$(echo "$X" | jq -c --arg i "$ID1" '[.data[] | select(.id == $i)]')"
 
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Porto Alegre - RS\",\"latitude\":-30.0346,\"longitude\":-51.2177}}" "$TP")
 [ "$(echo "$X" | jq -r '.data.distanceMeters')" -gt 1000000 ] 2>/dev/null && ok "Passageiro: ve o preco para fora da regiao (Porto Alegre, $(echo "$X" | jq -r '.data.distanceMeters/1000|floor') km)" || falha "Passageiro: preco para longe" "$X"
@@ -500,6 +515,9 @@ sucesso "$X" && [ ${#PIN} -eq 4 ] && ok "Motorista: accept (PIN de embarque $PIN
 X=$(get "/rides/$RID" "$TP")
 [ "$(echo "$X" | jq -r '.data.ride.status')" = "DRIVER_ASSIGNED" ] && [ "$(echo "$X" | jq -r '.data.ride.driver.user.name')" = "Motorista Teste Automatico" ] && [ "$(echo "$X" | jq -r '.data.ride.pin')" = "$PIN" ] && [ "$(echo "$X" | jq -r '.data.ride.driverPosition.latitude // empty')" != "" ] \
   && ok "Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)" || falha "Passageiro: acompanhar a corrida" "$X"
+post /drivers/me/location '{"latitude":-18.0129,"longitude":-49.3549,"accuracy":8,"heading":181,"speed":6}' "$TM" >/dev/null
+X=$(get "/rides/$RID" "$TP")
+[ "$(echo "$X" | jq -r '.data.ride.driverPosition.heading')" = "180" ] && ok "Passageiro: o carro da corrida vem com o rumo (180 graus: andando para o sul)" || falha "Passageiro: rumo do carro da corrida" "$(echo "$X" | jq -c '.data.ride.driverPosition')"
 # Chat da corrida (modelo Pop Move): passageiro e motorista conversam enquanto o carro vem.
 X=$(post "/rides/$RID/messages" '{"texto":"Estou no portao azul"}' "$TP"); [ "$(echo "$X" | jq -r '.data.minha')" = "true" ] && ok "Chat: passageiro manda mensagem ao motorista" || falha "Chat: passageiro manda mensagem" "$X"
 X=$(get /driver/rides/current "$TM"); [ "$(echo "$X" | jq -r '.data.ride.mensagensNaoLidas')" = "1" ] && ok "Chat: o app do motorista sabe que chegou 1 mensagem" || falha "Chat: aviso de mensagem ao motorista" "$X"

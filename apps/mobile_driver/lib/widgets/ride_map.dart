@@ -7,22 +7,46 @@ import 'package:latlong2/latlong.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/utils/geo.dart';
+import '../core/utils/filtro_gps.dart';
+import '../core/situacao_veiculo.dart';
 import 'bussola.dart';
 import 'mapa_google.dart';
 import '../core/mapa_config.dart';
 import '../core/medida.dart';
 
+export '../core/situacao_veiculo.dart';
+
 /// [moto]: mototaxi (Evandro, 10/10/2026), desenhado como moto no mapa.
 enum MarkerKind { pickup, dropoff, driver, car, moto }
 
 class MapMarker {
-  const MapMarker({required this.id, required this.coords, required this.kind, this.label});
+  const MapMarker({
+    required this.id,
+    required this.coords,
+    required this.kind,
+    this.label,
+    this.rumo,
+    this.situacao = SituacaoVeiculo.livre,
+  });
 
   final String id;
   final Coords coords;
   final MarkerKind kind;
   final String? label;
+
+  /// Para onde o veiculo aponta (graus, 0 = norte). Sem ele, o mapa usa a
+  /// direcao do caminho entre uma posicao e a seguinte (Evandro, 30/10/2026:
+  /// "o carro nao acompanha o sentido da rua").
+  final double? rumo;
+
+  /// Cor do veiculo: livre (verde), ocupado (laranja), offline (cinza).
+  final SituacaoVeiculo situacao;
 }
+
+bool _ehVeiculo(MarkerKind k) => k == MarkerKind.car || k == MarkerKind.driver || k == MarkerKind.moto;
+
+/// Figura do veiculo (vista de cima, frente para o norte) na cor da situacao.
+String nomeDoVeiculo(MapMarker m) => '${m.kind == MarkerKind.moto ? 'moto' : 'carro'}_${m.situacao.name}';
 
 /// Desenho das ruas. Os testes automaticos desligam (la nao ha internet) —
 /// e com isso usam sempre o flutter_map (o Google precisa do celular).
@@ -105,13 +129,17 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   final Map<String, Coords> _animated = {};
   final Map<String, Coords> _targets = {};
+
+  /// Rumo de cada veiculo: de onde a animacao parte e onde chega (graus).
+  final Map<String, double> _rumoDe = {};
+  final Map<String, double> _rumoAlvo = {};
   final MapController _mapa = MapController();
   late final ControleFlutterMap _controleOsm = ControleFlutterMap(_mapa);
   final ControleGoogle _controleGoogle = ControleGoogle();
 
   /// Icones dos marcadores no mapa do Google (carregados uma vez).
-  static Future<Map<MarkerKind, gm.BitmapDescriptor>>? _icones;
-  Map<MarkerKind, gm.BitmapDescriptor>? _bitmaps;
+  static Future<Map<String, gm.BitmapDescriptor>>? _icones;
+  Map<String, gm.BitmapDescriptor>? _bitmaps;
 
   /// Ultimo tamanho do mapa na tela (para a folga caber).
   Size? _tamanho;
@@ -145,12 +173,17 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
     }
   }
 
-  static Future<Map<MarkerKind, gm.BitmapDescriptor>> _carregarIcones(ImageConfiguration cfg) async {
-    return <MarkerKind, gm.BitmapDescriptor>{
-      MarkerKind.pickup: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_pickup.png', width: 34, height: 34),
-      MarkerKind.dropoff: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_dropoff.png', width: 34, height: 34),
-      MarkerKind.car: await gm.BitmapDescriptor.asset(cfg, 'assets/markers/car_black.png', width: 40, height: 40),
+  static const _veiculos = ['carro_livre', 'carro_ocupado', 'carro_offline', 'moto_livre', 'moto_ocupado', 'moto_offline'];
+
+  static Future<Map<String, gm.BitmapDescriptor>> _carregarIcones(ImageConfiguration cfg) async {
+    final icones = <String, gm.BitmapDescriptor>{
+      'pickup': await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_pickup.png', width: 34, height: 34),
+      'dropoff': await gm.BitmapDescriptor.asset(cfg, 'assets/markers/pin_dropoff.png', width: 34, height: 34),
     };
+    for (final v in _veiculos) {
+      icones[v] = await gm.BitmapDescriptor.asset(cfg, 'assets/markers/$v.png', width: 44, height: 44);
+    }
+    return icones;
   }
 
   void _aoAnimar() {
@@ -198,48 +231,93 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
     _syncTargets();
   }
 
-  /// Detecta mudanca de posicao dos veiculos e anima ate o novo ponto.
+  /// Detecta mudanca de posicao (e de rumo) dos veiculos e anima ate o novo
+  /// ponto, girando pelo lado mais curto. A animacao recomeca de onde cada
+  /// veiculo esta AGORA (antes voltava ao ponto anterior e dava um pulo).
   void _syncTargets({bool initial = false}) {
+    final agora = <String, Coords>{};
+    final rumoAgora = <String, double>{};
+    for (final id in _targets.keys) {
+      final p = _posicaoAgora(id);
+      if (p != null) agora[id] = p;
+      final r = _rumoAgora(id);
+      if (r != null) rumoAgora[id] = r;
+    }
+    final vivos = <String>{
+      for (final m in widget.markers)
+        if (_ehVeiculo(m.kind)) m.id,
+    };
+    _targets.removeWhere((id, _) => !vivos.contains(id));
+    _animated.removeWhere((id, _) => !vivos.contains(id));
+    _rumoAlvo.removeWhere((id, _) => !vivos.contains(id));
+    _rumoDe.removeWhere((id, _) => !vivos.contains(id));
+
     var changed = false;
-
     for (final marker in widget.markers) {
-      if (marker.kind != MarkerKind.car && marker.kind != MarkerKind.driver && marker.kind != MarkerKind.moto) continue;
-
-      final previousTarget = _targets[marker.id];
-      final currentPosition = _animated[marker.id];
-
-      if (initial || previousTarget == null) {
-        _animated[marker.id] = marker.coords;
-      } else if (previousTarget.latitude != marker.coords.latitude ||
-          previousTarget.longitude != marker.coords.longitude) {
-        _animated[marker.id] = currentPosition ?? previousTarget;
+      if (!_ehVeiculo(marker.kind)) continue;
+      final id = marker.id;
+      final anterior = _targets[id];
+      if (initial || anterior == null) {
+        _animated[id] = marker.coords;
+        _targets[id] = marker.coords;
+        final r = marker.rumo;
+        if (r != null) {
+          _rumoDe[id] = r;
+          _rumoAlvo[id] = r;
+        }
+        continue;
+      }
+      final moveu = anterior.latitude != marker.coords.latitude || anterior.longitude != marker.coords.longitude;
+      var alvoRumo = marker.rumo;
+      if (alvoRumo == null && moveu && distanceKm(anterior, marker.coords) * 1000 >= 8) {
+        alvoRumo = rumoEntre(anterior, marker.coords);
+      }
+      if (moveu) {
+        _targets[id] = marker.coords;
         changed = true;
       }
-
-      _targets[marker.id] = marker.coords;
+      if (alvoRumo != null && alvoRumo != _rumoAlvo[id]) {
+        _rumoAlvo[id] = alvoRumo;
+        changed = true;
+      }
     }
-
-    if (changed) {
-      _ultimoQuadro = 0;
-      _controller.forward(from: 0);
+    if (!changed) return;
+    for (final id in _targets.keys) {
+      _animated[id] = agora[id] ?? _targets[id]!;
+      final r = rumoAgora[id] ?? _rumoAlvo[id];
+      if (r != null) _rumoDe[id] = r;
     }
+    _ultimoQuadro = 0;
+    _controller.forward(from: 0);
   }
 
-  /// Posicao interpolada do veiculo (movimento suave entre atualizacoes).
-  Coords _positionFor(MapMarker marker) {
-    if (marker.kind != MarkerKind.car && marker.kind != MarkerKind.driver && marker.kind != MarkerKind.moto) {
-      return marker.coords;
-    }
+  double get _passo => Curves.easeOut.transform(_controller.value);
 
-    final from = _animated[marker.id];
-    final to = _targets[marker.id] ?? marker.coords;
+  /// Posicao do veiculo neste quadro (movimento suave entre atualizacoes).
+  Coords? _posicaoAgora(String id) {
+    final to = _targets[id];
+    if (to == null) return null;
+    final from = _animated[id];
     if (from == null) return to;
-
-    final t = Curves.easeOut.transform(_controller.value);
+    final t = _passo;
     return Coords(
       from.latitude + (to.latitude - from.latitude) * t,
       from.longitude + (to.longitude - from.longitude) * t,
     );
+  }
+
+  /// Rumo do veiculo neste quadro (gira pelo lado mais curto).
+  double? _rumoAgora(String id) {
+    final alvo = _rumoAlvo[id];
+    if (alvo == null) return null;
+    final de = _rumoDe[id] ?? alvo;
+    final diferenca = ((alvo - de + 540) % 360) - 180;
+    return (de + diferenca * _passo + 360) % 360;
+  }
+
+  Coords _positionFor(MapMarker marker) {
+    if (!_ehVeiculo(marker.kind)) return marker.coords;
+    return _posicaoAgora(marker.id) ?? marker.coords;
   }
 
   @override
@@ -317,8 +395,13 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
   Widget _mapaGoogle() {
     Medida.marcar('mapa');
     final icones = _bitmaps;
-    gm.BitmapDescriptor icone(MarkerKind k) {
-      final i = icones?[k == MarkerKind.driver || k == MarkerKind.moto ? MarkerKind.car : k];
+    gm.BitmapDescriptor icone(MapMarker m) {
+      final k = m.kind;
+      final i = icones?[switch (k) {
+        MarkerKind.pickup => 'pickup',
+        MarkerKind.dropoff => 'dropoff',
+        _ => nomeDoVeiculo(m),
+      }];
       if (i != null) return i;
       return switch (k) {
         MarkerKind.pickup => gm.BitmapDescriptor.defaultMarkerWithHue(gm.BitmapDescriptor.hueGreen),
@@ -365,8 +448,11 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
           gm.Marker(
             markerId: gm.MarkerId(m.id),
             position: paraGoogle(_positionFor(m)),
-            icon: icone(m.kind),
+            icon: icone(m),
             anchor: const Offset(0.5, 0.5),
+            // Veiculo deitado no mapa, girado para o lado em que anda.
+            flat: _ehVeiculo(m.kind),
+            rotation: _ehVeiculo(m.kind) ? (_rumoAgora(m.id) ?? 0) : 0,
             consumeTapEvents: true,
           ),
       },
@@ -542,45 +628,31 @@ class _RideMapState extends State<RideMap> with SingleTickerProviderStateMixin {
     return Marker(
       point: _latLng(position),
       width: switch (marker.kind) {
-        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => 40,
+        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => 44,
         MarkerKind.pickup => 34,
         MarkerKind.dropoff => 34,
       },
       height: switch (marker.kind) {
-        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => 40,
+        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => 44,
         MarkerKind.pickup => 34,
         MarkerKind.dropoff => 34,
       },
       alignment: Alignment.center,
       child: switch (marker.kind) {
-        // Carro preto visto de cima, conforme a especificacao visual.
-        MarkerKind.car || MarkerKind.driver => Image.asset(
-            'assets/markers/car_black.png',
-            fit: BoxFit.contain,
+        // Carro (ou moto) visto de cima, na cor da situacao e girado para o
+        // lado em que anda (o mapa gira junto; 0 = norte).
+        MarkerKind.car || MarkerKind.driver || MarkerKind.moto => Transform.rotate(
+            key: ValueKey('rumo-${marker.id}'),
+            angle: (_rumoAgora(marker.id) ?? 0) * math.pi / 180,
+            child: Image.asset(
+              'assets/markers/${nomeDoVeiculo(marker)}.png',
+              key: ValueKey('veiculo-${marker.id}-${nomeDoVeiculo(marker)}'),
+              fit: BoxFit.contain,
+            ),
           ),
-        MarkerKind.moto => const _Moto(),
         MarkerKind.pickup => Image.asset('assets/markers/pin_pickup.png', fit: BoxFit.contain),
         MarkerKind.dropoff => Image.asset('assets/markers/pin_dropoff.png', fit: BoxFit.contain),
       },
-    );
-  }
-}
-
-/// Moto no mapa (mototaxi): circulo branco com a moto preta.
-class _Moto extends StatelessWidget {
-  const _Moto();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF1B1F24), width: 2),
-        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 1))],
-      ),
-      alignment: Alignment.center,
-      child: const Icon(Icons.two_wheeler, size: 24, color: Color(0xFF1B1F24)),
     );
   }
 }

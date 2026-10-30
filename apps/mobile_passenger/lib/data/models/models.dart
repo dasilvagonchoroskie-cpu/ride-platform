@@ -461,7 +461,12 @@ class DriverInfo {
     this.fotoUrl,
     this.fotoCarroUrl,
     this.moto = false,
+    this.rumo,
   });
+
+  /// Para onde o carro aponta (graus, 0 = norte), vindo do GPS do motorista:
+  /// o mapa gira o carro no sentido da rua (Evandro, 30/10/2026).
+  final double? rumo;
 
   /// Foto do rosto do motorista (/arquivos/...), se ele mandou.
   final String? fotoUrl;
@@ -644,6 +649,7 @@ class Ride {
                 'plate': driver!.plate,
                 'color': driver!.color,
                 'position': driver!.position.toJson(),
+                if (driver!.rumo != null) 'rumo': driver!.rumo,
                 'telefone': driver!.telefone,
                 'posicaoReal': driver!.posicaoReal,
                 'fotoUrl': driver!.fotoUrl,
@@ -710,6 +716,7 @@ class Ride {
               ),
               telefone: driverJson['telefone'] as String?,
               posicaoReal: driverJson['posicaoReal'] as bool? ?? false,
+              rumo: (driverJson['rumo'] as num?)?.toDouble(),
               fotoUrl: driverJson['fotoUrl'] as String?,
               fotoCarroUrl: driverJson['fotoCarroUrl'] as String?,
             ),
@@ -775,6 +782,7 @@ class Ride {
               position: pos == null ? embarque : Coords(numero(pos['latitude']) ?? 0, numero(pos['longitude']) ?? 0),
               telefone: userJson?['phone'] as String?,
               posicaoReal: pos != null,
+              rumo: numero(pos?['heading']),
               fotoUrl: userJson?['avatarUrl'] as String?,
               fotoCarroUrl: driverJson['fotoCarroUrl'] as String?,
             ),

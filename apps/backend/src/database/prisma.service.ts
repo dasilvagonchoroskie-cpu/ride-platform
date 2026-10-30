@@ -69,10 +69,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         NOW()
       )
       ON CONFLICT (driver_id) DO UPDATE SET
-        location = EXCLUDED.location,
-        heading = EXCLUDED.heading,
+        -- 30/10/2026 (Evandro: "melhorar a precisao do GPS"): leitura ruim
+        -- (mais de 60 m de erro, ex.: rede de celular) nao tira o carro de uma
+        -- posicao boa (ate 30 m) de menos de 1 minuto; so renova o "visto".
+        location = CASE WHEN EXCLUDED.accuracy > 60 AND driver_locations.accuracy <= 30 AND driver_locations.last_seen_at > NOW() - INTERVAL '60 seconds' THEN driver_locations.location ELSE EXCLUDED.location END,
+        -- Sem rumo nesta leitura (parado, celular sem bussola): fica o ultimo.
+        heading = COALESCE(EXCLUDED.heading, driver_locations.heading),
         speed = EXCLUDED.speed,
-        accuracy = EXCLUDED.accuracy,
+        accuracy = CASE WHEN EXCLUDED.accuracy > 60 AND driver_locations.accuracy <= 30 AND driver_locations.last_seen_at > NOW() - INTERVAL '60 seconds' THEN driver_locations.accuracy ELSE EXCLUDED.accuracy END,
         is_online = EXCLUDED.is_online,
         is_available = EXCLUDED.is_available,
         last_seen_at = NOW(),
@@ -99,18 +103,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
      * celular dele tocou chamado de teste na rua).
      */
     teste?: boolean;
-  }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>> {
+  }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>> {
     const limit = params.limit ?? 20;
     const categoria = params.category ?? 'CARRO';
     const teste = params.teste === true;
     // '' = filtra pela categoria; senao pelo tipo de veiculo da entrega.
     const veiculos = params.veiculos ?? '';
-    return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>>`
+    return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>>`
       SELECT
         dl.driver_id                     AS "driverId",
         ST_Distance(dl.location, ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography) AS "distanceMeters",
         ST_Y(dl.location::geometry)      AS "latitude",
-        ST_X(dl.location::geometry)      AS "longitude"
+        ST_X(dl.location::geometry)      AS "longitude",
+        dl.heading                       AS "heading"
       FROM driver_locations dl
       JOIN drivers d ON d.id = dl.driver_id
       JOIN users u ON u.id = d.user_id

@@ -20,6 +20,7 @@ import { AppConfigService } from '../../config/app-config.service';
 import { assinarCotacao, lerCotacao } from './cotacao';
 import { EntregasService } from '../entregas/entregas.service';
 import { CODIGO_ENTREGA, ehEntrega } from '../entregas/entregas.regras';
+import { diaDeBrasilia, idAnonimo, posicaoAproximada, rumoArredondado } from './carros-perto';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -713,8 +714,8 @@ export class RidesService {
 
   /**
    * Carros disponiveis perto do passageiro, para o mapa da tela inicial.
-   * Posicao arredondada (uns 50 m) e sem identificar o motorista: o
-   * passageiro ve que ha carro por perto, nao onde cada um esta parado.
+   * Sem identificar o motorista; posicao de ~11 m e rumo para o carro andar
+   * no sentido da rua (regras em carros-perto.ts).
    */
   async carrosPerto(lat: number, lng: number, userId?: string) {
     const teste = userId ? await this.prisma.contaDeTeste(userId) : false;
@@ -727,16 +728,21 @@ export class RidesService {
         ).map((m) => ({ ...m, category: c.codigo })),
       ),
     );
+    const vistos = new Set<string>();
     const perto = listas
       .flat()
       .sort((a, b) => a.distanceMeters - b.distanceMeters)
+      .filter((m) => (vistos.has(m.driverId) ? false : (vistos.add(m.driverId), true)))
       .slice(0, 12);
-    const arredondar = (n: number) => Math.round(n * 2000) / 2000;
-    return perto.map((m, i) => ({
-      id: `carro-${i + 1}`,
-      latitude: arredondar(m.latitude),
-      longitude: arredondar(m.longitude),
+    const dia = diaDeBrasilia();
+    const segredo = this.config.jwt.accessSecret;
+    return perto.map((m) => ({
+      id: idAnonimo(m.driverId, segredo, dia),
+      latitude: posicaoAproximada(Number(m.latitude)),
+      longitude: posicaoAproximada(Number(m.longitude)),
       distanceMeters: Math.round(m.distanceMeters),
+      rumo: rumoArredondado(m.heading == null ? null : Number(m.heading)),
+      situacao: 'LIVRE' as const,
       category: m.category,
       moto: ehMoto(m.category),
     }));
@@ -1732,12 +1738,22 @@ export class RidesService {
     };
   }
 
-  async posicaoDoMotorista(driverId: string): Promise<{ latitude: number; longitude: number; updatedAt: string } | null> {
-    const linhas = await this.prisma.$queryRaw<Array<{ latitude: number; longitude: number; atualizado: Date }>>`
-      SELECT ST_Y(location::geometry) AS "latitude", ST_X(location::geometry) AS "longitude", last_seen_at AS "atualizado"
+  /** Onde o carro esta e para onde aponta (rumo do GPS; null se o celular nao mandou). */
+  async posicaoDoMotorista(
+    driverId: string,
+  ): Promise<{ latitude: number; longitude: number; heading: number | null; updatedAt: string } | null> {
+    const linhas = await this.prisma.$queryRaw<Array<{ latitude: number; longitude: number; heading: number | null; atualizado: Date }>>`
+      SELECT ST_Y(location::geometry) AS "latitude", ST_X(location::geometry) AS "longitude", heading AS "heading", last_seen_at AS "atualizado"
       FROM driver_locations WHERE driver_id = ${driverId}::uuid LIMIT 1`;
     const l = linhas[0];
-    return l ? { latitude: Number(l.latitude), longitude: Number(l.longitude), updatedAt: l.atualizado.toISOString() } : null;
+    return l
+      ? {
+          latitude: Number(l.latitude),
+          longitude: Number(l.longitude),
+          heading: rumoArredondado(l.heading == null ? null : Number(l.heading)),
+          updatedAt: l.atualizado.toISOString(),
+        }
+      : null;
   }
 
   async historico(userId: string, papel: UserRole, filtro: ListRidesInput) {

@@ -283,6 +283,7 @@ class RideRepository {
             color: '',
             position: Coords((c['latitude'] as num).toDouble(), (c['longitude'] as num).toDouble()),
             moto: c['moto'] == true,
+            rumo: (c['rumo'] as num?)?.toDouble(),
           ),
       ];
     } catch (_) {

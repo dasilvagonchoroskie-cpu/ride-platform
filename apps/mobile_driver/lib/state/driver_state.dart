@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -14,6 +15,8 @@ import '../core/storage/app_storage.dart';
 import '../core/taximetro.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
+import '../core/utils/filtro_gps.dart';
+import '../core/situacao_veiculo.dart';
 import '../data/demo/driver_demo.dart';
 import '../data/models/driver_models.dart';
 import '../core/avisos.dart';
@@ -77,6 +80,20 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// guardada: o mapa vai ate o lugar certo.
   int recentrarMapa = 0;
   StreamSubscription<Position>? _gps;
+
+  /// Filtro do GPS (Evandro, 30/10/2026: "melhorar a precisao do GPS"):
+  /// suaviza o zigue-zague, ignora a tremida parado e os saltos, e acha o
+  /// rumo do carro.
+  final FiltroGps _filtroGps = FiltroGps();
+
+  /// Para onde o carro aponta (graus, 0 = norte): o mapa gira o carro para
+  /// andar no sentido da rua. Null ate andar um pouco.
+  double? rumo;
+
+  /// Situacao do carro no mapa (cor): livre (verde), em corrida (laranja) ou
+  /// offline (cinza) — as mesmas cores da Central.
+  SituacaoVeiculo get situacaoDoCarro =>
+      !isOnline ? SituacaoVeiculo.offline : (activeRide != null ? SituacaoVeiculo.ocupado : SituacaoVeiculo.livre);
 
   // ---- Oferta recebida ----
   RideOffer? offer;
@@ -1242,13 +1259,20 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       locationDenied = false;
 
       _gps?.cancel();
-      _gps = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15),
-      ).listen((p) {
-        if (p.accuracy > 60) return; // leitura ruim demais: descarta
-        _usarLeituraDoGps(Coords(p.latitude, p.longitude), p.accuracy);
-        _naCorrida(position, p.accuracy);
-        notifyListeners();
+      _gps = Geolocator.getPositionStream(locationSettings: _configuracaoDoGps()).listen((p) {
+        final bruto = Coords(p.latitude, p.longitude);
+        final mudou = _filtroGps.adicionar(bruto,
+            precisao: p.accuracy, rumoDoGps: p.heading, velocidade: p.speed, em: p.timestamp);
+        final filtrada = _filtroGps.posicao;
+        if (filtrada == null) return; // ainda nenhuma leitura boa
+        final rumoNovo = _filtroGps.rumo;
+        final girou = rumoNovo != null && rumoNovo != rumo;
+        if (mudou || !posicaoReal) _usarLeituraDoGps(filtrada, _filtroGps.precisao ?? p.accuracy);
+        if (girou) rumo = rumoNovo;
+        // Taximetro: a leitura como o GPS mandou (ele tem o proprio filtro de
+        // tremida e salto); a conferencia da rota usa a posicao filtrada.
+        if (p.accuracy <= 60) _naCorrida(bruto, position, p.accuracy);
+        if (mudou || girou) notifyListeners();
         _talvezMandarPosicao(p);
       }, onError: (_) {
         // Um erro isolado do stream nao para o motorista: o heartbeat
@@ -1258,6 +1282,21 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       locationDenied = true;
       notifyListeners();
     }
+  }
+
+  /// GPS do motorista: o mais preciso (navegacao), leitura a cada 1 s e a
+  /// cada 5 m (antes 15 m: o carro andava aos pulos e cortava as esquinas).
+  /// No Android, pelo FusedLocationProvider (GPS + Wi-Fi + antenas).
+  static LocationSettings _configuracaoDoGps() {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return AndroidSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 5,
+        intervalDuration: const Duration(seconds: 1),
+        forceLocationManager: false,
+      );
+    }
+    return const LocationSettings(accuracy: LocationAccuracy.bestForNavigation, distanceFilter: 5);
   }
 
   void _pararGps() {
@@ -1303,12 +1342,15 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _mandarPosicao(Position p) async {
     if (!AppConfig.hasApi) return;
     try {
+      // A posicao filtrada (sem tremida nem salto) e o rumo do carro; parado,
+      // vai o ultimo rumo (o passageiro ve o carro no sentido da rua).
+      final r = rumo;
       await _client.request('POST', '/drivers/me/location', body: {
-        'latitude': p.latitude,
-        'longitude': p.longitude,
-        if (!p.heading.isNaN) 'heading': p.heading,
-        if (!p.speed.isNaN) 'speed': p.speed,
-        'accuracy': p.accuracy,
+        'latitude': posicaoReal ? position.latitude : p.latitude,
+        'longitude': posicaoReal ? position.longitude : p.longitude,
+        if (r != null) 'heading': r.clamp(0, 359.9),
+        if (!p.speed.isNaN && p.speed >= 0) 'speed': p.speed,
+        'accuracy': (_filtroGps.precisao ?? p.accuracy).clamp(0, 999),
       });
     } catch (_) {
       // Sem sorte desta vez; a proxima leitura do GPS tenta de novo.
@@ -1590,11 +1632,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Nova posicao do GPS com corrida aberta: soma no taximetro e confere se
   /// o carro saiu da rota desenhada.
-  void _naCorrida(Coords p, double precisao) {
+  void _naCorrida(Coords bruto, Coords p, double precisao) {
     final ride = activeRide;
     if (ride == null) return;
     if (ride.phase == RidePhase.inProgress) {
-      if (taximetro.adicionar(p, precisao: precisao)) {
+      if (taximetro.adicionar(bruto, precisao: precisao)) {
         final agora = DateTime.now();
         if (agora.difference(_taximetroGuardadoEm).inSeconds >= 10) {
           _taximetroGuardadoEm = agora;
