@@ -1,18 +1,18 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart
-00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada de 5 minutos no meio da viagem entra no tempo parado
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: sinal fechado (40 s) e transito lento nao contam como parada
-00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada acontecendo agora ja aparece (o valor corre enquanto espera)
-00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: tempo parado guardado volta igual depois de fechar o app
-00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
-00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
+00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada de 5 minutos no meio da viagem entra no tempo parado
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
 00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
 00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
 00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Ainda em analise: continua na tela e o perfil fica
-00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
-00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Central suspendeu ou bloqueou: nao fica como "em analise"
-00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
+00:01 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Central suspendeu ou bloqueou: nao fica como "em analise"
+00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
 00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Boas-vindas: sem modo demonstracao no app de verdade
 00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
 00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
@@ -30,13 +30,13 @@
 00:04 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
 00:05 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
 00:05 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:06 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
-00:06 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
-00:06 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
-00:06 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
-00:06 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:05 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:05 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:05 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:05 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:05 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
 00:06 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:07 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
+00:06 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
 00:07 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 01 entrada, telefone e e-mail
 00:07 +38 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 04 termos, cadastro e em analise
 00:07 +38 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 07 inicio desconectado e conectado
@@ -50,34 +50,34 @@
 00:08 +40 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
 00:09 +41 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
 00:09 +42 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:10 +43 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:10 +44 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:09 +43 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:09 +44 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
 00:10 +45 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
 00:10 +46 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:11 +47 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
+00:10 +47 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
 00:11 +48 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
 00:11 +49 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas
-00:12 +50 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
-00:12 +51 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-00:12 +52 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-00:12 +53 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:11 +50 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
+00:11 +51 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:11 +52 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:11 +53 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
 00:12 +54 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
-00:13 +55 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
-00:13 +56 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
-00:13 +57 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
-00:13 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:12 +55 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:12 +56 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:12 +57 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:12 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
 00:13 +59 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
 00:13 +60 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
 00:13 +61 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
 00:13 +62 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
 00:13 +63 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
 00:13 +64 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
-00:14 +65 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
-00:14 +66 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
-00:14 +67 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
-00:14 +68 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:13 +65 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
+00:13 +66 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
+00:13 +67 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
+00:13 +68 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
 00:14 +69 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:14 +70 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:14 +70 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Chamado sem as rotas (sem rede na hora): ao aceitar pede a rota como antes
 00:14 +71 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: A caminho do passageiro: mostra o valor estimado
 00:15 +72 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Chamado marcado ENTREGA com o item; distancia ate a coleta
 00:15 +73 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Chamado marcado ENTREGA com o item; distancia ate a coleta
@@ -88,14 +88,14 @@
 00:16 +78 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Na coleta: CONFIRMAR COLETA (sem o codigo do passageiro)
 00:16 +79 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Na coleta: CONFIRMAR COLETA (sem o codigo do passageiro)
 00:16 +80 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:17 +81 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:17 +82 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:17 +83 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:17 +84 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:17 +85 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:17 +86 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:18 +87 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa cor pela situacao: livre verde, em corrida laranja, offline cinza; moto tambem
-00:18 +88 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa o carro gira para o lado em que anda (rumo do GPS)
-00:18 +89 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa sem rumo do GPS: gira pela direcao do caminho
-00:18 +90 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa de 350 para 10 graus gira pelo lado curto (passa pelo norte, nao pelo sul)
-00:18 +91 ~7: All tests passed!
+00:16 +81 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:16 +82 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:16 +83 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:16 +84 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:16 +85 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:16 +86 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:17 +87 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa cor pela situacao: livre verde, em corrida laranja, offline cinza; moto tambem
+00:17 +88 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa o carro gira para o lado em que anda (rumo do GPS)
+00:17 +89 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa sem rumo do GPS: gira pela direcao do caminho
+00:17 +90 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa de 350 para 10 graus gira pelo lado curto (passa pelo norte, nao pelo sul)
+00:17 +91 ~7: All tests passed!

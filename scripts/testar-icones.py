@@ -58,9 +58,17 @@ def main() -> int:
     x[..., :3] = np.where(q[..., None], 204, 255)
     xi = Image.fromarray(x, 'RGBA'); xi.alpha_composite(s); xi.convert('RGB').save(tmp / 'xadrez.png')
     p = Image.new('RGBA', (S, S), (0, 0, 0, 255)); p.alpha_composite(s); p.convert('RGB').save(tmp / 'preto.png')
+    # Transparente com sujeira de exportacao: nevoa de alfa 2 no fundo todo,
+    # miolo com alfa 252 e contorno com cor preta por baixo da transparencia.
+    n = np.asarray(s).copy()
+    fundo = n[..., 3] == 0
+    n[..., 3] = np.where(fundo, 2, np.where(n[..., 3] == 255, 252, n[..., 3]))
+    meio = (n[..., 3] > 2) & (n[..., 3] < 252)
+    n[..., :3] = np.where(meio[..., None], 0, n[..., :3])
+    Image.fromarray(n, 'RGBA').save(tmp / 'nevoa.png')
 
     ref = np.asarray(s).astype(float)
-    for caso, aviso_esperado in [('transparente', None), ('branco', 'fundo BRANCO'), ('xadrez', 'xadrez DESENHADO'), ('preto', 'fundo de cor #000000')]:
+    for caso, aviso_esperado in [('transparente', None), ('branco', 'fundo BRANCO'), ('xadrez', 'xadrez DESENHADO'), ('preto', 'fundo de cor #000000'), ('nevoa', 'nevoa quase invisivel')]:
         print(f'--- {caso}')
         app = tmp / f'app-{caso}'
         main_dir = app / 'android/app/src/main'
