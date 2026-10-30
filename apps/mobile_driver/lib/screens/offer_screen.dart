@@ -165,19 +165,30 @@ class OfferScreen extends StatelessWidget {
                               color: AppColors.sheetField,
                               borderRadius: BorderRadius.circular(Radii.sm),
                             ),
+                            // Letra grande no celular (ou valor alto): encolhe em vez
+                            // de passar da tela.
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('VALOR DA CORRIDA', style: SheetText.label),
-                                    Text(
-                                      formatMoney(offer.fareCents),
-                                      style: SheetText.title.copyWith(fontSize: 28),
-                                    ),
-                                  ],
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(offer.entrega != null ? 'VALOR DA ENTREGA' : 'VALOR DA CORRIDA', style: SheetText.label),
+                                      ),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          formatMoney(offer.fareCents),
+                                          style: SheetText.title.copyWith(fontSize: 28),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: Spacing.sm),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [

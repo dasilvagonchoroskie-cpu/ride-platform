@@ -124,7 +124,8 @@ void main() {
     expect(find.textContaining('Rua Javari, 1234'), findsOneWidget, reason: 'coleta comeca onde o cliente esta');
 
     // Sem o endereco de entrega: avisa o que falta.
-    await tester.ensureVisible(find.text('Ver o preço'));
+    await tester.scrollUntilVisible(find.text('Ver o preço'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Ver o preço'));
     await tester.pump();
     expect(find.text('Escolha o endereço de entrega.'), findsOneWidget);
