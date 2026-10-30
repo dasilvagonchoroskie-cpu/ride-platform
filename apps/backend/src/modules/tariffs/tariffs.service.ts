@@ -7,6 +7,7 @@ import { PrismaService } from '../../database/prisma.service';
 import type { UpdateTariffsInput } from './dto';
 import type { MultiplierInput, SaveCategoryInput } from '@ride/shared';
 import {
+  CHAVE_CATEGORIAS,
   codigoDaCategoria,
   gravarCategorias,
   gravarMultiplicador,
@@ -15,7 +16,7 @@ import {
 } from '../rides/categorias';
 import { gravarCobranca, lerCobranca } from '../rides/cobranca';
 import { aplicarSemente } from '../rides/semente-categorias';
-import { ajusteDe, aplicarAjuste, categoriasDaCidade, gravarAjuste, lerAjustes } from '../rides/tarifas-da-cidade';
+import { ajusteDe, aplicarAjuste, categoriasDaCidade, CHAVE_POR_CIDADE, gravarAjuste, lerAjustes } from '../rides/tarifas-da-cidade';
 import type { ModoCobranca } from '../rides/cobranca';
 
 /**
@@ -48,6 +49,28 @@ export class TariffsService implements OnModuleInit {
    * Com [praca]: os valores e o ligado/desligado daquela cidade (o que nao
    * foi ajustado na cidade vem do padrao; "daCidade" diz o que foi).
    */
+  /**
+   * Quando as tarifas mudaram pela ultima vez (qualquer categoria, cidade ou
+   * bandeira). A Central manda de volta ao salvar: se outra tela salvou
+   * depois, o servidor recusa em vez de gravar por cima (30/10/2026).
+   */
+  async versao(): Promise<string> {
+    const [s, f] = await Promise.all([
+      this.prisma.setting.findMany({ where: { key: { in: [CHAVE_CATEGORIAS, CHAVE_POR_CIDADE] } }, select: { updatedAt: true } }),
+      this.prisma.fareConfig.aggregate({ _max: { updatedAt: true } }),
+    ]);
+    const datas = [...s.map((x) => x.updatedAt.getTime()), f._max.updatedAt?.getTime() ?? 0];
+    return new Date(Math.max(0, ...datas)).toISOString();
+  }
+
+  private async conferirVersao(lida?: string): Promise<void> {
+    if (!lida) return;
+    const agora = await this.versao();
+    if (new Date(agora).getTime() > new Date(lida).getTime()) {
+      throw BusinessException.conflict('As tarifas foram mudadas em outra tela depois que você abriu esta. Abra Tarifas de novo e salve.');
+    }
+  }
+
   async listar(praca?: string | null) {
     const tabelas: FareConfig[] = await this.prisma.fareConfig.findMany();
     const ajustes = await lerAjustes(this.prisma);
@@ -79,6 +102,8 @@ export class TariffsService implements OnModuleInit {
       multiplicador: await lerMultiplicador(this.prisma),
       /** TAXIMETRO (valor corre na viagem) ou FECHADO (o estimado no pedido). */
       cobranca: await lerCobranca(this.prisma),
+      /** Manda de volta ao salvar (protege contra gravar por cima). */
+      versao: await this.versao(),
     };
   }
 
@@ -101,6 +126,15 @@ export class TariffsService implements OnModuleInit {
    */
   async salvarCategoria(codigoOuNovo: string, input: SaveCategoryInput, praca?: string | null, quem?: string) {
     this.conferirCobertura(input);
+    await this.conferirVersao(input.versao);
+    // Categoria nova com uma cidade escolhida (30/10/2026): nasce desligada
+    // nas outras cidades e ligada so nesta (valores padrao = os digitados).
+    if (praca && codigoOuNovo.toUpperCase() === 'NOVA') {
+      await this.salvarCategoria('NOVA', { ...input, ativa: false, versao: undefined }, null, quem);
+      const codigo = codigoDaCategoria(input.nome);
+      await gravarAjuste(this.prisma, praca, codigo, { ativa: input.ativa, multiplicador: input.multiplicador ?? 1 }, quem);
+      return this.listar(praca);
+    }
     if (praca) {
       const codigo = codigoOuNovo.toUpperCase();
       const categorias = await lerCategorias(this.prisma);
@@ -149,9 +183,12 @@ export class TariffsService implements OnModuleInit {
       }
       const outras = categorias.filter((c) => c.codigo !== codigo);
       const atual = categorias.find((c) => c.codigo === codigo);
+      // Central antiga (sem "versao") nao muda o nome de categoria que ja
+      // existe: foi assim que o "Popular" virou "Carro" de novo (30/10/2026).
+      const nome = atual && !input.versao ? atual.nome : input.nome;
       const nova = {
         codigo,
-        nome: input.nome,
+        nome,
         ativa: input.ativa,
         icone: input.icone ?? atual?.icone ?? (codigo.includes('MOTO') ? 'moto' : 'carro'),
         descricao: input.descricao ?? atual?.descricao ?? '',
