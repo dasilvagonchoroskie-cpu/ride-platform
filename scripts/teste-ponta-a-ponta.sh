@@ -801,7 +801,7 @@ if [ -n "$RENT" ]; then
   rota -18.0125 -49.3547 -18.0050 -49.3610 "$TM"   # motorista: a entrega (chamado)
   rota -18.0130 -49.3550 -18.0125 -49.3547 "$TP"   # cliente: o carro vindo
   for passo in arriving arrived start; do post "/driver/rides/$RENT/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM" >/dev/null; done
-  X=$(get "/rides/$RENT" "$TM"); [ "$(echo "$X" | jq -r '.data.ride.entrega | has("codigo")')" = "false" ] && [ "$(echo "$X" | jq -r '.data.ride.entrega.coletadaEm != null')" = "true" ] \
+  X=$(get /driver/rides/current "$TM"); [ "$(echo "$X" | jq -r '.data.ride.entrega | has("codigo")')" = "false" ] && [ "$(echo "$X" | jq -r '.data.ride.entrega.coletadaEm != null')" = "true" ] \
     && ok "Motorista: confirmou a coleta e continua sem ver o codigo" || falha "Motorista: coleta / codigo escondido" "$(echo "$X" | jq -c '.data.ride.entrega')"
   ERRADO=$( [ "$CODENT" = "0000" ] && echo 1111 || echo 0000 )
   X=$(post "/driver/rides/$RENT/finish" "{\"distanceMeters\":1400,\"stoppedSeconds\":0,\"latitude\":-18.0050,\"longitude\":-49.3610,\"codigoEntrega\":\"$ERRADO\"}" "$TM")
