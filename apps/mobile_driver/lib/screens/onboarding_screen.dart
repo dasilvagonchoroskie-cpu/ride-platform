@@ -8,6 +8,7 @@ import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
 import '../data/models/driver_models.dart';
 import '../state/driver_state.dart';
+import '../widgets/categoria.dart';
 import '../widgets/ui.dart';
 
 /// Cadastro em 3 etapas: dados pessoais, veiculo e documentos.
@@ -42,6 +43,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _color = TextEditingController();
   final _plate = TextEditingController();
 
+  /// Categoria pedida para o carro (a Central aprova).
+  String _categoria = 'CARRO';
+
   String? _error;
 
   /// Entrou pelo e-mail: ainda falta o telefone.
@@ -65,6 +69,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _cpf.text = '${cpfConta.substring(0, 3)}.${cpfConta.substring(3, 6)}.${cpfConta.substring(6, 9)}-${cpfConta.substring(9)}';
     }
     driver.carregarPracas();
+    driver.carregarCategorias();
+    _categoria = driver.categoriaDoCadastro ?? 'CARRO';
   }
 
   @override
@@ -144,6 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: _color.text.trim(),
             plate: plate,
           ),
+          categoria: _categoria == 'CARRO' ? null : _categoria,
         );
 
     setState(() {
@@ -505,6 +512,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Text(
           'Formatos aceitos: ABC1234 (antigo) ou ABC1D23 (Mercosul)',
           style: AppText.caption.copyWith(color: AppColors.textFaint),
+        ),
+        const SizedBox(height: Spacing.md),
+        EscolhaDeCategoria(
+          categorias: context.watch<DriverState>().categorias,
+          escolhida: _categoria,
+          aoEscolher: (c) => setState(() => _categoria = c),
         ),
         if (_error != null) ...[
           const SizedBox(height: Spacing.sm),
