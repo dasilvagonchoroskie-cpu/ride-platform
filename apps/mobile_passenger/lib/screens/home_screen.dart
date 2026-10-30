@@ -18,6 +18,7 @@ import '../core/avisos.dart';
 import 'agendadas_screen.dart';
 import 'confirm_screen.dart';
 import 'destino_sheet.dart';
+import 'entrega_screen.dart';
 import '../core/mapa_config.dart';
 import '../core/marca.dart';
 
@@ -88,7 +89,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _atualizarCarros() {
     if (!mounted) return;
-    context.read<RideState>().refreshNearby(context.read<AppState>().coords);
+    final aqui = context.read<AppState>().coords;
+    context.read<RideState>().refreshNearby(aqui);
+    // Botao "Entrega": so na cidade onde a Central ligou (Etapa 5).
+    unawaited(context.read<RideState>().conferirEntrega(aqui));
   }
 
   @override
@@ -384,6 +388,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+                  // Etapa 5: entrega de encomenda (so onde a Central ligou).
+                  if (ride.entregaAqui) ...[
+                    const SizedBox(height: Spacing.md),
+                    OutlinedButton.icon(
+                      onPressed: () => _abrir(const EntregaScreen()),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                        foregroundColor: AppColors.sheetText,
+                        side: const BorderSide(color: AppColors.sheetText, width: 1.5),
+                        shape: const StadiumBorder(),
+                      ),
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: Text('Entrega de encomenda', style: SheetText.heading.copyWith(fontSize: 18)),
+                    ),
+                  ],
                 ],
               ),
             ),

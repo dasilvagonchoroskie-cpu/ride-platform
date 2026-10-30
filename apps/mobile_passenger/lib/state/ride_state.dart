@@ -267,6 +267,7 @@ class RideState extends ChangeNotifier {
     required String dropoffAddress,
     required String paymentMethod,
     String paymentType = 'CASH',
+    Map<String, dynamic>? entrega,
   }) async {
     final ride = await _repository.createRide(
       origin: origin,
@@ -277,10 +278,11 @@ class RideState extends ChangeNotifier {
       paymentType: paymentType,
       couponCode: cupomCodigo,
       agendadaPara: agendarPara,
-      category: categoria,
-      semDestino: semDestino,
-      paradas: paradas,
+      category: entrega != null ? 'ENTREGA' : categoria,
+      semDestino: entrega != null ? false : semDestino,
+      paradas: entrega != null ? const [] : paradas,
       cotacao: quote?.cotacao,
+      entrega: entrega,
     );
 
     cupomCodigo = null;
@@ -404,6 +406,49 @@ class RideState extends ChangeNotifier {
       final pontos = pontosDaRota(r);
       return pontos.length >= 2 ? pontos : null;
     } catch (_) {
+      return null;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Entregas (Etapa 5, 30/10/2026)
+  // ------------------------------------------------------------------
+
+  /// Entrega ligada na cidade do ponto (o botao "Entrega" so aparece assim).
+  bool entregaAqui = false;
+
+  DateTime _entregaConferidaEm = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Pergunta ao servidor no maximo a cada 5 minutos (a Central liga e
+  /// desliga por cidade; nao muda a toda hora).
+  Future<void> conferirEntrega(Coords ponto, {bool forcar = false}) async {
+    final agora = DateTime.now();
+    if (!forcar && agora.difference(_entregaConferidaEm) < const Duration(minutes: 5)) return;
+    _entregaConferidaEm = agora;
+    final ligada = await _repository.entregaDisponivel(ponto);
+    if (ligada != entregaAqui) {
+      entregaAqui = ligada;
+      notifyListeners();
+    }
+  }
+
+  /// Preco da entrega (tarifa propria da cidade). Desenha o caminho igual a corrida.
+  Future<RideQuote?> estimarEntrega(Coords coleta, Coords entrega, {required String coletaEndereco, required String entregaEndereco}) async {
+    try {
+      cupomCodigo = null;
+      agendarPara = null;
+      novaViagem();
+      final result = await _repository.estimate(coleta, entrega,
+          pickupAddress: coletaEndereco, dropoffAddress: entregaEndereco, category: 'ENTREGA');
+      quote = result.quote;
+      rotaPrevia = result.quote.caminho.length >= 2 ? result.quote.caminho : [];
+      notifyListeners();
+      return result.quote;
+    } on ApiException catch (e) {
+      avisar(e.message);
+      return null;
+    } catch (_) {
+      avisar('Sem conexão. Tente de novo.');
       return null;
     }
   }

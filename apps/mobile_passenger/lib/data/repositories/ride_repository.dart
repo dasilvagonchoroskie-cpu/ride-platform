@@ -79,6 +79,7 @@ class RideRepository {
     bool semDestino = false,
     List<PlaceSuggestion> paradas = const [],
     String? cotacao,
+    Map<String, dynamic>? entrega,
   }) async {
     if (_useDemo) {
       return DemoEngine.createRide(
@@ -100,6 +101,7 @@ class RideRepository {
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
         if (category != null) 'category': category,
         if (cotacao != null) 'cotacao': cotacao,
+        if (entrega != null) 'entrega': entrega,
       }) as Map<String, dynamic>;
 
       return Ride.fromServer(data['ride'] as Map<String, dynamic>);
@@ -189,6 +191,20 @@ class RideRepository {
 
   /// Situacao atual da corrida no servidor (o aplicativo pergunta a cada
   /// poucos segundos enquanto ela esta aberta).
+  /// Entrega ligada na cidade deste ponto (coleta)? Servidor antigo: nao.
+  Future<bool> entregaDisponivel(Coords ponto) async {
+    if (_useDemo) return false;
+    try {
+      final r = await _client.request('GET', '/entregas/disponivel', query: {
+        'lat': ponto.latitude.toStringAsFixed(6),
+        'lng': ponto.longitude.toStringAsFixed(6),
+      });
+      return r is Map && r['ligada'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<Ride> detalhe(String id) async {
     final data = await _client.request('GET', '/rides/$id') as Map<String, dynamic>;
     return Ride.fromServer(data['ride'] as Map<String, dynamic>);
