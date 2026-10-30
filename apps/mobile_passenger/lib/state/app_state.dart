@@ -8,6 +8,7 @@ import '../core/config/app_config.dart';
 import '../core/api/api_client.dart';
 import '../core/storage/app_storage.dart';
 import '../core/utils/geo.dart';
+import '../core/utils/filtro_gps.dart';
 import 'auth_state.dart';
 import '../data/models/models.dart';
 import '../core/medida.dart';
@@ -177,10 +178,19 @@ class AppState extends ChangeNotifier {
   Future<void> _lerGps() async {
     final r = await _resolveLocation();
     locationGranted = r.granted;
-    if (!r.mocked) _usarLeitura(r.coords, r.accuracyMeters);
+    if (!r.mocked) {
+      _filtroGps.adicionar(r.coords, precisao: r.accuracyMeters ?? 30);
+      _usarLeitura(r.coords, r.accuracyMeters);
+    }
     if (r.granted && _vigia == null) _vigiarPosicao();
     notifyListeners();
   }
+
+  /// Filtro do GPS (Evandro, 30/10/2026: "melhorar a precisao do GPS"):
+  /// junta as leituras pesando pela precisao, ignora a tremida parado, a
+  /// leitura ruim e o salto; andando, o ponto acompanha (antes so trocava se
+  /// a leitura nova fosse mais precisa, e o ponto ficava para tras).
+  final FiltroGps _filtroGps = FiltroGps(velocidadeBase: 1.5);
 
   void _usarLeitura(Coords c, double? precisao) {
     coords = c;
@@ -305,13 +315,13 @@ class AppState extends ChangeNotifier {
   /// Posicao pelo FusedLocationProvider do Google Play (pedido do Evandro,
   /// 29/10/2026): junta GPS, Wi-Fi e antenas, acha o passageiro mais rapido e
   /// gasta menos bateria. Celular sem Google Play cai sozinho no GPS puro.
-  static LocationSettings _fused(LocationAccuracy precisao, {int distanceFilter = 0}) {
+  static LocationSettings _fused(LocationAccuracy precisao, {int distanceFilter = 0, int segundos = 5}) {
     if (defaultTargetPlatform == TargetPlatform.android) {
       return AndroidSettings(
         accuracy: precisao,
         distanceFilter: distanceFilter,
         forceLocationManager: false,
-        intervalDuration: const Duration(seconds: 5),
+        intervalDuration: Duration(seconds: segundos),
       );
     }
     return LocationSettings(accuracy: precisao, distanceFilter: distanceFilter);
@@ -321,15 +331,13 @@ class AppState extends ChangeNotifier {
     _vigia?.cancel();
     try {
       _vigia = Geolocator.getPositionStream(
-        locationSettings: _fused(LocationAccuracy.best, distanceFilter: 5),
+        locationSettings: _fused(LocationAccuracy.best, distanceFilter: 3, segundos: 2),
       ).listen((position) {
-        final atual = accuracyMeters;
-        // So aceita a leitura nova se ela for mais precisa que a que ja
-        // temos (a primeira do GPS sempre entra).
-        final melhorou = !localizacaoReal || atual == null || position.accuracy <= atual;
-        if (!melhorou) return;
-
-        _usarLeitura(Coords(position.latitude, position.longitude), position.accuracy);
+        final mudou = _filtroGps.adicionar(Coords(position.latitude, position.longitude),
+            precisao: position.accuracy, velocidade: position.speed, em: position.timestamp);
+        final filtrada = _filtroGps.posicao;
+        if (filtrada == null || (!mudou && localizacaoReal)) return;
+        _usarLeitura(filtrada, _filtroGps.precisao ?? position.accuracy);
         notifyListeners();
       }, onError: (_) {});
     } catch (_) {

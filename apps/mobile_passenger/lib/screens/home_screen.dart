@@ -33,6 +33,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Timer? _relogio;
+
+  /// Carros por perto a cada 10 s (antes 30 s): o carro anda no mapa quase
+  /// junto com o de verdade (Evandro, 30/10/2026). Modo economia: 30 s.
+  Timer? _carros;
   int _recentrar = 0;
 
   Future<void> _minhaLocalizacao() async {
@@ -61,10 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
       unawaited(context.read<ConfigState>().conferirNaoLidas());
     });
     var voltas = 0;
+    var voltasDosCarros = 0;
+    _carros = Timer.periodic(const Duration(seconds: 10), (_) {
+      voltasDosCarros++;
+      if (!MapaConfig.economia || voltasDosCarros % 3 == 0) _atualizarSoOsCarros();
+    });
     _relogio = Timer.periodic(const Duration(seconds: 30), (_) {
       voltas++;
-      // Modo economia do mapa: os carros por perto a cada 90 s (antes 30 s).
-      if (!MapaConfig.economia || voltas % 3 == 0) _atualizarCarros();
+      // Botao "Entrega" (a cidade pode ter ligado ou desligado).
+      _conferirEntrega();
       // Perto do horario de uma agendada, a corrida abre sozinha.
       if (mounted) context.read<RideState>().conferirAgendadas();
       // Sino: confere as nao lidas a cada 2 minutos.
@@ -84,15 +93,25 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _relogio?.cancel();
+    _carros?.cancel();
     super.dispose();
   }
 
   void _atualizarCarros() {
+    _atualizarSoOsCarros();
+    _conferirEntrega();
+  }
+
+  void _atualizarSoOsCarros() {
     if (!mounted) return;
     final aqui = context.read<AppState>().coords;
-    context.read<RideState>().refreshNearby(aqui);
-    // Botao "Entrega": so na cidade onde a Central ligou (Etapa 5).
-    unawaited(context.read<RideState>().conferirEntrega(aqui));
+    unawaited(context.read<RideState>().refreshNearby(aqui));
+  }
+
+  /// Botao "Entrega": so na cidade onde a Central ligou (Etapa 5).
+  void _conferirEntrega() {
+    if (!mounted) return;
+    unawaited(context.read<RideState>().conferirEntrega(context.read<AppState>().coords));
   }
 
   @override
@@ -178,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final markers = <MapMarker>[
       if (!app.centroDaCidade) MapMarker(id: 'me', coords: app.coords, kind: MarkerKind.pickup),
       for (final driver in ride.nearbyDrivers)
-        MapMarker(id: driver.id, coords: driver.position, kind: driver.moto ? MarkerKind.moto : MarkerKind.car),
+        MapMarker(id: driver.id, coords: driver.position, kind: driver.moto ? MarkerKind.moto : MarkerKind.car, rumo: driver.rumo),
     ];
 
     return Scaffold(
