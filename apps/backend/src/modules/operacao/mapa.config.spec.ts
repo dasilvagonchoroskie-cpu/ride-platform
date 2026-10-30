@@ -19,6 +19,15 @@ describe('mapa dos aplicativos (TomTom)', () => {
     expect(m.tamanho).toBe(512);
   });
 
+  it('com a chave so do mapa (TOMTOM_API_KEY_MAPA), o celular recebe ela, nunca a da busca e rota', () => {
+    const SO_MAPA = 'mapamapamapamapamapamapamapa1234';
+    const m = mapaComChave({ TOMTOM_API_KEY: CHAVE_FALSA, TOMTOM_API_KEY_MAPA: SO_MAPA });
+    expect(m.tiles).toBe(enderecoDasImagens(SO_MAPA));
+    expect(m.tiles).not.toContain(CHAVE_FALSA);
+    // Valor estragado na variavel do mapa: volta para a chave unica (como antes).
+    expect(mapaComChave({ TOMTOM_API_KEY: CHAVE_FALSA, TOMTOM_API_KEY_MAPA: 'x' }).tiles).toBe(enderecoDasImagens(CHAVE_FALSA));
+  });
+
   it('sem chave no servidor: sem endereco de imagens (o app mostra o aviso)', () => {
     expect(mapaComChave({}).tiles).toBeNull();
     expect(mapaComChave({ TOMTOM_API_KEY: 'curta' }).tiles).toBeNull();
