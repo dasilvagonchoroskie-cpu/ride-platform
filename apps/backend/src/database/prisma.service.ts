@@ -99,18 +99,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
      * celular dele tocou chamado de teste na rua).
      */
     teste?: boolean;
-  }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>> {
+  }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>> {
     const limit = params.limit ?? 20;
     const categoria = params.category ?? 'CARRO';
     const teste = params.teste === true;
     // '' = filtra pela categoria; senao pelo tipo de veiculo da entrega.
     const veiculos = params.veiculos ?? '';
-    return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>>`
+    return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>>`
       SELECT
         dl.driver_id                     AS "driverId",
         ST_Distance(dl.location, ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography) AS "distanceMeters",
         ST_Y(dl.location::geometry)      AS "latitude",
-        ST_X(dl.location::geometry)      AS "longitude"
+        ST_X(dl.location::geometry)      AS "longitude",
+        dl.heading                       AS "heading"
       FROM driver_locations dl
       JOIN drivers d ON d.id = dl.driver_id
       JOIN users u ON u.id = d.user_id
