@@ -1,25 +1,23 @@
 # PENDÊNCIAS — Fortaleza Move
 
-Atualizado em 30/10/2026 (madrugada): pedido "PLATAFORMA: FORTALEZA MOVE" de 29/10 20:23 — segurança do repositório, nome, categorias por cidade, TomTom, cidades, ícones, contas, teste de rua e passo a passo (montagem 265).
+Atualizado em 30/10/2026 (tarde): pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) pronta esperando os 3 símbolos, etapa 7 (loja) feita (montagem 282).
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**.
 
 Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou esteira) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
 
 ---
 
-## 1. Resultado real dos testes (30/10/2026)
+## 1. Resultado real dos testes (30/10/2026, tarde)
 
 | O quê | Resultado | Onde ver |
 |---|---|---|
-| Servidor: compilação TypeScript | 0 erros | rodado aqui (`tsc --noEmit`) |
-| Servidor: testes automáticos | **79 passaram, 0 falharam** (13 grupos; novos: categorias e tarifas por cidade, semente, chegada, busca de cidade nova, chave só do mapa) | rodado aqui (`jest`) |
-| App do passageiro: análise / testes de tela | nenhum problema / **71 passaram, 0 falharam** (12 pulados: fotos) | logs/analyze-mobile_passenger.txt, logs/test-mobile_passenger.txt |
-| App do motorista: análise / testes de tela | nenhum problema / **70 passaram, 0 falharam** (7 pulados) | logs/analyze-mobile_driver.txt, logs/test-mobile_driver.txt |
-| Central: análise / testes de tela | nenhum problema / **48 passaram, 0 falharam** (1 pulado) | logs/analyze-central_app.txt, logs/test-central_app.txt |
-| Teste de ponta a ponta no servidor real | **308 etapas, 0 falhas** (30/10, ~03:50 UTC, servidor feb95bc com as categorias no ar) | logs/teste-ponta-a-ponta.txt |
-| Os testes novos acharam e foram corrigidos | cartão da categoria estourava 15 px no passageiro; "Pedidos de categoria" da Central dava erro (setState com Future); "Abrir cidade nova" não achava cidade fora da região; teste da taxa do chamado esperava 8% fixo (a noturna hoje é 10%) | commits dcb9ad3, a3c0f3e, a4e5db4 |
-| Cópia do banco antes de publicar a semente das categorias | feita (esteira "Cópia diária do banco", 30/10 03:26 UTC, sucesso) | logs/copia-banco.txt |
-| APKs 265 | ver a seção 4 (conferidos por dentro antes da entrega) | rodado aqui |
+| Servidor: testes automáticos | **105 passaram, 0 falharam** (17 grupos; novos: caixa de entrada, aviso de saldo, rota medida uma vez, entregas) | rodado aqui (`jest`) |
+| App do passageiro: análise / testes de tela | nenhum problema / **81 passaram, 0 falharam** (12 pulados: fotos) | logs/analyze-mobile_passenger.txt, logs/test-mobile_passenger.txt |
+| App do motorista: análise / testes de tela | nenhum problema / **81 passaram, 0 falharam** (7 pulados) | logs/analyze-mobile_driver.txt, logs/test-mobile_driver.txt |
+| Central: análise / testes de tela | nenhum problema / **51 passaram, 0 falharam** (1 pulado) | logs/analyze-central_app.txt, logs/test-central_app.txt |
+| Teste de ponta a ponta no servidor real | **345 etapas, 0 falhas** (30/10 13:28 UTC, com as entregas no ar) | logs/teste-ponta-a-ponta.txt |
+| Gerador de ícones | **0 falhas** (transparente, fundo branco, xadrez desenhado e fundo preto) | `python3 scripts/testar-icones.py` |
+| APKs 282 | nome no celular, ícone redondo, alvo API 36 e alinhamento de 16 KB conferidos **dentro do APK** pela esteira; chave da TomTom não está dentro; textos das entregas presentes | esteira Android APKs (montagem 282) |
 
 Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a internet daqui bloqueia o download). Tudo que é Flutter roda no GitHub Actions.
 
@@ -30,44 +28,44 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a int
 1. **Chamado com a tela apagada / app fechado — [AUTO].** Falta o teste de rua (roteiro em docs/TESTE-DE-RUA.md).
 2. **Notificação push chegando no celular — [SEM TESTE] no aparelho.** O servidor aceita a chave do Firebase (conferido em todo ponta a ponta).
 3. **GPS na rua, taxímetro e posição — [AUTO].** Falta corrida de rua.
-4. **Mapa num celular de verdade em Goiatuba — [SEM TESTE].** Medido só no Android de teste (seção 7).
-5. **Cota grátis da TomTom é POR MÊS — [REAL no servidor].** A página oficial (docs.tomtom.com/pricing) diz "Free monthly requests per API": imagens 200 mil, rota 20 mil, endereço 20 mil, endereço pelo ponto 20 mil, lugares 2,5 mil por mês. O servidor conta por mês, **avisa a 70%** (Central → Configurações → Mapa: "ATENÇÃO: passou de 70%" e registro no servidor) e entra no **modo economia a 80%**. Ressalva: o contrato (cláusula 8.5) fala em "free daily limits" que vencem no fim do mês — página e contrato não batem (docs/TOMTOM-TERMOS.md, para o sócio). A TomTom também limita ~10 imagens por segundo para a chave inteira (os apps vão no ritmo). **Chamadas por corrida completa (medido 2 vezes no servidor real): 11** — 1 busca, 1 endereço pelo GPS, 1 lugar, 8 rotas (1 no orçamento, 1 na chegada do motorista mais perto, 5 dos apps nas etapas da corrida, 1 na conferência do fim). Média real na rua: medir no teste de rua (docs/TESTE-DE-RUA.md).
-6. **Repositório público — pendente do Evandro.** Varredura de 1.087 commits: a chave da TomTom e as senhas do banco **nunca** foram commitadas; ficaram no histórico a chave antiga do Google Maps (a chave antiga do Google Maps (Lord Perfumaria), apagar) e a senha inicial do administrador (trocar se ainda for ela). Passo a passo: docs/PASSO-A-PASSO-EVANDRO.md, item 1.
-7. **Chave da TomTom chega ao celular de quem está logado — [REAL].** Agora dá para usar uma **segunda chave só de imagens do mapa** (`TOMTOM_API_KEY_MAPA`, [AUTO] testado no servidor; falta o Evandro criar a chave no painel da TomTom). A TomTom não manda alerta de uso: o alerta é o nosso (70%).
-8. **Termos da TomTom sobre guardar dados — decisão do sócio.** O servidor **não guarda mais nada** da TomTom (busca, endereço, rota, imagens: [AUTO] + [REAL] no ponta a ponta). O celular guarda só as imagens, pelo prazo do cabeçalho da TomTom (**medido: max-age=86400, 1 dia**). Ficam para o sócio: endereços gravados nas corridas (11.6.1), plano grátis só para avaliação (2.2) e a atribuição fixa (17.3). Trechos com link: docs/TOMTOM-TERMOS.md.
-9. **Verificação em duas etapas da Central — [REAL], mas DESLIGADA na conta do dono.** Passo a passo: docs/PASSO-A-PASSO-EVANDRO.md, item 3.
-10. **Restauração da cópia do banco — [SEM TESTE] num banco de verdade.** A esteira nova "Testar a restauracao da copia" restaura num banco de teste vazio e confere tabela por tabela; a parte de abrir a cópia e montar o SQL foi testada aqui com uma chave descartável. Falta o Evandro pôr os 2 segredos e apertar o botão (item 4 do passo a passo).
-11. **Categorias Conforto e Premium — [REAL], mas DESLIGADAS.** Entraram desligadas em todas as cidades (senão o passageiro escolhe e ninguém atende). Ligar por cidade quando houver carro aprovado (docs/CIDADE-NOVA.md, passo 10). Observação: às 00:32 de 30/10 a sua conta salvou a categoria CARRO pela Central (app 256) e o nome voltou de "Popular" para "Carro" e a taxa noturna ficou 10%; se quiser "Popular", é só trocar o nome em Tarifas.
-12. **Endereço do servidor é o do Render.** Antes de publicar na loja: domínio próprio apontando para o Render, para poder trocar de conta sem atualizar o app (docs/CONTAS.md, seção 7).
-13. **Google Play — criar como conta de organização (CNPJ + D-U-N-S).** Conta pessoal nova exige teste fechado com 12 testadores por 14 dias; a de organização não (docs/CONTAS.md).
-14. **Dependências do servidor:** zod (alta, só no zod 4), @nestjs/core e file-type (moderadas, só com o Nest 11). Troca grande: **só com o seu OK**.
-15. **Pagamento com cartão — [NÃO EXISTE], por decisão.** "Meus cartões" mostra só "Em breve".
-16. **Banco grátis de 500 MB com as fotos dentro.** Aperta perto de 250–300 motoristas com documentos.
-17. **E-mail só pelo Gmail (~100 por dia).**
-18. **Ícones novos — não recebidos.** O gerador agora faz Android (adaptativo, redondo), **iPhone/iPad (18 tamanhos + 1024 da App Store, sem transparência)** e o 512 da Google Play, e avisa imagem fora do padrão (testado aqui com uma imagem boa e uma ruim: 6 avisos na ruim). A esteira do iPhone usa os ícones quando existirem.
-19. **20 ruas de Goiatuba para o teste da busca — não recebidas.**
-20. **Destinos recentes:** hoje ficam no servidor, só da conta (cada usuário tem o seu, nunca compartilhado). Você escreveu "o histórico do usuário fica somente no aplicativo do usuário": se for para ficar **só no celular** (e sair do servidor), me confirme — muda o que foi feito na etapa 4.
+4. **Mapa num celular de verdade em Goiatuba — [SEM TESTE].** Medido só no Android de teste.
+5. **Antes da loja: desligar o código na tela (`OTP_DEBUG_RETURN`).** Ligado, conta só com telefone (sem e-mail) recebe o código na tela. Precisa das contas de revisão do Google antes (docs/GOOGLE-PLAY.md, 5.5 e 6.5).
+6. **Cota grátis da TomTom é POR MÊS — [REAL no servidor].** Alerta a 70% e modo economia a 80%. **Chamadas por corrida completa (medido no servidor real): 7, sendo 4 rotas** (eram 11 e 8). **Entrega: 4 rotas, igual à corrida.** Ressalva do contrato em docs/TOMTOM-TERMOS.md (para o sócio).
+7. **Repositório público — pendente do Evandro.** Passo a passo: docs/PASSO-A-PASSO-EVANDRO.md, item 1. Quando disser "repositório privado", eu confiro o Render e as esteiras.
+8. **Chave da TomTom chega ao celular de quem está logado — [REAL].** Falta o Evandro criar a chave só de imagens (`TOMTOM_API_KEY_MAPA`, passo a passo item 2.2).
+9. **Termos da TomTom sobre guardar dados — decisão do sócio** (docs/TOMTOM-TERMOS.md).
+10. **Verificação em duas etapas da Central — [REAL], mas DESLIGADA na conta do dono** (passo a passo, item 3).
+11. **Restauração da cópia do banco — [SEM TESTE] num banco de verdade** (passo a passo, item 4).
+12. **Entregas — [REAL] no servidor, DESLIGADAS em todas as cidades.** Tarifa "Entrega" começa igual ao Popular (ajustar antes de ligar). Texto dos Termos (7-A) é **PROVISÓRIO**. 12 decisões para o Evandro e o sócio em docs/ENTREGAS.md. Código de entrega vai pelo WhatsApp (sem SMS).
+13. **Categorias Conforto e Premium — [REAL], mas DESLIGADAS** (docs/CIDADE-NOVA.md, passo 10).
+14. **Endereço do servidor é o do Render.** Antes da loja: domínio próprio (docs/GOOGLE-PLAY.md, item 2).
+15. **Google Play — conta de organização (CNPJ + D-U-N-S, até 28 dias).** Lista completa: docs/GOOGLE-PLAY.md. Regra nova: desde 30/09/2026, no Brasil, apps das lojas precisam estar registrados em desenvolvedor verificado; para APK instalado direto a regra vale a partir de 2027 (registrar também a Central).
+16. **Dependências do servidor:** zod (só no zod 4), @nestjs/core e file-type (só com o Nest 11). Troca grande: **só com o seu OK**.
+17. **Pagamento com cartão — [NÃO EXISTE], por decisão.** "Meus cartões" mostra só "Em breve".
+18. **Banco grátis de 500 MB com as fotos dentro.** Aperta perto de 250–300 motoristas com documentos. A foto do comprovante de entrega (Fase 2) vai fora do banco (plano em docs/ENTREGAS.md).
+19. **E-mail só pelo Gmail (~100 por dia).**
+20. **Ícones novos — não recebidos.** Gerador pronto e testado: símbolo a ~60% do ícone visível, fundo #0070B8, redondo, legado, monocromático do Android 13+, fundo branco removido, prévia em folha (scripts/previa-icones.py). Os APKs já conferem o ícone redondo e o nome.
+21. **20 ruas de Goiatuba para o teste da busca — não recebidas.**
+22. **Destinos recentes:** hoje ficam no servidor, só da conta. Se for para ficar **só no celular**, me confirme.
 
 ---
 
-## 3. Situação do pedido de 29/10 20:23
+## 3. Situação do pedido de 30/10 01:37 (7 etapas)
 
-| Item | Situação |
+| Etapa | Situação |
 |---|---|
-| 1. Segurança do repositório | Varredura FEITA (achados no risco 6); esteiras econômicas FEITAS (APK só pelo botão, só valida o app que mudou, 144 arquivos de APK antigos apagados); **tornar privado: falta o Evandro** (passo a passo) |
-| 2. Nome "Fortaleza Move" | FEITO: 120 trocas em 69 arquivos; pacotes mantidos `br.com.fortalezamov.*` (sua escolha) |
-| 3. Categorias de veículo | FEITO e **[REAL]** no ponta a ponta: Popular/Conforto/Premium; figura, descrição, lugares, tarifa base, km, minuto, mínima, multiplicador, ligada — por cidade; motorista pede no cadastro do carro e a Central aprova/recusa; recebe só da categoria aprovada; passageiro vê preço e chegada de cada uma; preço pela rota medida uma vez (com destino, sem destino e com parada); corridas antigas continuam (CARRO). Telas: **[AUTO]** |
-| 4. TomTom | FEITO: cota mensal; alerta 70% e economia 80%; busca com 3 letras úteis e 500 ms (já existia), só na região, sem chamada de detalhes; servidor sem guardar nada; motorista mais perto por linha reta e rota pela rua só nos 3 mais perto (**[AUTO]** teste despacho.spec; no ponta a ponta, com 1 motorista perto, foi 1 rota de chegada); 11 chamadas por corrida; chave própria por operador (variável do servidor de cada um) + chave só do mapa; trechos do contrato para o sócio (docs/TOMTOM-TERMOS.md) |
-| 5. Cidade nova pela Central | FEITO: docs/CIDADE-NOVA.md com as 6 cidades; busca de cidade no Brasil todo só para o dono (**[REAL]**: "Teutonia RS" achada a 1.296 km) |
-| 6. Ícones | gerador PRONTO (Android + iPhone + loja, com avisos); esperando os PNG |
-| 7. docs/CONTAS.md | FEITO: tabela de titular, como passar/compartilhar e o que precisa ir para o nome da empresa |
-| 8. Teste de rua | roteiro FEITO: docs/TESTE-DE-RUA.md (riscos 1 a 4 + categorias + contagem da TomTom) |
-| 9. Passo a passo do Evandro | FEITO: docs/PASSO-A-PASSO-EVANDRO.md (restauração, TomTom, 2 etapas, ícones/ruas, privado) |
+| 1. Segredos: arquivo mestre e docs só com o NOME e o lugar de cada segredo; histórico do Git conferido (só hashes); par novo de chaves da cópia do banco | FEITO (PR #5) |
+| 2. Tarifas sem gravar por cima, "Popular" de volta e "Nova categoria nesta cidade" | FEITO (PR #6) — **[REAL]** ponta a ponta 309 OK |
+| 3. Caixa de entrada (motorista e passageiro) e aviso de saldo por cidade | FEITO — **[REAL]** servidor (326 OK) + **[AUTO]** telas |
+| 4. Economia da TomTom (rota medida uma vez) | FEITO — **[REAL]**: 7 chamadas e 4 rotas por corrida (eram 11 e 8) |
+| 5. Entregas, Fase 1 (desligada em todas as cidades) | FEITO — **[REAL]** servidor (345 OK; entrega 4 rotas = corrida) + **[AUTO]** telas; Fase 2 só plano (docs/ENTREGAS.md) |
+| 6. Ícones (#0070B8, ~60%, redondo, legado, monocromático, fundo branco) | gerador PRONTO e testado; **esperando os 3 PNG amarelos** |
+| 7. Loja | FEITO: docs/GOOGLE-PLAY.md (lista completa), passo a passo itens 6 e 7, docs/CONTAS.md |
 | zod 4 / Nest 11 | NÃO mexido (esperando o seu OK) |
 
 ---
 
-## 4. APKs 265 (30/10/2026) — conferidos por dentro
+## 4. APKs 265 (30/10/2026, histórico) — conferidos por dentro
 
 | App | Pacote | Versão | Conferido |
 |---|---|---|---|

@@ -18,7 +18,8 @@ chat (regra de 30/10/2026).
 | Firebase (projeto fortaleza-mov) | aviso push | `FCM_*` no Render; configuração pública em `infra/firebase-apps.b64` | Evandro |
 | Gmail (Apps Script) | e-mail com o código de entrada | `EMAIL_GOOGLE_SCRIPT_URL` e `EMAIL_GOOGLE_SCRIPT_SEGREDO` no Render | Evandro |
 | Google Cloud (opcional) | Google Maps, se um dia ligar | `infra/mapas.b64` (chave restrita aos apps) e `GOOGLE_MAPS_API_KEY` | Evandro |
-| Google Play (quando publicar) | loja | conta de desenvolvedor do Evandro | Evandro |
+| Google Play (quando publicar) | loja; também registra os pacotes fora da loja (Central, operadores) na verificação de desenvolvedor do Android | conta de **organização** no CNPJ (ver `docs/GOOGLE-PLAY.md`) | empresa |
+| Registro.br (quando registrar) | domínio próprio (`api.<domínio>` → Render) | conta do titular (CNPJ) | empresa |
 
 ## 2. Variáveis do servidor (Render → Environment)
 
@@ -29,6 +30,8 @@ chat (regra de 30/10/2026).
     trocado, os códigos do Google Authenticator param de valer: entre com um
     **código de recuperação**, desligue e ligue de novo as duas etapas.
   - `OTP_CHAVE_TESTE`: só a esteira de testes usa (mesmo valor do segredo do GitHub).
+  - `OTP_DEBUG_RETURN`: modo teste (código na tela para conta sem e-mail; ligado
+    desde o começo, sem SMS). **Desligar antes da loja** (`docs/GOOGLE-PLAY.md`, item 6.5).
 - Mapa: `TOMTOM_API_KEY` (busca, endereço e rota; nunca sai do servidor),
   `TOMTOM_API_KEY_MAPA` (opcional: chave só das imagens do mapa, a única que
   chega aos celulares; sem ela, vale a `TOMTOM_API_KEY`), `TOMTOM_COTA_MES`,
@@ -51,7 +54,7 @@ chat (regra de 30/10/2026).
 - `RENDER_DEPLOY_HOOK` (opcional): publica o servidor sozinho a cada mudança.
   Sem ele, a publicação é feita pelo conector do Render.
 - `DATABASE_URL` (antigo): aponta para o banco velho; só a esteira
-  `db-bootstrap` (que não se usa) lê.
+  `db-bootstrap` (que não se usa) lê. Pode ser apagado (passo a passo, item 6.2).
 
 ## 4. Contas da Central
 
