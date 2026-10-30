@@ -10,7 +10,7 @@ import { GeoService } from '../geo/geo.service';
 import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
-import { ehMoto, lerCategorias } from './categorias';
+import { ehMoto } from './categorias';
 import { distanciaDoTaximetro, lerCobranca, paradasQueValem } from './cobranca';
 import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
@@ -84,6 +84,11 @@ const ACAO_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
 /** Marca da corrida sem destino (no placeId do destino; sem mudar o banco). */
 export const SEM_DESTINO = 'SEM_DESTINO';
 export const TEXTO_SEM_DESTINO = 'Sem destino definido (pelo taxímetro)';
+
+/** Minutos ate o embarque pela distancia em linha reta (x1,35 nas ruas, 25 km/h, +1 min para sair). */
+export function chegadaEmMinutos(distanciaMetros: number): number {
+  return Math.max(2, Math.ceil(((distanciaMetros / 1000) * 1.35 * 60) / 25) + 1);
+}
 
 /** No maximo ~400 pontos no caminho (o desenho fica igual e a resposta leve). */
 export function resumirCaminho(c: Array<[number, number]>, maximo = 400): Array<[number, number]> {
@@ -243,14 +248,30 @@ export class RidesService {
     };
   }
 
-  /** Preco da mesma viagem em cada categoria ativa (Carro, Moto...). */
+  /**
+   * Preco da mesma viagem em cada categoria ligada NA CIDADE do embarque
+   * (Popular, Conforto, Premium, Moto...), com o tempo de chegada do carro
+   * mais perto daquela categoria. A rota (distancia e tempo) e a mesma para
+   * todas: medida uma vez so.
+   */
   private async opcoesDeCategoria(
     input: EstimateRideInput,
     rota: { distanceMeters: number; durationSeconds: number },
     passengerId?: string,
   ) {
-    const ativas = (await lerCategorias(this.prisma)).filter((c) => c.ativa);
-    const opcoes: Array<{ category: string; nome: string; moto: boolean; estimatedFareCents: number; totalToPayCents: number }> = [];
+    const ativas = (await this.fare.categoriasNoPonto(input.pickup)).filter((c) => c.ativa);
+    const teste = passengerId ? await this.prisma.contaDeTeste(passengerId) : false;
+    const opcoes: Array<{
+      category: string;
+      nome: string;
+      moto: boolean;
+      icone: string;
+      descricao: string;
+      capacidade: number;
+      chegadaMinutos: number | null;
+      estimatedFareCents: number;
+      totalToPayCents: number;
+    }> = [];
     for (const c of ativas) {
       try {
         const o = await this.fare.calcular({
@@ -268,10 +289,24 @@ export class RidesService {
             desconto = 0;
           }
         }
+        // Chegada: o carro livre mais perto desta categoria, em linha reta
+        // (sem gastar rota da TomTom); null = nenhum perto agora.
+        const [perto] = await this.prisma.findNearbyDrivers({
+          latitude: input.pickup.latitude,
+          longitude: input.pickup.longitude,
+          radiusMeters: 10_000,
+          limit: 1,
+          category: c.codigo,
+          teste,
+        });
         opcoes.push({
           category: c.codigo,
           nome: c.nome || c.codigo,
           moto: ehMoto(c.codigo),
+          icone: c.icone,
+          descricao: c.descricao,
+          capacidade: c.capacidade,
+          chegadaMinutos: perto ? chegadaEmMinutos(perto.distanceMeters) : null,
           estimatedFareCents: o.totalCents,
           totalToPayCents: Math.max(0, o.totalCents - desconto),
         });
@@ -298,7 +333,7 @@ export class RidesService {
     }
 
     if (input.category) {
-      const categorias = await lerCategorias(this.prisma);
+      const categorias = await this.fare.categoriasNoPonto(input.pickup);
       if (!categorias.some((c) => c.codigo === input.category && c.ativa)) {
         throw BusinessException.validation('Esta categoria não está disponível agora.');
       }
@@ -640,7 +675,7 @@ export class RidesService {
   async carrosPerto(lat: number, lng: number, userId?: string) {
     const teste = userId ? await this.prisma.contaDeTeste(userId) : false;
     // Cada categoria ativa (carro e moto aparecem com o desenho certo).
-    const ativas = (await lerCategorias(this.prisma)).filter((c) => c.ativa);
+    const ativas = (await this.fare.categoriasNoPonto({ latitude: lat, longitude: lng })).filter((c) => c.ativa);
     const listas = await Promise.all(
       ativas.map(async (c) =>
         (
@@ -857,11 +892,8 @@ export class RidesService {
    */
   private async taximetroAoVivo(corrida: Ride) {
     const modo = corrida.dropoffPlaceId === SEM_DESTINO ? 'TAXIMETRO' : await lerCobranca(this.prisma);
-    const tabela =
-      (await this.prisma.fareConfig.findUnique({
-        where: { category_flag: { category: corrida.category, flag: corrida.fareFlag } },
-      })) ??
-      (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: 'CARRO', flag: corrida.fareFlag } } }));
+    const embarque = { latitude: corrida.pickupLat, longitude: corrida.pickupLng };
+    const tabela = await this.fare.tabelaDaCorrida(corrida.category, corrida.fareFlag, embarque);
     const tarifa = tabela
       ? {
           baseFareCents: tabela.baseFareCents,
@@ -897,6 +929,7 @@ export class RidesService {
         flag: corrida.fareFlag,
         category: corrida.category,
         multiplier: Number(corrida.multiplier),
+        pickup: embarque,
       });
       taximetro = {
         distanceMeters,
@@ -935,6 +968,8 @@ export class RidesService {
       flag: corrida.fareFlag,
       category: corrida.category,
       multiplier: Number(corrida.multiplier),
+      // Cidade do embarque: os mesmos valores da cidade usados no pedido.
+      pickup: { latitude: corrida.pickupLat, longitude: corrida.pickupLng },
       motorista: await this.prisma.driver.findUnique({
         where: { id: driverId },
         select: { financeModel: true, customCommissionPercent: true, fixedFeeCents: true },
@@ -1073,7 +1108,7 @@ export class RidesService {
     // uma corrida que ninguem aceitou.
     let multaCents = 0;
     if (ehPassageiro && corrida.driverId) {
-      multaCents = await this.fare.taxaDeCancelamento(new Date(), corrida.category);
+      multaCents = await this.fare.taxaDeCancelamento(new Date(), corrida.category, { latitude: corrida.pickupLat, longitude: corrida.pickupLng });
     }
 
     await this.prisma.withTransaction(async (tx) => {

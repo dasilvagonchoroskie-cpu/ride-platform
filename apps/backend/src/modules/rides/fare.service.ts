@@ -5,7 +5,11 @@ import { ERROR_CODES, haversineKm } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { percentOf, splitCommission } from '../../common/utils/money.util';
-import { lerMultiplicador, multiplicadorNoPonto } from './categorias';
+import { lerCategorias, lerMultiplicador, multiplicadorNoPonto } from './categorias';
+import type { Categoria } from './categorias';
+import { ajusteDe, aplicarAjuste, categoriasDaCidade, lerAjustes } from './tarifas-da-cidade';
+import type { AjusteDaCidade } from './tarifas-da-cidade';
+import { CHAVE_PRACAS, lerListaDePracas, pracaDoPonto } from '../pracas/pracas.store';
 
 /** Como o motorista paga a plataforma (definido pela Central). */
 export interface ModeloFinanceiro {
@@ -102,8 +106,21 @@ export class FareService {
     return inicio <= fim ? hora >= inicio && hora < fim : hora >= inicio || hora < fim;
   }
 
-  /** A tabela vigente neste instante. */
-  async tabelaVigente(quando: Date = new Date(), categoria = 'CARRO') {
+  /** Cidade (praca) do ponto, para as tarifas e categorias da cidade. */
+  async pracaDoPonto(ponto?: { latitude: number; longitude: number } | null): Promise<string | null> {
+    if (!ponto) return null;
+    const s = await this.prisma.setting.findUnique({ where: { key: CHAVE_PRACAS } });
+    return pracaDoPonto(lerListaDePracas(s?.value), ponto)?.id ?? null;
+  }
+
+  /** Categorias como valem na cidade do ponto (ligadas e multiplicador da cidade). */
+  async categoriasNoPonto(ponto?: { latitude: number; longitude: number } | null): Promise<Categoria[]> {
+    const [categorias, ajustes, praca] = await Promise.all([lerCategorias(this.prisma), lerAjustes(this.prisma), this.pracaDoPonto(ponto)]);
+    return categoriasDaCidade(categorias, ajustes, praca);
+  }
+
+  /** A tabela vigente neste instante (com os valores da cidade, se houver). */
+  async tabelaVigente(quando: Date = new Date(), categoria = 'CARRO', ajuste?: AjusteDaCidade) {
     let tabelas: FareConfig[] = await this.prisma.fareConfig.findMany({
       where: { isActive: true, category: categoria },
     });
@@ -111,6 +128,7 @@ export class FareService {
     if (tabelas.length === 0 && categoria !== 'CARRO') {
       tabelas = await this.prisma.fareConfig.findMany({ where: { isActive: true, category: 'CARRO' } });
     }
+    tabelas = tabelas.map((t) => aplicarAjuste(t, ajuste));
     if (tabelas.length === 0) {
       throw new BusinessException(
         ERROR_CODES.NOT_FOUND,
@@ -159,10 +177,16 @@ export class FareService {
   }): Promise<OrcamentoDaCorrida> {
     const quando = params.quando ?? new Date();
     const categoria = params.category ?? 'CARRO';
+    // Cidade do embarque: tarifas e multiplicador da categoria daquela cidade.
+    const [praca, ajustes, categorias] = await Promise.all([
+      this.pracaDoPonto(params.pickup),
+      lerAjustes(this.prisma),
+      lerCategorias(this.prisma),
+    ]);
+    const ajuste = ajusteDe(ajustes, praca, categoria);
     const tabela = params.flag
-      ? (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: categoria, flag: params.flag } } })) ??
-        (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: 'CARRO', flag: params.flag } } }))
-      : await this.tabelaVigente(quando, categoria);
+      ? await this.linhaDaBandeira(categoria, params.flag, ajuste)
+      : await this.tabelaVigente(quando, categoria, ajuste);
 
     if (!tabela) {
       throw new BusinessException(ERROR_CODES.NOT_FOUND, 'Tabela de precos nao encontrada.');
@@ -184,8 +208,11 @@ export class FareService {
     // mas fica como rede de seguranca se alguem baixar a bandeirada.
     const minFareApplied = subtotalCents < tabela.minFareCents;
     const semMultiplicador = minFareApplied ? tabela.minFareCents : subtotalCents;
+    // Dinamico (cidade toda ou zona) x o da categoria naquela cidade. No fim
+    // da corrida vale o gravado no pedido.
+    const daCategoria = categoriasDaCidade(categorias, ajustes, praca).find((c) => c.codigo === categoria)?.multiplicador ?? 1;
     const multiplier =
-      params.multiplier ?? multiplicadorNoPonto(await lerMultiplicador(this.prisma), params.pickup);
+      params.multiplier ?? Math.round(multiplicadorNoPonto(await lerMultiplicador(this.prisma), params.pickup) * daCategoria * 100) / 100;
     const totalCents = Math.round(semMultiplicador * multiplier);
 
     // Comissao: a da categoria, ou a do modelo que a Central definiu para o motorista.
@@ -226,9 +253,24 @@ export class FareService {
     };
   }
 
+  /** Linha de uma bandeira (a da categoria, ou a do Popular), com os valores da cidade. */
+  private async linhaDaBandeira(categoria: string, flag: FareFlag, ajuste?: AjusteDaCidade): Promise<FareConfig | null> {
+    const linha =
+      (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: categoria, flag } } })) ??
+      (await this.prisma.fareConfig.findUnique({ where: { category_flag: { category: 'CARRO', flag } } }));
+    return linha ? aplicarAjuste(linha, ajuste) : null;
+  }
+
+  /** A tabela que vale para uma corrida ja pedida (bandeira do pedido + cidade do embarque). */
+  async tabelaDaCorrida(categoria: string, flag: FareFlag, pickup: { latitude: number; longitude: number }): Promise<FareConfig | null> {
+    const ajuste = ajusteDe(await lerAjustes(this.prisma), await this.pracaDoPonto(pickup), categoria);
+    return this.linhaDaBandeira(categoria, flag, ajuste);
+  }
+
   /** Multa de cancelamento tardio, pela bandeira vigente. */
-  async taxaDeCancelamento(quando: Date = new Date(), categoria = 'CARRO'): Promise<number> {
-    const tabela = await this.tabelaVigente(quando, categoria);
+  async taxaDeCancelamento(quando: Date = new Date(), categoria = 'CARRO', pickup?: { latitude: number; longitude: number }): Promise<number> {
+    const ajuste = ajusteDe(await lerAjustes(this.prisma), await this.pracaDoPonto(pickup), categoria);
+    const tabela = await this.tabelaVigente(quando, categoria, ajuste);
     return tabela.cancellationFeeCents;
   }
 
