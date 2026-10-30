@@ -56,6 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ride.carregarAgendadas();
       // Endereco das imagens do mapa (TomTom, com a chave) so com login.
       unawaited(MapaConfig.atualizarComLogin((c) => ride.api.request('GET', c)));
+      // Ponto vermelho do sino: o servidor conta as nao lidas.
+      unawaited(context.read<ConfigState>().conferirNaoLidas());
     });
     var voltas = 0;
     _relogio = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -64,6 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!MapaConfig.economia || voltas % 3 == 0) _atualizarCarros();
       // Perto do horario de uma agendada, a corrida abre sozinha.
       if (mounted) context.read<RideState>().conferirAgendadas();
+      // Sino: confere as nao lidas a cada 2 minutos.
+      if (mounted && voltas % 4 == 0) unawaited(context.read<ConfigState>().conferirNaoLidas());
     });
   }
 
