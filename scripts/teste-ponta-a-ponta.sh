@@ -434,6 +434,11 @@ X=$(get "/geo/search?q=Porto%20Alegre&lat=-18.0128&lng=-49.3556" "$TP")
 # Evandro (29/10/2026): busca so na regiao de operacao (economia da TomTom).
 # "Porto Alegre" acha ruas com esse nome perto, nunca a cidade no RS.
 [ "$(echo "$X" | jq -r '(.data | length) > 0 and ([.data[] | select(.distanceKm > 300)] | length) == 0')" = "true" ] && ok "Passageiro: busca fica na regiao de operacao ('Porto Alegre' -> $(echo "$X" | jq -r '.data[0].address') - $(echo "$X" | jq -r '.data[0].detail'), $(echo "$X" | jq -r '.data[0].distanceKm') km)" || falha "Passageiro: busca so na regiao" "$X"
+# Central abrindo cidade nova: o dono procura no Brasil todo (ampla=1);
+# passageiro nao consegue (fica na regiao).
+X=$(get "/geo/search?q=Teutonia%20RS&lat=-18.0128&lng=-49.3556&ampla=1" "$TA")
+[ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)] | length')" -ge 1 ] 2>/dev/null && ok "Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, $(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)][0].distanceKm') km)" || falha "Central: busca de cidade nova" "$X"
+X=$(get "/geo/search?q=Teutonia%20RS&lat=-18.0128&lng=-49.3556&ampla=1" "$TP"); sucesso "$X" && falha "Passageiro buscou no Brasil todo" "$X" || ok "Seguranca: busca no Brasil todo so na Central"
 X=$(get "/geo/search?q=Rua%20Sao%20Paulo&lat=-18.0128&lng=-49.3556" "$TP")
 [ "$(echo "$X" | jq -r '(.data | length) > 0 and ((.data[0].distanceKm // 9999) < 80)')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
 # Rota pelas ruas (Evandro, 08/10/2026: "nao aquele risco verde que parece rota de aviao").

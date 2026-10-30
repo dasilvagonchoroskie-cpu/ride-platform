@@ -118,7 +118,7 @@ export class GeoService {
     texto: string,
     lat: number,
     lng: number,
-    opcoes: { raioMetros?: number; sessao?: string; fonte?: string } = {},
+    opcoes: { raioMetros?: number; sessao?: string; fonte?: string; brasilTodo?: boolean } = {},
   ): Promise<Lugar[]> {
     const q = texto.trim().replace(/\s+/g, ' ');
     this.contarSessao(opcoes.sessao);
@@ -134,7 +134,9 @@ export class GeoService {
       //    (Evandro, 29/10/2026: "limitada a regiao de operacao"). A busca
       //    extra no Brasil todo (decisao de 05/10) saiu: 1 chamada a menos.
       //    Fora do raio, o passageiro marca o destino no mapa.
-      regiao = await p.geocodificar(q, perto, raio);
+      // (Central, "Abrir cidade nova": Brasil todo, uma chamada so.)
+      regiao = await p.geocodificar(q, perto, opcoes.brasilTodo ? null : raio);
+      if (opcoes.brasilTodo) return this.comDistancia(regiao.slice(0, 12).map((l) => ({ ...l, distanceKm: null })), lat, lng);
       // 2) Lugares com nome (Rodoviaria, Hospital) — cota pequena (2.500/mes):
       //    so quando a regiao trouxe pouco e fora do modo economia.
       if (regiao.length < 3 && this.uso.pode('search', false)) lugares = await p.lugares(q, perto, Math.min(raio, 30_000));

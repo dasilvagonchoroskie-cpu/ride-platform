@@ -221,6 +221,29 @@ describe('GeoService com a TomTom', () => {
     expect(pedidos.length).toBe(2);
   });
 
+  it('Central abrindo cidade nova: Brasil todo, uma chamada so (sem raio)', async () => {
+    const pedidos: Array<{ raio: unknown }> = [];
+    let lugaresPedidos = 0;
+    const p: ProvedorGeo = {
+      nome: 'falso',
+      geocodificar: async (_q, _perto, raio) => {
+        pedidos.push({ raio });
+        return [lugar('Teutônia', -29.448, -51.806)];
+      },
+      lugares: async () => {
+        lugaresPedidos++;
+        return [];
+      },
+      enderecoDoPonto: async () => null,
+      rota: async () => null,
+    };
+    const g = GeoService.comProvedor(uso(), p);
+    const r = await g.buscar('Teutonia RS', -18.0128, -49.3556, { brasilTodo: true });
+    expect(pedidos).toEqual([{ raio: null }]);
+    expect(lugaresPedidos).toBe(0);
+    expect(r[0].distanceKm).toBeGreaterThan(1000);
+  });
+
   it('TomTom recusou (403): busca devolve MAPA_LIMITE e para por 30 min', async () => {
     const p: ProvedorGeo = {
       nome: 'falso',

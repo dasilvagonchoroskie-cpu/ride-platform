@@ -274,7 +274,8 @@ class _NovaCidadeState extends State<_NovaCidade> {
       _erro = null;
     });
     try {
-      final r = await widget.api.buscarEndereco(t, context.read<PainelState>().centro);
+      // Cidade nova fica fora da regiao de hoje: busca no Brasil todo.
+      final r = await widget.api.buscarEndereco(t, context.read<PainelState>().centro, brasilTodo: true);
       if (mounted) setState(() => _achados = r.take(6).toList());
     } catch (e) {
       if (mounted) setState(() => _erro = mensagemDe(e));

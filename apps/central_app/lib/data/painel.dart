@@ -1421,11 +1421,17 @@ class PainelApi {
   Future<void> cancelarCorrida(String rideId, String motivo) =>
       _c.request('POST', '/admin/rides/$rideId/cancel', body: {'reason': motivo});
 
-  Future<List<Lugar>> buscarEndereco(String texto, Coords perto) async {
+  /// Busca de endereco. [brasilTodo]: so para "Abrir cidade nova" (a busca
+  /// normal fica na regiao de operacao).
+  Future<List<Lugar>> buscarEndereco(String texto, Coords perto, {bool brasilTodo = false}) async {
     UsoLocal.contar('buscas');
     return [
-        for (final j in _lista(await _c.request('GET', '/geo/search',
-            query: {'q': texto, 'lat': '${perto.latitude}', 'lng': '${perto.longitude}'})))
+        for (final j in _lista(await _c.request('GET', '/geo/search', query: {
+          'q': texto,
+          'lat': '${perto.latitude}',
+          'lng': '${perto.longitude}',
+          if (brasilTodo) 'ampla': '1',
+        })))
           Lugar.fromJson(j),
       ];
   }
