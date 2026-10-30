@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../data/models/models.dart';
 import '../state/ride_state.dart';
+import '../widgets/entrega_ui.dart';
 import '../widgets/compartilhar_viagem.dart';
 import '../core/utils/geo.dart';
 import '../widgets/corrida_ui.dart';
@@ -41,13 +42,17 @@ class _SearchingScreenState extends State<SearchingScreen> {
     if (corrida == null) return const SizedBox.shrink();
 
     final motorista = corrida.driver;
+    final entrega = corrida.ehEntrega;
     final (titulo, subtitulo) = switch (corrida.status) {
-      RideStatus.driverWaiting => ('O motorista chegou', 'Ele está te esperando no local de embarque.'),
-      RideStatus.driverAssigned || RideStatus.driverArriving => (
-          'Motorista a caminho',
-          'Ele está indo até o local de embarque.',
-        ),
-      _ => ('Procurando motorista', 'Chamando os motoristas mais perto de você...'),
+      RideStatus.driverWaiting => entrega
+          ? ('O motorista chegou', 'Ele está no local de coleta. Entregue a encomenda a ele.')
+          : ('O motorista chegou', 'Ele está te esperando no local de embarque.'),
+      RideStatus.driverAssigned || RideStatus.driverArriving => entrega
+          ? ('Motorista a caminho da coleta', 'Ele está indo buscar a encomenda.')
+          : ('Motorista a caminho', 'Ele está indo até o local de embarque.'),
+      _ => entrega
+          ? ('Procurando motorista', 'Chamando os motoristas mais perto da coleta...')
+          : ('Procurando motorista', 'Chamando os motoristas mais perto de você...'),
     };
 
     final centro = motorista != null && motorista.posicaoReal ? motorista.position : corrida.pickup.coords;
@@ -83,6 +88,10 @@ class _SearchingScreenState extends State<SearchingScreen> {
                     Text(titulo, style: AppText.title.copyWith(fontSize: 22, color: AppColors.text)),
                     const SizedBox(height: Spacing.xs),
                     Text(subtitulo, style: AppText.body.copyWith(color: AppColors.textMuted)),
+                    if (corrida.entrega != null) ...[
+                      const SizedBox(height: Spacing.md),
+                      CartaoDaEntrega(entrega: corrida.entrega!),
+                    ],
                     const SizedBox(height: Spacing.md),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
@@ -194,7 +203,11 @@ class _SearchingScreenState extends State<SearchingScreen> {
                           children: [
                             const AlcaFolha(),
                             PainelMotorista(corrida: corrida),
-                            if (corrida.pin.isNotEmpty) ...[
+                            // Entrega: no lugar do codigo de embarque, o codigo de entrega.
+                            if (corrida.entrega != null) ...[
+                              const SizedBox(height: Spacing.md),
+                              CartaoDaEntrega(entrega: corrida.entrega!),
+                            ] else if (corrida.pin.isNotEmpty) ...[
                               const SizedBox(height: Spacing.md),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),

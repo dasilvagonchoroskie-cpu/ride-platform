@@ -544,6 +544,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         },
         paradas: ParadaDaCorrida.lista(c['paradas']),
         semDestino: c['semDestino'] == true || c['dropoffPlaceId'] == 'SEM_DESTINO',
+        entrega: EntregaDoChamado.ler(c['entrega']),
       );
       final fase = switch (c['status'] as String?) {
         'DRIVER_WAITING' => RidePhase.waitingPassenger,
@@ -1432,6 +1433,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           _ => 'Dinheiro',
         },
         expiresInSeconds: restam,
+        entrega: EntregaDoChamado.ler(o['entrega']),
         paradas: ParadaDaCorrida.lista(o['paradas']),
         semDestino: o['semDestino'] == true,
       );
@@ -1895,9 +1897,16 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> finishRide() async {
+  /// Motivo da recusa do codigo da entrega (aparece na janela do codigo).
+  String? erroDaEntrega;
+
+  /// Encerra a corrida. Entrega (Etapa 5): manda o codigo de 4 numeros que
+  /// quem recebe disse; codigo errado volta false com o motivo em
+  /// [erroDaEntrega]. true = encerrada.
+  Future<bool> finishRide({String? codigoEntrega}) async {
     final ride = activeRide;
-    if (ride == null) return;
+    if (ride == null) return false;
+    erroDaEntrega = null;
 
     if (AppConfig.hasApi) {
       try {
@@ -1908,6 +1917,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           if (ride.phase == RidePhase.inProgress && viagemIniciouEm != null) 'stoppedSeconds': taximetro.paradasAte(),
           if (posicaoReal) 'latitude': position.latitude,
           if (posicaoReal) 'longitude': position.longitude,
+          if (codigoEntrega != null) 'codigoEntrega': codigoEntrega,
         });
         if (r is Map<String, dynamic>) {
           valorFinalCents = (r['finalFareCents'] as num?)?.toInt();
@@ -1916,8 +1926,13 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         // A taxa da Central acabou de sair da carteira: busca o saldo novo.
         unawaited(carregarCarteira());
       } on ApiException catch (e) {
-        _avisar(e.message);
-        return;
+        if (ride.offer.entrega != null) {
+          erroDaEntrega = e.message;
+          notifyListeners();
+        } else {
+          _avisar(e.message);
+        }
+        return false;
       }
     }
     _pararVigia();
@@ -1927,6 +1942,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     );
     await _persistRide();
     notifyListeners();
+    return true;
   }
 
   /// Confirma o recebimento e libera o motorista para a proxima oferta.

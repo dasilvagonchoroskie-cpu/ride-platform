@@ -24,7 +24,10 @@ import 'map_pick_screen.dart';
 /// - "Escolher no mapa" com o alfinete fixo;
 /// - a mesma "sessao" de busca enquanto a tela esta aberta.
 class DestinoSheet extends StatefulWidget {
-  const DestinoSheet({super.key, this.parada = false});
+  const DestinoSheet({super.key, this.parada = false, this.titulo});
+
+  /// Entrega (Etapa 5): "Endereço de coleta" / "Endereço de entrega" (sem "Ir sem destino").
+  final String? titulo;
 
   /// Escolhendo uma parada no caminho (sem "Ir sem destino").
   final bool parada;
@@ -39,13 +42,13 @@ class DestinoSheet extends StatefulWidget {
   static bool ehSemDestino(PlaceSuggestion? p) => p != null && identical(p, semDestino);
 
   /// Abre a busca. null = fechou sem escolher.
-  static Future<PlaceSuggestion?> abrir(BuildContext context, {bool parada = false}) {
+  static Future<PlaceSuggestion?> abrir(BuildContext context, {bool parada = false, String? titulo}) {
     return showModalBottomSheet<PlaceSuggestion>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0x66000000),
-      builder: (_) => DestinoSheet(parada: parada),
+      builder: (_) => DestinoSheet(parada: parada, titulo: titulo),
     );
   }
 
@@ -152,7 +155,7 @@ class _DestinoSheetState extends State<DestinoSheet> {
   Future<void> _marcarNoMapa() async {
     final origem = context.read<AppState>().coords;
     final lugar = await Navigator.of(context).push<PlaceSuggestion>(
-      MaterialPageRoute<PlaceSuggestion>(builder: (_) => MapPickScreen(inicio: origem, parada: widget.parada)),
+      MaterialPageRoute<PlaceSuggestion>(builder: (_) => MapPickScreen(inicio: origem, parada: widget.parada || widget.titulo != null)),
     );
     if (lugar != null && mounted) Navigator.of(context).pop(lugar);
   }
@@ -314,12 +317,16 @@ class _DestinoSheetState extends State<DestinoSheet> {
                 ),
               ),
               const SizedBox(height: Spacing.lg),
-              if (widget.parada) ...[
-                Text('Adicionar parada', style: SheetText.title),
+              if (widget.parada || widget.titulo != null) ...[
+                Text(widget.titulo ?? 'Adicionar parada', style: SheetText.title),
                 const SizedBox(height: Spacing.sm),
               ],
               AppField(
-                hint: widget.parada ? 'Digite a parada (rua, bairro ou lugar)' : 'Digite o destino (rua, bairro ou lugar)',
+                hint: widget.titulo != null
+                    ? 'Digite o endereço (rua, bairro ou lugar)'
+                    : widget.parada
+                        ? 'Digite a parada (rua, bairro ou lugar)'
+                        : 'Digite o destino (rua, bairro ou lugar)',
                 controller: _controller,
                 autofocus: true,
                 onLight: true,
@@ -332,7 +339,7 @@ class _DestinoSheetState extends State<DestinoSheet> {
                 subtitulo: 'Para quando a busca não achar o lugar',
                 aoTocar: _marcarNoMapa,
               ),
-              if (!widget.parada)
+              if (!widget.parada && widget.titulo == null)
                 _Atalho(
                   icone: Icons.local_taxi_outlined,
                   titulo: 'Ir sem destino',

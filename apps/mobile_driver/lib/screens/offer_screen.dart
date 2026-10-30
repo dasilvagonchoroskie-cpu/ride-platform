@@ -165,19 +165,30 @@ class OfferScreen extends StatelessWidget {
                               color: AppColors.sheetField,
                               borderRadius: BorderRadius.circular(Radii.sm),
                             ),
+                            // Letra grande no celular (ou valor alto): encolhe em vez
+                            // de passar da tela.
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('VALOR DA CORRIDA', style: SheetText.label),
-                                    Text(
-                                      formatMoney(offer.fareCents),
-                                      style: SheetText.title.copyWith(fontSize: 28),
-                                    ),
-                                  ],
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(offer.entrega != null ? 'VALOR DA ENTREGA' : 'VALOR DA CORRIDA', style: SheetText.label),
+                                      ),
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          formatMoney(offer.fareCents),
+                                          style: SheetText.title.copyWith(fontSize: 28),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: Spacing.sm),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
@@ -203,6 +214,33 @@ class OfferScreen extends StatelessWidget {
 
                           const SizedBox(height: Spacing.md),
 
+                          // Etapa 5: entrega de encomenda, bem marcada.
+                          if (offer.entrega != null) ...[
+                            Container(
+                              key: const ValueKey('chamado-entrega'),
+                              padding: const EdgeInsets.all(Spacing.sm),
+                              decoration: BoxDecoration(
+                                color: AppColors.brandSoft,
+                                borderRadius: BorderRadius.circular(Radii.sm),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.inventory_2_outlined, color: AppColors.brand),
+                                  const SizedBox(width: Spacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      'ENTREGA · ${offer.entrega!.descricao}',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.heading.copyWith(color: AppColors.brand, fontSize: 16),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: Spacing.sm),
+                          ],
+
                           // Rota primeiro: e o que decide o aceite.
                           Row(
                             children: [
@@ -210,7 +248,9 @@ class OfferScreen extends StatelessWidget {
                               const SizedBox(width: Spacing.md),
                               Expanded(
                                 child: Text(
-                                  '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
+                                  offer.entrega != null
+                                      ? '${formatDistance(offer.distanceToPickupMeters.toDouble())} até a coleta'
+                                      : '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
                                   style: SheetText.body,
                                 ),
                               ),

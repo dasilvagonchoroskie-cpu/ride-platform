@@ -10,6 +10,7 @@ import '../state/config_state.dart';
 import '../state/ride_state.dart';
 import '../widgets/compartilhar_viagem.dart';
 import '../widgets/corrida_ui.dart';
+import '../widgets/entrega_ui.dart';
 import '../widgets/motorista_ui.dart';
 import 'sos_screen.dart';
 import '../widgets/ride_map.dart';
@@ -143,7 +144,7 @@ class RideScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const AlcaFolha(),
-                    Text('Em viagem', style: AppText.title.copyWith(fontSize: 22, color: AppColors.text)),
+                    Text(corrida.ehEntrega ? 'Levando a encomenda' : 'Em viagem', style: AppText.title.copyWith(fontSize: 22, color: AppColors.text)),
                     const SizedBox(height: Spacing.xs),
                     Text(
                       corrida.dropoff.address,
@@ -151,6 +152,10 @@ class RideScreen extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppText.body.copyWith(color: AppColors.textMuted),
                     ),
+                    if (corrida.entrega != null) ...[
+                      const SizedBox(height: Spacing.sm),
+                      CartaoDaEntrega(entrega: corrida.entrega!),
+                    ],
                     // Etapa 3: paradas no caminho.
                     for (var i = 0; i < corrida.paradas.length; i++)
                       Text(

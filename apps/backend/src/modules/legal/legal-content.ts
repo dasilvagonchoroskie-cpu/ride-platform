@@ -65,6 +65,20 @@ Passageiro e motorista podem cancelar uma corrida antes do embarque. Cancelament
 
 Durante a corrida, passageiro e motorista têm o botão SOS, que envia a localização na hora para a Central. O passageiro pode compartilhar a viagem com familiares por um link com o mapa ao vivo.
 
+## 7-A. Entregas de encomendas — TEXTO PROVISÓRIO (em revisão jurídica)
+
+*Este item ainda está em revisão e pode mudar antes de a entrega ser ligada na sua cidade. Enquanto a Central não ligar, a entrega não aparece no aplicativo.*
+
+Quando a Central liga a entrega na cidade, o cliente pode pedir que um motorista parceiro leve uma encomenda de um endereço a outro. A entrega segue as mesmas regras da corrida (preço, pagamento direto ao motorista, cancelamento e segurança), com a tarifa própria de entrega mostrada antes de confirmar, e mais estas:
+
+- **Itens proibidos:** dinheiro em espécie, cheques, cartões e títulos; joias e objetos de alto valor; armas, munição, explosivos e fogos de artifício; produtos inflamáveis, tóxicos ou corrosivos (gás, combustível, ácidos); drogas e substâncias ilícitas; medicamentos controlados sem receita; bebida alcoólica ou cigarro para menores de 18 anos; animais vivos; produtos falsificados, roubados ou de origem ilícita; e qualquer item proibido por lei. Vale também o item 3 destes Termos.
+- **Peso e tamanho (provisório):** de carro, até 10 kg e que caiba no porta-malas; de moto, até 5 kg e até 40 × 40 × 40 cm, levado em baú ou bolsa do motorista.
+- **Embalagem:** o cliente entrega o item fechado e embalado. O motorista pode recusar item mal embalado, acima do limite ou que pareça proibido.
+- **Descrição verdadeira:** o cliente descreve o que vai ser levado e responde, civil e criminalmente, pelo conteúdo, nos termos do item 3.
+- **Código de entrega:** a entrega só termina quando quem recebe diz ao motorista o código de 4 números que o cliente recebeu no aplicativo. Sem o código, o motorista não entrega.
+- **Ninguém para receber (provisório):** o motorista espera alguns minutos (tempo parado cobrado) e, sem ninguém, combina com o cliente a devolução, cobrada como uma nova viagem.
+- **Dano ou extravio (provisório):** a plataforma é intermediária e não faz seguro das encomendas. O motorista parceiro responde pelo dano ou extravio que causar, comprovado, até o limite que a plataforma informar; o cliente responde pela embalagem e pela descrição. Itens proibidos não têm qualquer cobertura.
+
 ## 8. Suspensão e encerramento de conta
 
 A plataforma pode suspender ou encerrar contas que violem estes Termos, incluindo o uso da plataforma para fins ilícitos, fraude, agressão ou comportamento que coloque em risco outros usuários. O usuário pode excluir a própria conta a qualquer momento, pelo aplicativo.
@@ -106,6 +120,8 @@ Esta Política explica como a Fortaleza Move coleta, usa e protege os dados pess
 **Do aparelho:** o identificador de notificações (para os avisos chegarem ao celular), o modelo do aparelho e a versão do aplicativo, para segurança e suporte. Não coletamos contatos da agenda, mensagens SMS, fotos da galeria (só a foto que você escolher enviar) nem o histórico de outros aplicativos.
 
 **Contatos de emergência (opcional):** nome e telefone das pessoas que o passageiro cadastrar, para avisá-las em caso de SOS.
+
+**Entregas (TEXTO PROVISÓRIO, em revisão):** quando o cliente pede uma entrega, ele informa o nome e o telefone de quem recebe e a descrição do item. Esses dados são usados só para fazer aquela entrega: o motorista parceiro vê o nome, o telefone e a descrição para entregar; o código de entrega só aparece para o cliente e para a Central. Ficam guardados junto com a corrida, pelo mesmo prazo do histórico, e são apagados com ela. Quem recebe pode pedir a exclusão pelos contatos do item 7.
 
 ## 2. Para que usamos esses dados
 

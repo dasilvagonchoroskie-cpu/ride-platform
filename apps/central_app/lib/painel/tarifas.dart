@@ -186,7 +186,7 @@ class _TarifasTelaState extends State<TarifasTela> {
             for (final cat in t.categorias)
               ChoiceChip(
                 avatar: Icon(iconeDaCategoria(cat.icone), size: 18),
-                label: Text(cat.ativa ? cat.nome : '${cat.nome} (desligada)'),
+                label: Text(cat.ativa || cat.codigo == 'ENTREGA' ? cat.nome : '${cat.nome} (desligada)'),
                 selected: _nova == null && _codigo == cat.codigo,
                 onSelected: (_) => setState(() {
                   _codigo = cat.codigo;
@@ -270,7 +270,16 @@ class _TarifasTelaState extends State<TarifasTela> {
                 valor: c.multiplicador.toString().replaceAll('.', ','),
                 aoMudar: (v) => c.multiplicador = v.clamp(0.5, 5).toDouble(),
               ),
-              if (c.codigo != 'CARRO')
+              // Etapa 5: a "Entrega" e tarifa (liga e desliga no menu Entregas).
+              if (c.codigo == 'ENTREGA')
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+                  child: Text(
+                    'Tarifa das entregas de encomendas. Ela não aparece como opção de corrida. Liga e desliga por cidade no menu Entregas.',
+                    style: AppText.caption.copyWith(color: AppColors.brand, fontWeight: FontWeight.w600),
+                  ),
+                )
+              else if (c.codigo != 'CARRO')
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: c.ativa,
@@ -370,6 +379,8 @@ IconData iconeDaCategoria(String icone) {
       return Icons.workspace_premium;
     case 'van':
       return Icons.airport_shuttle;
+    case 'entrega':
+      return Icons.inventory_2_outlined;
     default:
       return Icons.directions_car;
   }

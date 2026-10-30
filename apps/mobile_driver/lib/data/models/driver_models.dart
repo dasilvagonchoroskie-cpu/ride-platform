@@ -221,7 +221,11 @@ class RideOffer {
     this.expiresInSeconds = 30,
     this.paradas = const [],
     this.semDestino = false,
+    this.entrega,
   });
+
+  /// Etapa 5 (30/10/2026): entrega de encomenda (null = corrida de passageiro).
+  final EntregaDoChamado? entrega;
 
   /// Etapa 3 (29/10/2026): paradas no caminho, na ordem.
   final List<ParadaDaCorrida> paradas;
@@ -270,7 +274,35 @@ class RideOffer {
         expiresInSeconds: expiresInSeconds,
         paradas: paradas,
         semDestino: semDestino,
+        entrega: entrega,
       );
+}
+
+/// Entrega de encomenda vista pelo motorista: o que vai e quem recebe. O
+/// codigo de 4 numeros ele NAO recebe: pede a quem recebe e digita no fim.
+class EntregaDoChamado {
+  const EntregaDoChamado({required this.descricao, required this.destinatarioNome, this.destinatarioTelefone = ''});
+
+  final String descricao;
+  final String destinatarioNome;
+
+  /// So numeros, com 55 e DDD.
+  final String destinatarioTelefone;
+
+  static EntregaDoChamado? ler(Object? v) {
+    if (v is! Map) return null;
+    return EntregaDoChamado(
+      descricao: v['descricao']?.toString() ?? '',
+      destinatarioNome: v['destinatarioNome']?.toString() ?? '',
+      destinatarioTelefone: v['destinatarioTelefone']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'descricao': descricao,
+        'destinatarioNome': destinatarioNome,
+        'destinatarioTelefone': destinatarioTelefone,
+      };
 }
 
 /// Uma parada no caminho (etapa 3).
@@ -332,6 +364,7 @@ class DriverRide {
         'dropoffAddress': offer.dropoffAddress,
         'paradas': [for (final p in offer.paradas) p.toJson()],
         'semDestino': offer.semDestino,
+        if (offer.entrega != null) 'entrega': offer.entrega!.toJson(),
       };
 
   factory DriverRide.fromJson(Map<String, dynamic> json) => DriverRide(
@@ -352,6 +385,7 @@ class DriverRide {
           paymentMethod: 'Pix',
           paradas: ParadaDaCorrida.lista(json['paradas']),
           semDestino: json['semDestino'] == true,
+          entrega: EntregaDoChamado.ler(json['entrega']),
         ),
         phase: RidePhase.values.firstWhere(
           (p) => p.name == json['phase'],

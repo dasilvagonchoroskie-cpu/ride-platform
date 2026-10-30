@@ -8,6 +8,7 @@ import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { CreateVehicleInput, UpdateVehicleInput } from '@ride/shared';
 import { decodificarFoto, soArquivosDoBanco } from '../arquivos/arquivos.service';
 import { lerCategorias } from '../rides/categorias';
+import { ehEntrega } from '../entregas/entregas.regras';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import {
   CHAVE_VEICULOS,
@@ -85,7 +86,8 @@ export class VehiclesService {
 
   /** Lista para o motorista escolher (todas: a Central liga a categoria na cidade quando houver carro). */
   async categoriasParaEscolher() {
-    return (await lerCategorias(this.prisma)).map((c) => ({
+    // "Entrega" e tarifa, nao categoria de carro (Etapa 5).
+    return (await lerCategorias(this.prisma)).filter((c) => !ehEntrega(c.codigo)).map((c) => ({
       codigo: c.codigo,
       nome: c.nome,
       icone: c.icone,
@@ -98,7 +100,7 @@ export class VehiclesService {
   private async categoriaQueExiste(codigo: string): Promise<string> {
     const c = codigo.trim().toUpperCase();
     const lista = await lerCategorias(this.prisma);
-    if (!lista.some((x) => x.codigo === c)) throw BusinessException.validation('Categoria nao encontrada. Escolha uma da lista.');
+    if (ehEntrega(c) || !lista.some((x) => x.codigo === c)) throw BusinessException.validation('Categoria nao encontrada. Escolha uma da lista.');
     return c;
   }
 

@@ -528,7 +528,12 @@ class Ride {
     this.category,
     this.semDestino = false,
     this.paradas = const [],
+    this.entrega,
   });
+
+  /// Etapa 5 (30/10/2026): entrega de encomenda (null = corrida de passageiro).
+  final EntregaDaCorrida? entrega;
+  bool get ehEntrega => entrega != null || category == 'ENTREGA';
 
   /// Etapa 3 (29/10/2026): corrida sem destino — vai pelo taximetro e o valor
   /// mostrado e so estimado.
@@ -618,6 +623,7 @@ class Ride {
         category: category,
         semDestino: semDestino,
         paradas: paradas,
+        entrega: entrega,
       );
 
   Map<String, dynamic> toJson() => {
@@ -658,6 +664,7 @@ class Ride {
         'paradas': [
           for (final p in paradas) {'address': p.address, ...p.coords.toJson()},
         ],
+        if (entrega != null) 'entrega': entrega!.toJson(),
       };
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -719,6 +726,7 @@ class Ride {
       category: json['category'] as String?,
       semDestino: json['semDestino'] == true,
       paradas: _lerParadas(json['paradas']),
+      entrega: EntregaDaCorrida.ler(json['entrega']),
     );
   }
 
@@ -789,6 +797,7 @@ class Ride {
       category: j['category'] as String?,
       semDestino: j['semDestino'] == true || j['dropoffPlaceId'] == 'SEM_DESTINO',
       paradas: _lerParadas(j['paradas']),
+      entrega: EntregaDaCorrida.ler(j['entrega']),
     );
   }
 
@@ -1061,4 +1070,52 @@ class Notificacao {
         criadaEm: DateTime.tryParse(j['criadaEm'] as String? ?? '')?.toLocal() ?? DateTime.now(),
         lida: j['lida'] == true,
       );
+}
+
+/// Entrega de encomenda (Etapa 5, 30/10/2026): o que vai, quem recebe e o
+/// codigo de 4 numeros que quem recebe diz ao motorista.
+class EntregaDaCorrida {
+  const EntregaDaCorrida({
+    required this.descricao,
+    required this.destinatarioNome,
+    required this.destinatarioTelefone,
+    this.codigo,
+    this.coletadaEm,
+    this.entregueEm,
+  });
+
+  final String descricao;
+  final String destinatarioNome;
+
+  /// So numeros, com 55 e DDD.
+  final String destinatarioTelefone;
+  final String? codigo;
+  final String? coletadaEm;
+  final String? entregueEm;
+
+  static EntregaDaCorrida? ler(Object? v) {
+    if (v is! Map) return null;
+    return EntregaDaCorrida(
+      descricao: v['descricao']?.toString() ?? '',
+      destinatarioNome: v['destinatarioNome']?.toString() ?? '',
+      destinatarioTelefone: v['destinatarioTelefone']?.toString() ?? '',
+      codigo: v['codigo']?.toString(),
+      coletadaEm: v['coletadaEm']?.toString(),
+      entregueEm: v['entregueEm']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'descricao': descricao,
+        'destinatarioNome': destinatarioNome,
+        'destinatarioTelefone': destinatarioTelefone,
+        if (codigo != null) 'codigo': codigo,
+        if (coletadaEm != null) 'coletadaEm': coletadaEm,
+        if (entregueEm != null) 'entregueEm': entregueEm,
+      };
+
+  /// Mensagem pronta para quem recebe (WhatsApp).
+  String mensagemParaQuemRecebe(String nomeDoApp) =>
+      'Olá, $destinatarioNome! Uma entrega da $nomeDoApp está indo até você ($descricao). '
+      'Quando o motorista chegar, diga a ele este código: $codigo';
 }

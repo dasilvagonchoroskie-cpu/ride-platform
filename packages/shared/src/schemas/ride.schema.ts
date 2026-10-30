@@ -60,6 +60,20 @@ export const requestRideSchema = z.object({
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
   /** Medida assinada do orcamento: a rota nao e pedida de novo a TomTom. */
   cotacao: z.string().max(2000).optional(),
+  /**
+   * Etapa 5 (30/10/2026): entrega de encomenda. Com isto a corrida vira
+   * entrega (categoria ENTREGA): coleta = embarque, entrega = destino.
+   */
+  entrega: z
+    .object({
+      descricao: z.string().trim().min(3, 'Diga o que vai ser levado.').max(200, 'Descrição muito longa (até 200 letras).'),
+      destinatarioNome: z.string().trim().min(2, 'Nome de quem recebe muito curto.').max(120),
+      destinatarioTelefone: z
+        .string()
+        .trim()
+        .refine((t) => /^\d{10,13}$/.test(t.replace(/\D/g, '')), 'Telefone de quem recebe com DDD (só números).'),
+    })
+    .optional(),
 }).refine(comDestinoOuSem, AVISO_DESTINO);
 
 export const cancelRideSchema = z.object({
@@ -84,6 +98,8 @@ export const finishRideSchema = z.object({
   /** Onde a viagem terminou (confere a medicao do taximetro). */
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  /** Entrega: o codigo de 4 digitos que a pessoa que recebe tem. */
+  codigoEntrega: z.string().trim().max(10).optional(),
 });
 
 /** Taximetro ao vivo: o que o celular do motorista mediu ate agora. */

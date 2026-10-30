@@ -9,7 +9,7 @@ export const CHAVE_CATEGORIAS = 'tarifas.categorias';
 export const CHAVE_MULTIPLICADOR = 'tarifas.multiplicador';
 
 /** Desenho da categoria no app (o passageiro escolhe pela figura). */
-export const ICONES = ['carro', 'conforto', 'premium', 'moto', 'van'] as const;
+export const ICONES = ['carro', 'conforto', 'premium', 'moto', 'van', 'entrega'] as const;
 export type IconeDaCategoria = (typeof ICONES)[number];
 
 export interface Categoria {

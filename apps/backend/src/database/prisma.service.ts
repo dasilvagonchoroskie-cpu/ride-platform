@@ -89,6 +89,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     /** So motoristas com veiculo ativo desta categoria (CARRO, MOTO...). */
     category?: string;
     /**
+     * Entrega (Etapa 5): em vez da categoria, o tipo de veiculo que a cidade
+     * liberou — CARRO (qualquer carro), MOTO ou TODOS.
+     */
+    veiculos?: 'CARRO' | 'MOTO' | 'TODOS';
+    /**
      * Corrida do teste automatico so vai para motorista do teste, e corrida
      * de verdade nunca vai para motorista do teste (Evandro, 08/10/2026: o
      * celular dele tocou chamado de teste na rua).
@@ -98,6 +103,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const limit = params.limit ?? 20;
     const categoria = params.category ?? 'CARRO';
     const teste = params.teste === true;
+    // '' = filtra pela categoria; senao pelo tipo de veiculo da entrega.
+    const veiculos = params.veiculos ?? '';
     return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number }>>`
       SELECT
         dl.driver_id                     AS "driverId",
@@ -114,7 +121,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         AND dl.last_seen_at > NOW() - INTERVAL '2 minutes'
         AND EXISTS (
           SELECT 1 FROM vehicles v
-          WHERE v.driver_id = d.id AND v.is_active = TRUE AND v.category = ${categoria}
+          WHERE v.driver_id = d.id AND v.is_active = TRUE
+            AND (
+              (${veiculos} = '' AND v.category = ${categoria})
+              OR ${veiculos} = 'TODOS'
+              OR (${veiculos} = 'MOTO' AND UPPER(v.category) LIKE '%MOTO%')
+              OR (${veiculos} = 'CARRO' AND UPPER(v.category) NOT LIKE '%MOTO%')
+            )
         )
         AND ST_DWithin(
           dl.location,

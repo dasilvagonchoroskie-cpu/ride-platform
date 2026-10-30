@@ -830,7 +830,7 @@ class Categoria {
       ativa: j['ativa'] != false,
       diurna: Bandeira((j['diurna'] as Map).cast<String, dynamic>()),
       noturna: Bandeira((j['noturna'] as Map).cast<String, dynamic>()),
-      icone: iconesDeCategoria.contains(icone) ? icone : (moto ? 'moto' : 'carro'),
+      icone: iconesDeCategoria.contains(icone) || icone == 'entrega' ? icone : (moto ? 'moto' : 'carro'),
       descricao: _txt(j['descricao']),
       capacidade: j['capacidade'] == null ? (moto ? 1 : 4) : _int(j['capacidade']),
       multiplicador: _num(j['multiplicador']) ?? 1,
