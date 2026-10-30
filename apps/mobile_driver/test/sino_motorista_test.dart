@@ -163,7 +163,8 @@ void main() {
     expect(caixa.pedidos, contains('POST /api/notificacoes/lidas {}'), reason: 'abriu a lista: marca todas como lidas');
     expect(d.naoLidas, 0);
 
-    await tester.pageBack();
+    // Voltar (em portugues a seta se chama "Voltar").
+    await tester.tap(find.byType(BackButton));
     await _pump(tester, 8);
     expect(_pontoDoSino(tester), isFalse, reason: 'o ponto some ao abrir');
 
@@ -229,11 +230,11 @@ void main() {
     expect(caixa.naoLidas, 0);
 
     await tester.tap(find.text('Apagar todas'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
     expect(find.text('4 notificações apagadas.'), findsOneWidget);
     expect(find.text('Chegou agora'), findsNothing);
     await tester.tap(find.text('DESFAZER'));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
     expect(find.text('Chegou agora'), findsOneWidget);
 
     await tester.tap(find.text('Apagar todas'));

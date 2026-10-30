@@ -125,41 +125,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _PilulaMenu(onTap: () => _abrir(const MenuScreen())),
-                  const Spacer(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _PilulaGanhos(
-                        valor: dinheiro(driver.ganhosHojeCents, oculto: driver.ocultarValores),
-                        onTap: () => _abrir(const ActivityScreen()),
-                      ),
-                      const SizedBox(height: Spacing.md),
-                      // Ponto vermelho = nao lidas contadas pelo servidor
-                      // (some ao abrir e nao volta sozinho).
-                      BotaoRedondo(
-                        icone: Icons.notifications,
-                        marcado: driver.naoLidas > 0,
-                        onTap: () => _abrir(const AvisosScreen()),
-                      ),
-                      const SizedBox(height: Spacing.md),
-                      // Botao de panico sempre a mao.
-                      Material(
-                        color: AppColors.danger,
-                        shape: const CircleBorder(),
-                        elevation: 3,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => _abrir(const SosScreen()),
-                          child: const SizedBox(
-                            width: 52,
-                            height: 52,
-                            child: Center(
-                              child: Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                  const SizedBox(width: Spacing.sm),
+                  // Ganho grande em celular pequeno (ou letra grande): encolhe
+                  // em vez de passar da tela.
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _PilulaGanhos(
+                          valor: dinheiro(driver.ganhosHojeCents, oculto: driver.ocultarValores),
+                          onTap: () => _abrir(const ActivityScreen()),
+                        ),
+                        const SizedBox(height: Spacing.md),
+                        // Ponto vermelho = nao lidas contadas pelo servidor
+                        // (some ao abrir e nao volta sozinho).
+                        BotaoRedondo(
+                          icone: Icons.notifications,
+                          marcado: driver.naoLidas > 0,
+                          onTap: () => _abrir(const AvisosScreen()),
+                        ),
+                        const SizedBox(height: Spacing.md),
+                        // Botao de panico sempre a mao.
+                        Material(
+                          color: AppColors.danger,
+                          shape: const CircleBorder(),
+                          elevation: 3,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _abrir(const SosScreen()),
+                            child: const SizedBox(
+                              width: 52,
+                              height: 52,
+                              child: Center(
+                                child: Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -260,7 +264,12 @@ class _PilulaGanhos extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(valor, style: AppText.heading.copyWith(fontSize: 21, fontWeight: FontWeight.w700)),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(valor, style: AppText.heading.copyWith(fontSize: 21, fontWeight: FontWeight.w700)),
+                ),
+              ),
               const SizedBox(width: Spacing.sm),
               const Icon(Icons.chevron_right, color: AppColors.text),
             ],

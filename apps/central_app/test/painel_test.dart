@@ -1285,7 +1285,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Cortar chamados de quem ficar sem saldo no meio do turno'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Joao Batista da Silva Pereira Junior'));
+    // 30/10/2026: o card do aviso de saldo empurrou a lista para baixo.
+    await tester.scrollUntilVisible(find.text('Joao Batista da Silva Pereira Junior'), 300, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Joao Batista da Silva Pereira Junior'));
     await _carregar(tester);
