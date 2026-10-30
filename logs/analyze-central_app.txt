@@ -1,2 +1,5 @@
 Analyzing central_app...                                        
-No issues found! (ran in 10.4s)
+
+  error • The element type 'String?' can't be assigned to the map value type 'String' • lib/painel/entregas.dart:94:99 • map_value_type_not_assignable
+
+1 issue found. (ran in 7.2s)
