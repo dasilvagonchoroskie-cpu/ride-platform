@@ -128,11 +128,14 @@ fortaleza-mov. Para o teste de restauração acima, não precisa.
 ## 5. Mandar os ícones e as 20 ruas
 
 **Ícones** — aqui no chat, como arquivo:
-- 2 imagens PNG: símbolo do **passageiro** e do **motorista**;
-- **fundo transparente** (só o desenho), **1024 x 1024** px, desenho
-  quadrado, em cor que apareça bem sobre o azul #0070B8 (ex.: branco).
-Eu gero o Android (adaptativo e redondo), o iPhone (18 tamanhos + 1024 da
-App Store) e o 512 da Google Play, e aviso se alguma imagem fugir disso.
+- 3 imagens PNG: símbolo do **passageiro**, do **motorista** e da **Central**
+  (amarelos, como combinado em 30/10);
+- **fundo transparente** (só o desenho), de preferência **1024 x 1024** px.
+  Se vier com fundo branco, eu removo e aviso.
+Eu gero, com fundo azul #0070B8 e o símbolo a ~60% do ícone: Android
+(adaptativo, redondo, legado e o monocromático do Android 13+), iPhone (18
+tamanhos + 1024 da App Store) e o 512 da Google Play. Mando uma prévia de
+como fica em cada formato de celular antes dos APKs.
 
 **20 ruas de Goiatuba** — uma por linha, como o passageiro digitaria (ex.:
 "Rua Goiás 150", "Avenida Brasília", "Rodoviária"). Eu rodo a busca de cada

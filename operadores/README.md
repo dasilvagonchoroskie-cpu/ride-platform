@@ -13,9 +13,10 @@ bash scripts/novo-app.sh --operador goiatuba --nome "Goiatuba Mov" --cor "#12AB3
 - `--pacote`: vira `<pacote>.passageiro` e `<pacote>.motorista` na Google Play.
   Depois de publicado, não muda nunca.
 - Ícones: PNG com fundo transparente (só o desenho). A esteira monta o ícone
-  adaptativo com o símbolo a ~60% sobre `--fundo` (padrão #0070B8); no
-  motorista o símbolo fica menor (50%) e centralizado. Sem ícone, fica o da
-  Fortaleza Move.
+  adaptativo com o símbolo a ~60% do ícone que aparece no celular, sobre
+  `--fundo` (padrão #0070B8), mais o redondo, o legado e o monocromático do
+  Android 13+. Fundo branco (ou xadrez desenhado) é removido sozinho, com
+  aviso. Sem ícone, fica o da Fortaleza Move.
 - `--api`: servidor do operador (padrão: o da Fortaleza Move).
 - `--enviar`: grava no GitHub e roda a esteira **App de operador**.
 
