@@ -11,6 +11,11 @@ import 'painel_state.dart';
 
 /// Precificacao: cada categoria com as duas bandeiras (diurna e noturna) e
 /// o multiplicador dinamico (cidade toda ou zonas).
+///
+/// Categorias por cidade (Evandro, 29/10/2026): com uma cidade escolhida no
+/// topo da Central, ligar/desligar, multiplicador e valores valem so naquela
+/// cidade ("Voltar ao padrão" tira o ajuste). Em "Todas as cidades" fica o
+/// padrao, com nome, figura, texto e lugares (iguais em todas).
 class TarifasTela extends StatefulWidget {
   const TarifasTela({super.key});
 
@@ -26,21 +31,40 @@ class _TarifasTelaState extends State<TarifasTela> {
   bool _salvando = false;
   Categoria? _nova;
 
+  /// Cidade pedida no ultimo carregamento (a do topo da Central).
+  String? _cidadePedida;
+  bool _carregando = false;
+
   PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
+
+  /// Cidade cujos valores estao na tela (operador: sempre a dele).
+  String? get _cidade => _t?.praca;
 
   @override
   void initState() {
     super.initState();
+    _cidadePedida = Provider.of<PainelState>(context, listen: false).api.praca;
     _carregar();
   }
 
   Future<void> _carregar() async {
-    setState(() => _erro = null);
+    setState(() {
+      _erro = null;
+      _carregando = true;
+    });
     try {
-      final t = await _api.tarifas();
-      if (mounted) setState(() => _t = t);
+      final t = await _api.tarifas(cidade: _cidadePedida);
+      if (mounted) {
+        setState(() {
+          _t = t;
+          _nova = null;
+          if (!t.categorias.any((c) => c.codigo == _codigo)) _codigo = 'CARRO';
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _erro = '$e');
+    } finally {
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
@@ -68,7 +92,7 @@ class _TarifasTelaState extends State<TarifasTela> {
     }
     setState(() => _salvando = true);
     try {
-      final t = await _api.salvarCategoria(c.codigo, c);
+      final t = await _api.salvarCategoria(c.codigo, c, cidade: _cidade);
       if (!mounted) return;
       final nome = c.nome.trim().toLowerCase();
       setState(() {
@@ -76,7 +100,26 @@ class _TarifasTelaState extends State<TarifasTela> {
         _codigo = t.categorias.firstWhere((x) => x.nome.toLowerCase() == nome, orElse: () => t.categorias.first).codigo;
         _nova = null;
       });
-      avisar(context, 'Tarifas de ${c.nome} salvas. Valem a partir da próxima corrida.');
+      avisar(context, _cidade == null
+          ? 'Tarifas de ${c.nome} salvas. Valem a partir da próxima corrida.'
+          : 'Tarifas de ${c.nome} salvas só nesta cidade. Valem a partir da próxima corrida.');
+    } catch (e) {
+      if (mounted) avisar(context, mensagemDe(e), erro: true);
+    } finally {
+      if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  Future<void> _voltarAoPadrao() async {
+    final c = _atual!;
+    final cidade = _cidade;
+    if (cidade == null) return;
+    setState(() => _salvando = true);
+    try {
+      final t = await _api.voltarCategoriaAoPadrao(c.codigo, cidade);
+      if (!mounted) return;
+      setState(() => _t = t);
+      avisar(context, '${c.nome} voltou aos valores padrão nesta cidade.');
     } catch (e) {
       if (mounted) avisar(context, mensagemDe(e), erro: true);
     } finally {
@@ -86,24 +129,57 @@ class _TarifasTelaState extends State<TarifasTela> {
 
   @override
   Widget build(BuildContext context) {
+    // Trocou a cidade no topo da Central: carrega os valores dela.
+    final cidadeDoTopo = context.select<PainelState, String?>((p) => p.api.praca);
+    if (cidadeDoTopo != _cidadePedida && !_carregando) {
+      _cidadePedida = cidadeDoTopo;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _carregar();
+      });
+    }
     if (_erro != null) return Aviso(texto: 'Não foi possível carregar as tarifas: $_erro', tentarDeNovo: _carregar);
     final t = _t;
     if (t == null) return const Center(child: CircularProgressIndicator());
     final c = _atual!;
     final b = _noturna ? c.noturna : c.diurna;
-    final k = '${c.codigo}-${_noturna ? 'n' : 'd'}-${_nova == null ? 'x' : 'novo'}';
+    final k = '${c.codigo}-${_noturna ? 'n' : 'd'}-${_nova == null ? 'x' : 'novo'}-${t.praca ?? 'todas'}';
+    final naCidade = t.praca != null;
+    final nomeDaCidade = Provider.of<PainelState>(context, listen: false).eu?.pracas.where((p) => p.id == t.praca).firstOrNull?.rotulo ?? t.praca;
 
     return ListView(
       padding: const EdgeInsets.all(Spacing.md),
       children: [
         _Cobranca(t: t, api: _api, aoSalvar: (novo) => setState(() => _t = novo)),
         const SizedBox(height: Spacing.md),
+        Container(
+          padding: const EdgeInsets.all(Spacing.sm),
+          decoration: BoxDecoration(
+            color: naCidade ? AppColors.brandSoft : AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(Radii.md),
+          ),
+          child: Row(
+            children: [
+              Icon(naCidade ? Icons.location_city : Icons.public, size: 20, color: naCidade ? AppColors.brand : AppColors.textMuted),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Text(
+                  naCidade
+                      ? 'Categorias e valores de $nomeDaCidade. O que você salvar aqui vale só nesta cidade.'
+                      : 'Valores padrão (todas as cidades). Para mudar só uma cidade, escolha a cidade no topo.',
+                  style: AppText.caption,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: Spacing.sm),
         Wrap(
           spacing: Spacing.sm,
           runSpacing: Spacing.xs,
           children: [
             for (final cat in t.categorias)
               ChoiceChip(
+                avatar: Icon(iconeDaCategoria(cat.icone), size: 18),
                 label: Text(cat.ativa ? cat.nome : '${cat.nome} (desligada)'),
                 selected: _nova == null && _codigo == cat.codigo,
                 onSelected: (_) => setState(() {
@@ -111,7 +187,8 @@ class _TarifasTelaState extends State<TarifasTela> {
                   _nova = null;
                 }),
               ),
-            ActionChip(avatar: const Icon(Icons.add, size: 18), label: const Text('Nova categoria'), onPressed: _novaCategoria),
+            if (!naCidade)
+              ActionChip(avatar: const Icon(Icons.add, size: 18), label: const Text('Nova categoria'), onPressed: _novaCategoria),
           ],
         ),
         const SizedBox(height: Spacing.md),
@@ -121,18 +198,66 @@ class _TarifasTelaState extends State<TarifasTela> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (naCidade)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.sm),
+                  child: Text(
+                    c.daCidade ? 'Esta cidade tem valores próprios para ${c.nome}.' : '${c.nome} usa os valores padrão nesta cidade.',
+                    style: AppText.caption.copyWith(color: c.daCidade ? AppColors.brand : AppColors.textMuted, fontWeight: FontWeight.w600),
+                  ),
+                ),
               TextFormField(
                 key: ValueKey('nome-$k'),
                 initialValue: c.nome,
+                enabled: !naCidade,
                 style: AppText.body,
-                decoration: const InputDecoration(labelText: 'Nome da categoria (ex.: Carro Popular, Moto, Premium)'),
+                decoration: InputDecoration(
+                  labelText: 'Nome da categoria (ex.: Popular, Conforto, Premium, Moto)',
+                  helperText: naCidade ? 'Nome, figura, texto e lugares mudam em "Todas as cidades".' : null,
+                ),
                 onChanged: (v) => c.nome = v,
+              ),
+              if (!naCidade) ...[
+                const SizedBox(height: Spacing.sm),
+                Text('Figura no app do passageiro', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                Wrap(
+                  spacing: Spacing.xs,
+                  children: [
+                    for (final i in iconesDeCategoria)
+                      ChoiceChip(
+                        label: Icon(iconeDaCategoria(i), size: 20),
+                        tooltip: i,
+                        selected: c.icone == i,
+                        onSelected: (_) => setState(() => c.icone = i),
+                      ),
+                  ],
+                ),
+                TextFormField(
+                  key: ValueKey('desc-$k'),
+                  initialValue: c.descricao,
+                  maxLength: 120,
+                  style: AppText.body,
+                  decoration: const InputDecoration(labelText: 'Descrição curta (ex.: Carro mais novo e espaçoso)'),
+                  onChanged: (v) => c.descricao = v.trim(),
+                ),
+                _Numero(
+                  k: '$k-cap',
+                  rotulo: 'Lugares para passageiros',
+                  valor: '${c.capacidade}',
+                  aoMudar: (v) => c.capacidade = v.round().clamp(1, 20),
+                ),
+              ],
+              _Numero(
+                k: '$k-mult',
+                rotulo: 'Multiplicador da categoria (1 = normal)',
+                valor: c.multiplicador.toString().replaceAll('.', ','),
+                aoMudar: (v) => c.multiplicador = v.clamp(0.5, 5).toDouble(),
               ),
               if (c.codigo != 'CARRO')
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: c.ativa,
-                  title: const Text('Categoria ligada (aparece para pedir)', style: AppText.body),
+                  title: Text(naCidade ? 'Ligada nesta cidade (aparece para pedir)' : 'Categoria ligada (aparece para pedir)', style: AppText.body),
                   onChanged: (v) => setState(() => c.ativa = v),
                 ),
               const SizedBox(height: Spacing.sm),
@@ -194,8 +319,15 @@ class _TarifasTelaState extends State<TarifasTela> {
               FilledButton(
                 onPressed: _salvando ? null : _salvarCategoria,
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                child: Text(_salvando ? 'Salvando...' : (_nova != null ? 'Criar categoria' : 'Salvar ${c.nome}')),
+                child: Text(_salvando
+                    ? 'Salvando...'
+                    : (_nova != null ? 'Criar categoria' : (naCidade ? 'Salvar ${c.nome} nesta cidade' : 'Salvar ${c.nome}'))),
               ),
+              if (naCidade && c.daCidade)
+                TextButton(
+                  onPressed: _salvando ? null : _voltarAoPadrao,
+                  child: const Text('Voltar ao padrão nesta cidade'),
+                ),
               if (_nova != null)
                 TextButton(onPressed: () => setState(() => _nova = null), child: const Text('Desistir da nova categoria')),
             ],
@@ -207,6 +339,22 @@ class _TarifasTelaState extends State<TarifasTela> {
         const SizedBox(height: Spacing.xl),
       ],
     );
+  }
+}
+
+/// Figura de cada categoria (a mesma dos apps do passageiro e do motorista).
+IconData iconeDaCategoria(String icone) {
+  switch (icone) {
+    case 'moto':
+      return Icons.two_wheeler;
+    case 'conforto':
+      return Icons.directions_car_filled;
+    case 'premium':
+      return Icons.workspace_premium;
+    case 'van':
+      return Icons.airport_shuttle;
+    default:
+      return Icons.directions_car;
   }
 }
 

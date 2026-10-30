@@ -22,6 +22,7 @@ import 'package:central_app/painel/financeiro.dart';
 import 'package:central_app/painel/motoristas.dart';
 import 'package:central_app/painel/painel_state.dart';
 import 'package:central_app/painel/passageiros.dart';
+import 'package:central_app/painel/pedidos_categoria.dart';
 import 'package:central_app/painel/tarifas.dart';
 import 'package:central_app/painel/visao_geral.dart';
 import 'package:central_app/screens/shell_screen.dart';
@@ -116,6 +117,9 @@ bool _comPedidoExclusaoConta = false;
 /// Pedidos que a Central mandou para atender a exclusao (metodo e caminho).
 final List<String> _atendimentosExclusao = [];
 
+/// O que a Central mandou de tarifas e categorias (metodo, caminho, cidade, corpo).
+final List<String> _pedidosDeTarifa = [];
+
 /// Conta de operador de uma cidade (Teutonia), e nao o dono.
 bool _operador = false;
 
@@ -125,6 +129,26 @@ final _pracasTeste = [
 ];
 
 Object? _resposta(String metodo, String caminho, Map<String, String> q) {
+  // Categorias por cidade (29/10/2026).
+  if (caminho.startsWith('/api/admin/tariffs') && q['praca'] != null) {
+    final daCidade = !(metodo == 'DELETE');
+    return {
+      'praca': q['praca'],
+      'diurna': _bandeira('DIURNA', 6, 22),
+      'noturna': _bandeira('NOTURNA', 22, 6),
+      'categorias': [
+        {'codigo': 'CARRO', 'nome': 'Popular', 'ativa': true, 'icone': 'carro', 'descricao': 'Econômico', 'capacidade': 4, 'multiplicador': 1, 'daCidade': false, 'diurna': _bandeira('DIURNA', 6, 22), 'noturna': _bandeira('NOTURNA', 22, 6)},
+        {'codigo': 'CONFORTO', 'nome': 'Conforto', 'ativa': daCidade, 'icone': 'conforto', 'descricao': 'Carro mais novo', 'capacidade': 4, 'multiplicador': 1.1, 'daCidade': daCidade, 'diurna': _bandeira('DIURNA', 6, 22), 'noturna': _bandeira('NOTURNA', 22, 6)},
+      ],
+      'multiplicador': {'cidade': 1, 'zonas': <Object>[]},
+    };
+  }
+  if (caminho == '/api/admin/vehicles/category-requests') {
+    return [
+      {'id': 'car9', 'plate': 'QWE1R23', 'carro': 'Toyota Corolla 2024', 'driverId': _motoristaId, 'name': 'Joao Batista', 'categoriaAtual': 'CARRO', 'categoriaPedida': 'CONFORTO', 'pedidaEm': '2026-10-29T20:00:00.000Z'},
+    ];
+  }
+  if (caminho.endsWith('/category-review')) return <Object>[];
   if (caminho == '/api/admin/ao-vivo') {
     return {
       'counts': {'livres': 1, 'aCaminho': 1, 'noEmbarque': 0, 'emViagem': 1, 'offline': 1},
@@ -597,6 +621,9 @@ MockClient _servidor() => MockClient((http.Request r) async {
       if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
         _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
       }
+      if ((r.url.path.startsWith('/api/admin/tariffs') || r.url.path.endsWith('/category-review')) && r.method != 'GET') {
+        _pedidosDeTarifa.add('${r.method} ${r.url.path} ${r.url.queryParameters['praca'] ?? '-'} ${r.body}');
+      }
       if (r.url.path.startsWith('/api/admin/exclusoes/') && r.method != 'GET') {
         _atendimentosExclusao.add('${r.method} ${r.url.path}');
       }
@@ -1017,6 +1044,65 @@ void main() {
     await tester.scrollUntilVisible(find.text('Rodoviaria · 1.5x'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Rodoviaria · 1.5x'), findsOneWidget);
     expect(find.text('Multiplicador dinâmico'), findsOneWidget);
+  });
+
+  testWidgets('Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao', (tester) async {
+    _pedidosDeTarifa.clear();
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())))..api.praca = 'goiatuba';
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PainelState>.value(
+        value: painel,
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const Scaffold(body: TarifasTela()),
+        ),
+      ),
+    );
+    await _carregar(tester);
+    expect(find.textContaining('O que você salvar aqui vale só nesta cidade'), findsOneWidget);
+    expect(find.text('Nova categoria'), findsNothing, reason: 'categoria nova so em Todas as cidades');
+    await tester.tap(find.text('Conforto'));
+    await tester.pumpAndSettle();
+    expect(find.text('Esta cidade tem valores próprios para Conforto.'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Salvar Conforto nesta cidade'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Salvar Conforto nesta cidade'));
+    await _carregar(tester);
+    expect(_pedidosDeTarifa.where((p) => p.startsWith('PUT /api/admin/tariffs/categoria/CONFORTO goiatuba ')), hasLength(1));
+    expect(_pedidosDeTarifa.last, contains('"multiplicador":1.1'));
+    expect(_pedidosDeTarifa.last, isNot(contains('"icone"')), reason: 'figura e texto mudam so no padrao');
+    await tester.scrollUntilVisible(find.text('Voltar ao padrão nesta cidade'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Voltar ao padrão nesta cidade'));
+    await _carregar(tester);
+    expect(_pedidosDeTarifa.last, startsWith('DELETE /api/admin/tariffs/categoria/CONFORTO goiatuba'));
+    expect(find.text('Voltar ao padrão nesta cidade'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Pedidos de categoria: aprovar e recusar com motivo', (tester) async {
+    _pedidosDeTarifa.clear();
+    await _abrir(tester, PedidosDeCategoriaScreen(api: PainelApi(ApiClient(client: _servidor()))));
+    await _carregar(tester);
+    expect(find.text('Joao Batista'), findsOneWidget);
+    // Nomes pelas tarifas (CARRO = "Carro" no teste); sem a categoria na
+    // lista, o codigo vira nome (CONFORTO -> Conforto).
+    expect(find.text('Carro'), findsOneWidget);
+    expect(find.text('Conforto'), findsOneWidget);
+    await tester.tap(find.text('Aprovar categoria'));
+    await _carregar(tester);
+    expect(_pedidosDeTarifa.last, 'PATCH /api/admin/vehicles/car9/category-review - {"aprovar":true}');
+    await tester.tap(find.text('Recusar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Carro sem ar-condicionado');
+    await tester.tap(find.widgetWithText(FilledButton, 'Recusar'));
+    await _carregar(tester);
+    expect(_pedidosDeTarifa.last, contains('"motivo":"Carro sem ar-condicionado"'));
   });
 
   testWidgets('Financeiro: saques e receitas', (tester) async {
