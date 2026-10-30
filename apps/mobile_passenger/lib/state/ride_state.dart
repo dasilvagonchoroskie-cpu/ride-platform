@@ -220,12 +220,16 @@ class RideState extends ChangeNotifier {
           agendadaPara: agendarPara,
           category: categoria,
           semDestino: semDestino,
-          paradas: paradas);
+          paradas: paradas,
+          cotacao: quote?.cotacao);
       quote = result.quote;
       // O orcamento ja traz o caminho pelas ruas (29/10/2026): sem pedir a
       // rota de novo. Servidor antigo (sem caminho): pede como antes.
       final caminho = result.quote.caminho;
-      if (caminho.length >= 2) {
+      if (result.quote.medidaReaproveitada && rotaPrevia.length >= 2) {
+        // Mesma viagem (trocou a categoria ou o cupom): o caminho continua.
+        notifyListeners();
+      } else if (caminho.length >= 2) {
         rotaPrevia = caminho;
         notifyListeners();
       } else {

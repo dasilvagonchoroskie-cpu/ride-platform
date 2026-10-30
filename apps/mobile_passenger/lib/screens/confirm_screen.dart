@@ -291,9 +291,10 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
                   ),
                   const SizedBox(height: Spacing.sm),
 
-                  // Mototaxi (Evandro, 10/10/2026): com Carro e Moto ativos na
-                  // Central, o passageiro escolhe vendo o preco de cada um.
-                  if (quote != null && quote.opcoes.length > 1) ...[
+                  // Categorias (Evandro, 29/10/2026): depois do destino, o
+                  // passageiro ve cada categoria ligada na cidade com o preco
+                  // e quando o carro chega, e escolhe uma.
+                  if (quote != null && quote.opcoes.isNotEmpty) ...[
                     _EscolhaCategoria(
                       opcoes: quote.opcoes,
                       escolhida: ride.categoria ?? quote.category,
@@ -432,7 +433,10 @@ IconData _iconePagamento(String tipo) => switch (tipo) {
 /// Mostra a bandeira vigente e abre a conta: a bandeirada e, quando a
 /// viagem passa da franquia, quanto foi somado por distancia. O passageiro
 /// consegue conferir o valor em vez de so aceitar um numero.
-/// Carro ou Moto (ou outra categoria da Central), com o preco de cada uma.
+/// Quando o carro chega, em texto curto ("chega em ~5 min").
+String textoDaChegada(int? minutos) => minutos == null ? 'Sem carro perto' : 'Chega em ~$minutos min';
+
+/// Popular, Conforto, Premium, Moto... com o preco, a chegada e os lugares.
 class _EscolhaCategoria extends StatelessWidget {
   const _EscolhaCategoria({required this.opcoes, required this.escolhida, required this.aoEscolher});
 
@@ -443,7 +447,7 @@ class _EscolhaCategoria extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 76,
+      height: 96,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: opcoes.length,
@@ -458,7 +462,7 @@ class _EscolhaCategoria extends StatelessWidget {
               borderRadius: BorderRadius.circular(Radii.md),
               onTap: () => aoEscolher(o.category),
               child: Container(
-                width: 148,
+                width: 164,
                 padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(Radii.md),
@@ -466,7 +470,7 @@ class _EscolhaCategoria extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(o.moto ? Icons.two_wheeler : Icons.directions_car, color: sel ? AppColors.brand : AppColors.text),
+                    Icon(iconeDaCategoria(o.icone), color: sel ? AppColors.brand : AppColors.text),
                     const SizedBox(width: Spacing.sm),
                     Expanded(
                       child: Column(
@@ -475,7 +479,15 @@ class _EscolhaCategoria extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(o.nome, style: SheetText.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          Text(formatMoney(o.aPagarCents), style: SheetText.muted),
+                          Text(formatMoney(o.aPagarCents), style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
+                          Text(
+                            '${textoDaChegada(o.chegadaMinutos)} · ${o.capacidade} ${o.capacidade == 1 ? 'lugar' : 'lugares'}',
+                            style: SheetText.muted.copyWith(fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (o.descricao.isNotEmpty)
+                            Text(o.descricao, style: SheetText.muted.copyWith(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),

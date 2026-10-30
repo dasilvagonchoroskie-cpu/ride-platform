@@ -37,6 +37,7 @@ class RideRepository {
     String? category,
     bool semDestino = false,
     List<PlaceSuggestion> paradas = const [],
+    String? cotacao,
   }) async {
     if (_useDemo) return DemoEngine.estimate(origin, destination);
 
@@ -50,6 +51,9 @@ class RideRepository {
         if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
         if (category != null) 'category': category,
+        // Medida da consulta anterior: se os pontos sao os mesmos, o servidor
+        // nao pede a rota de novo (so trocou a categoria ou o cupom).
+        if (cotacao != null) 'cotacao': cotacao,
       }) as Map<String, dynamic>;
 
       return EstimateResult(quote: RideQuote.fromJson(data));
