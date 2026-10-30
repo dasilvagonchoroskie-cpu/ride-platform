@@ -374,6 +374,13 @@ jobs:
             MONO="sem monocromatico (simbolo novo ainda nao gerado)"
           fi
           echo "OK: '$NOME', icone redondo, $MONO"
+          # Exigencias da Google Play (Etapa 7): alvo Android 16 (API 36) desde
+          # 31/08/2026 e bibliotecas nativas alinhadas em 16 KB. So avisa: a
+          # Central nao vai para a loja e o APK de teste continua saindo.
+          ALVO="$(sed -n "s/^targetSdkVersion:'\([0-9]*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")"
+          if [ "${ALVO:-0}" -ge 36 ]; then echo "OK: alvo Android API $ALVO"; else echo "::warning::alvo API ${ALVO:-?}: a Google Play exige 36 desde 31/08/2026"; fi
+          ZIPALIGN="$(ls -d "$SDK"/build-tools/*/zipalign | sort -V | tail -n 1)"
+          if "$ZIPALIGN" -c -P 16 -v 4 "$APK" > "$RUNNER_TEMP/zipalign.txt" 2>&1; then echo "OK: bibliotecas nativas alinhadas em 16 KB"; else echo "::warning::bibliotecas nativas sem alinhamento de 16 KB"; grep -i 'BAD' "$RUNNER_TEMP/zipalign.txt" | head -n 5 || true; fi
 
       # Pacote da loja (AAB) para a Google Play (Evandro aprovou em
       # 09/10/2026). So passageiro e motorista: a Central fica fora da loja
