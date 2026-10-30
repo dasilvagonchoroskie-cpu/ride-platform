@@ -768,6 +768,62 @@ NMED=${MED%% *}
 NROT=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('routing',0))" "${MED#* }" 2>/dev/null)
 [ "${NROT:-99}" -le 4 ] 2>/dev/null && ok "TomTom: $NROT rotas por corrida (eram 8: orcamento 1, chamado no servidor 1, apps 5, fim 1)" || falha "TomTom: rotas por corrida (esperado ate 4)" "$MED"
 
+# ================= Entregas de encomendas (Etapa 5, 30/10/2026) =================
+# Desligada por padrao; o teste liga so na cidade do teste, faz uma entrega
+# completa com o motorista de teste e volta a configuracao como estava.
+EC=$(get /admin/entregas-config "$TA")
+ENT_TINHA=$(echo "$EC" | jq -c --arg p "$PRACA" '[.data.cidades[] | select(.praca==$p)][0] // {ligada:false,veiculos:"TODOS"} | {ligada, veiculos}')
+if [ "$(echo "$ENT_TINHA" | jq -r '.ligada')" = "false" ]; then
+  X=$(get "/entregas/disponivel?lat=-18.0125&lng=-49.3547" "$TP"); [ "$(echo "$X" | jq -r '.data.ligada')" = "false" ] && ok "Entregas: desligada na cidade ate a Central ligar" || falha "Entregas: deveria estar desligada" "$X"
+  X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"ENTREGA\"}" "$TP"); sucesso "$X" && falha "Entrega desligada nao deveria dar preco" "$X" || ok "Entregas: desligada, o pedido de preco e recusado"
+fi
+X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":true,\"veiculos\":\"CARRO\"}" "$TO"); sucesso "$X" && falha "Operador nao deveria ligar a entrega" "$X" || ok "Operador: nao liga nem desliga a entrega (so o dono)"
+X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":true,\"veiculos\":\"TODOS\"}" "$TA")
+[ "$(echo "$X" | jq -r --arg p "$PRACA" '.data.cidades[] | select(.praca==$p) | "\(.ligada)/\(.veiculos)"')" = "true/TODOS" ] && ok "Central: ligou a entrega so nesta cidade (carro e moto)" || falha "Central: ligar entrega" "$X"
+X=$(get "/entregas/disponivel?lat=-18.0125&lng=-49.3547" "$TP"); [ "$(echo "$X" | jq -r '.data.ligada')" = "true" ] && ok "Cliente: botao Entrega aparece na cidade ligada ($(echo "$X" | jq -r '.data.cidade'))" || falha "Cliente: entrega disponivel" "$X"
+X=$(get /vehicles/categorias); [ "$(echo "$X" | jq -r '[.data[].codigo] | index("ENTREGA") == null')" = "true" ] && ok "Motorista: 'Entrega' nao aparece como categoria de carro" || falha "Motorista: Entrega na lista de categorias" "$X"
+X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP"); [ "$(echo "$X" | jq -r '[.data.opcoes[].category] | index("ENTREGA") == null')" = "true" ] && ok "Passageiro: 'Entrega' nao aparece como opcao de corrida" || falha "Passageiro: Entrega nas opcoes de corrida" "$(echo "$X" | jq -c '[.data.opcoes[].category]')"
+U2=$(uso_total)
+E=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"ENTREGA\"}" "$TP"); COTE2=$(echo "$E" | jq -r '.data.cotacao // empty')
+[ "$(echo "$E" | jq -r '.data.category')" = "ENTREGA" ] && [ "$(echo "$E" | jq -r '.data.estimatedFareCents')" -gt 0 ] 2>/dev/null \
+  && ok "Entrega: preco pela tarifa propria da cidade ($(echo "$E" | jq -r '.data.estimatedFareCents') centavos)" || falha "Entrega: preco" "$E"
+post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"cotacao\":\"$COTE2\",\"entrega\":{\"descricao\":\"Envelope do teste automatico\",\"destinatarioNome\":\"Ana Teste\",\"destinatarioTelefone\":\"64999990000\"}}" "$TP")
+RENT=$(echo "$X" | jq -r '.data.ride.id // empty'); CODENT=$(echo "$X" | jq -r '.data.ride.entrega.codigo // empty')
+[ -n "$RENT" ] && [ "$(echo "$X" | jq -r '.data.ride.category')" = "ENTREGA" ] && echo "$CODENT" | grep -qE '^[0-9]{4}$' \
+  && ok "Cliente: pediu a entrega e recebeu o codigo de 4 numeros para quem recebe" || falha "Cliente: pedir entrega" "$X"
+if [ -n "$RENT" ]; then
+  OF=""; for t in 1 2 3 4 5; do sleep 2; OF=$(get /driver/rides/offers "$TM" | jq -c --arg r "$RENT" '[.data[] | select(.rideId==$r)][0] // empty' 2>/dev/null); [ -n "$OF" ] && break; done
+  [ "$(echo "$OF" | jq -r '.entrega.descricao')" = "Envelope do teste automatico" ] && [ "$(echo "$OF" | jq -r '.entrega | has("codigo")')" = "false" ] \
+    && ok "Motorista: chamado marcado ENTREGA, com o item e quem recebe (sem o codigo)" || falha "Motorista: chamado de entrega" "$OF"
+  post "/driver/rides/$RENT/accept" '{}' "$TM" >/dev/null
+  rota -18.0130 -49.3550 -18.0125 -49.3547 "$TM"   # motorista: ate a coleta (chamado)
+  rota -18.0125 -49.3547 -18.0050 -49.3610 "$TM"   # motorista: a entrega (chamado)
+  rota -18.0130 -49.3550 -18.0125 -49.3547 "$TP"   # cliente: o carro vindo
+  for passo in arriving arrived start; do post "/driver/rides/$RENT/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM" >/dev/null; done
+  X=$(get "/rides/$RENT" "$TM"); [ "$(echo "$X" | jq -r '.data.ride.entrega | has("codigo")')" = "false" ] && [ "$(echo "$X" | jq -r '.data.ride.entrega.coletadaEm != null')" = "true" ] \
+    && ok "Motorista: confirmou a coleta e continua sem ver o codigo" || falha "Motorista: coleta / codigo escondido" "$(echo "$X" | jq -c '.data.ride.entrega')"
+  ERRADO=$( [ "$CODENT" = "0000" ] && echo 1111 || echo 0000 )
+  X=$(post "/driver/rides/$RENT/finish" "{\"distanceMeters\":1400,\"stoppedSeconds\":0,\"latitude\":-18.0050,\"longitude\":-49.3610,\"codigoEntrega\":\"$ERRADO\"}" "$TM")
+  echo "$X" | jq -r '.error.message // empty' | grep -q 'Código errado' && ok "Motorista: codigo errado nao encerra a entrega ($(echo "$X" | jq -r '.error.message'))" || falha "Motorista: codigo errado deveria ser recusado" "$X"
+  X=$(post "/driver/rides/$RENT/finish" "{\"distanceMeters\":1400,\"stoppedSeconds\":0,\"latitude\":-18.0050,\"longitude\":-49.3610,\"codigoEntrega\":\"$CODENT\"}" "$TM")
+  sucesso "$X" && ok "Motorista: com o codigo certo a entrega termina ($(echo "$X" | jq -r '.data.finalFareCents // .data.ride.finalFareCents // "-"') centavos)" || falha "Motorista: encerrar entrega com o codigo" "$X"
+  X=$(get "/admin/entregas?praca=$PRACA" "$TA"); L=$(echo "$X" | jq -c --arg r "$RENT" '[.data.itens[] | select(.id==$r)][0]')
+  [ "$(echo "$L" | jq -r '.status')" = "COMPLETED" ] && [ "$(echo "$L" | jq -r '.detalhe.entregueEm != null')" = "true" ] && [ "$(echo "$L" | jq -r '.comissaoCents')" -ge 0 ] 2>/dev/null \
+    && ok "Central: ve a entrega na cidade, entregue (comissao $(echo "$L" | jq -r '.comissaoCents') centavos pela carteira)" || falha "Central: lista de entregas" "$X"
+  if [ "$(echo "$L" | jq -r '.comissaoCents')" -gt 0 ] 2>/dev/null; then
+    X=$(get /driver/wallet "$TM"); echo "$X" | jq -e --arg c "$(echo "$L" | jq -r '.code')" '[.data.transactions[] | select((.rideCode // "") == $c)] | length >= 1' >/dev/null \
+      && ok "Carteira: a taxa da entrega saiu da carteira pre-paga, como nas corridas" || falha "Carteira: taxa da entrega na carteira" "$(echo "$X" | jq -c '.data.transactions[0:3]')"
+  fi
+fi
+sleep 2
+U3=$(uso_total)
+MEDE=$(python3 -c "import json,sys; a=json.loads(sys.argv[1] or '{}'); b=json.loads(sys.argv[2] or '{}'); d={k:b.get(k,0)-a.get(k,0) for k in b}; print(sum(d.values()), d.get('routing',0), json.dumps(d))" "$U2" "$U3")
+NE=$(echo "$MEDE" | cut -d' ' -f1); RE=$(echo "$MEDE" | cut -d' ' -f2)
+[ "${RE:-99}" -le "${NROT:-4}" ] 2>/dev/null && ok "TomTom: entrega com $NE chamadas, $RE rotas (corrida: $NROT rotas) — igual ou menor que a corrida" || falha "TomTom: entrega gastou mais que a corrida" "$MEDE"
+X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":$(echo "$ENT_TINHA" | jq -r '.ligada'),\"veiculos\":\"$(echo "$ENT_TINHA" | jq -r '.veiculos')\"}" "$TA")
+[ "$(echo "$X" | jq -c --arg p "$PRACA" '.data.cidades[] | select(.praca==$p) | {ligada, veiculos}')" = "$ENT_TINHA" ] && ok "Central: entrega da cidade voltou como estava ($ENT_TINHA)" || falha "Central: restaurar entrega" "$X"
+
 # ================= Painel da Central =================
 X=$(get /admin/overview "$TA")
 sucesso "$X" && [ "$(echo "$X" | jq -r '.data.driversOnline')" -ge 1 ] 2>/dev/null \
