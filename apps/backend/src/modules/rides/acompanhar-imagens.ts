@@ -4,24 +4,32 @@ import { TomTomGeo } from '../geo/tomtom';
 
 /**
  * Imagens do mapa da pagina publica de acompanhar a viagem: o servidor busca
- * na TomTom e entrega, para a chave nunca ir para a pagina. Guarda as mais
- * usadas e limita cada link (a pagina e aberta pela familia, poucas vezes).
+ * na TomTom e entrega, para a chave nunca ir para a pagina. NAO guarda nada
+ * (29/10/2026: clausula 11.4 da TomTom e decisao do Evandro): repassa ao
+ * navegador o cabecalho de cache que a propria TomTom mandou, e o navegador
+ * de quem abriu guarda pelo prazo dela. Cada link tem limite por hora.
  */
+export interface ImagemDoMapa {
+  png: Buffer;
+  /** Cache-Control da TomTom (null = nao mandou: o navegador nao guarda). */
+  cacheControl: string | null;
+}
+
 export class ImagensDoAcompanhar {
   private readonly logger = new Logger('ImagensDoAcompanhar');
-  private readonly guardadas = new Map<string, { quando: number; png: Buffer }>();
   private readonly porLink = new Map<string, { hora: number; n: number }>();
   /** O mapa da TomTom aceita 10 pedidos/s para a chave toda (com os celulares): aqui no maximo 3. */
   private readonly ritmo = new Ritmo(3, 3000);
 
   constructor(
     private readonly chave: string | null = TomTomGeo.daVariavel(),
-    private readonly buscarNaRede: (url: string) => Promise<{ ok: boolean; status: number; arrayBuffer(): Promise<ArrayBuffer> }> = (u) =>
-      fetch(u),
+    private readonly buscarNaRede: (
+      url: string,
+    ) => Promise<{ ok: boolean; status: number; headers?: { get(n: string): string | null }; arrayBuffer(): Promise<ArrayBuffer> }> = (u) => fetch(u),
   ) {}
 
   /** null = numero invalido, sem chave, limite do link ou a TomTom nao respondeu. */
-  async buscar(token: string, zs: string, xs: string, ys: string): Promise<Buffer | null> {
+  async buscar(token: string, zs: string, xs: string, ys: string): Promise<ImagemDoMapa | null> {
     const z = Number(zs);
     const x = Number(xs);
     const y = Number(ys);
@@ -29,8 +37,6 @@ export class ImagensDoAcompanhar {
     const lado = 2 ** z;
     if (x < 0 || y < 0 || x >= lado || y >= lado) return null;
     const k = `${z}/${x}/${y}`;
-    const g = this.guardadas.get(k);
-    if (g && Date.now() - g.quando < 7 * 24 * 3600 * 1000) return g.png;
     if (!this.chave || !this.dentroDoLimite(token)) return null;
     try {
       const endereco = `https://api.tomtom.com/map/1/tile/basic/main/${k}.png?tileSize=256&language=pt-BR&key=${encodeURIComponent(this.chave)}`;
@@ -45,12 +51,7 @@ export class ImagensDoAcompanhar {
         return null;
       }
       const png = Buffer.from(await resp.arrayBuffer());
-      if (this.guardadas.size >= 800) {
-        const velha = this.guardadas.keys().next().value;
-        if (velha !== undefined) this.guardadas.delete(velha);
-      }
-      this.guardadas.set(k, { quando: Date.now(), png });
-      return png;
+      return { png, cacheControl: resp.headers?.get('cache-control') ?? null };
     } catch {
       return null;
     }

@@ -22,6 +22,11 @@ const pontoSchema = z.object({
   lng: z.coerce.number().min(-180).max(180),
 });
 
+const mapaSchema = z.object({
+  /** Imagens que o celular baixou desde o ultimo aviso. */
+  imagens: z.coerce.number().int().min(0).max(20_000).optional(),
+});
+
 const rotaSchema = z.object({
   deLat: z.coerce.number().min(-90).max(90),
   deLng: z.coerce.number().min(-180).max(180),
@@ -59,8 +64,8 @@ export class GeoController {
     const de = { latitude: q.deLat, longitude: q.deLng };
     const para = { latitude: q.paraLat, longitude: q.paraLng };
     // So para desenhar: nao essencial (no modo economia vem a linha reta).
-    // A rota da corrida (embarque -> destino) ja foi pedida no orcamento e
-    // vem do guardado, sem gastar cota.
+    // O servidor nao guarda rota de ninguem (29/10/2026): cada app pede uma
+    // vez por etapa da corrida e o proprio celular guarda.
     const r = await this.geo.rota(de, para, false);
     if (r) return r;
     return {
@@ -78,7 +83,10 @@ export class GeoController {
 
   @Get('mapa')
   @ApiOperation({ summary: 'Endereco das imagens do mapa (TomTom, com a chave) e modo economia — so com login' })
-  mapa() {
+  mapa(@Query(new ZodValidationPipe(mapaSchema)) q: { imagens?: number }) {
+    // O celular conta as imagens que baixou da TomTom e manda o numero aqui
+    // (a cota de imagens e da chave inteira: 200 mil por mes).
+    if (q.imagens) this.uso.contarImagens(q.imagens);
     return { ...mapaComChave(), economia: this.geo.economia(), parado: this.geo.parado() };
   }
 

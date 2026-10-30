@@ -27,59 +27,28 @@ export interface RotaPorRua {
   porRua: boolean;
 }
 
-const HORA_MS = 60 * 60 * 1000;
-const DIA_MS = 24 * HORA_MS;
-
-/** Guardado com prazo e tamanho maximo (o mais antigo sai primeiro). */
-class Guardado<T> {
-  private readonly itens = new Map<string, { quando: number; valor: T }>();
-  constructor(
-    private readonly prazoMs: number,
-    private readonly maximo: number,
-  ) {}
-
-  ler(chave: string): T | null {
-    const c = this.itens.get(chave);
-    if (!c) return null;
-    if (Date.now() - c.quando > this.prazoMs) {
-      this.itens.delete(chave);
-      return null;
-    }
-    return c.valor;
-  }
-
-  gravar(chave: string, valor: T): void {
-    if (this.itens.size >= this.maximo) {
-      const maisAntiga = this.itens.keys().next().value;
-      if (maisAntiga !== undefined) this.itens.delete(maisAntiga);
-    }
-    this.itens.set(chave, { quando: Date.now(), valor });
-  }
-}
-
-/** Texto normalizado da busca (para o guardado). */
+/** Texto normalizado (para tirar resultados repetidos). */
 const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 /**
  * Busca de endereco, endereco de um ponto e rota pelas ruas.
  *
  * Desde 29/10/2026 (pedido do Evandro) pela TomTom, SEMPRE pelo servidor:
- * a chave nunca vai para o celular, um contador so para todos os usuarios
- * (a cota e da chave) e o que ja foi perguntado fica guardado para todos.
- * O servidor publico do OpenStreetMap (Nominatim) e o Photon/OSRM sairam.
+ * a chave nunca vai para o celular e um contador so para todos os usuarios
+ * (a cota e da chave).
  *
- * Economia: busca 3 dias guardada; endereco de um ponto 7 dias (grade de
- * ~11 m); rota 1 dia (mesmos pontos = mesma rota, entao a rota da corrida
- * e pedida uma vez so: no orcamento; o pedido, o app do passageiro e o do
- * motorista reaproveitam).
+ * NADA fica guardado no servidor (Evandro, 29/10/2026: "cada usuario tem o
+ * seu proprio historico; nunca e compartilhado; fica somente no aplicativo
+ * do usuario"; e a clausula 11.4 dos termos da TomTom nao permite guardado
+ * para servir varios usuarios). Cada pedido vai para a TomTom em nome de
+ * quem pediu; quem guarda o que ja buscou e o celular da pessoa. A rota da
+ * corrida nao e pedida duas vezes: o orcamento devolve a medida assinada
+ * (cotacao) e o pedido da corrida a reaproveita.
  */
 @Injectable()
 export class GeoService {
   private readonly logger = new Logger(GeoService.name);
   private readonly provedor: ProvedorGeo | null;
-  private readonly buscas = new Guardado<Lugar[]>(3 * DIA_MS, 3000);
-  private readonly enderecos = new Guardado<Lugar>(7 * DIA_MS, 6000);
-  private readonly rotas = new Guardado<RotaPorRua>(DIA_MS, 2000);
 
   constructor(private readonly uso: UsoDoMapaService) {
     const chave = TomTomGeo.daVariavel();
@@ -152,9 +121,6 @@ export class GeoService {
     opcoes: { raioMetros?: number; sessao?: string; fonte?: string } = {},
   ): Promise<Lugar[]> {
     const q = texto.trim().replace(/\s+/g, ' ');
-    const chave = `${semAcento(q)}:${lat.toFixed(2)}:${lng.toFixed(2)}`;
-    const guardado = this.buscas.ler(chave);
-    if (guardado) return this.comDistancia(guardado, lat, lng);
     this.contarSessao(opcoes.sessao);
     const p = this.provedor;
     if (!p || !this.uso.pode('geocode', true)) throw this.limite();
@@ -163,16 +129,15 @@ export class GeoService {
     const perto = { lat, lng };
     let regiao: LugarDoProvedor[] = [];
     let lugares: LugarDoProvedor[] = [];
-    let brasil: LugarDoProvedor[] = [];
     try {
-      // 1) A regiao (uns 80 km): "Rua Sao Paulo" acha a da cidade primeiro.
+      // 1) So a regiao de operacao: o raio da cidade cadastrado na Central
+      //    (Evandro, 29/10/2026: "limitada a regiao de operacao"). A busca
+      //    extra no Brasil todo (decisao de 05/10) saiu: 1 chamada a menos.
+      //    Fora do raio, o passageiro marca o destino no mapa.
       regiao = await p.geocodificar(q, perto, raio);
       // 2) Lugares com nome (Rodoviaria, Hospital) — cota pequena (2.500/mes):
       //    so quando a regiao trouxe pouco e fora do modo economia.
-      if (regiao.length < 3 && this.uso.pode('search', false)) lugares = await p.lugares(q, perto, 30_000);
-      // 3) O Brasil todo (decisao de 05/10/2026: ver o preco para qualquer
-      //    lugar, ex.: "Porto Alegre") — fora do modo economia.
-      if (this.uso.pode('geocode', false)) brasil = await p.geocodificar(q, null, null);
+      if (regiao.length < 3 && this.uso.pode('search', false)) lugares = await p.lugares(q, perto, Math.min(raio, 30_000));
     } catch (e) {
       if (!(e instanceof LimiteDoMapa)) throw e;
       this.logger.warn(
@@ -181,10 +146,10 @@ export class GeoService {
           : `TomTom recusou (403) na busca: parado por 30 minutos.`,
       );
       this.uso.limiteDaTomTom(e.status);
-      if (regiao.length + lugares.length + brasil.length === 0) throw this.limite();
+      if (regiao.length + lugares.length === 0) throw this.limite();
     }
     const vistos = new Set<string>();
-    const unicos: Lugar[] = [...lugares, ...regiao.slice(0, 7), ...brasil, ...regiao.slice(7)]
+    const unicos: Lugar[] = [...lugares, ...regiao]
       .filter((l) => {
         const k = `${semAcento(l.address)}|${l.latitude.toFixed(3)}|${l.longitude.toFixed(3)}`;
         if (vistos.has(k)) return false;
@@ -193,15 +158,11 @@ export class GeoService {
       })
       .slice(0, 12)
       .map((l) => ({ ...l, distanceKm: null }));
-    if (unicos.length > 0) this.buscas.gravar(chave, unicos);
     return this.comDistancia(unicos, lat, lng);
   }
 
   /** Endereco escrito de um ponto do mapa (embarque pelo GPS, destino no mapa). */
   async endereco(lat: number, lng: number): Promise<Lugar> {
-    const chave = `${lat.toFixed(4)}:${lng.toFixed(4)}`;
-    const guardado = this.enderecos.ler(chave);
-    if (guardado) return { ...guardado, latitude: lat, longitude: lng };
     const ponto: Lugar = {
       address: `Ponto no mapa (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
       detail: '',
@@ -214,9 +175,7 @@ export class GeoService {
     try {
       const l = await p.enderecoDoPonto(lat, lng);
       if (!l) return ponto;
-      const lugar: Lugar = { ...l, latitude: lat, longitude: lng, distanceKm: null };
-      this.enderecos.gravar(chave, lugar);
-      return lugar;
+      return { ...l, latitude: lat, longitude: lng, distanceKm: null };
     } catch (e) {
       if (!(e instanceof LimiteDoMapa)) throw e;
       this.logger.warn(
@@ -240,18 +199,12 @@ export class GeoService {
     destino: { latitude: number; longitude: number },
     essencial = true,
   ): Promise<RotaPorRua | null> {
-    const f = (n: number) => n.toFixed(4);
-    const chave = `${f(origem.latitude)},${f(origem.longitude)}:${f(destino.latitude)},${f(destino.longitude)}`;
-    const guardada = this.rotas.ler(chave);
-    if (guardada) return guardada;
     const p = this.provedor;
     if (!p || !this.uso.pode('routing', essencial)) return null;
     try {
       const r = await p.rota(origem, destino);
       if (!r) return null;
-      const rota: RotaPorRua = { ...r, porRua: true };
-      this.rotas.gravar(chave, rota);
-      return rota;
+      return { ...r, porRua: true };
     } catch (e) {
       if (!(e instanceof LimiteDoMapa)) throw e;
       this.logger.warn(

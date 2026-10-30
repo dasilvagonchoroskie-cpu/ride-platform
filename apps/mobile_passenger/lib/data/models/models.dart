@@ -287,7 +287,17 @@ class RideQuote {
     this.opcoes = const [],
     this.semDestino = false,
     this.paradas = 0,
+    this.cotacao,
+    this.caminho = const [],
   });
+
+  /// Caminho pelas ruas desta consulta (desenho da confirmacao sem pedir a
+  /// rota de novo a TomTom).
+  final List<Coords> caminho;
+
+  /// Medida assinada pelo servidor (vai de volta no pedido: a rota nao e
+  /// pedida de novo a TomTom). So vale por 20 minutos e para os mesmos pontos.
+  final String? cotacao;
 
   /// Sem destino: o preco e so a partida (bandeirada); o final sai do taximetro.
   final bool semDestino;
@@ -352,6 +362,8 @@ class RideQuote {
         ],
         semDestino: json['semDestino'] == true,
         paradas: (json['paradas'] as num?)?.toInt() ?? 0,
+        cotacao: json['cotacao'] is String ? json['cotacao'] as String : null,
+        caminho: pontosDaRota(json),
       );
 
   Map<String, dynamic> toJson() => {

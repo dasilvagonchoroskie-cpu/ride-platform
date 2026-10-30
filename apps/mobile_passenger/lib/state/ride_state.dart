@@ -222,7 +222,15 @@ class RideState extends ChangeNotifier {
           semDestino: semDestino,
           paradas: paradas);
       quote = result.quote;
-      unawaited(_buscarRotaPrevia(origin, destination));
+      // O orcamento ja traz o caminho pelas ruas (29/10/2026): sem pedir a
+      // rota de novo. Servidor antigo (sem caminho): pede como antes.
+      final caminho = result.quote.caminho;
+      if (caminho.length >= 2) {
+        rotaPrevia = caminho;
+        notifyListeners();
+      } else {
+        unawaited(_buscarRotaPrevia(origin, destination));
+      }
       return result.quote;
     } on ApiException catch (e) {
       avisar(e.message);
@@ -263,6 +271,7 @@ class RideState extends ChangeNotifier {
       category: categoria,
       semDestino: semDestino,
       paradas: paradas,
+      cotacao: quote?.cotacao,
     );
 
     cupomCodigo = null;

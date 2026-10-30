@@ -16,6 +16,8 @@ import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
 import { HistoricoDeDestinos } from './destinos';
 import { PushService } from '../../integrations/notifications/push.service';
+import { AppConfigService } from '../../config/app-config.service';
+import { assinarCotacao, lerCotacao } from './cotacao';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -83,6 +85,13 @@ const ACAO_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
 export const SEM_DESTINO = 'SEM_DESTINO';
 export const TEXTO_SEM_DESTINO = 'Sem destino definido (pelo taxímetro)';
 
+/** No maximo ~400 pontos no caminho (o desenho fica igual e a resposta leve). */
+export function resumirCaminho(c: Array<[number, number]>, maximo = 400): Array<[number, number]> {
+  if (c.length <= maximo) return c;
+  const passo = (c.length - 1) / (maximo - 1);
+  return Array.from({ length: maximo }, (_, i) => c[Math.round(i * passo)]);
+}
+
 const EM_ABERTO: RideStatus[] = [
   'REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS',
 ];
@@ -108,6 +117,7 @@ export class RidesService {
     private readonly fare: FareService,
     private readonly geo: GeoService,
     private readonly push: PushService,
+    private readonly config: AppConfigService,
   ) {
     this.destinos = new HistoricoDeDestinos(prisma);
   }
@@ -134,20 +144,31 @@ export class RidesService {
    * (cada trecho pela estrada e guardado). Sem destino: so ate a ultima
    * parada (ou zero, so a bandeirada).
    */
+  /** Pontos da viagem na ordem: embarque, paradas e destino (sem destino: sem ele). */
+  private pontosDaViagem(
+    pickup: { latitude: number; longitude: number },
+    paradas: Array<{ latitude: number; longitude: number }>,
+    destino: RidePointInput,
+  ) {
+    return [pickup, ...paradas, ...(destino.placeId === SEM_DESTINO ? [] : [destino])];
+  }
+
   private async medirViagem(
     pickup: { latitude: number; longitude: number },
     paradas: Array<{ latitude: number; longitude: number }>,
     destino: RidePointInput,
-  ): Promise<{ distanceMeters: number; durationSeconds: number }> {
-    const pontos = [pickup, ...paradas, ...(destino.placeId === SEM_DESTINO ? [] : [destino])];
+  ): Promise<{ distanceMeters: number; durationSeconds: number; caminho: Array<[number, number]> }> {
+    const pontos = this.pontosDaViagem(pickup, paradas, destino);
     let distanceMeters = 0;
     let durationSeconds = 0;
+    const caminho: Array<[number, number]> = [];
     for (let i = 1; i < pontos.length; i++) {
       const t = await this.medirRota(pontos[i - 1], pontos[i]);
       distanceMeters += t.distanceMeters;
       durationSeconds += t.durationSeconds;
+      caminho.push(...t.pontos);
     }
-    return { distanceMeters, durationSeconds };
+    return { distanceMeters, durationSeconds, caminho: resumirCaminho(caminho) };
   }
 
   /**
@@ -157,10 +178,10 @@ export class RidesService {
   private async medirRota(
     origem: { latitude: number; longitude: number },
     destino: { latitude: number; longitude: number },
-  ): Promise<{ distanceMeters: number; durationSeconds: number }> {
+  ): Promise<{ distanceMeters: number; durationSeconds: number; pontos: Array<[number, number]> }> {
     const r = await this.geo.rota(origem, destino).catch(() => null);
-    if (r?.porRua && r.distanceMeters > 0) return { distanceMeters: r.distanceMeters, durationSeconds: r.durationSeconds };
-    return this.fare.estimarRota(origem, destino);
+    if (r?.porRua && r.distanceMeters > 0) return { distanceMeters: r.distanceMeters, durationSeconds: r.durationSeconds, pontos: r.pontos };
+    return { ...this.fare.estimarRota(origem, destino), pontos: [] };
   }
 
   // ------------------------------------------------------------------
@@ -212,6 +233,13 @@ export class RidesService {
       // Mototaxi (Evandro, 10/10/2026): o passageiro escolhe Carro ou Moto,
       // vendo o preco de cada categoria ativa.
       opcoes: await this.opcoesDeCategoria(input, rota, passengerId),
+      /** Medida assinada: o app manda de volta no pedido (a rota nao e pedida de novo). */
+      cotacao: assinarCotacao(this.pontosDaViagem(input.pickup, input.paradas ?? [], destino), rota, this.config.jwt.accessSecret),
+      /**
+       * Caminho pelas ruas desta mesma consulta (para o app de quem pediu
+       * desenhar na confirmacao sem pedir a rota de novo). Vazio = sem rota.
+       */
+      pontos: rota.caminho,
     };
   }
 
@@ -288,7 +316,11 @@ export class RidesService {
 
     const destino = this.destinoDe(input);
     const paradas = input.paradas ?? [];
-    const rota = await this.medirViagem(input.pickup, paradas, destino);
+    // A medida do orcamento (assinada) vale para os mesmos pontos: sem ela,
+    // ou vencida, mede de novo.
+    const rota =
+      lerCotacao(input.cotacao, this.pontosDaViagem(input.pickup, paradas, destino), this.config.jwt.accessSecret) ??
+      (await this.medirViagem(input.pickup, paradas, destino));
     const pedidoEm = new Date();
     // A bandeira e a do horario da viagem: agendada para as 23h paga noturna.
     const orcamento = await this.fare.calcular({
@@ -426,16 +458,22 @@ export class RidesService {
       if (proximos.length === 0) continue;
       const favoritosPerto = primeiraRodada ? proximos.filter((m) => favoritos.includes(m.driverId)) : [];
       const chamar = favoritosPerto.length > 0 ? favoritosPerto : proximos;
+      // Ja vem do mais perto para o mais longe em linha reta (PostGIS, mesma
+      // conta do haversine). Rota pelas ruas so nos 3 mais perto (29/10/2026).
+      const pelaRua = await this.chegadaPelaRua(chamar, { latitude: corrida.pickupLat, longitude: corrida.pickupLng });
 
       const expiraEm = new Date(Date.now() + RidesService.SEGUNDOS_PARA_RESPONDER * 1000);
       await this.prisma.rideOffer.createMany({
-        data: chamar.map((m) => ({
-          rideId,
-          driverId: m.driverId,
-          distanceKm: m.distanceMeters / 1000,
-          etaSeconds: Math.round((m.distanceMeters / 1000 / 25) * 3600),
-          expiresAt: expiraEm,
-        })),
+        data: chamar.map((m) => {
+          const r = pelaRua.get(m.driverId);
+          return {
+            rideId,
+            driverId: m.driverId,
+            distanceKm: (r?.distanceMeters ?? m.distanceMeters) / 1000,
+            etaSeconds: r?.durationSeconds ?? Math.round((m.distanceMeters / 1000 / 25) * 3600),
+            expiresAt: expiraEm,
+          };
+        }),
         skipDuplicates: true,
       });
       for (const m of chamar) {
@@ -448,6 +486,33 @@ export class RidesService {
 
     this.logger.warn(`Corrida ${rideId}: nenhum motorista disponivel.`);
     return { offered: 0 };
+  }
+
+  /**
+   * Quantos dos motoristas mais perto (em linha reta) ganham a rota pelas
+   * ruas ate o embarque, para o tempo de chegada certo. Variavel
+   * ROTA_NOS_MAIS_PROXIMOS no Render (padrao 3; 0 desliga). Cada um gasta 1
+   * pedido de rota da TomTom; no modo economia nao pede (fica a linha reta).
+   */
+  static quantosPelaRua(env: Record<string, string | undefined> = process.env): number {
+    const n = Number(env.ROTA_NOS_MAIS_PROXIMOS ?? 3);
+    return Number.isInteger(n) && n >= 0 && n <= 5 ? n : 3;
+  }
+
+  private async chegadaPelaRua(
+    motoristas: Array<{ driverId: string; latitude: number; longitude: number }>,
+    embarque: { latitude: number; longitude: number },
+  ): Promise<Map<string, { distanceMeters: number; durationSeconds: number }>> {
+    const mapa = new Map<string, { distanceMeters: number; durationSeconds: number }>();
+    const primeiros = motoristas.slice(0, RidesService.quantosPelaRua());
+    const rotas = await Promise.all(
+      primeiros.map((m) => this.geo.rota({ latitude: m.latitude, longitude: m.longitude }, embarque, false).catch(() => null)),
+    );
+    primeiros.forEach((m, i) => {
+      const r = rotas[i];
+      if (r?.porRua && r.distanceMeters > 0) mapa.set(m.driverId, { distanceMeters: r.distanceMeters, durationSeconds: r.durationSeconds });
+    });
+    return mapa;
   }
 
   // ------------------------------------------------------------------
