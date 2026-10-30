@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: 3eed9d8 (Servidor: entregas de encomendas (Fase 1, desligada em todas as cidades): tarifa)
 No ar agora: 128397a
 OK: servidor em dia.
-Teste de ponta a ponta - 30/10/2026 13:22 UTC
+Teste de ponta a ponta - 30/10/2026 13:28 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -71,7 +71,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST1082)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST1702)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -147,19 +147,19 @@ OK     Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, 1295.9 km)
 OK     Seguranca: busca no Brasil todo so na Central
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 119 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 120 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE13222227 criado (R$ 3,00)
+OK     Central: cupom TESTE13290638 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1142 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1144 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1121 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1141 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 6491 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 5194 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -179,7 +179,7 @@ OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
 OK     Bandeira certa pela hora de Brasilia (10h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 3 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 25s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 23s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -256,8 +256,7 @@ OK     Passageiro: 'Entrega' nao aparece como opcao de corrida
 OK     Entrega: preco pela tarifa propria da cidade (1000 centavos)
 OK     Cliente: pediu a entrega e recebeu o codigo de 4 numeros para quem recebe
 OK     Motorista: chamado marcado ENTREGA, com o item e quem recebe (sem o codigo)
-FALHA  Motorista: coleta / codigo escondido
-       resposta: null
+OK     Motorista: confirmou a coleta e continua sem ver o codigo
 OK     Motorista: codigo errado nao encerra a entrega (Código errado. Confira com quem recebe (restam 4 tentativa(s)).)
 OK     Motorista: com o codigo certo a entrega termina (1000 centavos)
 OK     Central: ve a entrega na cidade, entregue (comissao 100 centavos pela carteira)
@@ -338,7 +337,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 36/666, reverse 40/666, routing 206/666, search 6/83, tiles 29/6666)
+OK     Central: uso da TomTom hoje (geocode 42/666, reverse 42/666, routing 234/666, search 7/83, tiles 29/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
@@ -352,4 +351,4 @@ OK     Operador: desligou as duas etapas com um codigo valido
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 7 contas deste teste e 12 corridas delas
 
-Resultado: 1 falha(s).
+Resultado: 0 falha(s).
