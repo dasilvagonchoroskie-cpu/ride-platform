@@ -57,6 +57,12 @@ export const saveCategorySchema = z.object({
   descricao: z.string().trim().max(120).optional(),
   capacidade: z.number().int().min(1).max(20).optional(),
   multiplicador: z.number().min(0.5).max(5).optional(),
+  /**
+   * Quando a Central leu as tarifas (campo "versao" da lista). Se outra tela
+   * salvou depois, o servidor recusa em vez de gravar por cima (30/10/2026).
+   * Central antiga (sem este campo) salva valores, mas nao muda nomes.
+   */
+  versao: z.string().max(40).optional(),
 });
 export type SaveCategoryInput = z.infer<typeof saveCategorySchema>;
 

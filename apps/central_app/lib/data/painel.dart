@@ -864,7 +864,11 @@ class Zona {
 }
 
 class Tarifas {
-  Tarifas({required this.categorias, required this.multiplicadorCidade, required this.zonas, this.cobranca = 'TAXIMETRO', this.praca});
+  Tarifas({required this.categorias, required this.multiplicadorCidade, required this.zonas, this.cobranca = 'TAXIMETRO', this.praca, this.versao});
+
+  /// Quando as tarifas mudaram pela ultima vez: vai de volta ao salvar (se
+  /// outra tela salvou depois, o servidor recusa em vez de gravar por cima).
+  final String? versao;
 
   final List<Categoria> categorias;
 
@@ -887,6 +891,7 @@ class Tarifas {
       zonas: [for (final z in (m['zonas'] as List? ?? const []).whereType<Map<String, dynamic>>()) Zona.fromJson(z)],
       cobranca: j['cobranca'] == 'FECHADO' ? 'FECHADO' : 'TAXIMETRO',
       praca: j['praca'] as String?,
+      versao: j['versao'] as String?,
     );
   }
 }
@@ -1570,7 +1575,7 @@ class PainelApi {
 
   /// Salva a categoria. Com [cidade]: so naquela cidade (ligada,
   /// multiplicador e valores); sem: o padrao, com nome, figura e texto.
-  Future<Tarifas> salvarCategoria(String codigo, Categoria c, {String? cidade}) async => Tarifas.fromJson(await _c.request(
+  Future<Tarifas> salvarCategoria(String codigo, Categoria c, {String? cidade, String? versao}) async => Tarifas.fromJson(await _c.request(
         'PUT',
         '/admin/tariffs/categoria/$codigo',
         query: cidade == null ? const {} : {'praca': cidade},
@@ -1580,7 +1585,9 @@ class PainelApi {
           'diurna': c.diurna.toJson(),
           'noturna': c.noturna.toJson(),
           'multiplicador': c.multiplicador,
-          if (cidade == null) ...{'icone': c.icone, 'descricao': c.descricao, 'capacidade': c.capacidade},
+          // Nome, figura, texto e lugares: no padrao, ou ao criar a categoria.
+          if (cidade == null || codigo == 'NOVA') ...{'icone': c.icone, 'descricao': c.descricao, 'capacidade': c.capacidade},
+          if (versao != null) 'versao': versao,
         },
       ) as Map<String, dynamic>);
 

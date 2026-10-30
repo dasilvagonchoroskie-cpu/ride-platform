@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/api/api_client.dart';
 import '../core/mapa/busca.dart';
 import '../core/theme/central_theme.dart';
 import '../widgets/ui.dart';
@@ -92,7 +93,7 @@ class _TarifasTelaState extends State<TarifasTela> {
     }
     setState(() => _salvando = true);
     try {
-      final t = await _api.salvarCategoria(c.codigo, c, cidade: _cidade);
+      final t = await _api.salvarCategoria(c.codigo, c, cidade: _cidade, versao: _t?.versao);
       if (!mounted) return;
       final nome = c.nome.trim().toLowerCase();
       setState(() {
@@ -103,6 +104,11 @@ class _TarifasTelaState extends State<TarifasTela> {
       avisar(context, _cidade == null
           ? 'Tarifas de ${c.nome} salvas. Valem a partir da próxima corrida.'
           : 'Tarifas de ${c.nome} salvas só nesta cidade. Valem a partir da próxima corrida.');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      avisar(context, e.message, erro: true);
+      // Outra tela salvou depois que esta abriu: carrega os valores de agora.
+      if (e.statusCode == 409) await _carregar();
     } catch (e) {
       if (mounted) avisar(context, mensagemDe(e), erro: true);
     } finally {
@@ -187,8 +193,11 @@ class _TarifasTelaState extends State<TarifasTela> {
                   _nova = null;
                 }),
               ),
-            if (!naCidade)
-              ActionChip(avatar: const Icon(Icons.add, size: 18), label: const Text('Nova categoria'), onPressed: _novaCategoria),
+            ActionChip(
+              avatar: const Icon(Icons.add, size: 18),
+              label: Text(naCidade ? 'Nova categoria nesta cidade' : 'Nova categoria'),
+              onPressed: _novaCategoria,
+            ),
           ],
         ),
         const SizedBox(height: Spacing.md),
@@ -198,7 +207,15 @@ class _TarifasTelaState extends State<TarifasTela> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (naCidade)
+              if (naCidade && _nova != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Spacing.sm),
+                  child: Text(
+                    'A categoria nova fica ligada só nesta cidade; nas outras ela nasce desligada.',
+                    style: AppText.caption.copyWith(color: AppColors.brand, fontWeight: FontWeight.w600),
+                  ),
+                )
+              else if (naCidade)
                 Padding(
                   padding: const EdgeInsets.only(bottom: Spacing.sm),
                   child: Text(
@@ -209,15 +226,15 @@ class _TarifasTelaState extends State<TarifasTela> {
               TextFormField(
                 key: ValueKey('nome-$k'),
                 initialValue: c.nome,
-                enabled: !naCidade,
+                enabled: !naCidade || _nova != null,
                 style: AppText.body,
                 decoration: InputDecoration(
                   labelText: 'Nome da categoria (ex.: Popular, Conforto, Premium, Moto)',
-                  helperText: naCidade ? 'Nome, figura, texto e lugares mudam em "Todas as cidades".' : null,
+                  helperText: naCidade && _nova == null ? 'Nome, figura, texto e lugares mudam em "Todas as cidades".' : null,
                 ),
                 onChanged: (v) => c.nome = v,
               ),
-              if (!naCidade) ...[
+              if (!naCidade || _nova != null) ...[
                 const SizedBox(height: Spacing.sm),
                 Text('Figura no app do passageiro', style: AppText.caption.copyWith(color: AppColors.textMuted)),
                 Wrap(

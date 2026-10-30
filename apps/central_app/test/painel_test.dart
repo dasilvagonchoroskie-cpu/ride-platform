@@ -141,6 +141,7 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
         {'codigo': 'CONFORTO', 'nome': 'Conforto', 'ativa': daCidade, 'icone': 'conforto', 'descricao': 'Carro mais novo', 'capacidade': 4, 'multiplicador': 1.1, 'daCidade': daCidade, 'diurna': _bandeira('DIURNA', 6, 22), 'noturna': _bandeira('NOTURNA', 22, 6)},
       ],
       'multiplicador': {'cidade': 1, 'zonas': <Object>[]},
+      'versao': '2026-10-30T03:00:00.000Z',
     };
   }
   if (caminho == '/api/admin/vehicles/category-requests') {
@@ -1072,7 +1073,8 @@ void main() {
     );
     await _carregar(tester);
     expect(find.textContaining('O que você salvar aqui vale só nesta cidade'), findsOneWidget);
-    expect(find.text('Nova categoria'), findsNothing, reason: 'categoria nova so em Todas as cidades');
+    // 30/10/2026: categoria nova tambem com a cidade escolhida.
+    expect(find.text('Nova categoria nesta cidade'), findsOneWidget);
     await tester.tap(find.text('Conforto'));
     await tester.pumpAndSettle();
     expect(find.text('Esta cidade tem valores próprios para Conforto.'), findsOneWidget);
@@ -1082,6 +1084,7 @@ void main() {
     await _carregar(tester);
     expect(_pedidosDeTarifa.where((p) => p.startsWith('PUT /api/admin/tariffs/categoria/CONFORTO goiatuba ')), hasLength(1));
     expect(_pedidosDeTarifa.last, contains('"multiplicador":1.1'));
+    expect(_pedidosDeTarifa.last, contains('"versao":"2026-10-30T03:00:00.000Z"'), reason: 'manda quando leu (nao grava por cima)');
     expect(_pedidosDeTarifa.last, isNot(contains('"icone"')), reason: 'figura e texto mudam so no padrao');
     await tester.ensureVisible(find.text('Voltar ao padrão nesta cidade'));
     await tester.pumpAndSettle();
@@ -1089,6 +1092,47 @@ void main() {
     await _carregar(tester);
     expect(_pedidosDeTarifa.last, startsWith('DELETE /api/admin/tariffs/categoria/CONFORTO goiatuba'));
     expect(find.text('Voltar ao padrão nesta cidade'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Tarifas por cidade: criar categoria nova so nesta cidade', (tester) async {
+    _pedidosDeTarifa.clear();
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())))..api.praca = 'goiatuba';
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PainelState>.value(
+        value: painel,
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const Scaffold(body: TarifasTela()),
+        ),
+      ),
+    );
+    await _carregar(tester);
+    await tester.ensureVisible(find.text('Nova categoria nesta cidade'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nova categoria nesta cidade'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ligada só nesta cidade'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).first, 'Executivo');
+    // Fecha o teclado: com o campo em foco, a lista volta a mostrar o campo.
+    await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Criar categoria'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Criar categoria'));
+    await _carregar(tester);
+    final pedido = _pedidosDeTarifa.where((p) => p.startsWith('PUT /api/admin/tariffs/categoria/NOVA goiatuba ')).toList();
+    expect(pedido, hasLength(1));
+    expect(pedido.first, contains('"nome":"Executivo"'));
+    expect(pedido.first, contains('"icone"'), reason: 'categoria nova leva figura, texto e lugares');
     expect(tester.takeException(), isNull);
   });
 

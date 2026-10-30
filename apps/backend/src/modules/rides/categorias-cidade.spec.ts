@@ -2,7 +2,7 @@ import { FareFlag, Prisma } from '@prisma/client';
 import type { FareConfig } from '@prisma/client';
 import { CHAVE_CATEGORIAS, normalizarCategoria, lerCategorias, gravarCategorias } from './categorias';
 import type { Categoria } from './categorias';
-import { aplicarSemente, CHAVE_VERSAO, semente, VERSAO_ATUAL } from './semente-categorias';
+import { aplicarSemente, CHAVE_VERSAO, popularDeVolta, semente, VERSAO_ATUAL } from './semente-categorias';
 import { CHAVE_POR_CIDADE, categoriasDaCidade, lerAjustesDe } from './tarifas-da-cidade';
 import { FareService } from './fare.service';
 import { chegadaEmMinutos } from './rides.service';
@@ -107,6 +107,29 @@ describe('Categorias Popular, Conforto e Premium (semente)', () => {
     settings[CHAVE_CATEGORIAS] = (settings[CHAVE_CATEGORIAS] as Categoria[]).filter((c) => c.codigo !== 'PREMIUM');
     expect(await aplicarSemente(db as never, (d) => lerCategorias(d as never), (d, l) => gravarCategorias(d as never, l))).toBe(false);
     expect((settings[CHAVE_CATEGORIAS] as Categoria[]).map((c) => c.codigo)).toEqual(['CARRO', 'CONFORTO']);
+  });
+
+  it('versao 3: "Carro" volta a "Popular" uma vez; Premium apagado nao volta; nome escolhido fica', async () => {
+    // Banco como estava em 30/10 00:32: semente 2 ja rodou e a Central 256 gravou "Carro".
+    const settings: Record<string, unknown> = {
+      [CHAVE_VERSAO]: 2,
+      [CHAVE_CATEGORIAS]: [
+        { codigo: 'CARRO', nome: 'Carro', ativa: true },
+        { codigo: 'CONFORTO', nome: 'Conforto', ativa: false },
+      ],
+    };
+    const db = bancoFalso(settings, [...carro]);
+    const rodar = () => aplicarSemente(db as never, (d) => lerCategorias(d as never), (d, l) => gravarCategorias(d as never, l));
+    expect(await rodar()).toBe(true);
+    expect((settings[CHAVE_CATEGORIAS] as Categoria[]).map((c) => [c.codigo, c.nome])).toEqual([
+      ['CARRO', 'Popular'],
+      ['CONFORTO', 'Conforto'],
+    ]);
+    expect(settings[CHAVE_VERSAO]).toBe(3);
+    // Depois o Evandro escolhe "Comum": a semente nao mexe mais.
+    settings[CHAVE_CATEGORIAS] = [{ codigo: 'CARRO', nome: 'Comum', ativa: true }];
+    expect(await rodar()).toBe(false);
+    expect(popularDeVolta([normalizarCategoria({ codigo: 'CARRO', nome: 'Executivo' })])[0].nome).toBe('Executivo');
   });
 
   it('categoria gravada antes (sem figura, texto e lugares) continua valendo', () => {
