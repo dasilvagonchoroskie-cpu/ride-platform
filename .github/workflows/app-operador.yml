@@ -63,7 +63,7 @@ jobs:
           set -euo pipefail
           S="operadores/${{ inputs.operador }}/icone-$PAPEL.png"
           if [ -f "$S" ]; then
-            pip install --quiet pillow
+            pip install --quiet pillow numpy
             python3 scripts/gerar-icones.py "$S" "apps/${{ matrix.app }}" --fundo "$ICONE_FUNDO"
           else
             echo "Sem $S: fica o icone da Fortaleza Move."
