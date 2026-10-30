@@ -103,7 +103,7 @@ const COR_DESTAQUE = '#15803D';
 
 export function gerarPdf(d: DadosDoRelatorio): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true, info: { Title: limpo(d.titulo), Author: 'Fortaleza Mov' } });
+    const doc = new PDFDocument({ size: 'A4', margin: 40, bufferPages: true, info: { Title: limpo(d.titulo), Author: 'Fortaleza Move' } });
     const partes: Buffer[] = [];
     doc.on('data', (b: Buffer) => partes.push(b));
     doc.on('end', () => resolve(Buffer.concat(partes)));
@@ -114,7 +114,7 @@ export function gerarPdf(d: DadosDoRelatorio): Promise<Buffer> {
 
     // ---------- Cabecalho ----------
     doc.rect(0, 0, doc.page.width, 92).fill(COR_TITULO);
-    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(18).text('Fortaleza Mov', esq, 24);
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(18).text('Fortaleza Move', esq, 24);
     doc.font('Helvetica').fontSize(11).text(limpo(d.titulo), esq, 48);
     doc.fontSize(9).fillColor('#CBD5E1').text(`Período: ${dataBr(d.de)} a ${dataBr(d.ate)}   -   Gerado em ${dataBr(d.geradoEm, true)}`, esq, 66);
     doc.y = 110;
@@ -255,7 +255,7 @@ export function gerarPdf(d: DadosDoRelatorio): Promise<Buffer> {
       const yRod = doc.page.height - 30;
       doc.font('Helvetica').fontSize(7.5).fillColor(COR_FRACA);
       doc.text(
-        'Fortaleza Mov - relatório gerado pelo sistema. Valores conforme as corridas registradas no servidor.',
+        'Fortaleza Move - relatório gerado pelo sistema. Valores conforme as corridas registradas no servidor.',
         esq,
         yRod,
         { width: largura - 60, lineBreak: false },

@@ -312,7 +312,7 @@ public class VigiaCentralService extends Service {
     private Notification avisoFixo() {
         return new NotificationCompat.Builder(this, CANAL_FIXO)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle("Central Fortaleza Mov ativa")
+                .setContentTitle("Central Fortaleza Move ativa")
                 .setContentText("Avisa SOS e cadastros novos mesmo com o aplicativo fechado.")
                 .setOngoing(true)
                 .setContentIntent(abrirApp(1))

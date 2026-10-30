@@ -130,7 +130,7 @@ export class PushService implements OnApplicationBootstrap {
       CHEGANDO: ['Motorista a caminho', `${motorista} está indo até você.`],
       CHEGOU: ['Seu motorista chegou', `${motorista} está no local de embarque.${carro ? ` ${carro}.` : ''}`],
       INICIOU: ['Viagem iniciada', 'Boa viagem! Acompanhe pelo aplicativo.'],
-      TERMINOU: ['Viagem concluída', 'Obrigado por viajar com a Fortaleza Mov. Avalie o motorista.'],
+      TERMINOU: ['Viagem concluída', 'Obrigado por viajar com a Fortaleza Move. Avalie o motorista.'],
       CANCELADA: ['Corrida cancelada', `${motorista} cancelou a corrida. Peça de novo pelo aplicativo.`],
     };
     const [titulo, texto] = textos[evento];

@@ -66,7 +66,7 @@ jobs:
             pip install --quiet pillow
             python3 scripts/gerar-icones.py "$S" "apps/${{ matrix.app }}" --fundo "$ICONE_FUNDO"
           else
-            echo "Sem $S: fica o icone da Fortaleza Mov."
+            echo "Sem $S: fica o icone da Fortaleza Move."
           fi
 
       - uses: subosito/flutter-action@v2
@@ -93,7 +93,7 @@ jobs:
             "$RUNNER_TEMP/assinatura.jks" "$SENHA_LOJA" "$APELIDO" "$SENHA_CHAVE" > "apps/${{ matrix.app }}/android/key.properties"
 
       # Push: so com o app do operador registrado no Firebase (o arquivo de
-      # configuracao da Fortaleza Mov nao serve para outro pacote).
+      # configuracao da Fortaleza Move nao serve para outro pacote).
       - name: Compilar
         working-directory: apps/${{ matrix.app }}
         run: |

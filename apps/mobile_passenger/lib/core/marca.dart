@@ -13,7 +13,7 @@ import 'theme/app_theme.dart';
 class Marca {
   Marca._();
 
-  static const String nomePadrao = String.fromEnvironment('MARCA_NOME', defaultValue: 'Fortaleza Mov');
+  static const String nomePadrao = String.fromEnvironment('MARCA_NOME', defaultValue: 'Fortaleza Move');
   static const String _corPadrao = String.fromEnvironment('MARCA_COR', defaultValue: '#1E5BB8');
 
   static Color get corPadrao => corDe(_corPadrao) ?? AppColors.brand;

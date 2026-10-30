@@ -40,7 +40,7 @@ erro() { echo "ERRO: $1" >&2; exit 2; }
 [[ "$COR" =~ ^#[0-9A-Fa-f]{6}$ ]] || erro "--cor: formato #RRGGBB"
 [[ "$FUNDO" =~ ^#[0-9A-Fa-f]{6}$ ]] || erro "--fundo: formato #RRGGBB"
 [[ "$PACOTE" =~ ^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$ ]] || erro "--pacote: ex.: br.com.goiatubamov (minusculas, com pontos)"
-[ "$PACOTE" != "br.com.fortalezamov" ] || erro "--pacote: esse e o da Fortaleza Mov; o operador precisa de um proprio"
+[ "$PACOTE" != "br.com.fortalezamov" ] || erro "--pacote: esse e o da Fortaleza Move; o operador precisa de um proprio"
 [[ "$API" =~ ^https://[A-Za-z0-9.-]+(/.*)?$ ]] || erro "--api: endereco https do servidor"
 case "$NOME" in *'"'*|*'$'*|*'`'*|*'\'*) erro "--nome: sem aspas, \$, crase ou barra invertida" ;; esac
 

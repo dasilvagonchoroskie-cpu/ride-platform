@@ -320,7 +320,7 @@ class _Passageiro extends StatelessWidget {
           ),
           IconButton.filledTonal(
             tooltip: 'WhatsApp',
-            onPressed: () => abrirWhatsApp(tel, 'Olá! Sou o motorista da Fortaleza Mov.'),
+            onPressed: () => abrirWhatsApp(tel, 'Olá! Sou o motorista da Fortaleza Move.'),
             icon: const Icon(Icons.chat),
           ),
         ],

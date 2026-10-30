@@ -115,7 +115,7 @@ if [ "$(echo "$A" | jq -r '.data.definida')" = "true" ]; then
   # Ja personalizada pela Central: grava de volta o mesmo (nao muda o app).
   X=$(put /admin/aparencia "$(echo "$A" | jq -c '.data | {nome, cor, bannerAtivo, bannerTexto}')" "$TA")
   # Igual ao padrao de fabrica (sobra de um teste antigo): volta ao padrao.
-  if [ "$(echo "$X" | jq -r '[.data.nome, .data.cor, .data.bannerAtivo, .data.logoId] | @json')" = '["Fortaleza Mov","#1E5BB8",false,null]' ]; then
+  if [ "$(echo "$X" | jq -r '[.data.nome, .data.cor, .data.bannerAtivo, .data.logoId] | @json')" = '["Fortaleza Move","#1E5BB8",false,null]' ]; then
     X=$(curl -s -m 90 -X DELETE "$API/admin/aparencia" -H "Authorization: Bearer $TA")
   fi
 fi
@@ -173,6 +173,19 @@ N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 X=$(get /geo/mapa "$TP")
 [ "$(echo "$X" | jq -r '(.data.tiles // "") | startswith("https://api.tomtom.com/map/1/tile/")')" = "true" ] && [ "$(echo "$X" | jq -r '.data.tamanho')" = "512" ] \
   && ok "Mapa: imagens da TomTom com login (512 px, economia: $(echo "$X" | jq -r '.data.economia'))" || falha "Mapa: imagens da TomTom" "$(echo "$X" | jq -c '{provedor: .data.provedor, temTiles: ((.data.tiles // "") != ""), erro: .error.code}')"
+# Termos da TomTom (clausula 11.4): o celular so pode guardar a imagem pelo
+# prazo do cabecalho de cache da propria TomTom. Mostra o que ela manda (o
+# endereco com a chave nunca aparece no relatorio).
+T=$(echo "$X" | jq -r '.data.tiles // empty')
+if [ -n "$T" ]; then
+  XY=$(python3 -c "import math; z=14; la=-18.0125; lo=-49.3547; n=2**z; x=int((lo+180)/360*n); r=math.radians(la); y=int((1-math.asinh(math.tan(r))/math.pi)/2*n); print(z,x,y)")
+  read -r TZ_ TX_ TY_ <<< "$XY"; U=$(echo "$T" | sed "s#{z}#$TZ_#; s#{x}#$TX_#; s#{y}#$TY_#")
+  H=$(curl -s -m 30 -D - -o /dev/null "$U" | tr -d '\r' | grep -iE '^(http/|cache-control|expires|age|etag|last-modified):' | sed 's/^/         /')
+  echo "$H" | head -1 | grep -q ' 200' && ok "Mapa: cabecalhos de cache de uma imagem da TomTom (para o advogado):" || falha "Mapa: imagem de teste da TomTom" "$(echo "$H" | head -1)"
+  echo "$H" | tee -a "$REL" > /dev/null
+  echo "$H"
+  unset U T
+fi
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API/geo/mapa"); [ "$C" = "401" ] && ok "Seguranca: a chave do mapa nao sai sem login" || falha "Seguranca: chave do mapa sem login" "$C"
 X=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
 [ -n "$(echo "$X" | jq -r '.data.address // empty' | grep -v '^Ponto no mapa')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
@@ -378,7 +391,7 @@ X=$(post /admin/passengers/excluir "{\"ids\":[\"$MUID\"]}" "$TA")
 X=$(post /admin/passengers/excluir "{\"ids\":[\"$PXID\"]}" "$TM"); sucesso "$X" && falha "Seguranca: motorista excluiu passageiro" "$X" || ok "Seguranca: so a Central exclui passageiro"
 
 # Excluir a propria conta (exigencia da Google Play, 09/10/2026).
-X=$(curl -s -m 60 "$API/conta/exclusao"); echo "$X" | grep -q "Excluir sua conta da Fortaleza Mov" && echo "$X" | grep -q '<form method="post"' && ok "Pagina publica de exclusao de conta no ar" || falha "Pagina de exclusao de conta" "$(echo "$X" | head -c 200)"
+X=$(curl -s -m 60 "$API/conta/exclusao"); echo "$X" | grep -q "Excluir sua conta da Fortaleza Move" && echo "$X" | grep -q '<form method="post"' && ok "Pagina publica de exclusao de conta no ar" || falha "Pagina de exclusao de conta" "$(echo "$X" | head -c 200)"
 X=$(curl -s -m 60 "$API/legal/privacidade"); echo "$X" | grep -q "<h1>" && echo "$X" | grep -qi "LGPD" && ok "Politica de privacidade em pagina de internet" || falha "Pagina da politica de privacidade" "$(echo "$X" | head -c 200)"
 TXX=$(entrar "+55649${SUF}84" PASSENGER)
 X=$(post /conta/excluir '{}' "$TXX"); sucesso "$X" && falha "Excluir conta sem confirmar deveria ser recusado" "$X" || ok "Seguranca: exclusao da conta pede confirmacao"
@@ -677,6 +690,37 @@ X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX comprovante teste"}' "$TA")
 X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.last.kind')" = "CREDIT" ] && [ "$(echo "$X" | jq -r '.data.last.amountCents')" = "5000" ] && ok "Carteira: o aplicativo fica sabendo da recarga (+R\$ 50,00)" || falha "Carteira: recarga no aplicativo" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Carteira: com a recarga, ficou online de novo" || falha "Carteira: online depois da recarga" "$X"
+# Chamadas a TomTom numa corrida completa (29/10/2026): o mesmo que os 2 apps
+# fazem — endereco do embarque, busca do destino, orcamento (o caminho vem
+# junto), pedido com a cotacao (sem pedir a rota de novo), escolha do
+# motorista, rotas do app do motorista (ate o embarque e a viagem) e do
+# passageiro (carro vindo e em viagem) — medido pelo contador do servidor.
+uso_total() { get /geo/uso "$TA" | jq -r '[.data.servicos[] | select(.servico != "tiles") | {(.servico): .hoje}] | add | tojson'; }
+U0=$(uso_total)
+G1=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
+G2=$(get "/geo/search?q=Rodoviaria&lat=-18.0125&lng=-49.3547&sessao=medida-$SUF" "$TP")
+E=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP"); COT=$(echo "$E" | jq -r '.data.cotacao // empty'); NPT=$(echo "$E" | jq -r '.data.pontos | length')
+post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
+X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"cotacao\":\"$COT\"}" "$TP"); RMED=$(echo "$X" | jq -r '.data.ride.id // empty')
+[ -n "$COT" ] && [ "${NPT:-0}" -ge 2 ] && [ -n "$RMED" ] && [ "$(echo "$X" | jq -r '.data.ride.distanceMeters')" = "$(echo "$E" | jq -r '.data.distanceMeters')" ] \
+  && ok "TomTom: o pedido usou a medida assinada do orcamento ($(echo "$E" | jq -r '.data.distanceMeters') m; caminho com $NPT pontos ja veio no orcamento)" || falha "TomTom: cotacao reaproveitada no pedido" "$(echo "$X" | jq -c '{erro: .error.message, d: .data.ride.distanceMeters}')"
+rota() { get "/geo/rota?deLat=$1&deLng=$2&paraLat=$3&paraLng=$4" "$5" >/dev/null; }
+if [ -n "$RMED" ]; then
+  for t in 1 2 3; do sleep 2; get /driver/rides/offers "$TM" | jq -e --arg r "$RMED" '[.data[] | select(.rideId==$r)] | length == 1' >/dev/null && break; done
+  post "/driver/rides/$RMED/accept" '{}' "$TM" >/dev/null
+  rota -18.0130 -49.3550 -18.0125 -49.3547 "$TM"   # motorista: ate o embarque
+  rota -18.0125 -49.3547 -18.0050 -49.3610 "$TM"   # motorista: a viagem (para mostrar)
+  rota -18.0130 -49.3550 -18.0125 -49.3547 "$TP"   # passageiro: o carro vindo
+  for passo in arriving arrived start; do post "/driver/rides/$RMED/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM" >/dev/null; done
+  rota -18.0126 -49.3548 -18.0050 -49.3610 "$TM"   # motorista: em viagem, de onde esta
+  rota -18.0126 -49.3548 -18.0050 -49.3610 "$TP"   # passageiro: em viagem
+  post "/driver/rides/$RMED/finish" '{"distanceMeters":1400,"stoppedSeconds":0,"latitude":-18.0050,"longitude":-49.3610}' "$TM" >/dev/null
+fi
+sleep 2
+U1=$(uso_total)
+MED=$(python3 -c "import json,sys; a=json.loads(sys.argv[1] or '{}'); b=json.loads(sys.argv[2] or '{}'); d={k:b.get(k,0)-a.get(k,0) for k in b}; print(sum(d.values()), json.dumps(d))" "$U0" "$U1")
+NMED=${MED%% *}
+[ "${NMED:-0}" -ge 3 ] 2>/dev/null && [ "${NMED:-99}" -le 15 ] 2>/dev/null && ok "TomTom: $NMED chamadas numa corrida completa simulada (por servico: ${MED#* }) — sem guardado no servidor" || falha "TomTom: chamadas por corrida" "$MED"
 
 # ================= Painel da Central =================
 X=$(get /admin/overview "$TA")

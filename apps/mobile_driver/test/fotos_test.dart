@@ -137,7 +137,7 @@ Object? _resposta(String metodo, String caminho) {
         'blocking': false,
         'blockEnabled': true,
         'status': 'ok',
-        'central': {'whatsapp': '+5564999991234', 'pixKey': 'pix@fortalezamov.com.br', 'pixHolder': 'Fortaleza Mov'},
+        'central': {'whatsapp': '+5564999991234', 'pixKey': 'pix@fortalezamov.com.br', 'pixHolder': 'Fortaleza Move'},
         'transactions': [
           {'id': 't1', 'type': 'COMMISSION', 'kind': 'DEBIT', 'amountCents': -148, 'balanceAfterCents': 4250, 'description': 'Taxa da corrida', 'rideCode': 'AB12CD', 'createdAt': '2026-10-10T15:20:00.000Z'},
           {'id': 't2', 'type': 'ADJUSTMENT', 'kind': 'CREDIT', 'amountCents': 5000, 'balanceAfterCents': 4398, 'description': 'Recarga por PIX', 'rideCode': null, 'createdAt': '2026-10-09T10:00:00.000Z'},
@@ -146,7 +146,7 @@ Object? _resposta(String metodo, String caminho) {
     case '/api/driver/wallet/resumo':
       return {'balanceCents': 4250, 'minimumCents': 1000, 'blockEnabled': true, 'blocking': false, 'last': null};
     case '/api/driver/central':
-      return {'whatsapp': '+5564999991234', 'pixKey': 'pix@fortalezamov.com.br', 'pixHolder': 'Fortaleza Mov'};
+      return {'whatsapp': '+5564999991234', 'pixKey': 'pix@fortalezamov.com.br', 'pixHolder': 'Fortaleza Move'};
     case '/api/driver/meus-dados':
       return {
         'dados': {
@@ -223,7 +223,7 @@ Object? _resposta(String metodo, String caminho) {
       return {
         'version': '2026-10-01',
         'title': caminho.endsWith('terms') ? 'Termos de Uso' : 'Política de Privacidade',
-        'content': 'Ao dirigir pela Fortaleza Mov você concorda com estas regras.\n\n1. A taxa da Central é descontada da carteira.\n2. Seus documentos são usados só para conferir o cadastro.',
+        'content': 'Ao dirigir pela Fortaleza Move você concorda com estas regras.\n\n1. A taxa da Central é descontada da carteira.\n2. Seus documentos são usados só para conferir o cadastro.',
       };
   }
   if (caminho.endsWith('/messages')) return {'podeEscrever': true, 'items': <Object>[]};

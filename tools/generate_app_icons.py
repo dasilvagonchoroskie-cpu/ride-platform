@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Gera os icones dos aplicativos da plataforma Fortaleza Mov.
+Gera os icones dos aplicativos da plataforma Fortaleza Move.
 
 Design (identico ao das referencias do usuario):
   - fundo: quadrado arredondado com degrade azul-escuro (claro no topo,

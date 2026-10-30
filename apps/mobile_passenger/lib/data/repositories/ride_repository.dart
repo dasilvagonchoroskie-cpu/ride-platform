@@ -74,6 +74,7 @@ class RideRepository {
     String? category,
     bool semDestino = false,
     List<PlaceSuggestion> paradas = const [],
+    String? cotacao,
   }) async {
     if (_useDemo) {
       return DemoEngine.createRide(
@@ -94,6 +95,7 @@ class RideRepository {
         if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
         if (agendadaPara != null) 'scheduledFor': agendadaPara.toUtc().toIso8601String(),
         if (category != null) 'category': category,
+        if (cotacao != null) 'cotacao': cotacao,
       }) as Map<String, dynamic>;
 
       return Ride.fromServer(data['ride'] as Map<String, dynamic>);

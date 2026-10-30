@@ -229,4 +229,22 @@ void main() {
       expect(ponto[1], closeTo(-49.2155, 0.0001));
     });
   });
+
+  test('imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois', () async {
+    SharedPreferences.setMockInitialValues({});
+    UsoLocal.zerar();
+    await MapaConfig.esquecer();
+    UsoLocal.contar('imagens');
+    UsoLocal.contar('imagens');
+    UsoLocal.contar('imagens');
+    String? caminho;
+    await MapaConfig.atualizarComLogin((c) async {
+      caminho = c;
+      return {'provedor': 'tomtom', 'tiles': 'https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?tileSize=512&key=teste', 'tamanho': 512};
+    });
+    expect(caminho, '/geo/mapa?imagens=3');
+    expect(UsoLocal.imagensParaAvisar, 0);
+    expect(UsoLocal.hoje('imagens'), 3, reason: 'o teto do dia do celular continua contando');
+    await MapaConfig.esquecer();
+  });
 }

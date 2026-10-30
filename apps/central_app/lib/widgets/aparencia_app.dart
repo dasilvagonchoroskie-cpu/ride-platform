@@ -106,7 +106,7 @@ class _AparenciaDoAppState extends State<AparenciaDoApp> {
 
   Future<void> _editar() async {
     final a = _a ?? const {};
-    final nome = TextEditingController(text: a['nome']?.toString() ?? 'Fortaleza Mov');
+    final nome = TextEditingController(text: a['nome']?.toString() ?? 'Fortaleza Move');
     final faixa = TextEditingController(text: a['bannerTexto']?.toString() ?? '');
     var cor = a['cor']?.toString() ?? '#1E5BB8';
     var faixaLigada = a['bannerAtivo'] == true;
@@ -123,7 +123,7 @@ class _AparenciaDoAppState extends State<AparenciaDoApp> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AppField(label: 'Nome do app', hint: 'Ex.: Fortaleza Mov', controller: nome, maxLength: 30),
+                  AppField(label: 'Nome do app', hint: 'Ex.: Fortaleza Move', controller: nome, maxLength: 30),
                   const SizedBox(height: Spacing.sm),
                   Text('Cor do destaque', style: AppText.bodyStrong),
                   const SizedBox(height: Spacing.xs),

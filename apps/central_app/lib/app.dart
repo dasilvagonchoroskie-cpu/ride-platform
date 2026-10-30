@@ -29,7 +29,7 @@ class CentralApp extends StatelessWidget {
         child: SafeArea(top: false, left: false, right: false, child: child ?? const SizedBox.shrink()),
       ),
       scaffoldMessengerKey: avisos,
-      title: 'Fortaleza Mov Central',
+      title: 'Fortaleza Move Central',
       debugShowCheckedModeBanner: false,
       theme: CentralTheme.light,
       // Logo ao instalar: autorizacoes antes de qualquer outra tela.

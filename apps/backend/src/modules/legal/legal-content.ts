@@ -11,7 +11,7 @@
 
 export const LEGAL_VERSION = '1.0.0';
 
-// Evandro (11/10/2026): marca Fortaleza Mov; quem desenvolve e opera e a
+// Evandro (11/10/2026): marca Fortaleza Move; quem desenvolve e opera e a
 // Fortaleza Digital Security. CNPJ ainda nao existe: entra aqui quando sair.
 const OPERADORA = 'Fortaleza Digital Security (Goiatuba – GO, CNPJ em registro)';
 const EMAIL_CONTATO = 'fortalezadigitalsecurity@gmail.com';
@@ -22,17 +22,17 @@ const WHATSAPP_CONTATO = '(64) 99647-2794';
 // plataforma ainda não tem usuários de verdade — depois do lançamento,
 // mudança relevante aqui exige subir LEGAL_VERSION (e kTermsVersion nos apps).
 
-export const TERMS_MD = `# Termos de Uso — Fortaleza Mov
+export const TERMS_MD = `# Termos de Uso — Fortaleza Move
 
 Versão ${LEGAL_VERSION} — vigente a partir de sua publicação no aplicativo.
 
-## 1. O que é a Fortaleza Mov
+## 1. O que é a Fortaleza Move
 
-A Fortaleza Mov, desenvolvida e operada por ${OPERADORA}, é uma plataforma de tecnologia que aproxima passageiros e motoristas parceiros para a realização de corridas de carro e de moto (mototáxi). A plataforma **não presta o serviço de transporte diretamente**: ela é uma intermediária que conecta as partes, sendo o motorista parceiro o responsável pela execução da viagem.
+A Fortaleza Move, desenvolvida e operada por ${OPERADORA}, é uma plataforma de tecnologia que aproxima passageiros e motoristas parceiros para a realização de corridas de carro e de moto (mototáxi). A plataforma **não presta o serviço de transporte diretamente**: ela é uma intermediária que conecta as partes, sendo o motorista parceiro o responsável pela execução da viagem.
 
 ## 2. Cadastro
 
-Para usar a Fortaleza Mov é preciso ter 18 anos ou mais e fornecer dados verdadeiros. Motoristas parceiros passam por análise de documentos antes da aprovação, incluindo Carteira Nacional de Habilitação (CNH) válida e documento do veículo (CRLV) em dia, e só começam a receber corridas depois da aprovação presencial na Central.
+Para usar a Fortaleza Move é preciso ter 18 anos ou mais e fornecer dados verdadeiros. Motoristas parceiros passam por análise de documentos antes da aprovação, incluindo Carteira Nacional de Habilitação (CNH) válida e documento do veículo (CRLV) em dia, e só começam a receber corridas depois da aprovação presencial na Central.
 
 ## 3. Uso proibido da plataforma
 
@@ -86,13 +86,13 @@ Fica eleito o foro da comarca de Goiatuba, Estado de Goiás, para dirimir quaisq
 Ao tocar em "Aceito os Termos", você declara ter lido e concordado com este documento e com a Política de Privacidade.
 `;
 
-export const PRIVACY_MD = `# Política de Privacidade — Fortaleza Mov
+export const PRIVACY_MD = `# Política de Privacidade — Fortaleza Move
 
 Versão ${LEGAL_VERSION} — vigente a partir de sua publicação no aplicativo.
 
-Esta Política explica como a Fortaleza Mov coleta, usa e protege os dados pessoais de passageiros e motoristas parceiros, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD). Vale para os aplicativos Fortaleza Mov (passageiro) e Fortaleza Mov Motorista e para a Central da plataforma.
+Esta Política explica como a Fortaleza Move coleta, usa e protege os dados pessoais de passageiros e motoristas parceiros, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD). Vale para os aplicativos Fortaleza Move (passageiro) e Fortaleza Move Motorista e para a Central da plataforma.
 
-**Quem é o responsável (controlador):** ${OPERADORA}, que desenvolve e opera a Fortaleza Mov.
+**Quem é o responsável (controlador):** ${OPERADORA}, que desenvolve e opera a Fortaleza Move.
 **Encarregado pelos dados (LGPD):** a própria Fortaleza Digital Security — e-mail ${EMAIL_CONTATO}, WhatsApp ${WHATSAPP_CONTATO}.
 
 ## 1. Quais dados coletamos

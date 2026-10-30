@@ -25,7 +25,7 @@ class SplashScreen extends StatelessWidget {
             ),
             SizedBox(height: Spacing.xs),
             Text(
-              'MOV  -  MOTORISTA',
+              'MOVE  -  MOTORISTA',
               style: TextStyle(
                 fontFamily: AppText.family,
                 color: AppColors.brand,

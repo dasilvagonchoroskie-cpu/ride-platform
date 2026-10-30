@@ -70,7 +70,7 @@ export class AcompanharCorridaController {
     res.send(paginaDeAcompanhar(token));
   }
 
-  /** Imagem do mapa da pagina (TomTom pelo servidor, com guardado). */
+  /** Imagem do mapa da pagina (TomTom pelo servidor, sem guardado no servidor). */
   @Get(':token/mapa/:z/:x/:y')
   async imagem(
     @Param('token') token: string,
@@ -86,8 +86,9 @@ export class AcompanharCorridaController {
       return;
     }
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.send(r);
+    // O mesmo prazo que a TomTom mandou (sem prazo dela: o navegador nao guarda).
+    res.setHeader('Cache-Control', r.cacheControl ?? 'no-store');
+    res.send(r.png);
   }
 
   @Get(':token/dados')

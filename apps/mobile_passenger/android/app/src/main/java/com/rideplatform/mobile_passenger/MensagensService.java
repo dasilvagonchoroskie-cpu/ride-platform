@@ -36,7 +36,7 @@ public class MensagensService extends FirebaseMessagingService {
         if (!"corrida".equals(d.get("tipo"))) return;
         // Com o vigia da corrida de pe, os avisos ja saem por ele.
         if (CorridaService.ativo) return;
-        String titulo = d.get("titulo") != null ? d.get("titulo") : "Fortaleza Mov";
+        String titulo = d.get("titulo") != null ? d.get("titulo") : "Fortaleza Move";
         String texto = d.get("texto") != null ? d.get("texto") : "";
         String evento = d.get("evento") != null ? d.get("evento") : "";
 

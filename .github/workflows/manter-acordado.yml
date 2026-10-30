@@ -9,11 +9,13 @@ name: Manter o servidor acordado
 # banco tambem nao entra em pausa por inatividade, e se algo cair esta
 # tarefa falha e o GitHub avisa o dono da conta por e-mail.
 
+# 29/10/2026: quem mantem o servidor acordado e o pg_cron do Supabase (a
+# cada 4 minutos; conferido no registro do Render). Aqui fica so o alarme:
+# 2 visitas por dia, e o GitHub avisa por e-mail se o servidor cair.
+# (Antes: a cada 5 min, ~170 minutos de esteira por mes.)
 on:
   schedule:
-    # Fora do minuto zero: o GitHub avisa que agendamentos no inicio da
-    # hora sao os que mais atrasam.
-    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
+    - cron: '41 9,21 * * *'   # 06:41 e 18:41 em Brasilia
   workflow_dispatch: {}
 
 jobs:

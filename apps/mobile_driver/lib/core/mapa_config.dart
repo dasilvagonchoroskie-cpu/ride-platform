@@ -146,8 +146,12 @@ class MapaConfig {
     }
     _pedindo = true;
     try {
-      final d = await pedir('/geo/mapa');
+      // Junto, quantas imagens este celular baixou da TomTom desde o ultimo
+      // aviso (o servidor soma para a cota do mes da chave inteira).
+      final imagens = UsoLocal.imagensParaAvisar;
+      final d = await pedir(imagens > 0 ? '/geo/mapa?imagens=$imagens' : '/geo/mapa');
       if (d is Map) {
+        if (imagens > 0) UsoLocal.avisouImagens(imagens);
         _pedidoEm = DateTime.now();
         _falhas = 0;
         _novaTentativa?.cancel();

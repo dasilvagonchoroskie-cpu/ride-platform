@@ -56,6 +56,8 @@ export const requestRideSchema = z.object({
   category: z.string().trim().toUpperCase().max(20).optional(),
   /** Codigo do cupom de desconto (opcional). */
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
+  /** Medida assinada do orcamento: a rota nao e pedida de novo a TomTom. */
+  cotacao: z.string().max(2000).optional(),
 }).refine(comDestinoOuSem, AVISO_DESTINO);
 
 export const cancelRideSchema = z.object({

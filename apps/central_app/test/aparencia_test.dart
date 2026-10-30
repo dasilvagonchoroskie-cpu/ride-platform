@@ -24,7 +24,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     var atual = <String, dynamic>{
-      'nome': 'Fortaleza Mov',
+      'nome': 'Fortaleza Move',
       'cor': '#1E5BB8',
       'bannerAtivo': false,
       'bannerTexto': '',
@@ -39,7 +39,7 @@ void main() {
       if (r.url.path.endsWith('/admin/aparencia') && r.method == 'PUT') {
         atual = {...atual, ...?corpo, 'definida': true};
       } else if (r.url.path.endsWith('/admin/aparencia') && r.method == 'DELETE') {
-        atual = {'nome': 'Fortaleza Mov', 'cor': '#1E5BB8', 'bannerAtivo': false, 'bannerTexto': '', 'logoId': null, 'logoUrl': null, 'definida': false};
+        atual = {'nome': 'Fortaleza Move', 'cor': '#1E5BB8', 'bannerAtivo': false, 'bannerTexto': '', 'logoId': null, 'logoUrl': null, 'definida': false};
       } else if (r.url.path.endsWith('/admin/aparencia/logo')) {
         atual = {...atual, 'logoId': r.method == 'POST' ? 'id' : null, 'logoUrl': r.method == 'POST' ? '/app/logo?v=abcd1234' : null};
       }
@@ -58,11 +58,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Aparência do app'), findsOneWidget);
-    expect(find.text('Fortaleza Mov'), findsOneWidget);
+    expect(find.text('Fortaleza Move'), findsOneWidget);
 
     await tester.tap(find.text('Editar'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Fortaleza Mov'), 'Goiatuba Mov');
+    await tester.enterText(find.widgetWithText(TextField, 'Fortaleza Move'), 'Goiatuba Mov');
     await tester.tap(find.text('Verde'));
     await tester.pumpAndSettle();
     // A janela rola: no celular a chave da faixa fica mais para baixo.
@@ -101,14 +101,14 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Voltar ao padrão').last);
     await tester.pumpAndSettle();
     expect(pedidos.containsKey('DELETE /api/admin/aparencia'), isTrue);
-    expect(find.text('Fortaleza Mov'), findsOneWidget);
+    expect(find.text('Fortaleza Move'), findsOneWidget);
     expect(find.text('Voltar ao padrão'), findsNothing);
   });
 
   testWidgets('Operador (nao dono): o servidor recusa e a Central mostra o motivo', (tester) async {
     final servidor = MockClient((r) async {
       if (r.method == 'GET') {
-        return _ok({'nome': 'Fortaleza Mov', 'cor': '#1E5BB8', 'bannerAtivo': false, 'bannerTexto': '', 'logoUrl': null});
+        return _ok({'nome': 'Fortaleza Move', 'cor': '#1E5BB8', 'bannerAtivo': false, 'bannerTexto': '', 'logoUrl': null});
       }
       return http.Response(jsonEncode({'success': false, 'error': {'code': 'FORBIDDEN', 'message': 'Só o dono da Central pode mudar isso.'}}), 403,
           headers: {'content-type': 'application/json; charset=utf-8'});
@@ -122,6 +122,6 @@ void main() {
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
     expect(find.text('Só o dono da Central pode mudar isso.'), findsOneWidget);
-    expect(find.text('Fortaleza Mov'), findsOneWidget);
+    expect(find.text('Fortaleza Move'), findsOneWidget);
   });
 }

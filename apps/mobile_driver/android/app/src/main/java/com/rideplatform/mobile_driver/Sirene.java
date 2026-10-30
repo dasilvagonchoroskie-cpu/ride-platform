@@ -94,7 +94,7 @@ public final class Sirene {
         } catch (Exception ignored) {
             // Alguns aparelhos no "Nao perturbe" total recusam: toca no volume que estiver.
         }
-        // Som proprio da Fortaleza Mov (assobio de chamado, res/raw/chamado.ogg):
+        // Som proprio da Fortaleza Move (assobio de chamado, res/raw/chamado.ogg):
         // toca igual em qualquer celular (Evandro, 09/10/2026). O toque de
         // alarme do aparelho fica so de reserva.
         Uri[] sons = {

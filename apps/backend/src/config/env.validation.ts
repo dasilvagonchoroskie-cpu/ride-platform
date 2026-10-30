@@ -54,7 +54,7 @@ export const envSchema = z.object({
   /** Envio pelo Gmail (gratis, sem SMTP): endereco do script do Google e o segredo. */
   EMAIL_GOOGLE_SCRIPT_URL: z.string().url().optional(),
   EMAIL_GOOGLE_SCRIPT_SEGREDO: z.string().min(20).optional(),
-  EMAIL_REMETENTE_NOME: z.string().default('Fortaleza Mov'),
+  EMAIL_REMETENTE_NOME: z.string().default('Fortaleza Move'),
   FCM_PROJECT_ID: z.string().optional(),
   FCM_CLIENT_EMAIL: z.string().optional(),
   FCM_PRIVATE_KEY: z.string().optional(),

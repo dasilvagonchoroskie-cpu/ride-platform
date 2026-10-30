@@ -21,7 +21,7 @@ class AppColors {
   static const Color textMuted = Color(0xFF667085);
   static const Color textFaint = Color(0xFF98A2B3);
 
-  // ---- Marca Fortaleza Mov: azul do icone + dourado das asas ----
+  // ---- Marca Fortaleza Move: azul do icone + dourado das asas ----
   static const Color brand = Color(0xFF1E5BB8);
   static const Color brandDark = Color(0xFF143E80);
   static const Color brandSoft = Color(0x1A1E5BB8);

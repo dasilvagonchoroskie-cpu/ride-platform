@@ -282,7 +282,7 @@ class _StatusDasConexoesState extends State<_StatusDasConexoes> {
 /// Resumo do GET /geo/uso para a Central (cota gratis da TomTom por MES).
 String textoDoUsoDoMapa(Map<dynamic, dynamic> u) {
   if (u['ligado'] != true) return 'TomTom: chave não configurada no servidor';
-  const nomes = {'geocode': 'buscas', 'reverse': 'endereços', 'routing': 'rotas', 'search': 'lugares'};
+  const nomes = {'geocode': 'buscas', 'reverse': 'endereços', 'routing': 'rotas', 'search': 'lugares', 'tiles': 'imagens'};
   final partes = <String>[];
   for (final s in (u['servicos'] as List? ?? const [])) {
     if (s is! Map) continue;
@@ -294,7 +294,13 @@ String textoDoUsoDoMapa(Map<dynamic, dynamic> u) {
       : u['economia'] == true
           ? ' · modo economia'
           : '';
-  return 'TomTom$estado · no mês: ${partes.join(', ')}';
+  // Alerta a 70% da cota gratis do mes (29/10/2026).
+  final alertas = [
+    for (final a in (u['alertas'] as List? ?? const []))
+      if (a is Map) '${nomes[a['servico']] ?? a['servico']} ${a['porcento']}%',
+  ];
+  final alerta = alertas.isEmpty ? '' : ' · ATENÇÃO: passou de 70% da cota do mês (${alertas.join(', ')})';
+  return 'TomTom$estado$alerta · no mês: ${partes.join(', ')}';
 }
 
 /// Verificacao em duas etapas da Central (etapa 7, Evandro 29/10/2026:

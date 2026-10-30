@@ -4,7 +4,7 @@ import '../core/fotos.dart';
 import '../core/theme/app_theme.dart';
 import '../core/marca.dart';
 
-/// Logo redondo da Fortaleza Mov (icone do motorista).
+/// Logo redondo da Fortaleza Move (icone do motorista).
 class BrandLogo extends StatelessWidget {
   const BrandLogo({super.key, this.size = 44});
 
@@ -65,7 +65,7 @@ class RatingChip extends StatelessWidget {
   }
 }
 
-/// Foto (iniciais) com a nota embaixo, nome e "Fortaleza Mov".
+/// Foto (iniciais) com a nota embaixo, nome e "Fortaleza Move".
 class DriverHeader extends StatelessWidget {
   const DriverHeader({super.key, required this.name, required this.initials, required this.rating, this.fotoUrl});
 

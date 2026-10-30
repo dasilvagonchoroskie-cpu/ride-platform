@@ -91,7 +91,7 @@ export class ContaService {
         userId: 'sistema',
         channel: NotificationChannel.EMAIL,
         to: destino,
-        title: 'Fortaleza Mov: pedido de exclusão de conta',
+        title: 'Fortaleza Move: pedido de exclusão de conta',
         body:
           `Chegou um pedido de exclusão de conta pela página da internet.\n\n` +
           `Telefone ou e-mail informado: ${c}\n` +

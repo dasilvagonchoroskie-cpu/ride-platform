@@ -5,12 +5,16 @@ import { PrismaService } from '../../database/prisma.service';
  * Contador de pedidos a TomTom (busca, endereco, rota), para a plataforma
  * inteira — a cota e da chave, nao de cada celular (Evandro, 29/10/2026).
  *
- * Cota gratis da TomTom (pagina de precos, 29/10/2026), POR MES:
- * geocodificacao 20 mil, endereco do ponto 20 mil, rota 20 mil e busca de
- * lugares 2.500. As imagens do mapa (200 mil/mes) vao direto do celular
- * para a TomTom e cada app conta as suas.
+ * Cota gratis da TomTom (docs.tomtom.com/pricing, conferida em 29/10/2026:
+ * "Free monthly requests per API"), POR MES: geocodificacao 20 mil, endereco
+ * do ponto 20 mil, rota 20 mil, busca de lugares 2.500 e imagens do mapa 200
+ * mil. As imagens vao direto do celular para a TomTom; cada app conta as suas
+ * e manda o numero junto do /geo/mapa (contagem aproximada: o que o celular
+ * baixou e ainda nao mandou nao entra).
  *
  * Regras:
+ * - "alerta": passou de 70% da cota do mes (Central > Configuracoes > Mapa
+ *   mostra o aviso; o registro do servidor avisa uma vez por mes).
  * - "economia": passou de 80% da parte do dia (cota do mes / 30) ou de 80%
  *   do mes -> o servidor deixa de fazer os pedidos que nao sao essenciais
  *   (busca de lugares, a segunda busca no Brasil todo, rota so para desenhar).
@@ -23,17 +27,22 @@ import { PrismaService } from '../../database/prisma.service';
  * Gravado na tabela settings (chave mapa.uso) a cada minuto: o servidor
  * gratis reinicia e nao pode esquecer o que ja gastou.
  */
-export type ServicoDoMapa = 'geocode' | 'reverse' | 'routing' | 'search';
+export type ServicoDoMapa = 'geocode' | 'reverse' | 'routing' | 'search' | 'tiles';
 
 export const COTA_GRATIS_DO_MES: Record<ServicoDoMapa, number> = {
   geocode: 20_000,
   reverse: 20_000,
   routing: 20_000,
   search: 2_500,
+  tiles: 200_000,
 };
 
+/** Alerta a 70% da cota do mes; economia a 80%. */
+export const ALERTA = 0.7;
+export const ECONOMIA = 0.8;
+
 const CHAVE = 'mapa.uso';
-const SERVICOS: ServicoDoMapa[] = ['geocode', 'reverse', 'routing', 'search'];
+const SERVICOS: ServicoDoMapa[] = ['geocode', 'reverse', 'routing', 'search', 'tiles'];
 
 export interface EstadoDoUso {
   dia: string;
@@ -44,9 +53,11 @@ export interface EstadoDoUso {
   paradoAte: number;
   /** Vezes no dia em que a TomTom pediu "devagar" (429) mesmo com o ritmo. */
   rajadas?: number;
+  /** Servicos que ja passaram de 70% neste mes (o aviso sai uma vez). */
+  avisados?: string[];
 }
 
-const zerado = (): Record<ServicoDoMapa, number> => ({ geocode: 0, reverse: 0, routing: 0, search: 0 });
+const zerado = (): Record<ServicoDoMapa, number> => ({ geocode: 0, reverse: 0, routing: 0, search: 0, tiles: 0 });
 
 /** Dia e mes no horario de Brasilia. */
 export function diaDeBrasilia(agora = new Date()): { dia: string; mes: string } {
@@ -88,7 +99,7 @@ export class ContaDoUso {
   atualizarDia(agora = new Date()): void {
     const { dia, mes } = diaDeBrasilia(agora);
     if (this.estado.mes !== mes) {
-      this.estado = { dia, mes, hoje: zerado(), noMes: zerado(), paradoAte: 0 };
+      this.estado = { dia, mes, hoje: zerado(), noMes: zerado(), paradoAte: 0, avisados: [] };
     } else if (this.estado.dia !== dia) {
       this.estado = { ...this.estado, dia, hoje: zerado(), rajadas: 0 };
     }
@@ -104,7 +115,20 @@ export class ContaDoUso {
 
   economia(s?: ServicoDoMapa): boolean {
     const lista = s ? [s] : SERVICOS;
-    return lista.some((x) => this.estado.hoje[x] >= this.parteDoDia(x) * 0.8 || this.estado.noMes[x] >= this.cota[x] * 0.8);
+    return lista.some((x) => this.estado.hoje[x] >= this.parteDoDia(x) * ECONOMIA || this.estado.noMes[x] >= this.cota[x] * ECONOMIA);
+  }
+
+  /** Servicos acima de 70% da cota do mes. */
+  alertas(): ServicoDoMapa[] {
+    return SERVICOS.filter((x) => this.estado.noMes[x] >= this.cota[x] * ALERTA);
+  }
+
+  /** Servicos que acabaram de passar de 70% (para avisar uma vez so). */
+  alertasNovos(): ServicoDoMapa[] {
+    const ja = new Set(this.estado.avisados ?? []);
+    const novos = this.alertas().filter((s) => !ja.has(s));
+    if (novos.length) this.estado.avisados = [...ja, ...novos];
+    return novos;
   }
 
   /** Pode pedir agora? Os nao essenciais param no modo economia. */
@@ -114,9 +138,9 @@ export class ContaDoUso {
     return true;
   }
 
-  contar(s: ServicoDoMapa): void {
-    this.estado.hoje[s] += 1;
-    this.estado.noMes[s] += 1;
+  contar(s: ServicoDoMapa, n = 1): void {
+    this.estado.hoje[s] += n;
+    this.estado.noMes[s] += n;
   }
 
   /**
@@ -136,6 +160,8 @@ export class ContaDoUso {
       dia: this.estado.dia,
       mes: this.estado.mes,
       economia: this.economia(),
+      alerta: this.alertas().length > 0,
+      alertas: this.alertas().map((s) => ({ servico: s, porcento: Math.floor((this.estado.noMes[s] / this.cota[s]) * 100) })),
       parado: SERVICOS.some((s) => this.parado(s)),
       paradoAte: this.estado.paradoAte > Date.now() ? new Date(this.estado.paradoAte).toISOString() : null,
       rajadas: this.estado.rajadas ?? 0,
@@ -171,6 +197,7 @@ export class UsoDoMapaService implements OnModuleInit, OnModuleDestroy {
           noMes: { ...zerado(), ...(v.noMes ?? {}) },
           paradoAte: Number(v.paradoAte) || 0,
           rajadas: Number(v.rajadas) || 0,
+          avisados: Array.isArray(v.avisados) ? v.avisados.map(String) : [],
         };
       }
     } catch (e) {
@@ -191,10 +218,18 @@ export class UsoDoMapaService implements OnModuleInit, OnModuleDestroy {
     return this.conta.pode(s, essencial);
   }
 
-  contar(s: ServicoDoMapa): void {
+  contar(s: ServicoDoMapa, n = 1): void {
     this.conta.atualizarDia();
-    this.conta.contar(s);
+    this.conta.contar(s, n);
     this.mudou = true;
+    for (const novo of this.conta.alertasNovos()) {
+      this.logger.warn(`ALERTA: a TomTom (${novo}) passou de 70% da cota gratis do mes.`);
+    }
+  }
+
+  /** Imagens do mapa que os celulares baixaram (vem junto do /geo/mapa). */
+  contarImagens(n: number): void {
+    if (Number.isInteger(n) && n > 0) this.contar('tiles', Math.min(n, 20_000));
   }
 
   limiteDaTomTom(status = 403): void {
@@ -210,7 +245,7 @@ export class UsoDoMapaService implements OnModuleInit, OnModuleDestroy {
 
   parado(): boolean {
     this.conta.atualizarDia();
-    return (['geocode', 'reverse', 'routing', 'search'] as ServicoDoMapa[]).some((s) => this.conta.parado(s));
+    return (['geocode', 'reverse', 'routing', 'search', 'tiles'] as ServicoDoMapa[]).some((s) => this.conta.parado(s));
   }
 
   resumo() {
@@ -225,7 +260,7 @@ export class UsoDoMapaService implements OnModuleInit, OnModuleDestroy {
       await this.prisma.setting.upsert({
         where: { key: CHAVE },
         update: { value: this.conta.estado as never },
-        create: { key: CHAVE, value: this.conta.estado as never, description: 'Uso da TomTom (busca, endereco, rota) no dia e no mes' },
+        create: { key: CHAVE, value: this.conta.estado as never, description: 'Uso da TomTom (busca, endereco, rota, imagens) no dia e no mes' },
       });
     } catch (e) {
       this.mudou = true;

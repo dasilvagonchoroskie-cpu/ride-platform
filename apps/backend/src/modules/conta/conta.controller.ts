@@ -61,12 +61,12 @@ export class ContaController {
     res.send(
       pagina(
         'Excluir conta',
-        `<h1>Excluir sua conta da Fortaleza Mov</h1>
+        `<h1>Excluir sua conta da Fortaleza Move</h1>
 <div class="cartao">
 <h2>Pelo aplicativo (na hora)</h2>
 <ol>
-<li><strong>Passageiro:</strong> abra o aplicativo Fortaleza Mov, toque em <strong>Conta</strong> e depois em <strong>Excluir minha conta</strong>.</li>
-<li><strong>Motorista:</strong> abra o Fortaleza Mov Motorista, toque no <strong>Menu</strong>, em <strong>Cadastro</strong> e depois em <strong>Excluir minha conta</strong>.</li>
+<li><strong>Passageiro:</strong> abra o aplicativo Fortaleza Move, toque em <strong>Conta</strong> e depois em <strong>Excluir minha conta</strong>.</li>
+<li><strong>Motorista:</strong> abra o Fortaleza Move Motorista, toque no <strong>Menu</strong>, em <strong>Cadastro</strong> e depois em <strong>Excluir minha conta</strong>.</li>
 </ol>
 </div>
 <div class="cartao">

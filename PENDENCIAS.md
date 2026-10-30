@@ -1,4 +1,4 @@
-# PENDÊNCIAS — Fortaleza Mov
+# PENDÊNCIAS — Fortaleza Move
 
 Atualizado em 29/10/2026 (noite): etapas 3 a 8 do "Pedido de atualização da plataforma" + aceleração do mapa da TomTom (montagem 256).
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**. Fica atualizado a cada etapa.

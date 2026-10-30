@@ -102,7 +102,7 @@ export async function liberarTelefoneDeContaVazia(prisma: PrismaService, phone: 
 export function erroContaExistente(conta: ContaExistente): BusinessException {
   return new BusinessException(
     ERROR_CODES.CONTA_EXISTENTE,
-    `Voce ja tem conta na Fortaleza Mov com estes dados (${conta.destino}). ` +
+    `Voce ja tem conta na Fortaleza Move com estes dados (${conta.destino}). ` +
       'Confirme com o codigo para usar a mesma conta no app do motorista.',
     409,
     { destino: conta.destino },

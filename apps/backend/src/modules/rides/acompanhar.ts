@@ -27,7 +27,7 @@ export function paginaDeAcompanhar(token: string): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fortaleza Mov - acompanhar viagem</title>
+<title>Fortaleza Move - acompanhar viagem</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, Roboto, Arial, sans-serif; background: #eef0f3; color: #14181f; }
@@ -44,7 +44,7 @@ export function paginaDeAcompanhar(token: string): string {
 <body>
 <div id="mapa"></div>
 <div id="painel">
-  <span class="marca">Fortaleza Mov</span>
+  <span class="marca">Fortaleza Move</span>
   <h1 id="situacao">Carregando a viagem...</h1>
   <p class="linha" id="motorista"></p>
   <p class="linha" id="trajeto"></p>

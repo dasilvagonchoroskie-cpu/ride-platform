@@ -14,6 +14,6 @@ describe('paginas publicas', () => {
     expect(escapar('<script>"x"</script>')).toBe('&lt;script&gt;&quot;x&quot;&lt;/script&gt;');
     const p = pagina('Excluir conta', '<h1>Oi</h1>');
     expect(p).toContain('<!doctype html>');
-    expect(p).toContain('<title>Excluir conta — Fortaleza Mov</title>');
+    expect(p).toContain('<title>Excluir conta — Fortaleza Move</title>');
   });
 });

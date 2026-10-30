@@ -176,7 +176,7 @@ describe('Contador da TomTom (cota da chave, para todos)', () => {
   });
 
   it('virada do dia zera o dia; virada do mes zera tudo', () => {
-    const c = new ContaDoUso({ dia: '2026-10-28', mes: '2026-10', hoje: { geocode: 9, reverse: 0, routing: 0, search: 0 }, noMes: { geocode: 50, reverse: 0, routing: 0, search: 0 }, paradoAte: 0 }, cota);
+    const c = new ContaDoUso({ dia: '2026-10-28', mes: '2026-10', hoje: { geocode: 9, reverse: 0, routing: 0, search: 0, tiles: 0 }, noMes: { geocode: 50, reverse: 0, routing: 0, search: 0, tiles: 0 }, paradoAte: 0 }, cota);
     c.atualizarDia(new Date('2026-10-29T15:00:00Z'));
     expect(c.estado.hoje.geocode).toBe(0);
     expect(c.estado.noMes.geocode).toBe(50);
@@ -198,12 +198,12 @@ describe('GeoService com a TomTom', () => {
   }
   const lugar = (address: string, lat: number, lng: number) => ({ address, detail: 'Goiatuba - GO', latitude: lat, longitude: lng });
 
-  it('regiao primeiro, depois o Brasil; a mesma busca de novo nao pede de novo', async () => {
-    let pedidos = 0;
+  it('so a regiao da cidade (sem busca no Brasil todo); nada fica guardado no servidor', async () => {
+    const pedidos: Array<{ perto: unknown; raio: unknown }> = [];
     const p: ProvedorGeo = {
       nome: 'falso',
-      geocodificar: async (_q, perto) => {
-        pedidos++;
+      geocodificar: async (_q, perto, raio) => {
+        pedidos.push({ perto, raio });
         return perto ? [lugar('Rua São Paulo', -18.01, -49.35)] : [lugar('Rua São Paulo', -23.5, -46.6)];
       },
       lugares: async () => [],
@@ -211,12 +211,14 @@ describe('GeoService com a TomTom', () => {
       rota: async () => null,
     };
     const g = GeoService.comProvedor(uso(), p);
-    const r = await g.buscar('Rua Sao Paulo', -18.0128, -49.3556);
+    const r = await g.buscar('Rua Sao Paulo', -18.0128, -49.3556, { raioMetros: 40_000 });
     expect(r[0].distanceKm).toBeLessThan(80);
-    expect(r.some((l) => (l.distanceKm ?? 0) > 500)).toBe(true);
-    const antes = pedidos;
-    await g.buscar('rua são paulo', -18.0128, -49.3556);
-    expect(pedidos).toBe(antes);
+    expect(r.some((l) => (l.distanceKm ?? 0) > 500)).toBe(false);
+    expect(pedidos).toEqual([{ perto: { lat: -18.0128, lng: -49.3556 }, raio: 40_000 }]);
+    // A mesma busca (outro usuario ou o mesmo) vai de novo a TomTom: o
+    // servidor nao guarda resultado para ninguem.
+    await g.buscar('rua são paulo', -18.0128, -49.3556, { raioMetros: 40_000 });
+    expect(pedidos.length).toBe(2);
   });
 
   it('TomTom recusou (403): busca devolve MAPA_LIMITE e para por 30 min', async () => {
@@ -264,7 +266,7 @@ describe('GeoService com a TomTom', () => {
     expect(await g.rota({ latitude: -18, longitude: -49 }, { latitude: -18.1, longitude: -49.1 })).toBeNull();
   });
 
-  it('rota da corrida: pedida uma vez, as outras vem do guardado', async () => {
+  it('rota: o servidor nao guarda (cada pedido vai a TomTom em nome de quem pediu)', async () => {
     let pedidos = 0;
     const p: ProvedorGeo = {
       nome: 'falso',
@@ -279,9 +281,26 @@ describe('GeoService com a TomTom', () => {
     const g = GeoService.comProvedor(uso(), p);
     const a = { latitude: -18.0125, longitude: -49.3547 };
     const b = { latitude: -18.005, longitude: -49.361 };
-    await g.rota(a, b); // orcamento
-    await g.rota(a, b); // pedido da corrida
-    await g.rota(a, b, false); // desenho no app do passageiro e do motorista
-    expect(pedidos).toBe(1);
+    await g.rota(a, b);
+    await g.rota(a, b);
+    expect(pedidos).toBe(2);
+  });
+
+  it('alerta a 70% da cota do mes, economia a 80%; imagens contadas pelos celulares', () => {
+    const cota = { ...COTA_GRATIS_DO_MES };
+    const c = new ContaDoUso(ContaDoUso.vazio(new Date('2026-10-30T12:00:00Z')), cota);
+    c.contar('routing', 13_999);
+    expect(c.alertas()).toEqual([]);
+    c.contar('routing');
+    expect(c.alertas()).toEqual(['routing']);
+    expect(c.alertasNovos()).toEqual(['routing']);
+    expect(c.alertasNovos()).toEqual([]);
+    expect(c.resumo().alerta).toBe(true);
+    expect(c.resumo().alertas).toEqual([{ servico: 'routing', porcento: 70 }]);
+    // Imagens: 200 mil por mes; parte do dia = 6.666; economia a 80% dela.
+    expect(c.economia('tiles')).toBe(false);
+    c.contar('tiles', 5_400);
+    expect(c.economia('tiles')).toBe(true);
+    expect(c.resumo().servicos.find((x) => x.servico === 'tiles')?.cotaDoMes).toBe(200_000);
   });
 });

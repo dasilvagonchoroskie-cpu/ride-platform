@@ -193,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     // heightFactor 1: sem ele o Align ocupava a tela toda e a
-                    // pilula "Fortaleza Mov" ia parar no meio do mapa (05/10).
+                    // pilula "Fortaleza Move" ia parar no meio do mapa (05/10).
                     child: Align(
                       alignment: Alignment.centerLeft,
                       heightFactor: 1,

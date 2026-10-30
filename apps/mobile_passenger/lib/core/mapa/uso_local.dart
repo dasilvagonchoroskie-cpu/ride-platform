@@ -23,6 +23,11 @@ class UsoLocal {
 
   static String _dia = _hoje();
   static Map<String, int> _contas = {};
+
+  /// Imagens baixadas da TomTom que o servidor ainda nao sabe (29/10/2026:
+  /// a cota de imagens e da chave inteira; vai junto do /geo/mapa).
+  static int _imagensParaAvisar = 0;
+  static int get imagensParaAvisar => _imagensParaAvisar;
   static bool _carregado = false;
   static Timer? _gravar;
 
@@ -38,6 +43,8 @@ class UsoLocal {
       final raw = prefs.getString(_chave);
       if (raw != null && raw.isNotEmpty) {
         final m = jsonDecode(raw) as Map<String, dynamic>;
+        final pendentes = m['pendentes'];
+        if (pendentes is num && pendentes > 0) _imagensParaAvisar += pendentes.toInt();
         if (m['dia'] == _hoje()) {
           _dia = m['dia'] as String;
           _contas = {
@@ -68,6 +75,7 @@ class UsoLocal {
   static void contar(String tipo) {
     _virarDia();
     _contas[tipo] = (_contas[tipo] ?? 0) + 1;
+    if (tipo == 'imagens') _imagensParaAvisar++;
     if (!_carregado) return;
     _gravar ??= Timer(const Duration(seconds: 20), () {
       _gravar = null;
@@ -78,7 +86,7 @@ class UsoLocal {
   static Future<void> _salvar() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_chave, jsonEncode({'dia': _dia, 'contas': _contas}));
+      await prefs.setString(_chave, jsonEncode({'dia': _dia, 'contas': _contas, 'pendentes': _imagensParaAvisar}));
     } catch (_) {}
   }
 
@@ -91,11 +99,18 @@ class UsoLocal {
   /// Passou do teto do dia daquele tipo (so os essenciais continuam).
   static bool acabou(String tipo) => hoje(tipo) >= (tetoDoDia[tipo] ?? 1 << 30);
 
+  /// O servidor recebeu [n] imagens (desconta das pendentes).
+  static void avisouImagens(int n) {
+    _imagensParaAvisar = (_imagensParaAvisar - n).clamp(0, 1 << 30);
+    if (_carregado) unawaited(_salvar());
+  }
+
   /// Zera tudo (testes).
   static void zerar() {
     _gravar?.cancel();
     _gravar = null;
     _dia = _hoje();
     _contas = {};
+    _imagensParaAvisar = 0;
   }
 }

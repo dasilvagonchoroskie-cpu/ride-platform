@@ -238,7 +238,7 @@ class _Saldo extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(
-                        text: pixCopiaECola(chave: central.pixKey!, nome: central.pixHolder ?? 'Fortaleza Mov'),
+                        text: pixCopiaECola(chave: central.pixKey!, nome: central.pixHolder ?? 'Fortaleza Move'),
                       ));
                       avisar('PIX Copia e Cola copiado. Cole no aplicativo do seu banco e digite o valor.');
                     },
@@ -269,7 +269,7 @@ class _Saldo extends StatelessWidget {
                   ),
                   onPressed: () => abrirWhatsApp(
                     central.whatsapp,
-                    'Olá! Sou o motorista $nome da Fortaleza Mov. '
+                    'Olá! Sou o motorista $nome da Fortaleza Move. '
                     'Segue o comprovante da recarga da minha carteira.',
                   ),
                   icon: const Icon(Icons.chat),

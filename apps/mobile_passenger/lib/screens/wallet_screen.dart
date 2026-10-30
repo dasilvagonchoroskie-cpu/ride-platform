@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../data/models/models.dart';
 
-/// Formas de pagamento. Na Fortaleza Mov o passageiro paga DIRETO ao
+/// Formas de pagamento. Na Fortaleza Move o passageiro paga DIRETO ao
 /// motorista: nao ha cartao salvo, saldo nem cobranca pelo aplicativo.
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});

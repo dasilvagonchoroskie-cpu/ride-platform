@@ -12,8 +12,8 @@ on:
         description: 'Apps, separados por virgula'
         required: false
         default: 'mobile_passenger,mobile_driver,central_app'
-  schedule:
-    - cron: '17 9 * * 1'   # toda segunda, 06:17 em Brasilia
+  # So pelo botao, antes de lancar versao (29/10/2026: o Mac custa ~10x o
+  # Linux no repositorio privado).
 
 permissions:
   contents: write
