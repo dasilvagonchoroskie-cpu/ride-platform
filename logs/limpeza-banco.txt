@@ -2,5 +2,5 @@ Limpeza do banco - 11/10/2026 03:23 UTC - acao: listar
 Antes: {"contasTeste":0,"contas":2,"corridas":13,"movimentos":11,"saques":0,"sos":0,"avaliacoes":11,"cuponsTeste":0,"ultimaCopia":null}
 
 Contas (passageiros e motoristas):
-  APAGA  Natalia Da Silva Gonchoroski | +5551996124860 | dasilvanatalia346@gmail.com | corridas 12 | teste false | motorista false
-  FICA   Evandro Da Silva gonchoroski | +5564996472794 | dasilvagonchoroskie@gmail.com | corridas 13 | teste false | motorista true
+  APAGA  Natalia D. S. G. | •••4860 | da•••@gmail.com | corridas 12 | teste false | motorista false
+  FICA   Evandro D. S. g. | •••2794 | da•••@gmail.com | corridas 13 | teste false | motorista true

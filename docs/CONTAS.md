@@ -4,7 +4,8 @@ Este arquivo fica no repositório (hoje **público**; ver PENDENCIAS.md para
 torná-lo privado): aqui só vão os NOMES das
 contas e das variáveis, e onde cada coisa fica. Nenhuma senha, chave ou
 endereço de banco entra aqui. Os valores ficam no Render, nos segredos do
-GitHub e no arquivo do projeto do Evandro.
+GitHub e no cofre de senhas do Evandro — nunca no arquivo do projeto nem no
+chat (regra de 30/10/2026).
 
 ## 1. Serviços
 
@@ -43,7 +44,10 @@ GitHub e no arquivo do projeto do Evandro.
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
   **Perder esta chave = não dá mais para atualizar o app na loja.** Guarde uma
   cópia do arquivo .jks e das senhas fora do GitHub.
-- Testes no servidor real: `ADMIN_EMAIL`, `ADMIN_SENHA`, `OTP_CHAVE_TESTE`.
+- Testes no servidor real: `ADMIN_EMAIL`, `OTP_CHAVE_TESTE` (a esteira entra pelo código do
+  e-mail). `ADMIN_SENHA` não é usado por nenhuma esteira desde 30/10/2026: pode ser apagado.
+- Teste de restauração (só quando for testar): `COPIA_BANCO_CHAVE` (chave privada da cópia)
+  e `BANCO_TESTE_URL` (banco de teste vazio).
 - `RENDER_DEPLOY_HOOK` (opcional): publica o servidor sozinho a cada mudança.
   Sem ele, a publicação é feita pelo conector do Render.
 - `DATABASE_URL` (antigo): aponta para o banco velho; só a esteira
@@ -65,8 +69,13 @@ GitHub e no arquivo do projeto do Evandro.
 - Todo dia às 03:23 (Brasília) a esteira **Cópia diária do banco** baixa todas
   as tabelas, compacta e **criptografa** com a chave pública
   `infra/copia-banco.age.pub`. A cópia fica 30 dias nos arquivos da execução.
-- Só abre com a chave privada (`AGE-SECRET-KEY-1...`), que fica **somente**
-  com o Evandro (arquivo do projeto). Sem ela, a cópia não serve para nada.
+- Só abre com a chave privada, que fica **somente** com o Evandro (cofre de
+  senhas ou papel; nunca no arquivo do projeto nem no chat). Sem ela, a cópia
+  não serve para nada.
+- **Troca da chave em 30/10/2026**: a chave antiga tinha sido escrita no
+  arquivo do projeto. Par novo gerado; `infra/copia-banco.age.pub` é a pública
+  nova. Cópias feitas antes de 30/10 só abrem com a chave antiga; as novas, só
+  com a nova.
 
 Para restaurar (só em caso de perda de dados):
 

@@ -36,12 +36,17 @@ manter() {
   return 1
 }
 
+# Relatorio vai para logs/ (repositorio no GitHub): nome, telefone e e-mail
+# sempre mascarados (30/10/2026). A decisao FICA/APAGA usa os dados inteiros.
+mascara_tel()   { local t="$1"; [ "$t" = "-" ] && { echo "sem telefone"; return; }; echo "•••${t: -4}"; }
+mascara_email() { local e="$1"; [ "$e" = "-" ] && { echo "sem e-mail"; return; }; echo "${e:0:2}•••@${e#*@}"; }
+mascara_nome()  { echo "$1" | awk '{printf "%s", $1; for (i=2;i<=NF;i++) printf " %s.", substr($i,1,1); print ""}'; }
 contas() { get /admin/limpeza/contas "$TA" | jq -r '.data.items[] | [.id, (if .phone == "" then "-" else .phone end), (.email // "-"), .name, (.corridas|tostring), (.teste|tostring), (.motorista|tostring)] | @tsv'; }
 log ""
 log "Contas (passageiros e motoristas):"
 while IFS=$'\t' read -r id tel email nome corridas teste motorista; do
   if manter "$tel" "$email"; then m="FICA "; else m="APAGA"; fi
-  log "  $m  $nome | ${tel:-sem telefone} | ${email:-sem e-mail} | corridas $corridas | teste $teste | motorista $motorista"
+  log "  $m  $(mascara_nome "$nome") | $(mascara_tel "$tel") | $(mascara_email "$email") | corridas $corridas | teste $teste | motorista $motorista"
 done < <(contas)
 
 if [ "$ACAO" = "zerar_e_limpar" ]; then
@@ -62,5 +67,5 @@ if [ "$ACAO" = "zerar_e_limpar" ]; then
   log ""
   log "Depois: $(resumo)"
   log "Contas que ficaram:"
-  while IFS=$'\t' read -r id tel email nome corridas teste motorista; do log "  $nome | ${tel:-sem telefone} | ${email:-sem e-mail}"; done < <(contas)
+  while IFS=$'\t' read -r id tel email nome corridas teste motorista; do log "  $(mascara_nome "$nome") | $(mascara_tel "$tel") | $(mascara_email "$email")"; done < <(contas)
 fi

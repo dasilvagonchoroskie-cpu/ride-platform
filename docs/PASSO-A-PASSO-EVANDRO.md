@@ -11,15 +11,15 @@ elas vão direto no lugar indicado.
 Antes, apague a chave antiga do Google Maps que ficou no histórico (passo 1.1):
 esconder não apaga o que já foi copiado.
 
-**1.1 Apagar a chave antiga do Google Maps (`AIzaSyAgq3…`, a da Lord Perfumaria)**
+**1.1 Apagar a chave antiga do Google Maps (a chave antiga do Google Maps (Lord Perfumaria), a da Lord Perfumaria)**
 1. Abra console.cloud.google.com com a conta onde a chave foi criada.
 2. Menu ☰ → APIs & Services ("APIs e serviços") → Credentials ("Credenciais").
-3. Na lista API Keys ("Chaves de API"), abra a que começa com `AIzaSyAgq3`.
+3. Na lista API Keys ("Chaves de API"), abra a que começa com a chave antiga do Google Maps (Lord Perfumaria).
 4. Se a Lord Perfumaria usa essa chave: Regenerate key ("Gerar chave de novo")
    e me mande só o aviso "troquei" (a chave nova eu ponho onde precisar sem
    ela aparecer). Se não usa: Delete ("Excluir").
 
-**1.2 Restringir a chave do Firebase (`AIzaSyBu7U…`, projeto fortaleza-mov)**
+**1.2 Restringir a chave do Firebase (a chave do Firebase (projeto fortaleza-mov), projeto fortaleza-mov)**
 1. Mesmo lugar (Credentials), abra a chave "Android key (auto created by Firebase)".
 2. Application restrictions ("Restrições de aplicativo") → Android apps ("Apps Android").
 3. Add ("Adicionar") duas vezes:
@@ -106,7 +106,7 @@ tiver dados).
    repository secret ("Novo segredo do repositório"):
    - Name ("Nome") `BANCO_TESTE_URL` → Secret ("Segredo"): o endereço do passo 2 → Add secret.
    - Name `COPIA_BANCO_CHAVE` → Secret: a chave privada da cópia (a linha
-     que começa com `AGE-SECRET-KEY-1`, do seu arquivo do projeto) → Add secret.
+     que começa com `AGE-SECRET-KEY-1`, do arquivo CHAVE-PRIVADA-COPIA-DO-BANCO-30-10-2026.txt que eu mandei) → Add secret.
 4. Actions ("Ações") → **Testar a restauracao da copia** → Run workflow
    ("Executar fluxo de trabalho") → Branch `main` → Run workflow.
 5. Me avise "rodei a restauração": eu leio o resultado (fica em
