@@ -16,7 +16,8 @@
     <application
         android:label="Fortaleza Move Central"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round">
         <!-- Google Maps: chave restrita aos 3 apps (pacote + SHA-1) e ao Maps SDK. -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
