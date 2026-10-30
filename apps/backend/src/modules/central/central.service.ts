@@ -106,6 +106,8 @@ export class CentralService {
       // Carro novo de motorista aprovado (09/10/2026): a Central confere.
       this.vehicles.paraConferir(ids),
     ]);
+    // Categoria pedida pelo motorista (29/10/2026): a Central aprova ou recusa.
+    const categoriasPedidas = await this.vehicles.categoriasParaConferir(ids);
     const paraConferir = docsParaConferir + carrosParaConferir.length;
     // Evandro (10/10/2026): toda aprovacao tem que avisar a Central. Pedidos
     // de mudanca de dados dos motoristas e saques pedidos.
@@ -177,6 +179,17 @@ export class CentralService {
         : null,
       accountDeletionsPending: exclusoes.total,
       latestAccountDeletion: exclusoes.ultimo,
+      categoryRequestsPending: categoriasPedidas.length,
+      latestCategoryRequest: categoriasPedidas[0]
+        ? {
+            id: categoriasPedidas[0].id,
+            driverId: categoriasPedidas[0].driverId,
+            name: categoriasPedidas[0].name,
+            plate: categoriasPedidas[0].plate,
+            categoria: categoriasPedidas[0].categoriaPedida,
+            createdAt: categoriasPedidas[0].pedidaEm,
+          }
+        : null,
       documentsToReview: paraConferir,
       latestDocumentToReview: ultimoParaConferir
         ? {
@@ -502,10 +515,12 @@ export class CentralService {
     });
   }
 
-  async categoriaDoVeiculo(driverId: string, categoria: string) {
-    const r = await this.prisma.vehicle.updateMany({ where: { driverId, isActive: true }, data: { category: categoria } });
-    if (r.count === 0) throw BusinessException.validation('Este motorista nao tem veiculo ativo.');
-    return { ok: true, category: categoria };
+  async categoriaDoVeiculo(driverId: string, categoria: string, quem = 'central') {
+    const ativos = await this.prisma.vehicle.findMany({ where: { driverId, isActive: true }, select: { id: true } });
+    if (ativos.length === 0) throw BusinessException.validation('Este motorista nao tem veiculo ativo.');
+    // Vale na hora e tira o pedido de categoria que estivesse esperando.
+    const c = await this.vehicles.definirCategoria(ativos.map((v) => v.id), categoria, quem);
+    return { ok: true, category: c };
   }
 
   /**

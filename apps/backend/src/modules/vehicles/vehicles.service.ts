@@ -7,6 +7,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { CreateVehicleInput, UpdateVehicleInput } from '@ride/shared';
 import { decodificarFoto, soArquivosDoBanco } from '../arquivos/arquivos.service';
+import { lerCategorias } from '../rides/categorias';
 import {
   CHAVE_VEICULOS,
   carroLiberado,
@@ -23,6 +24,11 @@ export type CarroPublico = Vehicle & {
   fotoUrl: string | null;
   crlvUrl: string | null;
   enviadoEm: string | null;
+  /** Categoria pedida pelo motorista, esperando a Central (null = nenhuma). */
+  categoriaPedida: string | null;
+  categoriaPedidaEm: string | null;
+  /** Motivo da ultima recusa de categoria. */
+  categoriaMotivo: string | null;
 };
 
 /**
@@ -65,7 +71,139 @@ export class VehiclesService {
       fotoUrl: f.foto ?? null,
       crlvUrl: f.crlv ?? null,
       enviadoEm: f.em ?? null,
+      categoriaPedida: f.categoriaPedida ?? null,
+      categoriaPedidaEm: f.categoriaPedidaEm ?? null,
+      categoriaMotivo: f.categoriaMotivo ?? null,
     };
+  }
+
+  // --------------------------- CATEGORIA ---------------------------
+
+  /** Lista para o motorista escolher (todas: a Central liga a categoria na cidade quando houver carro). */
+  async categoriasParaEscolher() {
+    return (await lerCategorias(this.prisma)).map((c) => ({
+      codigo: c.codigo,
+      nome: c.nome,
+      icone: c.icone,
+      descricao: c.descricao,
+      capacidade: c.capacidade,
+    }));
+  }
+
+  /** Confere se a categoria existe (ligada ou nao: Conforto liga depois que ha carro aprovado). */
+  private async categoriaQueExiste(codigo: string): Promise<string> {
+    const c = codigo.trim().toUpperCase();
+    const lista = await lerCategorias(this.prisma);
+    if (!lista.some((x) => x.codigo === c)) throw BusinessException.validation('Categoria nao encontrada. Escolha uma da lista.');
+    return c;
+  }
+
+  /**
+   * O motorista pede a categoria do carro (Evandro, 29/10/2026: "escolhe a
+   * categoria no cadastro do veiculo, com aprovacao da Central"). Ate a
+   * Central aprovar, o carro continua recebendo chamados da categoria de antes.
+   */
+  private async registrarPedidoDeCategoria(vehicle: Vehicle, codigo: string, quem: string): Promise<MapaDeCarros> {
+    const categoria = await this.categoriaQueExiste(codigo);
+    return this.mudar((m) => {
+      const f = { ...(m[vehicle.id] ?? {}) };
+      if (categoria === vehicle.category) {
+        delete f.categoriaPedida;
+        delete f.categoriaPedidaEm;
+      } else {
+        f.categoriaPedida = categoria;
+        f.categoriaPedidaEm = new Date().toISOString();
+        delete f.categoriaMotivo;
+      }
+      if (Object.keys(f).length) m[vehicle.id] = f;
+      else delete m[vehicle.id];
+    }, quem);
+  }
+
+  async pedirCategoria(userId: string, vehicleId: string, categoria: string) {
+    const vehicle = await this.carroDoMotorista(userId, vehicleId);
+    const mapa = await this.mapa();
+    if (mapa[vehicleId]?.situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
+    const novo = await this.registrarPedidoDeCategoria(vehicle, categoria, userId);
+    this.logger.log(`Carro ${vehicle.plate}: motorista pediu a categoria ${categoria}`);
+    return this.publico(vehicle, novo);
+  }
+
+  /** A Central aprova (a categoria passa a valer) ou recusa (motivo obrigatorio) o pedido. */
+  async adminRevisarCategoria(vehicleId: string, adminId: string, aprovar: boolean, motivo?: string | null) {
+    const v = await this.carroPorId(vehicleId);
+    const mapa = await this.mapa();
+    const pedida = mapa[vehicleId]?.categoriaPedida;
+    if (!pedida) throw BusinessException.validation('Este carro nao tem pedido de categoria.');
+    if (!aprovar && !motivo?.trim()) throw BusinessException.validation('Escreva o motivo da recusa (o motorista ve).');
+    if (aprovar) {
+      await this.categoriaQueExiste(pedida);
+      await this.prisma.vehicle.update({ where: { id: vehicleId }, data: { category: pedida } });
+    }
+    await this.mudar((m) => {
+      const f = { ...(m[vehicleId] ?? {}) };
+      delete f.categoriaPedida;
+      delete f.categoriaPedidaEm;
+      if (aprovar) delete f.categoriaMotivo;
+      else f.categoriaMotivo = motivo!.trim();
+      if (Object.keys(f).length) m[vehicleId] = f;
+      else delete m[vehicleId];
+    }, adminId);
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        action: aprovar ? 'VEHICLE_CATEGORY_APPROVED' : 'VEHICLE_CATEGORY_REJECTED',
+        entity: 'Vehicle',
+        entityId: vehicleId,
+        before: { category: v.category },
+        after: { category: aprovar ? pedida : v.category, pedida, motivo: motivo ?? null },
+      },
+    });
+    this.logger.log(`Carro ${v.plate}: Central ${aprovar ? 'aprovou' : 'recusou'} a categoria ${pedida}`);
+    return this.carrosDoMotorista(v.driverId);
+  }
+
+  /** A Central muda a categoria direto (sem pedido): vale na hora e limpa o pedido. */
+  async definirCategoria(vehicleIds: string[], categoria: string, quem: string): Promise<string> {
+    const c = await this.categoriaQueExiste(categoria);
+    await this.prisma.vehicle.updateMany({ where: { id: { in: vehicleIds } }, data: { category: c } });
+    await this.mudar((m) => {
+      for (const id of vehicleIds) {
+        const f = m[id];
+        if (!f) continue;
+        delete f.categoriaPedida;
+        delete f.categoriaPedidaEm;
+        delete f.categoriaMotivo;
+        if (!Object.keys(f).length) delete m[id];
+      }
+    }, quem);
+    return c;
+  }
+
+  /** Pedidos de categoria esperando a Central (o mais novo primeiro). */
+  async categoriasParaConferir(driverIds: string[] | null) {
+    const mapa = await this.mapa();
+    const ids = Object.entries(mapa)
+      .filter(([, f]) => f.categoriaPedida && f.situacao !== 'REMOVIDO')
+      .map(([id]) => id);
+    if (ids.length === 0) return [];
+    const carros = await this.prisma.vehicle.findMany({
+      where: { id: { in: ids }, driver: { user: { deletedAt: null }, ...(driverIds ? { id: { in: driverIds } } : {}) } },
+      select: { id: true, plate: true, brand: true, model: true, year: true, category: true, driverId: true, driver: { select: { user: { select: { name: true } } } } },
+    });
+    return carros
+      .map((c) => ({
+        id: c.id,
+        plate: c.plate,
+        carro: `${c.brand} ${c.model} ${c.year}`,
+        driverId: c.driverId,
+        name: c.driver.user?.name ?? null,
+        categoriaAtual: c.category,
+        categoriaPedida: mapa[c.id]?.categoriaPedida ?? null,
+        pedidaEm: mapa[c.id]?.categoriaPedidaEm ?? null,
+      }))
+      .sort((a, b) => (b.pedidaEm ?? '').localeCompare(a.pedidaEm ?? ''));
   }
 
   /** Carros do motorista (sem os removidos): o em uso primeiro. */
@@ -129,7 +267,7 @@ export class VehiclesService {
   async create(userId: string, input: CreateVehicleInput) {
     const driver = await this.motoristaDe(userId);
     const conferir = driver.status === 'APPROVED';
-    return this.cadastrar(driver.id, input, conferir ? 'CONFERIR' : 'LIBERAR', userId);
+    return this.cadastrar(driver.id, input, conferir ? 'CONFERIR' : 'LIBERAR', userId, false);
   }
 
   private async cadastrar(
@@ -137,7 +275,10 @@ export class VehiclesService {
     input: CreateVehicleInput,
     modo: 'CONFERIR' | 'LIBERAR',
     quem: string,
+    /** true = a Central cadastrou: a categoria vale na hora; false = pedido do motorista. */
+    categoriaDaCentral: boolean,
   ): Promise<CarroPublico> {
+    const categoria = input.categoria ? await this.categoriaQueExiste(input.categoria) : null;
     const plate = normalizePlate(input.plate);
     const mapa = await this.mapa();
     const dados = { brand: input.brand, model: input.model, year: input.year, color: input.color };
@@ -170,9 +311,14 @@ export class VehiclesService {
     if (atual && atual.category !== carro.category) {
       carro = await this.prisma.vehicle.update({ where: { id: carro.id }, data: { category: atual.category } });
     }
+    if (categoria && categoriaDaCentral && categoria !== carro.category) {
+      carro = await this.prisma.vehicle.update({ where: { id: carro.id }, data: { category: categoria } });
+    }
+    const pedir = categoria && !categoriaDaCentral && categoria !== carro.category;
     const novoMapa = await this.mudar((m) => {
       if (modo === 'CONFERIR') m[carro.id] = { situacao: 'PENDENTE', em: new Date().toISOString() };
       else delete m[carro.id];
+      if (pedir) m[carro.id] = { ...(m[carro.id] ?? {}), categoriaPedida: categoria, categoriaPedidaEm: new Date().toISOString() };
     }, quem);
     if (modo === 'LIBERAR') await this.garantirCarroEmUso(driverId, novoMapa);
     const final = await this.prisma.vehicle.findUniqueOrThrow({ where: { id: carro.id } });
@@ -198,11 +344,12 @@ export class VehiclesService {
       },
     });
     // Recusado e corrigido: volta para a Central conferir.
-    const novo = mapa[vehicleId]?.situacao === 'RECUSADO'
+    let novo = mapa[vehicleId]?.situacao === 'RECUSADO'
       ? await this.mudar((m) => {
           m[vehicleId] = { ...m[vehicleId], situacao: 'PENDENTE', motivo: null, em: new Date().toISOString() };
         }, userId)
       : mapa;
+    if (input.categoria) novo = await this.registrarPedidoDeCategoria(atualizado, input.categoria, userId);
     return this.publico(atualizado, novo);
   }
 
@@ -309,7 +456,7 @@ export class VehiclesService {
   async adminCriar(driverId: string, adminId: string, input: CreateVehicleInput) {
     const d = await this.prisma.driver.findUnique({ where: { id: driverId }, select: { id: true } });
     if (!d) throw BusinessException.notFound('Motorista nao encontrado.');
-    return this.cadastrar(driverId, input, 'LIBERAR', adminId);
+    return this.cadastrar(driverId, input, 'LIBERAR', adminId, true);
   }
 
   /** A Central aprova ou recusa o carro novo. */
@@ -321,7 +468,13 @@ export class VehiclesService {
     const novo = await this.mudar((m) => {
       const f = m[vehicleId] ?? {};
       m[vehicleId] = aprovar
-        ? { foto: f.foto ?? null, crlv: f.crlv ?? null, em: new Date().toISOString() }
+        ? {
+            foto: f.foto ?? null,
+            crlv: f.crlv ?? null,
+            em: new Date().toISOString(),
+            // O pedido de categoria continua (a Central confere a parte).
+            ...(f.categoriaPedida ? { categoriaPedida: f.categoriaPedida, categoriaPedidaEm: f.categoriaPedidaEm ?? null } : {}),
+          }
         : { ...f, situacao: 'RECUSADO', motivo: motivo!.trim(), em: new Date().toISOString() };
     }, adminId);
     if (aprovar) await this.garantirCarroEmUso(v.driverId, novo);
@@ -363,6 +516,7 @@ export class VehiclesService {
         ...(input.color ? { color: input.color } : {}),
       },
     });
+    if (input.categoria) await this.definirCategoria([vehicleId], input.categoria, 'central');
     return this.carrosDoMotorista(v.driverId);
   }
 

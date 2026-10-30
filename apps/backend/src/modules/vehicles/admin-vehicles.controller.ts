@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { SoDonoGuard } from '../pracas/so-dono.guard';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { createVehicleSchema, paginationSchema, updateVehicleSchema, UserRole } from '@ride/shared';
+import { createVehicleSchema, paginationSchema, revisarCategoriaSchema, updateVehicleSchema, UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -64,6 +64,23 @@ export class AdminVehiclesController {
   ) {
     await this.doCarro(user, id);
     return this.vehicles.adminRevisar(id, user.id, body.aprovar, body.motivo);
+  }
+
+  @Get('vehicles/category-requests')
+  @ApiOperation({ summary: 'Pedidos de categoria dos motoristas esperando a Central (da cidade do operador)' })
+  async pedidosDeCategoria(@CurrentUser() user: AuthenticatedUser) {
+    return this.vehicles.categoriasParaConferir(await this.pracas.idsDeMotoristas(await this.pracas.escopoDe(user.id)));
+  }
+
+  @Patch('vehicles/:id/category-review')
+  @ApiOperation({ summary: 'Aprova (passa a valer) ou recusa (motivo obrigatorio) a categoria pedida pelo motorista' })
+  async revisarCategoria(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(revisarCategoriaSchema)) body: { aprovar: boolean; motivo?: string },
+  ) {
+    await this.doCarro(user, id);
+    return this.vehicles.adminRevisarCategoria(id, user.id, body.aprovar, body.motivo);
   }
 
   @Post('vehicles/:id/usar')

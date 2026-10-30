@@ -120,7 +120,7 @@ export class AdminCentralController {
     @Body(new ZodValidationPipe(z.object({ category: z.string().trim().toUpperCase().min(2).max(20) }))) body: { category: string },
   ) {
     await this.pracas.exigirAcesso(user, await this.pracas.pracaDoMotorista(id));
-    return this.central.categoriaDoVeiculo(id, body.category);
+    return this.central.categoriaDoVeiculo(id, body.category, user.id);
   }
 
   @Get('passengers')
