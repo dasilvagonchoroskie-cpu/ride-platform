@@ -8,13 +8,44 @@ type Db = Pick<Prisma.TransactionClient, 'setting'>;
 export const CHAVE_CATEGORIAS = 'tarifas.categorias';
 export const CHAVE_MULTIPLICADOR = 'tarifas.multiplicador';
 
+/** Desenho da categoria no app (o passageiro escolhe pela figura). */
+export const ICONES = ['carro', 'conforto', 'premium', 'moto', 'van'] as const;
+export type IconeDaCategoria = (typeof ICONES)[number];
+
 export interface Categoria {
   codigo: string;
   nome: string;
   ativa: boolean;
+  /** Etapa de categorias (29/10/2026): figura, texto curto e lugares. */
+  icone: IconeDaCategoria;
+  descricao: string;
+  capacidade: number;
+  /** Multiplicador da categoria (1 = normal), alem do dinamico da cidade/zona. */
+  multiplicador: number;
 }
 
-const PADRAO: Categoria[] = [{ codigo: 'CARRO', nome: 'Carro', ativa: true }];
+/** O codigo CARRO continua (carros e corridas antigas); o nome e "Popular". */
+const PADRAO: Categoria[] = [
+  { codigo: 'CARRO', nome: 'Popular', ativa: true, icone: 'carro', descricao: 'Econômico', capacidade: 4, multiplicador: 1 },
+];
+
+/** Campos novos com valor padrao (categoria gravada antes nao tinha). */
+export function normalizarCategoria(c: Record<string, unknown>): Categoria {
+  const codigo = String(c.codigo ?? '');
+  const moto = ehMoto(codigo);
+  const icone = ICONES.includes(c.icone as IconeDaCategoria) ? (c.icone as IconeDaCategoria) : moto ? 'moto' : 'carro';
+  const cap = Number(c.capacidade);
+  const mult = Number(c.multiplicador);
+  return {
+    codigo,
+    nome: String(c.nome ?? '') || codigo,
+    ativa: c.ativa !== false,
+    icone,
+    descricao: typeof c.descricao === 'string' ? c.descricao.trim().slice(0, 120) : '',
+    capacidade: Number.isInteger(cap) && cap >= 1 && cap <= 20 ? cap : moto ? 1 : 4,
+    multiplicador: Number.isFinite(mult) && mult >= 0.5 && mult <= 5 ? Math.round(mult * 100) / 100 : 1,
+  };
+}
 
 export function codigoDaCategoria(nome: string): string {
   return nome
@@ -32,7 +63,7 @@ export async function lerCategorias(db: Db): Promise<Categoria[]> {
   if (!Array.isArray(v)) return PADRAO;
   const lista = (v as unknown[])
     .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object' && !Array.isArray(c))
-    .map((c) => ({ codigo: String(c.codigo ?? ''), nome: String(c.nome ?? ''), ativa: c.ativa !== false }))
+    .map((c) => normalizarCategoria(c))
     .filter((c) => c.codigo);
   if (!lista.some((c) => c.codigo === 'CARRO')) lista.unshift(PADRAO[0]);
   return lista;

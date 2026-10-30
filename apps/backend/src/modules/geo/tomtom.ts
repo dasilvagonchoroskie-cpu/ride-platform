@@ -146,6 +146,17 @@ export class TomTomGeo implements ProvedorGeo {
     return k && /^[A-Za-z0-9]{20,64}$/.test(k) ? k : null;
   }
 
+  /**
+   * Chave das IMAGENS do mapa, a unica que chega aos celulares (30/10/2026).
+   * TOMTOM_API_KEY_MAPA: uma segunda chave da TomTom liberada so para "Map
+   * Display" no painel da TomTom — se vazar de um celular, nao serve para
+   * busca nem rota. Sem ela, vale a TOMTOM_API_KEY (como antes).
+   */
+  static daVariavelDoMapa(env: Record<string, string | undefined> = process.env): string | null {
+    const k = env.TOMTOM_API_KEY_MAPA?.trim();
+    return k && /^[A-Za-z0-9]{20,64}$/.test(k) ? k : TomTomGeo.daVariavel(env);
+  }
+
   async geocodificar(q: string, perto: { lat: number; lng: number } | null, raioMetros: number | null): Promise<LugarDoProvedor[]> {
     const p = new URLSearchParams({ countrySet: 'BR', language: 'pt-BR', limit: '8', typeahead: 'true' });
     if (perto) {

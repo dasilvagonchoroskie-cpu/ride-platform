@@ -4,8 +4,11 @@ import { UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { mapaComChave } from '../operacao/mapa.config';
 import { GeoService } from './geo.service';
+import { BusinessException } from '../../common/errors/business.exception';
 import { UsoDoMapaService } from './uso-do-mapa';
 import { PracasService } from '../pracas/pracas.service';
 
@@ -15,6 +18,12 @@ const buscaSchema = z.object({
   lng: z.coerce.number().min(-180).max(180),
   /** Token de sessao da tela de destino (etapa 3). */
   sessao: z.string().trim().max(64).optional(),
+  /**
+   * Brasil todo (so a conta do dono da Central): para "Abrir cidade nova",
+   * que procura uma cidade fora da regiao de hoje. Passageiro e motorista
+   * ficam sempre na regiao de operacao.
+   */
+  ampla: z.enum(['1', 'true']).optional(),
 });
 
 const pontoSchema = z.object({
@@ -47,7 +56,16 @@ export class GeoController {
 
   @Get('search')
   @ApiOperation({ summary: 'Busca enderecos e lugares perto de um ponto (TomTom, pelo servidor)' })
-  async buscar(@Query(new ZodValidationPipe(buscaSchema)) q: { q: string; lat: number; lng: number; sessao?: string }) {
+  async buscar(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(buscaSchema)) q: { q: string; lat: number; lng: number; sessao?: string; ampla?: string },
+  ) {
+    if (q.ampla) {
+      // So o dono abre cidade nova (operador e apps: sempre a regiao).
+      if (user?.role !== UserRole.ADMIN) throw BusinessException.forbidden('Busca no Brasil todo so na Central.');
+      await this.pracas.exigirDono(user);
+      return this.geo.buscar(q.q, q.lat, q.lng, { brasilTodo: true });
+    }
     // Centro e limite da cidade (praca) de onde vem a busca; fonte da busca
     // configuravel por cidade.
     const praca = await this.pracas.doPonto({ latitude: q.lat, longitude: q.lng }).catch(() => null);

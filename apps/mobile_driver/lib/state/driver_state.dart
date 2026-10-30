@@ -167,6 +167,13 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// Veiculos cadastrados no servidor.
   List<Map<String, dynamic>> veiculos = const [];
 
+  /// Categorias que o motorista pode pedir (Popular, Conforto, Premium...).
+  /// Evandro, 29/10/2026: escolhe no cadastro do carro e a Central aprova.
+  List<Map<String, dynamic>> categorias = const [];
+
+  /// Categoria escolhida no primeiro cadastro (vai junto com o carro).
+  String? categoriaDoCadastro;
+
   /// Olho na tela Atividades: esconde os valores de quem estiver do lado.
   bool ocultarValores = false;
 
@@ -1027,6 +1034,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
             'model': v.model,
             'year': v.year,
             'color': v.color,
+            // Categoria pedida: vale depois que a Central aprovar.
+            if (categoriaDoCadastro != null) 'categoria': categoriaDoCadastro,
           });
         } on ApiException catch (e) {
           // O servidor ja aceita de novo o mesmo carro do mesmo motorista;
@@ -1052,7 +1061,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     return ResultadoCadastro.enviado;
   }
 
-  Future<void> registerVehicle(VehicleInfo info) async {
+  Future<void> registerVehicle(VehicleInfo info, {String? categoria}) async {
+    categoriaDoCadastro = categoria;
     // No primeiro cadastro o veiculo fica guardado e segue junto com os
     // dados do motorista; depois disso, trocas de veiculo vao na hora.
     if (AppConfig.hasApi && isOnboarded) {
@@ -1063,6 +1073,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'model': info.model,
           'year': info.year,
           'color': info.color,
+          if (categoria != null) 'categoria': categoria,
         });
       } on ApiException catch (e) {
         // O mesmo carro de novo o servidor aceita; recusa aqui e de verdade.
@@ -2066,6 +2077,24 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// Foto do carro (tipo FOTO) ou do CRLV (tipo CRLV) do carro novo.
   Future<void> fotoDoCarro(String id, String tipo, {required String mime, required String base64}) async {
     await _client.request('POST', '/vehicles/$id/foto', body: {'tipo': tipo, 'mime': mime, 'dados': base64});
+    await carregarCarros();
+  }
+
+  /// Lista de categorias para escolher (o servidor manda nome, figura e texto).
+  Future<void> carregarCategorias() async {
+    if (!AppConfig.hasApi) return;
+    try {
+      final r = await _client.request('GET', '/vehicles/categorias') as List<dynamic>;
+      categorias = [for (final c in r) if (c is Map<String, dynamic>) c];
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: fica so o Popular.
+    }
+  }
+
+  /// Pede outra categoria para o carro (a Central aprova ou recusa).
+  Future<void> pedirCategoria(String id, String codigo) async {
+    await _client.request('PATCH', '/vehicles/$id/categoria', body: {'categoria': codigo});
     await carregarCarros();
   }
 

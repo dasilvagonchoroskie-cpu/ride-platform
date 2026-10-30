@@ -17,9 +17,15 @@ import pyrage
 
 
 def main() -> None:
-    copia, chave = sys.argv[1], sys.argv[2]
+    # --contagem: so imprime as linhas por tabela (JSON), para conferir depois.
+    so_contagem = sys.argv[1] == '--contagem'
+    args = sys.argv[2:] if so_contagem else sys.argv[1:]
+    copia, chave = args[0], args[1]
     ident = pyrage.x25519.Identity.from_str(open(chave).read().strip())
     dados = json.loads(gzip.decompress(pyrage.decrypt(open(copia, 'rb').read(), [ident])))
+    if so_contagem:
+        print(json.dumps(dados.get('contagem', {})))
+        return
     tabelas = dados['tabelas']
     print('-- Copia gerada em', dados.get('geradoEm'))
     print('BEGIN;')

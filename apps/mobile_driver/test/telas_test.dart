@@ -22,7 +22,20 @@ import 'package:mobile_driver/widgets/ride_map.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// O que o app mandou ao servidor (metodo, caminho e corpo).
+final _pedidos = <(String, String, String)>[];
+
 Object? _resposta(String metodo, String caminho) {
+  if (caminho == '/api/vehicles/categorias') {
+    return [
+      {'codigo': 'CARRO', 'nome': 'Popular', 'icone': 'carro', 'descricao': 'Econômico', 'capacidade': 4},
+      {'codigo': 'CONFORTO', 'nome': 'Conforto', 'icone': 'conforto', 'descricao': 'Carro mais novo e espaçoso', 'capacidade': 4},
+      {'codigo': 'PREMIUM', 'nome': 'Premium', 'icone': 'premium', 'descricao': 'Carro de luxo, ar-condicionado', 'capacidade': 4},
+    ];
+  }
+  if (metodo == 'PATCH' && caminho.endsWith('/categoria')) {
+    return {'id': 'v1', 'category': 'CARRO', 'categoriaPedida': 'PREMIUM'};
+  }
   if (caminho == '/api/driver/rides/history') {
     return {
       'total': 1,
@@ -49,8 +62,8 @@ Object? _resposta(String metodo, String caminho) {
   if (caminho == '/api/vehicles/me') {
     // Carro em uso, um guardado (liberado) e um novo esperando a Central.
     return [
-      {'id': 'v1', 'plate': 'ABC1D23', 'brand': 'Chevrolet', 'model': 'Onix Plus', 'year': 2022, 'color': 'Prata', 'isActive': true, 'situacao': 'EM_USO', 'fotoUrl': null, 'crlvUrl': null, 'motivo': null},
-      {'id': 'v2', 'plate': 'DEF2G34', 'brand': 'Fiat', 'model': 'Mobi', 'year': 2020, 'color': 'Vermelho', 'isActive': false, 'situacao': 'GUARDADO', 'fotoUrl': null, 'crlvUrl': null, 'motivo': null},
+      {'id': 'v1', 'plate': 'ABC1D23', 'brand': 'Chevrolet', 'model': 'Onix Plus', 'year': 2022, 'color': 'Prata', 'isActive': true, 'situacao': 'EM_USO', 'fotoUrl': null, 'crlvUrl': null, 'motivo': null, 'category': 'CARRO', 'categoriaPedida': 'CONFORTO'},
+      {'id': 'v2', 'plate': 'DEF2G34', 'brand': 'Fiat', 'model': 'Mobi', 'year': 2020, 'color': 'Vermelho', 'isActive': false, 'situacao': 'GUARDADO', 'fotoUrl': null, 'crlvUrl': null, 'motivo': null, 'category': 'CARRO', 'categoriaMotivo': 'Carro sem ar-condicionado'},
       {'id': 'v3', 'plate': 'XYZ9A88', 'brand': 'Fiat', 'model': 'Argo', 'year': 2024, 'color': 'Branco', 'isActive': false, 'situacao': 'PENDENTE', 'fotoUrl': '/arquivos/carro3', 'crlvUrl': null, 'motivo': null},
     ];
   }
@@ -73,6 +86,7 @@ Object? _resposta(String metodo, String caminho) {
 }
 
 MockClient _servidor() => MockClient((http.Request r) async {
+      _pedidos.add((r.method, r.url.path, r.body));
       final dados = _resposta(r.method, r.url.path);
       return http.Response(
         jsonEncode(dados == null
@@ -221,10 +235,42 @@ void main() {
     await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.text('Cadastrar outro carro'));
     await tester.pumpAndSettle();
+    // A escolha da categoria (29/10/2026) fica antes das fotos.
+    expect(find.text('Categoria do carro'), findsOneWidget);
+    final lista = find.descendant(of: find.byType(NovoCarroScreen), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('Foto do CRLV'), 200, scrollable: lista);
     expect(find.text('Foto do CRLV'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Enviar para a Central'), 200, scrollable: lista);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Enviar para a Central'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Placa inválida'), findsOneWidget);
+  });
+
+  // Evandro (29/10/2026): o motorista escolhe a categoria e a Central aprova.
+  testWidgets('Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra', (tester) async {
+    _pedidos.clear();
+    await _abrir(tester, const VehiclesScreen());
+    expect(find.text('Categoria: Popular'), findsAtLeastNWidgets(1));
+    expect(find.textContaining('Pediu Conforto: aguardando a Central aprovar'), findsOneWidget);
+    await tester.tap(find.text('Mudar categoria').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Categoria do carro'), findsAtLeastNWidgets(1));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Premium'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Carro de luxo'), findsOneWidget);
+    await tester.tap(find.text('Pedir à Central'));
+    for (var i = 0; i < 4; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    final pedido = _pedidos.where((p) => p.$1 == 'PATCH' && p.$2 == '/api/vehicles/v1/categoria').toList();
+    expect(pedido, hasLength(1));
+    expect(jsonDecode(pedido.first.$3), {'categoria': 'PREMIUM'});
+    // O segundo carro mostra a recusa de categoria com o motivo.
+    await tester.scrollUntilVisible(find.textContaining('Carro sem ar-condicionado'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.textContaining('recusou a categoria'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('SOS: botao de panico e 190/192', (tester) async {

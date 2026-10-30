@@ -113,4 +113,94 @@ void main() {
     corridas.dispose();
     app.dispose();
   });
+
+  testWidgets('Popular, Conforto e Premium: preco, chegada e lugares; trocar nao pede a rota de novo', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final cotacoesRecebidas = <String?>[];
+    var pedidosDeRota = 0;
+    final servidor = MockClient((r) async {
+      Object? dados = const {};
+      if (r.url.path.contains('/geo/rota')) pedidosDeRota++;
+      if (r.url.path.endsWith('/rides/estimate')) {
+        final corpo = jsonDecode(r.body) as Map<String, dynamic>;
+        cotacoesRecebidas.add(corpo['cotacao'] as String?);
+        final cat = (corpo['category'] as String?) ?? 'CARRO';
+        final reaproveitada = corpo['cotacao'] == 'medida-assinada';
+        dados = {
+          ..._orcamento('CARRO'),
+          'category': cat,
+          'estimatedFareCents': {'CARRO': 1800, 'CONFORTO': 2250, 'PREMIUM': 2880}[cat],
+          'cotacao': 'medida-assinada',
+          'medidaReaproveitada': reaproveitada,
+          // Primeira consulta traz o caminho; as seguintes (mesma medida), nao.
+          'pontos': reaproveitada ? <List<double>>[] : [[-18.0125, -49.3547], [-18.0010, -49.3600]],
+          'opcoes': [
+            {'category': 'CARRO', 'nome': 'Popular', 'icone': 'carro', 'descricao': 'Econômico', 'capacidade': 4, 'chegadaMinutos': 4, 'estimatedFareCents': 1800, 'totalToPayCents': 1800},
+            {'category': 'CONFORTO', 'nome': 'Conforto', 'icone': 'conforto', 'capacidade': 4, 'chegadaMinutos': 9, 'estimatedFareCents': 2250, 'totalToPayCents': 2250},
+            {'category': 'PREMIUM', 'nome': 'Premium', 'icone': 'premium', 'capacidade': 4, 'chegadaMinutos': null, 'estimatedFareCents': 2880, 'totalToPayCents': 2880},
+          ],
+        };
+      }
+      return http.Response(jsonEncode({'success': true, 'data': dados}), 200,
+          headers: {'content-type': 'application/json; charset=utf-8'});
+    });
+    final app = AppState(client: ApiClient(client: servidor))..coords = _goiatuba;
+    final corridas = RideState(repository: RideRepository(client: ApiClient(client: servidor), demo: false));
+    await tester.runAsync(() => corridas.estimate(_goiatuba, _destino, dropoffAddress: 'Rua Destino, 10'));
+    expect(corridas.rotaPrevia, hasLength(2));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppState>.value(value: app),
+          ChangeNotifierProvider<RideState>.value(value: corridas),
+        ],
+        child: const MaterialApp(
+          locale: Locale('pt', 'BR'),
+          supportedLocales: [Locale('pt', 'BR')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: ConfirmScreen(destination: _destino, address: 'Rua Destino, 10'),
+        ),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // O terceiro cartao pode ficar meio fora da tela (lista de lado).
+    expect(find.text('Popular'), findsOneWidget);
+    expect(find.text('Conforto'), findsOneWidget);
+    expect(find.text('Premium', skipOffstage: false), findsOneWidget);
+    expect(find.text('Chega em ~4 min'), findsOneWidget);
+    expect(find.text('Chega em ~9 min'), findsOneWidget);
+    expect(find.text('Sem carro perto', skipOffstage: false), findsOneWidget);
+    expect(find.text('4 lugares · Econômico'), findsOneWidget);
+    expect(find.byIcon(Icons.workspace_premium, skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('22,50'), findsAtLeastNWidgets(1));
+    expect(tester.takeException(), isNull, reason: 'cartoes cabem sem estourar');
+
+    await tester.tap(find.text('Conforto'));
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(corridas.categoria, 'CONFORTO');
+    expect(corridas.quote?.priceCents, 2250);
+    expect(cotacoesRecebidas.last, 'medida-assinada', reason: 'trocar de categoria manda a medida de volta');
+    expect(corridas.rotaPrevia, hasLength(2), reason: 'o caminho desenhado continua');
+    expect(pedidosDeRota, 0, reason: 'nenhuma rota pedida de novo');
+
+    await tester.pumpWidget(const SizedBox());
+    corridas.dispose();
+    app.dispose();
+  });
 }

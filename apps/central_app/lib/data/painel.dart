@@ -35,6 +35,7 @@ class Indicadores {
     this.ultimoSaque,
     this.exclusoes = 0,
     this.ultimaExclusao,
+    this.categoriasPedidas = 0,
   });
 
   final int ativas;
@@ -76,8 +77,11 @@ class Indicadores {
   final int exclusoes;
   final AprovacaoResumo? ultimaExclusao;
 
+  /// Categorias de carro pedidas pelos motoristas (29/10/2026).
+  final int categoriasPedidas;
+
   /// Tudo o que espera a Central aprovar.
-  int get aprovacoes => pendentes + paraConferir + alteracoes + saques + exclusoes;
+  int get aprovacoes => pendentes + paraConferir + alteracoes + saques + exclusoes + categoriasPedidas;
 
   factory Indicadores.fromJson(Map<String, dynamic> j) => Indicadores(
         ativas: _int(j['activeRides']),
@@ -106,6 +110,7 @@ class Indicadores {
         saques: _int(j['payoutsPending']),
         ultimoSaque: j['latestPayout'] is Map<String, dynamic> ? AprovacaoResumo.fromJson(j['latestPayout'] as Map<String, dynamic>) : null,
         exclusoes: _int(j['accountDeletionsPending']),
+        categoriasPedidas: _int(j['categoryRequestsPending']),
         ultimaExclusao: j['latestAccountDeletion'] is Map<String, dynamic>
             ? AprovacaoResumo.fromJson(j['latestAccountDeletion'] as Map<String, dynamic>)
             : null,
@@ -167,7 +172,15 @@ class CarroDoMotorista {
     this.motivo,
     this.fotoUrl,
     this.crlvUrl,
+    this.categoriaPedida,
+    this.categoriaMotivo,
   });
+
+  /// Categoria que o motorista pediu e espera a Central (null = nenhuma).
+  final String? categoriaPedida;
+
+  /// Motivo da ultima recusa de categoria.
+  final String? categoriaMotivo;
 
   final String id;
   final String placa;
@@ -209,7 +222,55 @@ class CarroDoMotorista {
         motivo: j['motivo'] as String?,
         fotoUrl: j['fotoUrl'] as String?,
         crlvUrl: j['crlvUrl'] as String?,
+        categoriaPedida: j['categoriaPedida'] as String?,
+        categoriaMotivo: j['categoriaMotivo'] as String?,
       );
+}
+
+/// Pedido de categoria de um motorista (Popular -> Conforto...), para a
+/// Central aprovar ou recusar.
+class PedidoDeCategoria {
+  const PedidoDeCategoria({
+    required this.carroId,
+    required this.motoristaId,
+    required this.nome,
+    required this.placa,
+    required this.carro,
+    required this.atual,
+    required this.pedida,
+    this.quando,
+  });
+
+  final String carroId;
+  final String motoristaId;
+  final String nome;
+  final String placa;
+  final String carro;
+  final String atual;
+  final String pedida;
+  final DateTime? quando;
+
+  String get placaBonita => placa.length == 7 ? '${placa.substring(0, 3)}-${placa.substring(3)}' : placa;
+
+  factory PedidoDeCategoria.fromJson(Map<String, dynamic> j) => PedidoDeCategoria(
+        carroId: _txt(j['id']),
+        motoristaId: _txt(j['driverId']),
+        nome: _txt(j['name'], 'Motorista'),
+        placa: _txt(j['plate']).toUpperCase(),
+        carro: _txt(j['carro']),
+        atual: _txt(j['categoriaAtual'], 'CARRO'),
+        pedida: _txt(j['categoriaPedida']),
+        quando: _data(j['pedidaEm']),
+      );
+}
+
+/// Nome da categoria pelo codigo (CARRO = Popular).
+String nomeDaCategoria(List<Categoria> categorias, String codigo) {
+  for (final c in categorias) {
+    if (c.codigo == codigo) return c.nome;
+  }
+  if (codigo == 'CARRO') return 'Popular';
+  return codigo.isEmpty ? 'Popular' : '${codigo[0]}${codigo.substring(1).toLowerCase()}';
 }
 
 /// O que aconteceu ao excluir passageiros.
@@ -726,8 +787,22 @@ class Bandeira {
       };
 }
 
+/// Figuras que a categoria pode ter (o passageiro escolhe pelo desenho).
+const iconesDeCategoria = ['carro', 'conforto', 'premium', 'moto', 'van'];
+
 class Categoria {
-  Categoria({required this.codigo, required this.nome, required this.ativa, required this.diurna, required this.noturna});
+  Categoria({
+    required this.codigo,
+    required this.nome,
+    required this.ativa,
+    required this.diurna,
+    required this.noturna,
+    this.icone = 'carro',
+    this.descricao = '',
+    this.capacidade = 4,
+    this.multiplicador = 1,
+    this.daCidade = false,
+  });
 
   final String codigo;
   String nome;
@@ -735,13 +810,33 @@ class Categoria {
   final Bandeira diurna;
   final Bandeira noturna;
 
-  factory Categoria.fromJson(Map<String, dynamic> j) => Categoria(
-        codigo: _txt(j['codigo']),
-        nome: _txt(j['nome']),
-        ativa: j['ativa'] != false,
-        diurna: Bandeira((j['diurna'] as Map).cast<String, dynamic>()),
-        noturna: Bandeira((j['noturna'] as Map).cast<String, dynamic>()),
-      );
+  /// Etapa de categorias (29/10/2026): figura, texto curto, lugares e
+  /// multiplicador da categoria (1 = normal).
+  String icone;
+  String descricao;
+  int capacidade;
+  double multiplicador;
+
+  /// Com uma cidade escolhida: true = esta cidade tem valores proprios.
+  final bool daCidade;
+
+  factory Categoria.fromJson(Map<String, dynamic> j) {
+    final codigo = _txt(j['codigo']);
+    final moto = codigo.contains('MOTO');
+    final icone = _txt(j['icone']);
+    return Categoria(
+      codigo: codigo,
+      nome: _txt(j['nome']),
+      ativa: j['ativa'] != false,
+      diurna: Bandeira((j['diurna'] as Map).cast<String, dynamic>()),
+      noturna: Bandeira((j['noturna'] as Map).cast<String, dynamic>()),
+      icone: iconesDeCategoria.contains(icone) ? icone : (moto ? 'moto' : 'carro'),
+      descricao: _txt(j['descricao']),
+      capacidade: j['capacidade'] == null ? (moto ? 1 : 4) : _int(j['capacidade']),
+      multiplicador: _num(j['multiplicador']) ?? 1,
+      daCidade: j['daCidade'] == true,
+    );
+  }
 }
 
 class Zona {
@@ -769,9 +864,12 @@ class Zona {
 }
 
 class Tarifas {
-  Tarifas({required this.categorias, required this.multiplicadorCidade, required this.zonas, this.cobranca = 'TAXIMETRO'});
+  Tarifas({required this.categorias, required this.multiplicadorCidade, required this.zonas, this.cobranca = 'TAXIMETRO', this.praca});
 
   final List<Categoria> categorias;
+
+  /// Cidade destes valores (null = padrao de todas as cidades).
+  final String? praca;
   double multiplicadorCidade;
   final List<Zona> zonas;
 
@@ -788,6 +886,7 @@ class Tarifas {
       multiplicadorCidade: _num(m['cidade']) ?? 1,
       zonas: [for (final z in (m['zonas'] as List? ?? const []).whereType<Map<String, dynamic>>()) Zona.fromJson(z)],
       cobranca: j['cobranca'] == 'FECHADO' ? 'FECHADO' : 'TAXIMETRO',
+      praca: j['praca'] as String?,
     );
   }
 }
@@ -1322,11 +1421,17 @@ class PainelApi {
   Future<void> cancelarCorrida(String rideId, String motivo) =>
       _c.request('POST', '/admin/rides/$rideId/cancel', body: {'reason': motivo});
 
-  Future<List<Lugar>> buscarEndereco(String texto, Coords perto) async {
+  /// Busca de endereco. [brasilTodo]: so para "Abrir cidade nova" (a busca
+  /// normal fica na regiao de operacao).
+  Future<List<Lugar>> buscarEndereco(String texto, Coords perto, {bool brasilTodo = false}) async {
     UsoLocal.contar('buscas');
     return [
-        for (final j in _lista(await _c.request('GET', '/geo/search',
-            query: {'q': texto, 'lat': '${perto.latitude}', 'lng': '${perto.longitude}'})))
+        for (final j in _lista(await _c.request('GET', '/geo/search', query: {
+          'q': texto,
+          'lat': '${perto.latitude}',
+          'lng': '${perto.longitude}',
+          if (brasilTodo) 'ampla': '1',
+        })))
           Lugar.fromJson(j),
       ];
   }
@@ -1458,13 +1563,38 @@ class PainelApi {
       );
 
   // Tarifas
-  Future<Tarifas> tarifas() async => Tarifas.fromJson(await _c.request('GET', '/admin/tariffs') as Map<String, dynamic>);
+  /// Tarifas e categorias. Com [cidade]: os valores daquela cidade (o que nao
+  /// foi ajustado nela vem do padrao).
+  Future<Tarifas> tarifas({String? cidade}) async => Tarifas.fromJson(
+      await _c.request('GET', '/admin/tariffs', query: cidade == null ? const {} : {'praca': cidade}) as Map<String, dynamic>);
 
-  Future<Tarifas> salvarCategoria(String codigo, Categoria c) async => Tarifas.fromJson(await _c.request(
+  /// Salva a categoria. Com [cidade]: so naquela cidade (ligada,
+  /// multiplicador e valores); sem: o padrao, com nome, figura e texto.
+  Future<Tarifas> salvarCategoria(String codigo, Categoria c, {String? cidade}) async => Tarifas.fromJson(await _c.request(
         'PUT',
         '/admin/tariffs/categoria/$codigo',
-        body: {'nome': c.nome, 'ativa': c.ativa, 'diurna': c.diurna.toJson(), 'noturna': c.noturna.toJson()},
+        query: cidade == null ? const {} : {'praca': cidade},
+        body: {
+          'nome': c.nome,
+          'ativa': c.ativa,
+          'diurna': c.diurna.toJson(),
+          'noturna': c.noturna.toJson(),
+          'multiplicador': c.multiplicador,
+          if (cidade == null) ...{'icone': c.icone, 'descricao': c.descricao, 'capacidade': c.capacidade},
+        },
       ) as Map<String, dynamic>);
+
+  /// A categoria volta aos valores padrao nesta cidade.
+  Future<Tarifas> voltarCategoriaAoPadrao(String codigo, String cidade) async => Tarifas.fromJson(
+      await _c.request('DELETE', '/admin/tariffs/categoria/$codigo', query: {'praca': cidade}) as Map<String, dynamic>);
+
+  /// Pedidos de categoria dos motoristas (da cidade do operador).
+  Future<List<PedidoDeCategoria>> pedidosDeCategoria() async =>
+      [for (final j in _lista(await _c.request('GET', '/admin/vehicles/category-requests'))) PedidoDeCategoria.fromJson(j)];
+
+  /// Aprova (passa a valer) ou recusa (motivo obrigatorio) a categoria pedida.
+  Future<List<CarroDoMotorista>> revisarCategoria(String carroId, bool aprovar, [String? motivo]) async => _carros(await _c.request(
+      'PATCH', '/admin/vehicles/$carroId/category-review', body: {'aprovar': aprovar, if (motivo != null) 'motivo': motivo}));
 
   Future<Tarifas> salvarCobranca(String modo) async => Tarifas.fromJson(
       await _c.request('PUT', '/admin/tariffs/cobranca', body: {'modo': modo}) as Map<String, dynamic>);

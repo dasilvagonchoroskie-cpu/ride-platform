@@ -1,0 +1,124 @@
+name: Testar a restauracao da copia
+
+# Evandro (29/10/2026): testar se a copia diaria do banco volta de verdade.
+# Restaura a copia mais nova num banco de TESTE (vazio) e confere, tabela por
+# tabela, se a quantidade de linhas bate com a copia. Nunca toca no banco de
+# producao: se o banco de teste ja tiver dados, para antes de mexer.
+#
+# Precisa de 2 segredos (GitHub -> Settings -> Secrets and variables -> Actions):
+#   COPIA_BANCO_CHAVE  - a chave privada AGE-SECRET-KEY-1... (so o Evandro tem)
+#   BANCO_TESTE_URL    - endereco de um banco Supabase NOVO e vazio, so de teste
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir os segredos
+        env:
+          CHAVE: ${{ secrets.COPIA_BANCO_CHAVE }}
+          BANCO: ${{ secrets.BANCO_TESTE_URL }}
+        run: |
+          mkdir -p /tmp/rel
+          [ -n "$CHAVE" ] || { echo "FALTA o segredo COPIA_BANCO_CHAVE" | tee /tmp/rel/r.txt; exit 1; }
+          [ -n "$BANCO" ] || { echo "FALTA o segredo BANCO_TESTE_URL" | tee /tmp/rel/r.txt; exit 1; }
+
+      - name: O banco de teste esta vazio? (protege a producao)
+        env:
+          BANCO: ${{ secrets.BANCO_TESTE_URL }}
+        run: |
+          set -eu
+          N=$(psql "$BANCO" -tAc "select case when to_regclass('public.users') is null then 0 else (select count(*) from public.users) end")
+          echo "Linhas em users no banco de teste: $N"
+          if [ "$N" != "0" ]; then
+            echo "PARADO: o banco de teste ja tem $N usuario(s). Use um banco NOVO e vazio (nunca o de producao)." | tee /tmp/rel/r.txt
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Criar as tabelas no banco de teste
+        working-directory: apps/backend
+        env:
+          DATABASE_URL: ${{ secrets.BANCO_TESTE_URL }}
+        run: |
+          set -o pipefail
+          # PostGIS (posicao dos motoristas) e busca por nome, como no banco de producao.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -c "create extension if not exists postgis" -c "create extension if not exists pg_trgm"
+          pnpm install --frozen-lockfile > /dev/null
+          pnpm exec prisma generate > /dev/null
+          pnpm exec prisma db push --skip-generate 2>&1 | tail -3
+          pnpm exec prisma db execute --file prisma/sql/post-init.sql --schema prisma/schema.prisma 2>&1 | tail -3
+
+      - name: Baixar a copia mais nova
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          RUN=$(gh run list --workflow copia-banco.yml --status success -L 1 --json databaseId -q '.[0].databaseId')
+          [ -n "$RUN" ] || { echo "Nenhuma copia encontrada" | tee /tmp/rel/r.txt; exit 1; }
+          gh run download "$RUN" -D /tmp/copia
+          ls -la /tmp/copia/*/
+          echo "RUN_COPIA=$RUN" >> "$GITHUB_ENV"
+
+      - name: Abrir a copia e restaurar
+        env:
+          CHAVE: ${{ secrets.COPIA_BANCO_CHAVE }}
+          BANCO: ${{ secrets.BANCO_TESTE_URL }}
+        run: |
+          set -euo pipefail
+          pip install -q pyrage
+          umask 077
+          printf '%s\n' "$CHAVE" > /tmp/chave.txt
+          ARQ=$(ls /tmp/copia/*/*.age | head -1)
+          python3 scripts/restaurar-copia.py "$ARQ" /tmp/chave.txt > /tmp/restaurar.sql 2> /tmp/contagem.txt
+          python3 scripts/restaurar-copia.py --contagem "$ARQ" /tmp/chave.txt > /tmp/contagem.json
+          rm -f /tmp/chave.txt
+          psql "$BANCO" -v ON_ERROR_STOP=1 -q -f /tmp/restaurar.sql
+          rm -f /tmp/restaurar.sql
+
+      - name: Conferir tabela por tabela
+        env:
+          BANCO: ${{ secrets.BANCO_TESTE_URL }}
+        run: |
+          set -eu
+          {
+            echo "Teste de restauracao - $(date -u '+%d/%m/%Y %H:%M UTC')"
+            echo "Copia: execucao $RUN_COPIA da esteira 'Copia diaria do banco'"
+            echo ""
+          } > /tmp/rel/r.txt
+          ERROS=0
+          for t in $(jq -r 'keys[]' /tmp/contagem.json); do
+            E=$(jq -r --arg t "$t" '.[$t]' /tmp/contagem.json)
+            R=$(psql "$BANCO" -tAc "select count(*) from public.\"$t\"" 2>/dev/null || echo "erro")
+            if [ "$R" = "$E" ]; then echo "OK     $t: $R de $E" >> /tmp/rel/r.txt; else echo "FALHA  $t: $R de $E" >> /tmp/rel/r.txt; ERROS=$((ERROS+1)); fi
+          done
+          echo "" >> /tmp/rel/r.txt
+          echo "Resultado: $ERROS tabela(s) com diferenca." >> /tmp/rel/r.txt
+          cat /tmp/rel/r.txt
+          [ "$ERROS" = "0" ]
+
+      - name: Guardar o relatorio (sem dados, so as contagens)
+        if: always()
+        run: |
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          mkdir -p logs && cp /tmp/rel/r.txt logs/restauracao.txt 2>/dev/null || exit 0
+          git add logs/restauracao.txt
+          git commit -m "relatorio: teste de restauracao da copia" || exit 0
+          for t in 1 2 3; do git pull --rebase --autostash origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && break; sleep 5; done

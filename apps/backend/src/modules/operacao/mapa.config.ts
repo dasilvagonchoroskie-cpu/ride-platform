@@ -53,6 +53,6 @@ export function enderecoDasImagens(chave: string): string {
 }
 
 export function mapaComChave(env: Record<string, string | undefined> = process.env): MapaComChave {
-  const chave = TomTomGeo.daVariavel(env);
+  const chave = TomTomGeo.daVariavelDoMapa(env);
   return { ...mapaDoApp(env), tiles: chave ? enderecoDasImagens(chave) : null };
 }

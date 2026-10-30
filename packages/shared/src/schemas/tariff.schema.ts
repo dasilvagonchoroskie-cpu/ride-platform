@@ -52,6 +52,11 @@ export const saveCategorySchema = z.object({
   ativa: z.boolean().default(true),
   diurna: tariffFlagSchema,
   noturna: tariffFlagSchema,
+  /** Categorias (29/10/2026): figura, texto curto, lugares e multiplicador. */
+  icone: z.enum(['carro', 'conforto', 'premium', 'moto', 'van']).optional(),
+  descricao: z.string().trim().max(120).optional(),
+  capacidade: z.number().int().min(1).max(20).optional(),
+  multiplicador: z.number().min(0.5).max(5).optional(),
 });
 export type SaveCategoryInput = z.infer<typeof saveCategorySchema>;
 

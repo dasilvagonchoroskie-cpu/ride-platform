@@ -22,7 +22,7 @@ export class ImagensDoAcompanhar {
   private readonly ritmo = new Ritmo(3, 3000);
 
   constructor(
-    private readonly chave: string | null = TomTomGeo.daVariavel(),
+    private readonly chave: string | null = TomTomGeo.daVariavelDoMapa(),
     private readonly buscarNaRede: (
       url: string,
     ) => Promise<{ ok: boolean; status: number; headers?: { get(n: string): string | null }; arrayBuffer(): Promise<ArrayBuffer> }> = (u) => fetch(u),

@@ -180,7 +180,7 @@ T=$(echo "$X" | jq -r '.data.tiles // empty')
 if [ -n "$T" ]; then
   XY=$(python3 -c "import math; z=14; la=-18.0125; lo=-49.3547; n=2**z; x=int((lo+180)/360*n); r=math.radians(la); y=int((1-math.asinh(math.tan(r))/math.pi)/2*n); print(z,x,y)")
   read -r TZ_ TX_ TY_ <<< "$XY"; U=$(echo "$T" | sed "s#{z}#$TZ_#; s#{x}#$TX_#; s#{y}#$TY_#")
-  H=$(curl -s -m 30 -D - -o /dev/null "$U" | tr -d '\r' | grep -iE '^(http/|cache-control|expires|age|etag|last-modified):' | sed 's/^/         /')
+  H=$(curl -s -m 30 -D - -o /dev/null "$U" | tr -d '\r' | grep -iE '^(http/[0-9.]+ |(cache-control|expires|age|etag|last-modified):)' | sed 's/^/         /')
   echo "$H" | head -1 | grep -q ' 200' && ok "Mapa: cabecalhos de cache de uma imagem da TomTom (para o advogado):" || falha "Mapa: imagem de teste da TomTom" "$(echo "$H" | head -1)"
   echo "$H" | tee -a "$REL" > /dev/null
   echo "$H"
@@ -431,7 +431,14 @@ N=$(echo "$X" | jq -r '.data | length' 2>/dev/null)
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Porto Alegre - RS\",\"latitude\":-30.0346,\"longitude\":-51.2177}}" "$TP")
 [ "$(echo "$X" | jq -r '.data.distanceMeters')" -gt 1000000 ] 2>/dev/null && ok "Passageiro: ve o preco para fora da regiao (Porto Alegre, $(echo "$X" | jq -r '.data.distanceMeters/1000|floor') km)" || falha "Passageiro: preco para longe" "$X"
 X=$(get "/geo/search?q=Porto%20Alegre&lat=-18.0128&lng=-49.3556" "$TP")
-[ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)] | length')" -ge 1 ] 2>/dev/null && ok "Passageiro: busca acha destino fora da regiao (Porto Alegre)" || falha "Passageiro: busca fora da regiao" "$X"
+# Evandro (29/10/2026): busca so na regiao de operacao (economia da TomTom).
+# "Porto Alegre" acha ruas com esse nome perto, nunca a cidade no RS.
+[ "$(echo "$X" | jq -r '(.data | length) > 0 and ([.data[] | select(.distanceKm > 300)] | length) == 0')" = "true" ] && ok "Passageiro: busca fica na regiao de operacao ('Porto Alegre' -> $(echo "$X" | jq -r '.data[0].address') - $(echo "$X" | jq -r '.data[0].detail'), $(echo "$X" | jq -r '.data[0].distanceKm') km)" || falha "Passageiro: busca so na regiao" "$X"
+# Central abrindo cidade nova: o dono procura no Brasil todo (ampla=1);
+# passageiro nao consegue (fica na regiao).
+X=$(get "/geo/search?q=Teutonia%20RS&lat=-18.0128&lng=-49.3556&ampla=1" "$TA")
+[ "$(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)] | length')" -ge 1 ] 2>/dev/null && ok "Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, $(echo "$X" | jq -r '[.data[] | select(.distanceKm > 1000)][0].distanceKm') km)" || falha "Central: busca de cidade nova" "$X"
+X=$(get "/geo/search?q=Teutonia%20RS&lat=-18.0128&lng=-49.3556&ampla=1" "$TP"); sucesso "$X" && falha "Passageiro buscou no Brasil todo" "$X" || ok "Seguranca: busca no Brasil todo so na Central"
 X=$(get "/geo/search?q=Rua%20Sao%20Paulo&lat=-18.0128&lng=-49.3556" "$TP")
 [ "$(echo "$X" | jq -r '(.data | length) > 0 and ((.data[0].distanceKm // 9999) < 80)')" = "true" ] && ok "Passageiro: rua com nome comum acha primeiro a da cidade" || falha "Passageiro: busca da regiao primeiro" "$X"
 # Rota pelas ruas (Evandro, 08/10/2026: "nao aquele risco verde que parece rota de aviao").
@@ -746,6 +753,64 @@ X=$(patch "/admin/drivers/$DID/finance" '{"financeModel":"TAXA_FIXA","fixedFeeCe
 [ "$(echo "$X" | jq -r '.data.financeModel')" = "TAXA_FIXA" ] && ok "Central: modelo financeiro do motorista (taxa fixa R\$ 2,00)" || falha "Central: modelo financeiro" "$X"
 patch "/admin/drivers/$DID/finance" '{"financeModel":"PADRAO"}' "$TA" >/dev/null
 X=$(patch "/admin/drivers/$DID/category" '{"category":"CARRO"}' "$TA"); sucesso "$X" && ok "Central: categoria do veiculo do motorista" || falha "Central: categoria do veiculo" "$X"
+
+# ================= Categorias de veiculo (Evandro, 29/10/2026) =================
+# Popular (o CARRO de sempre), Conforto e Premium; ligadas por cidade; o
+# motorista pede a categoria e a Central aprova; o passageiro ve cada uma com
+# preco e chegada. O teste liga o Conforto na cidade e volta como estava.
+X=$(get /admin/tariffs "$TA")
+[ "$(echo "$X" | jq -r '[.data.categorias[].codigo] | (index("CARRO") != null) and (index("CONFORTO") != null) and (index("PREMIUM") != null)')" = "true" ] \
+  && ok "Central: categorias padrao criadas ($(echo "$X" | jq -r '[.data.categorias[] | "\(.nome) (\(.codigo), \(if .ativa then "ligada" else "desligada" end))"] | join(", ")'))" || falha "Central: semente das categorias" "$(echo "$X" | jq -c '[.data.categorias[]?.codigo]')"
+if [ -n "$PRACA" ] && [ -n "${VID1:-}" ]; then
+  ANTES=$(get "/admin/tariffs?praca=$PRACA" "$TA")
+  CONF_TINHA=$(echo "$ANTES" | jq -r '.data.categorias[] | select(.codigo=="CONFORTO") | .daCidade')
+  CONF_ORIG=$(echo "$ANTES" | jq -c '.data.categorias[] | select(.codigo=="CONFORTO") | {nome, ativa, multiplicador, diurna: (.diurna | del(.flag, .updatedAt)), noturna: (.noturna | del(.flag, .updatedAt))}')
+  CONF_LIGA=$(echo "$CONF_ORIG" | jq -c '.ativa = true | .multiplicador = 1.1')
+  X=$(put "/admin/tariffs/categoria/CONFORTO?praca=$PRACA" "$CONF_LIGA" "$TA")
+  [ "$(echo "$X" | jq -r '.data.categorias[] | select(.codigo=="CONFORTO") | "\(.ativa)/\(.daCidade)/\(.multiplicador)"')" = "true/true/1.1" ] && [ "$(echo "$X" | jq -r '.data.praca')" = "$PRACA" ] \
+    && ok "Central: ligou o Conforto so na cidade $PRACA (x1,1)" || falha "Central: categoria por cidade" "$X"
+  X=$(get /admin/tariffs "$TA"); [ "$(echo "$X" | jq -r '.data.categorias[] | select(.codigo=="CONFORTO") | .daCidade')" = "false" ] && ok "Central: o padrao das outras cidades nao mudou" || falha "Central: padrao mudou junto" "$X"
+  E=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES}" "$TP")
+  PP=$(echo "$E" | jq -r '.data.opcoes[] | select(.category=="CARRO") | .estimatedFareCents'); PC=$(echo "$E" | jq -r '.data.opcoes[] | select(.category=="CONFORTO") | .estimatedFareCents')
+  [ -n "$PC" ] && [ "${PC:-0}" -gt "${PP:-0}" ] 2>/dev/null && [ "$(echo "$E" | jq -r '[.data.opcoes[] | has("icone") and has("capacidade") and has("chegadaMinutos")] | all')" = "true" ] \
+    && ok "Passageiro: ve as categorias com preco e chegada ($(echo "$E" | jq -r '[.data.opcoes[] | "\(.nome) \(.estimatedFareCents) centavos, chega em \(.chegadaMinutos // "-") min"] | join("; ")'))" || falha "Passageiro: categorias no orcamento" "$(echo "$E" | jq -c '.data.opcoes')"
+  COTE=$(echo "$E" | jq -r '.data.cotacao // empty')
+  X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"CONFORTO\",\"cotacao\":\"$COTE\"}" "$TP")
+  [ "$(echo "$X" | jq -r '.data.medidaReaproveitada')" = "true" ] && [ "$(echo "$X" | jq -r '.data.estimatedFareCents')" = "$PC" ] && [ "$(echo "$X" | jq -r '.data.distanceMeters')" = "$(echo "$E" | jq -r '.data.distanceMeters')" ] \
+    && ok "Passageiro: trocar para Conforto nao pede a rota de novo (mesma medida, $(echo "$X" | jq -r '.data.estimatedFareCents') centavos)" || falha "Passageiro: troca de categoria" "$(echo "$X" | jq -c '{r: .data.medidaReaproveitada, p: .data.estimatedFareCents, e: .error.message}')"
+  X=$(post /rides/estimate "{\"pickup\":$EMB,\"semDestino\":true,\"category\":\"CONFORTO\"}" "$TP"); Y=$(post /rides/estimate "{\"pickup\":$EMB,\"semDestino\":true}" "$TP")
+  [ "$(echo "$X" | jq -r '.data.category')" = "CONFORTO" ] && [ "$(echo "$X" | jq -r '.data.cobranca')" = "TAXIMETRO" ] && [ "$(echo "$X" | jq -r '.data.estimatedFareCents')" -gt "$(echo "$Y" | jq -r '.data.estimatedFareCents')" ] 2>/dev/null \
+    && ok "Passageiro: sem destino (taximetro) tambem pela tarifa do Conforto ($(echo "$X" | jq -r '.data.estimatedFareCents') x Popular $(echo "$Y" | jq -r '.data.estimatedFareCents'))" || falha "Passageiro: Conforto sem destino" "$X"
+  X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"paradas\":[$PAR],\"category\":\"CONFORTO\"}" "$TP")
+  [ "$(echo "$X" | jq -r '.data.paradas')" = "1" ] && [ "$(echo "$X" | jq -r '.data.estimatedFareCents')" -gt "${PC:-0}" ] 2>/dev/null \
+    && ok "Passageiro: Conforto com parada extra ($(echo "$X" | jq -r '.data.distanceMeters') m, $(echo "$X" | jq -r '.data.estimatedFareCents') centavos)" || falha "Passageiro: Conforto com parada" "$X"
+  # O motorista pede a categoria; ate a Central aprovar, segue no Popular.
+  X=$(get /vehicles/categorias); [ "$(echo "$X" | jq -r '[.data[].codigo] | index("CONFORTO") != null')" = "true" ] && ok "Motorista: ve as categorias para escolher, ja no primeiro cadastro (sem login) ($(echo "$X" | jq -r '[.data[].nome] | join(", ")'))" || falha "Motorista: lista de categorias" "$X"
+  X=$(patch "/vehicles/$VID1/categoria" '{"categoria":"CONFORTO"}' "$TM")
+  [ "$(echo "$X" | jq -r '.data.categoriaPedida')" = "CONFORTO" ] && [ "$(echo "$X" | jq -r '.data.category')" = "CARRO" ] && ok "Motorista: pediu Conforto (continua no Popular ate a Central aprovar)" || falha "Motorista: pedir categoria" "$X"
+  X=$(patch "/vehicles/$VID1/categoria" '{"categoria":"NAOEXISTE"}' "$TM"); sucesso "$X" && falha "Categoria inexistente deveria ser recusada" "$X" || ok "Motorista: categoria que nao existe e recusada"
+  X=$(get /admin/overview "$TA"); [ "$(echo "$X" | jq -r '.data.categoryRequestsPending')" -ge 1 ] 2>/dev/null && ok "Central: painel avisa pedido de categoria ($(echo "$X" | jq -r '.data.latestCategoryRequest.name // "-"'): $(echo "$X" | jq -r '.data.latestCategoryRequest.categoria // "-"'))" || falha "Central: aviso de categoria" "$(echo "$X" | jq -c '{n: .data.categoryRequestsPending, u: .data.latestCategoryRequest}')"
+  X=$(get /admin/vehicles/category-requests "$TA"); [ "$(echo "$X" | jq -r --arg v "$VID1" '[.data[] | select(.id==$v and .categoriaPedida=="CONFORTO")] | length')" = "1" ] && ok "Central: lista os pedidos de categoria" || falha "Central: lista de pedidos de categoria" "$X"
+  X=$(patch "/admin/vehicles/$VID1/category-review" '{"aprovar":false}' "$TA"); sucesso "$X" && falha "Recusa sem motivo deveria ser recusada" "$X" || ok "Central: recusa de categoria pede o motivo"
+  patch "/admin/vehicles/$VID1/category-review" '{"aprovar":false,"motivo":"Carro nao e do padrao Conforto (teste)"}' "$TA" >/dev/null
+  X=$(get /vehicles/me "$TM"); [ "$(echo "$X" | jq -r --arg v "$VID1" '.data[] | select(.id==$v) | "\(.category)/\(.categoriaPedida)/\(.categoriaMotivo)"')" = "CARRO/null/Carro nao e do padrao Conforto (teste)" ] \
+    && ok "Motorista: ve a recusa com o motivo (continua no Popular)" || falha "Motorista: recusa de categoria" "$X"
+  patch "/vehicles/$VID1/categoria" '{"categoria":"CONFORTO"}' "$TM" >/dev/null
+  X=$(patch "/admin/vehicles/$VID1/category-review" '{"aprovar":true}' "$TA")
+  [ "$(echo "$X" | jq -r --arg v "$VID1" '.data[] | select(.id==$v) | "\(.category)/\(.categoriaPedida)"')" = "CONFORTO/null" ] && ok "Central: aprovou o Conforto (passa a valer no carro)" || falha "Central: aprovar categoria" "$X"
+  # Passageiro pede Conforto: o chamado vai para o carro aprovado no Conforto.
+  post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
+  X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"category\":\"CONFORTO\",\"cotacao\":\"$COTE\"}" "$TP"); RCAT=$(echo "$X" | jq -r '.data.ride.id // empty')
+  [ "$(echo "$X" | jq -r '.data.ride.category')" = "CONFORTO" ] && ok "Passageiro: pediu Conforto ($(echo "$X" | jq -r '.data.ride.estimatedFareCents') centavos)" || falha "Passageiro: pedir Conforto" "$X"
+  N=0; for t in 1 2 3 4 5; do sleep 2; N=$(get /driver/rides/offers "$TM" | jq -r --arg r "$RCAT" '[.data[] | select(.rideId==$r)] | length' 2>/dev/null); [ "${N:-0}" = "1" ] && break; done
+  [ "${N:-0}" = "1" ] && ok "Motorista do Conforto recebeu o chamado do Conforto" || falha "Despacho por categoria" "offers: $N"
+  [ -n "$RCAT" ] && post "/rides/$RCAT/cancel" '{"reason":"Teste de categoria"}' "$TP" >/dev/null
+  # Volta tudo como estava.
+  X=$(patch "/admin/drivers/$DID/category" '{"category":"CARRO"}' "$TA")
+  [ "$(get /vehicles/me "$TM" | jq -r --arg v "$VID1" '.data[] | select(.id==$v) | .category')" = "CARRO" ] && ok "Central: muda a categoria direto (o carro de teste volta ao Popular)" || falha "Central: categoria direto" "$X"
+  if [ "$CONF_TINHA" = "true" ]; then X=$(put "/admin/tariffs/categoria/CONFORTO?praca=$PRACA" "$CONF_ORIG" "$TA"); else X=$(curl -s -m 90 -X DELETE "$API/admin/tariffs/categoria/CONFORTO?praca=$PRACA" -H "Authorization: Bearer $TA"); fi
+  [ "$(echo "$X" | jq -r '.data.categorias[] | select(.codigo=="CONFORTO") | .daCidade')" = "$CONF_TINHA" ] && ok "Central: Conforto da cidade voltou como estava (ajuste da cidade: $CONF_TINHA)" || falha "Central: voltar o Conforto" "$X"
+fi
 FONE_P=$(get /auth/me "$TP" | jq -r '.data.phone')
 X=$(post /admin/rides "{\"passengerName\":\"Passageiro Teste\",\"passengerPhone\":\"$FONE_P\",\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"CARRO\",\"paymentMethodType\":\"CASH\"}" "$TA")
 RMAN=$(echo "$X" | jq -r '.data.rideId // empty')

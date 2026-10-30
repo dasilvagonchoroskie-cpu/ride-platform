@@ -25,6 +25,14 @@ export interface FichaDoCarro {
   crlv?: string | null;
   /** Quando entrou na situacao atual (ISO). */
   em?: string;
+  /**
+   * Categoria que o motorista pediu (29/10/2026) e a Central ainda nao
+   * conferiu. A categoria que vale e a do carro (vehicles.category).
+   */
+  categoriaPedida?: string | null;
+  categoriaPedidaEm?: string | null;
+  /** Motivo da ultima recusa de categoria (o motorista ve). */
+  categoriaMotivo?: string | null;
 }
 
 export type MapaDeCarros = Record<string, FichaDoCarro>;
@@ -44,6 +52,9 @@ export function lerMapaDeCarros(valor: unknown): MapaDeCarros {
       foto: typeof f.foto === 'string' ? f.foto : null,
       crlv: typeof f.crlv === 'string' ? f.crlv : null,
       ...(typeof f.em === 'string' ? { em: f.em } : {}),
+      ...(typeof f.categoriaPedida === 'string' && f.categoriaPedida ? { categoriaPedida: f.categoriaPedida } : {}),
+      ...(typeof f.categoriaPedidaEm === 'string' ? { categoriaPedidaEm: f.categoriaPedidaEm } : {}),
+      ...(typeof f.categoriaMotivo === 'string' && f.categoriaMotivo ? { categoriaMotivo: f.categoriaMotivo } : {}),
     };
   }
   return mapa;

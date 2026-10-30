@@ -4,6 +4,7 @@ import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'foto.dart';
+import 'tarifas.dart' show iconeDaCategoria;
 
 /// Carros do motorista no cadastro dele (Evandro, 09/10/2026: "o motorista
 /// comprou mais um carro ou trocou de carro, para atualizar os dados — isso
@@ -30,6 +31,9 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
   String? _erro;
   bool _ocupado = false;
 
+  /// Nomes das categorias (CARRO = Popular, CONFORTO...).
+  List<Categoria> _categorias = const [];
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +41,9 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
   }
 
   Future<void> _carregar() async {
+    widget.api.tarifas().then((t) {
+      if (mounted) setState(() => _categorias = t.categorias);
+    }).catchError((Object _) {});
     try {
       final r = await widget.api.carrosDoMotorista(widget.driverId);
       if (!mounted) return;
@@ -89,6 +96,18 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
     await _fazer(() => widget.api.revisarCarro(c.id, false, motivo), 'Carro recusado. O motorista vê o motivo.');
   }
 
+  Future<void> _recusarCategoria(CarroDoMotorista c) async {
+    final motivo = await pedirTexto(
+      context,
+      titulo: 'Recusar ${nomeDaCategoria(_categorias, c.categoriaPedida ?? '')}',
+      rotulo: 'Motivo (o motorista vê)',
+      explicacao: 'Ex.: o carro não é do padrão da categoria.',
+      confirmar: 'Recusar',
+    );
+    if (motivo == null || !mounted) return;
+    await _fazer(() => widget.api.revisarCategoria(c.id, false, motivo), 'Categoria recusada. O motorista vê o motivo.');
+  }
+
   Future<void> _remover(CarroDoMotorista c) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -139,6 +158,12 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
           editar: () => _editar(c),
           remover: () => _remover(c),
           foto: (tipo) => _foto(c, tipo),
+          categorias: _categorias,
+          aprovarCategoria: () => _fazer(
+            () => widget.api.revisarCategoria(c.id, true),
+            'Categoria aprovada: ${nomeDaCategoria(_categorias, c.categoriaPedida ?? '')}.',
+          ),
+          recusarCategoria: () => _recusarCategoria(c),
         ),
         if (_ocupado) const Padding(padding: EdgeInsets.only(top: Spacing.sm), child: LinearProgressIndicator()),
         const SizedBox(height: Spacing.sm),
@@ -165,7 +190,14 @@ class _Carro extends StatelessWidget {
     required this.editar,
     required this.remover,
     required this.foto,
+    required this.aprovarCategoria,
+    required this.recusarCategoria,
+    this.categorias = const [],
   });
+
+  final VoidCallback aprovarCategoria;
+  final VoidCallback recusarCategoria;
+  final List<Categoria> categorias;
 
   final CarroDoMotorista carro;
   final bool ocupado;
@@ -207,6 +239,7 @@ class _Carro extends StatelessWidget {
                     Text('${c.ano} · ${c.cor} · ${c.placaBonita}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
                     Text(c.rotuloSituacao, style: AppText.caption.copyWith(color: cor, fontWeight: FontWeight.w600)),
                     if (c.motivo != null) Text('Motivo: ${c.motivo}', style: AppText.caption.copyWith(color: AppColors.danger)),
+                    Text('Categoria: ${nomeDaCategoria(categorias, c.categoria)}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
                   ],
                 ),
               ),
@@ -244,6 +277,32 @@ class _Carro extends StatelessWidget {
               ],
             ),
           ],
+          if (c.categoriaPedida != null) ...[
+            const SizedBox(height: Spacing.xs),
+            Row(
+              children: [
+                Icon(iconeDaCategoria(_icone(categorias, c.categoriaPedida!)), size: 18, color: AppColors.warning),
+                const SizedBox(width: Spacing.xs),
+                Expanded(
+                  child: Text(
+                    'O motorista pediu ${nomeDaCategoria(categorias, c.categoriaPedida!)}',
+                    style: AppText.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            Wrap(
+              spacing: Spacing.sm,
+              children: [
+                FilledButton(onPressed: ocupado ? null : aprovarCategoria, child: const Text('Aprovar categoria')),
+                TextButton(
+                  onPressed: ocupado ? null : recusarCategoria,
+                  child: const Text('Recusar categoria', style: TextStyle(color: AppColors.danger)),
+                ),
+              ],
+            ),
+          ] else if (c.categoriaMotivo != null)
+            Text('Categoria recusada: ${c.categoriaMotivo}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
           if (c.paraConferir || (!c.emUso && c.situacao == 'GUARDADO')) ...[
             const SizedBox(height: Spacing.xs),
             Wrap(
@@ -264,6 +323,13 @@ class _Carro extends StatelessWidget {
       ),
     );
   }
+}
+
+String _icone(List<Categoria> cats, String codigo) {
+  for (final c in cats) {
+    if (c.codigo == codigo) return c.icone;
+  }
+  return codigo.contains('MOTO') ? 'moto' : 'carro';
 }
 
 class _Miniatura extends StatelessWidget {

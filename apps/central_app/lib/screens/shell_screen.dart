@@ -13,6 +13,7 @@ import '../painel/limpeza.dart';
 import '../painel/comuns.dart';
 import '../painel/cupons.dart';
 import '../painel/dados_pessoais.dart';
+import '../painel/pedidos_categoria.dart';
 import '../painel/pedidos_exclusao.dart';
 import '../painel/despacho.dart';
 import '../painel/financeiro.dart';
@@ -286,6 +287,16 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           Icons.edit_note,
           () async {
             await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeAlteracaoScreen(api: p.api)));
+            await p.atualizar();
+          },
+        ),
+      if (i.categoriasPedidas > 0)
+        (
+          '${i.categoriasPedidas} pedido(s) de categoria',
+          i.categoriasPedidas,
+          Icons.directions_car_filled,
+          () async {
+            await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PedidosDeCategoriaScreen(api: p.api)));
             await p.atualizar();
           },
         ),

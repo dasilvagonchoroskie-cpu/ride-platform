@@ -1,10 +1,11 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { createVehicleSchema, updateVehicleSchema, UserRole } from '@ride/shared';
+import { createVehicleSchema, pedirCategoriaSchema, updateVehicleSchema, UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { VehiclesService } from './vehicles.service';
 
 export const fotoDoCarroSchema = z.object({
@@ -26,6 +27,16 @@ export class VehiclesController {
     return this.vehicles.listMine(userId);
   }
 
+  // Publico: o motorista escolhe a categoria ja no primeiro cadastro (nome e
+  // figura das categorias nao sao segredo).
+  @Public()
+  @Roles()
+  @Get('categorias')
+  @ApiOperation({ summary: 'Categorias que o motorista pode pedir para o carro (a Central aprova)' })
+  categorias() {
+    return this.vehicles.categoriasParaEscolher();
+  }
+
   @Post()
   @ApiOperation({ summary: 'Cadastra um carro (motorista ja aprovado: a Central confere antes de usar)' })
   create(@CurrentUser('id') userId: string, @Body(new ZodValidationPipe(createVehicleSchema)) body: never) {
@@ -40,6 +51,16 @@ export class VehiclesController {
     @Body(new ZodValidationPipe(updateVehicleSchema)) body: never,
   ) {
     return this.vehicles.update(userId, id, body);
+  }
+
+  @Patch(':id/categoria')
+  @ApiOperation({ summary: 'Pede a categoria do carro (Popular, Conforto, Premium...): vale depois que a Central aprova' })
+  categoria(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(pedirCategoriaSchema)) body: { categoria: string },
+  ) {
+    return this.vehicles.pedirCategoria(userId, id, body.categoria);
   }
 
   @Post(':id/usar')

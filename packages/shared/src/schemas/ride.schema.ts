@@ -40,6 +40,8 @@ export const estimateRideSchema = z.object({
   category: z.string().trim().toUpperCase().max(20).optional(),
   /** Mostra o desconto do cupom antes de confirmar. */
   couponCode: z.string().trim().toUpperCase().max(30).optional(),
+  /** Medida assinada do orcamento anterior: trocar categoria ou cupom nao pede a rota de novo. */
+  cotacao: z.string().max(2000).optional(),
 }).refine(comDestinoOuSem, AVISO_DESTINO);
 
 export const requestRideSchema = z.object({

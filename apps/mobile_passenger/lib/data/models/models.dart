@@ -289,7 +289,12 @@ class RideQuote {
     this.paradas = 0,
     this.cotacao,
     this.caminho = const [],
+    this.medidaReaproveitada = false,
   });
+
+  /// O servidor usou a medida da consulta anterior (trocou so a categoria ou
+  /// o cupom): o caminho desenhado continua o mesmo, sem pedir rota de novo.
+  final bool medidaReaproveitada;
 
   /// Caminho pelas ruas desta consulta (desenho da confirmacao sem pedir a
   /// rota de novo a TomTom).
@@ -364,6 +369,7 @@ class RideQuote {
         paradas: (json['paradas'] as num?)?.toInt() ?? 0,
         cotacao: json['cotacao'] is String ? json['cotacao'] as String : null,
         caminho: pontosDaRota(json),
+        medidaReaproveitada: json['medidaReaproveitada'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -378,9 +384,20 @@ class RideQuote {
       };
 }
 
-/// Uma categoria para escolher na confirmacao (ex.: Carro R\$ 18,00 / Moto R\$ 12,00).
+/// Uma categoria para escolher na confirmacao (ex.: Popular R\$ 18,00 /
+/// Conforto R\$ 22,50), com a figura, os lugares e quando o carro chega.
 class OpcaoCategoria {
-  const OpcaoCategoria({required this.category, required this.nome, required this.moto, required this.precoCents, required this.aPagarCents});
+  const OpcaoCategoria({
+    required this.category,
+    required this.nome,
+    required this.moto,
+    required this.precoCents,
+    required this.aPagarCents,
+    this.icone = 'carro',
+    this.descricao = '',
+    this.capacidade = 4,
+    this.chegadaMinutos,
+  });
 
   final String category;
   final String nome;
@@ -388,13 +405,45 @@ class OpcaoCategoria {
   final int precoCents;
   final int aPagarCents;
 
-  factory OpcaoCategoria.fromJson(Map<String, dynamic> j) => OpcaoCategoria(
-        category: j['category'] as String? ?? 'CARRO',
-        nome: j['nome'] as String? ?? 'Carro',
-        moto: j['moto'] == true,
-        precoCents: (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
-        aPagarCents: (j['totalToPayCents'] as num?)?.toInt() ?? (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
-      );
+  /// carro, conforto, premium, moto ou van (a Central escolhe).
+  final String icone;
+  final String descricao;
+  final int capacidade;
+
+  /// Minutos ate o carro livre mais perto desta categoria chegar; null =
+  /// nenhum perto agora (o pedido ainda pode ser feito).
+  final int? chegadaMinutos;
+
+  factory OpcaoCategoria.fromJson(Map<String, dynamic> j) {
+    final moto = j['moto'] == true;
+    return OpcaoCategoria(
+      category: j['category'] as String? ?? 'CARRO',
+      nome: j['nome'] as String? ?? 'Popular',
+      moto: moto,
+      precoCents: (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
+      aPagarCents: (j['totalToPayCents'] as num?)?.toInt() ?? (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
+      icone: j['icone'] as String? ?? (moto ? 'moto' : 'carro'),
+      descricao: j['descricao'] as String? ?? '',
+      capacidade: (j['capacidade'] as num?)?.toInt() ?? (moto ? 1 : 4),
+      chegadaMinutos: (j['chegadaMinutos'] as num?)?.toInt(),
+    );
+  }
+}
+
+/// Figura de cada categoria (o passageiro reconhece pelo desenho).
+IconData iconeDaCategoria(String icone) {
+  switch (icone) {
+    case 'moto':
+      return Icons.two_wheeler;
+    case 'conforto':
+      return Icons.directions_car_filled;
+    case 'premium':
+      return Icons.workspace_premium;
+    case 'van':
+      return Icons.airport_shuttle;
+    default:
+      return Icons.directions_car;
+  }
 }
 
 class DriverInfo {

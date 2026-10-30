@@ -7,6 +7,7 @@ import '../core/central.dart';
 import '../core/fotos.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
+import '../widgets/categoria.dart';
 
 /// Meus veiculos (Evandro, 09/10/2026: "o motorista comprou mais um carro ou
 /// trocou de carro, para ele atualizar os dados — isso nao pode deixar a
@@ -34,8 +35,43 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   Future<void> _carregar() async {
-    await context.read<DriverState>().carregarCarros();
+    final driver = context.read<DriverState>();
+    await Future.wait([driver.carregarCarros(), driver.carregarCategorias()]);
     if (mounted) setState(() => _carregou = true);
+  }
+
+  /// Pede outra categoria (Popular, Conforto, Premium...) para a Central aprovar.
+  Future<void> _categoria(Map<String, dynamic> v) async {
+    final driver = context.read<DriverState>();
+    var escolhida = '${v['categoriaPedida'] ?? v['category'] ?? 'CARRO'}';
+    final codigo = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Categoria do carro'),
+          content: SingleChildScrollView(
+            child: EscolhaDeCategoria(
+              categorias: driver.categorias,
+              escolhida: escolhida,
+              aoEscolher: (c) => setState(() => escolhida = c),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Voltar')),
+            FilledButton(onPressed: () => Navigator.of(ctx).pop(escolhida), child: const Text('Pedir à Central')),
+          ],
+        ),
+      ),
+    );
+    if (codigo == null || !mounted) return;
+    final atual = '${v['category'] ?? 'CARRO'}';
+    await _fazer(
+      '${v['id']}',
+      () => driver.pedirCategoria('${v['id']}', codigo),
+      codigo == atual
+          ? 'Pronto: o carro continua no ${nomeDaCategoria(driver.categorias, atual)}.'
+          : 'Pedido enviado. A Central confere e aprova o ${nomeDaCategoria(driver.categorias, codigo)}.',
+    );
   }
 
   /// Roda a acao. Erros comuns o aplicativo ja mostra; o de conflito (ex.: em
@@ -131,6 +167,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                 editar: () => _editar(v),
                 fotos: () => _fotos(v),
                 tirar: () => _tirar(v),
+                categoria: () => _categoria(v),
+                categorias: driver.categorias,
               ),
               const SizedBox(height: Spacing.md),
             ],
@@ -174,6 +212,8 @@ class _Veiculo extends StatelessWidget {
     required this.editar,
     required this.fotos,
     required this.tirar,
+    required this.categoria,
+    this.categorias = const [],
   });
 
   final Map<String, dynamic> dados;
@@ -182,6 +222,8 @@ class _Veiculo extends StatelessWidget {
   final VoidCallback editar;
   final VoidCallback fotos;
   final VoidCallback tirar;
+  final VoidCallback categoria;
+  final List<Map<String, dynamic>> categorias;
 
   @override
   Widget build(BuildContext context) {
@@ -196,6 +238,9 @@ class _Veiculo extends StatelessWidget {
       _ => ('Guardado (liberado)', AppColors.textMuted),
     };
     final fotoUrl = dados['fotoUrl'] as String?;
+    final cat = '${dados['category'] ?? 'CARRO'}';
+    final pedida = dados['categoriaPedida'] as String?;
+    final recusaCategoria = dados['categoriaMotivo'] as String?;
     final semFotos = situacao == 'PENDENTE' && (dados['fotoUrl'] == null || dados['crlvUrl'] == null);
 
     return Container(
@@ -233,6 +278,19 @@ class _Veiculo extends StatelessWidget {
                     ),
                     const SizedBox(height: Spacing.xs),
                     Text(rotulo, style: AppText.caption.copyWith(color: cor, fontWeight: FontWeight.w600)),
+                    Row(
+                      children: [
+                        Icon(iconeDaCategoria(_iconeDe(categorias, cat)), size: 16, color: AppColors.textMuted),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Categoria: ${nomeDaCategoria(categorias, cat)}',
+                            style: AppText.caption.copyWith(color: AppColors.textMuted),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -250,6 +308,19 @@ class _Veiculo extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: Spacing.sm),
               child: Text('Motivo: $motivo. Corrija os dados ou mande as fotos de novo.', style: AppText.caption.copyWith(color: AppColors.danger)),
+            ),
+          if (pedida != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.sm),
+              child: Text(
+                'Pediu ${nomeDaCategoria(categorias, pedida)}: aguardando a Central aprovar. Até lá você recebe chamados do ${nomeDaCategoria(categorias, cat)}.',
+                style: AppText.caption.copyWith(color: AppColors.warning),
+              ),
+            )
+          else if (recusaCategoria != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.sm),
+              child: Text('A Central recusou a categoria pedida. Motivo: $recusaCategoria', style: AppText.caption.copyWith(color: AppColors.danger)),
             ),
           if (semFotos)
             Padding(
@@ -271,6 +342,7 @@ class _Veiculo extends StatelessWidget {
                 if (situacao == 'PENDENTE' || situacao == 'RECUSADO')
                   OutlinedButton.icon(onPressed: fotos, icon: const Icon(Icons.photo_camera_outlined), label: const Text('Mandar fotos')),
                 TextButton(onPressed: editar, child: const Text('Corrigir dados')),
+                TextButton(onPressed: categoria, child: const Text('Mudar categoria')),
                 TextButton(
                   onPressed: tirar,
                   child: const Text('Tirar', style: TextStyle(color: AppColors.danger)),
@@ -281,6 +353,13 @@ class _Veiculo extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _iconeDe(List<Map<String, dynamic>> categorias, String codigo) {
+  for (final c in categorias) {
+    if ('${c['codigo']}' == codigo) return c['icone'] as String?;
+  }
+  return codigo.contains('MOTO') ? 'moto' : 'carro';
 }
 
 class _IconeCarro extends StatelessWidget {
@@ -364,6 +443,9 @@ class _NovoCarroScreenState extends State<NovoCarroScreen> {
   FotoEscolhida? _foto;
   FotoEscolhida? _crlv;
   bool _enviando = false;
+
+  /// Categoria pedida (comeca na do carro de agora; a Central aprova).
+  String? _categoria;
   String? _erro;
 
   @override
@@ -398,6 +480,7 @@ class _NovoCarroScreenState extends State<NovoCarroScreen> {
         'model': _modelo.text.trim(),
         'year': int.parse(_ano.text.trim()),
         'color': _cor.text.trim(),
+        if (_categoria != null) 'categoria': _categoria,
       });
       final id = '${carro['id']}';
       final conferir = carro['situacao'] == 'PENDENTE';
@@ -475,6 +558,18 @@ class _NovoCarroScreenState extends State<NovoCarroScreen> {
             _campo('Modelo', _modelo, dica: 'Ex.: Onix'),
             _campo('Ano', _ano, teclado: TextInputType.number),
             _campo('Cor', _cor),
+            Builder(builder: (context) {
+              final driver = context.watch<DriverState>();
+              final atual = driver.vehicle?.category ?? 'CARRO';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.md),
+                child: EscolhaDeCategoria(
+                  categorias: driver.categorias,
+                  escolhida: _categoria ?? atual,
+                  aoEscolher: (c) => setState(() => _categoria = c),
+                ),
+              );
+            }),
             _botaoFoto('Foto do carro (de frente, com a placa)', _foto, (f) => _foto = f),
             _botaoFoto('Foto do CRLV', _crlv, (f) => _crlv = f),
             if (_erro != null)

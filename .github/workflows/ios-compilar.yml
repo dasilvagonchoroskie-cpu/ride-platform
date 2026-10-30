@@ -55,6 +55,12 @@ jobs:
           set -eu
           [ -d ios ] || flutter create --platforms=ios --org br.com.fortalezamov . > /dev/null
           flutter pub get > /dev/null
+          # Icones do iPhone gerados por scripts/gerar-icones.py (se ja vieram).
+          if [ -f loja/ios/AppIcon.appiconset/Contents.json ]; then
+            rm -rf ios/Runner/Assets.xcassets/AppIcon.appiconset
+            cp -R loja/ios/AppIcon.appiconset ios/Runner/Assets.xcassets/AppIcon.appiconset
+            echo "Icones do iPhone: os de loja/ios"
+          fi
           # Gera o Podfile e acerta a versao minima (Google Maps pede iOS 15+).
           flutter build ios --config-only --no-codesign > /dev/null 2>&1 || true
           if [ -f ios/Podfile ]; then
