@@ -66,7 +66,7 @@ Ou simplesmente: `make setup && make backend-dev`.
 - Swagger: http://localhost:3333/docs
 - MinIO Console: http://localhost:9001 (`ride` / `ride12345`)
 - MailHog: http://localhost:8025
-- Admin semeado: `admin@ride.local` / `Admin@123` (troque via `SEED_ADMIN_PASSWORD`)
+- Admin semeado (só banco local de desenvolvimento): `admin@ride.local`, senha padrão do seed — defina `SEED_ADMIN_PASSWORD` para escolher outra. A Central de produção usa outra conta.
 
 > **Importante:** rode `prisma:postinit` **depois** de `prisma:migrate`. Ele cria os indices GIST (`driver_locations`, `surge_zones`), indices trigram, os triggers de `updated_at` e as views do painel (`vw_active_drivers`, `vw_daily_financials`).
 

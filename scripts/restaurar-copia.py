@@ -21,7 +21,9 @@ def main() -> None:
     so_contagem = sys.argv[1] == '--contagem'
     args = sys.argv[2:] if so_contagem else sys.argv[1:]
     copia, chave = args[0], args[1]
-    ident = pyrage.x25519.Identity.from_str(open(chave).read().strip())
+    # O arquivo da chave pode ter comentarios (# ...): vale a linha AGE-SECRET-KEY-1...
+    linha = next((l.strip() for l in open(chave) if l.strip().startswith('AGE-SECRET-KEY-1')), '')
+    ident = pyrage.x25519.Identity.from_str(linha)
     dados = json.loads(gzip.decompress(pyrage.decrypt(open(copia, 'rb').read(), [ident])))
     if so_contagem:
         print(json.dumps(dados.get('contagem', {})))

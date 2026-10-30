@@ -36,7 +36,6 @@ jobs:
         id: teste
         continue-on-error: true
         env:
-          ADMIN_SENHA: ${{ secrets.ADMIN_SENHA }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
           REL: /tmp/relatorio.txt
