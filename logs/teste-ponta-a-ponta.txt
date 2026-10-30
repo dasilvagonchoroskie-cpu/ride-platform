@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: ba995df (TomTom: chave separada so para as imagens do mapa (opcional))
 No ar agora: feb95bc
 OK: servidor em dia.
-Teste de ponta a ponta - 30/10/2026 03:31 UTC
+Teste de ponta a ponta - 30/10/2026 03:40 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -31,7 +31,7 @@ OK     App: configuracao publica (6 cidade(s), WhatsApp 5564996472794)
 OK     App: configuracao publica do mapa (TomTom) sem a chave
 OK     Central: cidades e avisos carregados
 OK     Central: aparencia recusa nome curto e cor fora do formato #RRGGBB
-OK     Central: aparencia do app (nome Fortaleza Mov, cor #0070B8, faixa desligada, personalizada: true)
+OK     Central: aparencia do app (nome Fortaleza Move, cor #0070B8, faixa desligada, personalizada: true)
 OK     App: nome e cor do app vem da Central
 OK     App: logo publico (sem logo, usa o padrao: 404)
 OK     Passageiro: cadastro completo gravado (cidade: Goiatuba - GO)
@@ -67,7 +67,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST8232)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST1933)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -148,14 +148,14 @@ OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE0331457 criado (R$ 3,00)
+OK     Central: cupom TESTE03410584 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1171 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1196 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 978 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1027 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 5592 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 5902 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -175,7 +175,7 @@ OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (1700 centavos)
 OK     Bandeira certa pela hora de Brasilia (0h, noturna: 2000 centavos)
 OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1800 centavos, online 25s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1800 centavos, online 22s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -229,8 +229,7 @@ OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
 OK     Carteira: saldo zerado avisa mas nao corta o turno
 OK     Carteira: motorista ja online e sem saldo continua recebendo chamado
-FALHA  Motorista: dados do chamado
-       resposta: {"offerId":"9ccca83f-fa19-4d98-8c64-67758eb665ca","rideId":"f53bfa3e-8f7c-4b14-9493-712f3730dc24","code":"487734","pickupAddress":"Praca da Matriz, Goiatuba","dropoffAddress":"Rodoviaria de Goiatuba","estimatedFareCents":2000,"distanceKm":0.105,"etaSeconds":30,"expiresAt":"2026-10-30T03:36:16.387Z","scheduledFor":null,"discountCents":0,"pickupLat":-18.0125,"pickupLng":-49.3547,"dropoffLat":-18.005
+OK     Motorista: chamado mostra valor liquido (1800), taxa 10% (tabela noturna: 10%) e nota do passageiro (4)
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
@@ -301,7 +300,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 6/666, reverse 2/666, routing 36/666, search 1/83, tiles 0/6666)
+OK     Central: uso da TomTom hoje (geocode 12/666, reverse 4/666, routing 72/666, search 2/83, tiles 0/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
@@ -315,4 +314,4 @@ OK     Operador: desligou as duas etapas com um codigo valido
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 7 contas deste teste e 11 corridas delas
 
-Resultado: 1 falha(s).
+Resultado: 0 falha(s).
