@@ -199,7 +199,11 @@ export class RidesService {
   async estimar(input: EstimateRideInput, passengerId?: string) {
     const destino = this.destinoDe(input);
     const semDestino = destino.placeId === SEM_DESTINO;
-    const rota = await this.medirViagem(input.pickup, input.paradas ?? [], destino);
+    // Trocou so a categoria ou o cupom (mesmos pontos, cotacao no prazo):
+    // usa a medida assinada e nao pede a rota de novo a TomTom.
+    const pontos = this.pontosDaViagem(input.pickup, input.paradas ?? [], destino);
+    const medida = lerCotacao(input.cotacao, pontos, this.config.jwt.accessSecret);
+    const rota = medida ? { ...medida, caminho: [] as Array<[number, number]> } : await this.medirViagem(input.pickup, input.paradas ?? [], destino);
     const orcamento = await this.fare.calcular({
       distanceMeters: rota.distanceMeters,
       durationSeconds: rota.durationSeconds,
@@ -239,7 +243,9 @@ export class RidesService {
       // vendo o preco de cada categoria ativa.
       opcoes: await this.opcoesDeCategoria(input, rota, passengerId),
       /** Medida assinada: o app manda de volta no pedido (a rota nao e pedida de novo). */
-      cotacao: assinarCotacao(this.pontosDaViagem(input.pickup, input.paradas ?? [], destino), rota, this.config.jwt.accessSecret),
+      cotacao: medida && input.cotacao ? input.cotacao : assinarCotacao(pontos, rota, this.config.jwt.accessSecret),
+      /** true = mesma medida da consulta anterior (o app mantem o caminho que ja desenhou). */
+      medidaReaproveitada: !!medida,
       /**
        * Caminho pelas ruas desta mesma consulta (para o app de quem pediu
        * desenhar na confirmacao sem pedir a rota de novo). Vazio = sem rota.

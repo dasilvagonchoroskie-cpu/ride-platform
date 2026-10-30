@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { VehiclesService } from './vehicles.service';
 
 export const fotoDoCarroSchema = z.object({
@@ -26,6 +27,10 @@ export class VehiclesController {
     return this.vehicles.listMine(userId);
   }
 
+  // Publico: o motorista escolhe a categoria ja no primeiro cadastro (nome e
+  // figura das categorias nao sao segredo).
+  @Public()
+  @Roles()
   @Get('categorias')
   @ApiOperation({ summary: 'Categorias que o motorista pode pedir para o carro (a Central aprova)' })
   categorias() {
