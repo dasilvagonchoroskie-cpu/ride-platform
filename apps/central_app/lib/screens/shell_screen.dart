@@ -16,6 +16,7 @@ import '../painel/dados_pessoais.dart';
 import '../painel/pedidos_categoria.dart';
 import '../painel/pedidos_exclusao.dart';
 import '../painel/despacho.dart';
+import '../painel/entregas.dart';
 import '../painel/financeiro.dart';
 import '../painel/motoristas.dart';
 import '../painel/painel_state.dart';
@@ -59,6 +60,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     // situacao, no mapa com o nome e em lista, e as corridas de hoje.
     _Aba('aovivo', 'Motoristas ao vivo', Icons.sensors, menu: 'Ao vivo'),
     _Aba('despacho', 'Despacho', Icons.support_agent),
+    // Etapa 5 (30/10/2026): entregas de encomendas (desligadas ate o dono ligar).
+    _Aba('entregas', 'Entregas', Icons.inventory_2_outlined),
     _Aba('motoristas', 'Motoristas', Icons.badge_outlined),
     _Aba('passageiros', 'Passageiros', Icons.people_outline, soDono: true),
     _Aba('tarifas', 'Tarifas', Icons.price_change_outlined, soDono: true),
@@ -385,6 +388,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         return const CuponsTela();
       case 'carteiras':
         return const CarteirasTela();
+      case 'entregas':
+        return const EntregasTela();
       case 'cidades':
         return const CidadesEquipeTela();
       case 'limpeza':

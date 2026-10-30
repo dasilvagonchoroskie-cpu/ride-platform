@@ -18,6 +18,7 @@ import 'package:central_app/painel/comuns.dart';
 import 'package:central_app/painel/cupons.dart';
 import 'package:central_app/painel/dados_pessoais.dart';
 import 'package:central_app/painel/despacho.dart';
+import 'package:central_app/painel/entregas.dart';
 import 'package:central_app/painel/financeiro.dart';
 import 'package:central_app/painel/motoristas.dart';
 import 'package:central_app/painel/painel_state.dart';
@@ -123,6 +124,11 @@ final List<String> _pedidosDeTarifa = [];
 /// Aviso de saldo gravado pela Central no teste (null = automatico).
 int? _avisoSaldoCents;
 final List<String> _pedidosDeAviso = [];
+
+/// Entrega na cidade de teste (Etapa 5).
+bool _entregaLigada = false;
+String _entregaVeiculos = 'TODOS';
+final List<String> _pedidosDeEntrega = [];
 
 /// Conta de operador de uma cidade (Teutonia), e nao o dono.
 bool _operador = false;
@@ -553,6 +559,35 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       ],
     };
   }
+  if (caminho == '/api/admin/entregas-config') {
+    return {
+      'cidades': [
+        {'praca': 'goiatuba', 'nome': 'Goiatuba', 'uf': 'GO', 'ligada': _entregaLigada, 'veiculos': _entregaVeiculos},
+        {'praca': 'teutonia', 'nome': 'Teutônia', 'uf': 'RS', 'ligada': false, 'veiculos': 'TODOS'},
+      ],
+    };
+  }
+  if (caminho == '/api/admin/entregas') {
+    return {
+      'itens': [
+        {
+          'id': '77777777-7777-4777-8777-777777777777',
+          'code': 'ENT001',
+          'status': 'IN_PROGRESS',
+          'praca': 'goiatuba',
+          'coleta': 'Rua Javari, 1234',
+          'entrega': 'Rodoviária de Goiatuba',
+          'valorCents': 1200,
+          'comissaoCents': 0,
+          'cliente': {'nome': 'Carlos Remetente', 'telefone': '+5564999990000'},
+          'motorista': {'nome': 'Joao Batista', 'telefone': '+5564988887777'},
+          'veiculo': 'Onix · ABC1D23',
+          'pedidaEm': '2026-10-30T13:00:00.000Z',
+          'detalhe': {'descricao': 'Envelope com documentos', 'destinatarioNome': 'Ana Souza', 'destinatarioTelefone': '5564999991234', 'codigo': '4821', 'tentativas': 5},
+        },
+      ],
+    };
+  }
   if (caminho == '/api/admin/settings/aviso-saldo') {
     return {
       'praca': null,
@@ -635,6 +670,14 @@ MockClient _servidor() => MockClient((http.Request r) async {
       }
       if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
         _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
+      }
+      if ((r.url.path == '/api/admin/entregas-config' && r.method == 'PUT') || r.url.path.endsWith('/liberar')) {
+        _pedidosDeEntrega.add('${r.method} ${r.url.path} ${r.body}');
+        if (r.method == 'PUT') {
+          final b = jsonDecode(r.body) as Map;
+          _entregaLigada = b['ligada'] == true;
+          _entregaVeiculos = '${b['veiculos']}';
+        }
       }
       if (r.url.path == '/api/admin/settings/aviso-saldo' && r.method == 'PUT') {
         _pedidosDeAviso.add(r.body);
@@ -1259,7 +1302,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
+    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
       await _mostrarNoMenu(tester, aba);
       expect(_noMenu(aba), findsOneWidget, reason: 'aba $aba no menu');
     }
@@ -1308,6 +1351,37 @@ void main() {
     await _carregar(tester);
     expect(find.textContaining('Recarga confirmada'), findsOneWidget);
     expect(find.textContaining('98,50'), findsWidgets);
+  });
+
+  // Etapa 5 (30/10/2026): entregas por cidade e pedidos com o status.
+  testWidgets('Entregas: liga na cidade so com moto, pedidos com status e liberar codigo', (tester) async {
+    _entregaLigada = false;
+    _entregaVeiculos = 'TODOS';
+    _pedidosDeEntrega.clear();
+    await _abrir(tester, const EntregasTela());
+    await _carregar(tester);
+    expect(find.text('Goiatuba - GO'), findsOneWidget);
+    expect(find.text('Desligada'), findsWidgets);
+    expect(find.text('Levando'), findsOneWidget);
+    expect(find.text('Item: Envelope com documentos'), findsOneWidget);
+    expect(find.textContaining('código 4821'), findsOneWidget);
+
+    await tester.tap(find.text('Goiatuba - GO'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Entrega ligada nesta cidade'));
+    await tester.tap(find.text('Moto'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar'));
+    await _carregar(tester);
+    expect(_pedidosDeEntrega.first, 'PUT /api/admin/entregas-config {"praca":"goiatuba","ligada":true,"veiculos":"MOTO"}');
+    expect(find.text('Ligada · só moto'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Liberar código'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Liberar código'));
+    await _carregar(tester);
+    expect(_pedidosDeEntrega.last, startsWith('POST /api/admin/entregas/77777777-7777-4777-8777-777777777777/liberar'));
+    expect(tester.takeException(), isNull);
   });
 
   // Evandro, 30/10/2026: "o limite do aviso de saldo configuravel pela
