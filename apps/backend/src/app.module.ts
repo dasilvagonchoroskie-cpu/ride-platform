@@ -35,6 +35,7 @@ import { PracasModule } from './modules/pracas/pracas.module';
 import { LimpezaModule } from './modules/limpeza/limpeza.module';
 import { RelatoriosModule } from './modules/relatorios/relatorios.module';
 import { ContaModule } from './modules/conta/conta.module';
+import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { ContaModule } from './modules/conta/conta.module';
     LimpezaModule,
     RelatoriosModule,
     ContaModule,
+    NotificacoesModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis
