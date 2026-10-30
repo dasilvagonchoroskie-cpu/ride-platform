@@ -752,6 +752,11 @@ X=$(get /admin/tariffs "$TA")
 CARRO=$(echo "$X" | jq -c '.data.categorias[] | select(.codigo=="CARRO") | {nome, ativa, diurna: (.diurna | del(.flag, .updatedAt)), noturna: (.noturna | del(.flag, .updatedAt))}')
 MULT=$(echo "$X" | jq -c '.data.multiplicador')
 X=$(put /admin/tariffs/categoria/CARRO "$CARRO" "$TA"); sucesso "$X" && ok "Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')" || falha "Central: salvar categoria" "$X"
+# 30/10/2026: tela aberta antes de outra salvar nao grava por cima (versao velha = 409).
+X=$(put /admin/tariffs/categoria/CARRO "$(echo "$CARRO" | jq -c '.versao = "2000-01-01T00:00:00.000Z"')" "$TA")
+[ "$(echo "$X" | jq -r '.error.message // empty' | grep -c 'outra tela')" = "1" ] && ok "Central: tela velha nao grava por cima das tarifas (pede para abrir de novo)" || falha "Central: protecao contra gravar por cima" "$X"
+NOMEP=$(get /admin/tariffs "$TA" | jq -r '.data.categorias[] | select(.codigo=="CARRO") | .nome')
+[ -n "$NOMEP" ] && ok "Central: nome da categoria comum (CARRO) continua '$NOMEP' depois de salvar sem versao (Central antiga nao troca o nome)" || falha "Central: nome do CARRO" "$NOMEP"
 X=$(put /admin/tariffs/multiplicador "$MULT" "$TA"); sucesso "$X" && ok "Central: multiplicador dinamico salvo ($(echo "$MULT" | jq -r '.cidade')x)" || falha "Central: multiplicador" "$X"
 X=$(patch "/admin/drivers/$DID/finance" '{"financeModel":"TAXA_FIXA","fixedFeeCents":200}' "$TA")
 [ "$(echo "$X" | jq -r '.data.financeModel')" = "TAXA_FIXA" ] && ok "Central: modelo financeiro do motorista (taxa fixa R\$ 2,00)" || falha "Central: modelo financeiro" "$X"
