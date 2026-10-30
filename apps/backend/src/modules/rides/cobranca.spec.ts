@@ -1,3 +1,4 @@
+import { haversineKm } from '@ride/shared';
 import { distanciaDoTaximetro, paradasQueValem } from './cobranca';
 
 // Praca da Matriz de Goiatuba e um ponto ~1,1 km dali.
@@ -25,6 +26,31 @@ describe('Taximetro: distancia que vale no fim', () => {
   it('desceu perto do embarque: cobra o pouco que andou', async () => {
     const d = await distanciaDoTaximetro({ medida: 120, embarque, fim: embarque, estimadaMetros: 5000, porRuaAte: porRua(0) });
     expect(d).toBe(120);
+  });
+
+  it('30/10/2026: medida normal nao pede rota a TomTom (preco igual ao de antes)', async () => {
+    let pedidas = 0;
+    const contando = (metros: number) => async () => {
+      pedidas++;
+      return metros;
+    };
+    // Corrida comum: 1,8 km medidos, 1,1 km em linha reta.
+    expect(await distanciaDoTaximetro({ medida: 1800, embarque, fim: longe, estimadaMetros: 1500, porRuaAte: contando(1400) })).toBe(1800);
+    expect(pedidas).toBe(0);
+    // Salto de GPS: ai sim pede a rota para o teto.
+    expect(await distanciaDoTaximetro({ medida: 90_000, embarque, fim: longe, estimadaMetros: 1500, porRuaAte: contando(1400) })).toBe(6200);
+    expect(pedidas).toBe(1);
+  });
+
+  it('30/10/2026: o atalho da exatamente o mesmo valor da conta antiga (5 mil casos)', async () => {
+    const antiga = (medida: number, reta: number, ruas: number) => Math.round(Math.min(medida, Math.max(ruas, reta) * 3 + 2000));
+    const reta = Math.round(haversineKm(embarque, longe) * 1000); // a mesma conta do servidor
+    for (let i = 0; i < 5000; i++) {
+      const ruas = reta * (0.95 + Math.random() * 2); // pelas ruas (ate um pouco menor, se a TomTom ajustar o ponto)
+      const medida = reta * 0.9 + Math.random() * 20_000;
+      const nova = await distanciaDoTaximetro({ medida, embarque, fim: longe, estimadaMetros: 1500, porRuaAte: async () => ruas });
+      expect(nova).toBe(antiga(medida, reta, ruas));
+    }
   });
 
   it('sem medicao e sem saber onde terminou: a estimativa do pedido', async () => {

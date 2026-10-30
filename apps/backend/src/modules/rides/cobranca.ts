@@ -51,6 +51,10 @@ export async function distanciaDoTaximetro(params: {
   const reta = fim ? Math.round(haversineKm(embarque, fim) * 1000) : 0;
   if (medida != null && medida >= reta * 0.9) {
     if (!fim || reta < 300) return Math.round(Math.min(medida, Math.max(estimadaMetros, reta) * 3 + 2000));
+    // Economia da TomTom (30/10/2026), sem mudar o preco: o teto e
+    // max(ruas, reta) x 3 + 2 km, nunca menor que reta x 3 + 2 km. Medida
+    // ate isso fica inteira de qualquer jeito: nao precisa pedir a rota.
+    if (medida <= reta * 3 + 2000) return Math.round(medida);
     const porRua = await params.porRuaAte(fim);
     return Math.round(Math.min(medida, Math.max(porRua, reta) * 3 + 2000));
   }
