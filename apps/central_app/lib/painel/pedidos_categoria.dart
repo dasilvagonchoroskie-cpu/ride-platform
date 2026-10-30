@@ -33,7 +33,9 @@ class _PedidosDeCategoriaScreenState extends State<PedidosDeCategoriaScreen> {
     return (pedidos, categorias);
   }
 
-  void _recarregar() => setState(() => _dados = _buscar());
+  void _recarregar() => setState(() {
+        _dados = _buscar();
+      });
 
   Future<void> _recusar(PedidoDeCategoria p, List<Categoria> cats) async {
     final motivo = await pedirTexto(

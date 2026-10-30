@@ -176,13 +176,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
+    // O terceiro cartao pode ficar meio fora da tela (lista de lado).
     expect(find.text('Popular'), findsOneWidget);
     expect(find.text('Conforto'), findsOneWidget);
-    expect(find.text('Premium'), findsOneWidget);
-    expect(find.text('Chega em ~4 min · 4 lugares'), findsOneWidget);
-    expect(find.text('Chega em ~9 min · 4 lugares'), findsOneWidget);
-    expect(find.text('Sem carro perto · 4 lugares'), findsOneWidget);
-    expect(find.byIcon(Icons.workspace_premium), findsOneWidget);
+    expect(find.text('Premium', skipOffstage: false), findsOneWidget);
+    expect(find.text('Chega em ~4 min'), findsOneWidget);
+    expect(find.text('Chega em ~9 min'), findsOneWidget);
+    expect(find.text('Sem carro perto', skipOffstage: false), findsOneWidget);
+    expect(find.text('4 lugares · Econômico'), findsOneWidget);
+    expect(find.byIcon(Icons.workspace_premium, skipOffstage: false), findsOneWidget);
     expect(find.textContaining('22,50'), findsAtLeastNWidgets(1));
     expect(tester.takeException(), isNull, reason: 'cartoes cabem sem estourar');
 

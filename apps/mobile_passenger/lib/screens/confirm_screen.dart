@@ -447,7 +447,7 @@ class _EscolhaCategoria extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 96,
+      height: 92,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: opcoes.length,
@@ -462,34 +462,35 @@ class _EscolhaCategoria extends StatelessWidget {
               borderRadius: BorderRadius.circular(Radii.md),
               onTap: () => aoEscolher(o.category),
               child: Container(
-                width: 164,
-                padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: 6),
+                width: 150,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(Radii.md),
                   border: Border.all(color: sel ? AppColors.brand : AppColors.border, width: sel ? 2 : 1),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(iconeDaCategoria(o.icone), color: sel ? AppColors.brand : AppColors.text),
-                    const SizedBox(width: Spacing.sm),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(o.nome, style: SheetText.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          Text(formatMoney(o.aPagarCents), style: SheetText.body.copyWith(fontWeight: FontWeight.w600)),
-                          Text(
-                            '${textoDaChegada(o.chegadaMinutos)} · ${o.capacidade} ${o.capacidade == 1 ? 'lugar' : 'lugares'}',
-                            style: SheetText.muted.copyWith(fontSize: 11),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (o.descricao.isNotEmpty)
-                            Text(o.descricao, style: SheetText.muted.copyWith(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
+                    Row(
+                      children: [
+                        Icon(iconeDaCategoria(o.icone), size: 20, color: sel ? AppColors.brand : AppColors.text),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(o.nome, style: SheetText.body.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                    Text(formatMoney(o.aPagarCents), style: SheetText.body.copyWith(fontWeight: FontWeight.w600), maxLines: 1),
+                    Text(textoDaChegada(o.chegadaMinutos), style: SheetText.muted.copyWith(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      [
+                        '${o.capacidade} ${o.capacidade == 1 ? 'lugar' : 'lugares'}',
+                        if (o.descricao.isNotEmpty) o.descricao,
+                      ].join(' · '),
+                      style: SheetText.muted.copyWith(fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

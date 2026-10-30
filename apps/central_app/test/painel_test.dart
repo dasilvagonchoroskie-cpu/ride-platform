@@ -1033,13 +1033,19 @@ void main() {
     expect(find.text('Carro'), findsWidgets);
     expect(find.text('Moto (desligada)'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Noturna'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Noturna'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Moto (desligada)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Moto (desligada)'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Nova categoria'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Nova categoria'));
     await tester.pumpAndSettle();
-    expect(find.text('Criar categoria'), findsOneWidget);
+    expect(find.text('Criar categoria', skipOffstage: false), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('Rodoviaria · 1.5x'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('Rodoviaria · 1.5x'), findsOneWidget);
@@ -1071,13 +1077,15 @@ void main() {
     await tester.tap(find.text('Conforto'));
     await tester.pumpAndSettle();
     expect(find.text('Esta cidade tem valores próprios para Conforto.'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Salvar Conforto nesta cidade'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Salvar Conforto nesta cidade'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar Conforto nesta cidade'));
     await _carregar(tester);
     expect(_pedidosDeTarifa.where((p) => p.startsWith('PUT /api/admin/tariffs/categoria/CONFORTO goiatuba ')), hasLength(1));
     expect(_pedidosDeTarifa.last, contains('"multiplicador":1.1'));
     expect(_pedidosDeTarifa.last, isNot(contains('"icone"')), reason: 'figura e texto mudam so no padrao');
-    await tester.scrollUntilVisible(find.text('Voltar ao padrão nesta cidade'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('Voltar ao padrão nesta cidade'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Voltar ao padrão nesta cidade'));
     await _carregar(tester);
     expect(_pedidosDeTarifa.last, startsWith('DELETE /api/admin/tariffs/categoria/CONFORTO goiatuba'));
