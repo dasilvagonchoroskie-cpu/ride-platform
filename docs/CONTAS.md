@@ -1,6 +1,7 @@
 # Contas, chaves e restauração (etapa 7)
 
-Este arquivo fica no repositório, que é **público**: aqui só vão os NOMES das
+Este arquivo fica no repositório (hoje **público**; ver PENDENCIAS.md para
+torná-lo privado): aqui só vão os NOMES das
 contas e das variáveis, e onde cada coisa fica. Nenhuma senha, chave ou
 endereço de banco entra aqui. Os valores ficam no Render, nos segredos do
 GitHub e no arquivo do projeto do Evandro.
@@ -27,7 +28,11 @@ GitHub e no arquivo do projeto do Evandro.
     trocado, os códigos do Google Authenticator param de valer: entre com um
     **código de recuperação**, desligue e ligue de novo as duas etapas.
   - `OTP_CHAVE_TESTE`: só a esteira de testes usa (mesmo valor do segredo do GitHub).
-- Mapa: `TOMTOM_API_KEY`, `TOMTOM_COTA_MES`, `MAPA_PROVEDOR` (`tomtom` ou `google`).
+- Mapa: `TOMTOM_API_KEY` (busca, endereço e rota; nunca sai do servidor),
+  `TOMTOM_API_KEY_MAPA` (opcional: chave só das imagens do mapa, a única que
+  chega aos celulares; sem ela, vale a `TOMTOM_API_KEY`), `TOMTOM_COTA_MES`,
+  `MAPA_PROVEDOR` (`tomtom` ou `google`), `ROTA_NOS_MAIS_PROXIMOS` (quantos
+  motoristas mais perto têm a chegada medida pela rua; padrão 3; 0 desliga).
 - E-mail: `EMAIL_GOOGLE_SCRIPT_URL`, `EMAIL_GOOGLE_SCRIPT_SEGREDO`, `EMAIL_REMETENTE`, `EMAIL_REMETENTE_NOME`.
 - Push: `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`.
 - Pagamento (desligado; só "pagamento direto ao motorista"): `PAYMENT_PROVIDER` e as chaves do gateway quando houver.
@@ -87,3 +92,33 @@ PENDENCIAS.md). Ninguém mais tem essa chave, de propósito.
 
 Ver `operadores/README.md` (script `scripts/novo-app.sh` e a esteira
 **App de operador**).
+
+## 7. Quem é o titular de cada conta e como passar para a empresa
+
+Hoje tudo está no nome do Evandro (pessoa física, sem CNPJ). Quando a empresa
+existir, o que está marcado **Sim** precisa ir para o nome dela: é o que a
+loja, os contratos e a cobrança exigem, e o que não pode ficar preso a uma
+pessoa. Nenhuma senha vai aqui.
+
+| Serviço | Titular hoje | Como compartilhar / passar | Nome da empresa? |
+|---|---|---|---|
+| **Google Play** (ainda não criada) | — | Criar já como **conta de organização** (CNPJ + número D-U-N-S, grátis, até ~30 dias; verificação do Google 1–3 semanas). Conta de organização não precisa do teste fechado com 12 testadores por 14 dias que vale para conta pessoal criada depois de 13/11/2023. Dá para transferir app entre contas depois (pedido no Play Console; o Google pode pedir documentos), mas é mais demorado. A chave de assinatura (segredos `ANDROID_*`) vai junto e não pode se perder. | **Sim, obrigatório** |
+| **TomTom** (mapa, busca, rota) | conta do Evandro | Não precisa transferir: a empresa cria a conta dela, gera a chave (e a chave só do mapa), troca `TOMTOM_API_KEY` (e `TOMTOM_API_KEY_MAPA`) no Render e apaga a chave antiga. Uso comercial pede plano pago (cláusula 2.2, ver docs/TOMTOM-TERMOS.md): o contrato deve ser da empresa. Cada operador com servidor próprio usa a chave dele. | **Sim** |
+| **Render** (servidor) | conta/workspace do Evandro | Membros só no plano Pro ou maior (Settings → Team members → Invite). O Render **não transfere** serviço entre workspaces (resposta do suporte; pedido aberto desde 2020): a empresa cria o workspace dela, cria um serviço novo ligado ao mesmo repositório e copia as variáveis. Como o app chama `fortaleza-mov-backend.onrender.com`, o serviço novo teria outro endereço: **antes de publicar na loja, pôr um domínio próprio** (ex.: api.<domínio>) apontando para o Render, para poder trocar de conta sem atualizar o app. | **Sim** |
+| **Supabase** (banco) | organização do Evandro | Convidar: Organization → Team → Invite. Passar: Project Settings → General → **Transfer project** (dono da organização de origem e membro da de destino; sem integração com GitHub nem log drains; no plano grátis, máximo de 2 projetos por organização). O endereço do banco não muda. | **Sim** |
+| **Firebase** (aviso push, projeto fortaleza-mov) | conta Google do Evandro | ⚙ Project settings ("Configurações do projeto") → Users and permissions ("Usuários e permissões") → Add member ("Adicionar membro") → Owner ("Proprietário"). A conta da empresa aceita o convite; depois o Evandro pode sair. O projeto é o mesmo: nada muda nos apps. | **Sim** |
+| **GitHub** (código e esteiras) | conta pessoal `dasilvagonchoroskie-cpu` | Compartilhar: Settings → Collaborators ("Colaboradores") → Add people. Passar: criar uma organização da empresa (grátis) → no repositório Settings → General → Danger Zone ("Zona de perigo") → Transfer ownership ("Transferir"). Depois conferir os segredos das Actions e a ligação do Render com o GitHub. | **Sim** |
+| **Domínio** | o app ainda **não tem domínio próprio** (servidor no endereço do Render). `fortalezadigitalsecurity.com.br` é da marca de desenvolvimento do Evandro | Registrar o domínio do app já no CNPJ. Se for registrado no CPF antes: Registro.br → transferência de titularidade (documento gerado no site, assinado pelo gov.br, análise em 2 dias úteis; .com.br pode passar de CPF para CNPJ). | **Sim** |
+| **Gmail** (e-mail com o código de entrada) | Gmail do Evandro, pelo Apps Script | Conta Gmail não se transfere. A empresa cria o e-mail dela (de preferência no domínio próprio), refaz o Apps Script nessa conta (pasta `scripts/email-gmail`) e troca `EMAIL_GOOGLE_SCRIPT_URL`, `EMAIL_GOOGLE_SCRIPT_SEGREDO`, `EMAIL_REMETENTE` no Render. | **Sim** (quem envia) |
+| **Google Cloud** (chave do Google Maps, opcional) | Evandro | Só se for usar o Google Maps: projeto na conta da empresa, chave restrita aos pacotes + SHA-1. A chave antiga que esteve no repositório deve ser apagada (PENDENCIAS.md). | Sim, se usar |
+| **Chave privada da cópia do banco** | só o Evandro | Não se compartilha por chat nem e-mail. Guardar em papel/cofre; para o teste de restauração, vai como segredo do GitHub (`COPIA_BANCO_CHAVE`). | Guardar com o responsável legal |
+
+Fontes: [Render – membros](https://render.com/docs/team-members) ·
+[Render – transferir serviço (suporte)](https://community.render.com/t/transfer-services-from-one-team-to-another/12318) ·
+[Supabase – transferir projeto](https://supabase.com/docs/guides/platform/project-transfer) ·
+[Firebase – membros do projeto](https://support.google.com/firebase/answer/7000272) ·
+[Google Play – conta de organização e 12 testadores](https://ontest.app/blog/personal-vs-organization-google-play-account-12-testers) ·
+[Transferência de app entre contas da Play](https://adapty.io/docs/transfer-apps) ·
+[Registro.br – titularidade](https://www.homehost.com.br/blog/dominio/transferencia-de-dominio-no-brasil/) ·
+[TomTom – gestão de chaves](https://docs.tomtom.com/platform/documentation/api-best-practices/api-key-management-best-practices)
+

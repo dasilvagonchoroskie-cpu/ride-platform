@@ -689,8 +689,12 @@ X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\
 X=$(get /driver/rides/offers "$TM")
 [ -n "$RSS" ] && [ "$(echo "$X" | jq -r --arg r "$RSS" '[.data[] | select(.rideId==$r)] | length')" = "1" ] && ok "Carteira: motorista ja online e sem saldo continua recebendo chamado" || falha "Carteira: chamado sem saldo" "$X"
 O=$(echo "$X" | jq -c --arg r "$RSS" '[.data[] | select(.rideId==$r)][0]')
-[ "$(echo "$O" | jq -r '.driverNetCents')" -gt 0 ] 2>/dev/null && [ "$(echo "$O" | jq -r '.passengerRating')" != "null" ] && [ "$(echo "$O" | jq -r '.commissionPercent')" = "8" ] \
-  && ok "Motorista: chamado mostra valor liquido ($(echo "$O" | jq -r '.driverNetCents')), taxa 8% e nota do passageiro ($(echo "$O" | jq -r '.passengerRating'))" || falha "Motorista: dados do chamado" "$O"
+# A taxa esperada e a da tabela da bandeira de agora (a Central pode mudar;
+# antes o teste esperava 8% fixo).
+HB=$((10#$(TZ=America/Sao_Paulo date +%H))); if [ "$HB" -ge 6 ] && [ "$HB" -lt 22 ]; then BB=diurna; else BB=noturna; fi
+TXE=$(get /admin/tariffs "$TA" | jq -r ".data.$BB.commissionPercent")
+[ "$(echo "$O" | jq -r '.driverNetCents')" -gt 0 ] 2>/dev/null && [ "$(echo "$O" | jq -r '.passengerRating')" != "null" ] && [ "$(echo "$O" | jq -r --argjson e "${TXE:-8}" '.commissionPercent == $e')" = "true" ] \
+  && ok "Motorista: chamado mostra valor liquido ($(echo "$O" | jq -r '.driverNetCents')), taxa $(echo "$O" | jq -r '.commissionPercent')% (tabela $BB: $TXE%) e nota do passageiro ($(echo "$O" | jq -r '.passengerRating'))" || falha "Motorista: dados do chamado" "$(echo "$O" | jq -c --arg t "$TXE" --arg b "$BB" '{driverNetCents, commissionPercent, passengerRating, tabela: ($b + " " + $t)}')"
 post "/rides/$RSS/cancel" '{"reason":"Teste"}' "$TP" >/dev/null
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "Sem saldo nao deveria ficar online de novo" "$X" || ok "Carteira: sem saldo nao consegue ficar online de novo"
