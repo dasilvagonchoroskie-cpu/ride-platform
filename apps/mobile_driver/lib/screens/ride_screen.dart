@@ -87,7 +87,7 @@ class RideScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _Etapa(fase: fase),
+                              _Etapa(fase: fase, entrega: offer.entrega != null),
                               if (fase != RidePhase.completed) ...[
                                 const SizedBox(height: Spacing.sm),
                                 _ValorDaCorrida(d: d, fase: fase),
@@ -146,17 +146,18 @@ class RideScreen extends StatelessWidget {
 }
 
 class _Etapa extends StatelessWidget {
-  const _Etapa({required this.fase});
+  const _Etapa({required this.fase, this.entrega = false});
 
   final RidePhase fase;
+  final bool entrega;
 
   @override
   Widget build(BuildContext context) {
     final (n, texto) = switch (fase) {
-      RidePhase.toPickup => (1, 'A caminho'),
-      RidePhase.waitingPassenger => (1, 'No embarque'),
-      RidePhase.inProgress => (2, 'Em viagem'),
-      RidePhase.completed => (3, 'Finalizada'),
+      RidePhase.toPickup => (1, entrega ? 'A caminho da coleta' : 'A caminho'),
+      RidePhase.waitingPassenger => (1, entrega ? 'Na coleta' : 'No embarque'),
+      RidePhase.inProgress => (2, entrega ? 'Levando a entrega' : 'Em viagem'),
+      RidePhase.completed => (3, entrega ? 'Entregue' : 'Finalizada'),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.sm),
@@ -446,10 +447,11 @@ class _ACaminho extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('A caminho do passageiro', style: AppText.title),
+        Text(offer.entrega != null ? 'A caminho da coleta' : 'A caminho do passageiro', style: AppText.title),
         const SizedBox(height: Spacing.md),
+        if (offer.entrega != null) ...[_FaixaEntrega(entrega: offer.entrega!), const SizedBox(height: Spacing.sm)],
         _Passageiro(d: d, offer: offer),
-        _Endereco(rotulo: 'Buscar em', texto: offer.pickupAddress, cor: AppColors.primary),
+        _Endereco(rotulo: offer.entrega != null ? 'Coletar em' : 'Buscar em', texto: offer.pickupAddress, cor: AppColors.primary),
         _BotoesNavegar(destino: offer.pickupCoords),
         const SizedBox(height: Spacing.md),
         SizedBox(
@@ -508,7 +510,7 @@ class _EsperandoState extends State<_Esperando> {
       children: [
         Row(
           children: [
-            const Expanded(child: Text('Esperando o passageiro', style: AppText.title)),
+            Expanded(child: Text(offer.entrega != null ? 'No local de coleta' : 'Esperando o passageiro', style: AppText.title)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.xs),
               decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(Radii.pill)),
@@ -517,15 +519,22 @@ class _EsperandoState extends State<_Esperando> {
           ],
         ),
         const SizedBox(height: Spacing.md),
+        if (offer.entrega != null) ...[_FaixaEntrega(entrega: offer.entrega!), const SizedBox(height: Spacing.sm)],
         _Passageiro(d: d, offer: offer),
-        _Endereco(rotulo: 'Embarque', texto: offer.pickupAddress, cor: AppColors.primary),
-        Container(
-          padding: const EdgeInsets.all(Spacing.md),
-          decoration: BoxDecoration(color: AppColors.surfaceElevated, borderRadius: BorderRadius.circular(Radii.sm)),
-          child: Text('Confira o código do passageiro: ${widget.ride.pin}', style: AppText.bodyStrong),
-        ),
+        _Endereco(rotulo: offer.entrega != null ? 'Coleta' : 'Embarque', texto: offer.pickupAddress, cor: AppColors.primary),
+        // Entrega: sem codigo na coleta (o cliente entrega a encomenda).
+        if (offer.entrega == null)
+          Container(
+            padding: const EdgeInsets.all(Spacing.md),
+            decoration: BoxDecoration(color: AppColors.surfaceElevated, borderRadius: BorderRadius.circular(Radii.sm)),
+            child: Text('Confira o código do passageiro: ${widget.ride.pin}', style: AppText.bodyStrong),
+          ),
         const SizedBox(height: Spacing.lg),
-        Deslizar(texto: 'INICIAR VIAGEM', ocupado: d.enviandoEtapa, aoConfirmar: d.startRide),
+        Deslizar(
+          texto: offer.entrega != null ? 'CONFIRMAR COLETA' : 'INICIAR VIAGEM',
+          ocupado: d.enviandoEtapa,
+          aoConfirmar: d.startRide,
+        ),
         TextButton(
           onPressed: () => _cancelar(context, d),
           child: const Text('Cancelar corrida', style: TextStyle(color: AppColors.danger)),
@@ -551,7 +560,7 @@ class _Viagem extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Viagem em andamento', style: AppText.title),
+        Text(offer.entrega != null ? 'Levando a encomenda' : 'Viagem em andamento', style: AppText.title),
         Text(
           d.precoFechado
               ? 'Preço fechado: ${formatMoney(offer.fareCents)}, o valor combinado no pedido.'
@@ -559,6 +568,7 @@ class _Viagem extends StatelessWidget {
           style: AppText.caption.copyWith(color: AppColors.textMuted),
         ),
         const SizedBox(height: Spacing.md),
+        if (offer.entrega != null) ...[_FaixaEntrega(entrega: offer.entrega!, comQuemRecebe: true), const SizedBox(height: Spacing.sm)],
         _Passageiro(d: d, offer: offer),
         // Etapa 3: paradas na ordem, cada uma com o seu caminho.
         for (var i = 0; i < offer.paradas.length; i++) ...[
@@ -568,11 +578,14 @@ class _Viagem extends StatelessWidget {
         if (offer.semDestino)
           _Endereco(rotulo: 'Destino', texto: 'Sem destino: pergunte ao passageiro. O valor sai pelo taxímetro.', cor: AppColors.danger)
         else ...[
-          _Endereco(rotulo: 'Destino', texto: offer.dropoffAddress, cor: AppColors.danger),
+          _Endereco(rotulo: offer.entrega != null ? 'Entregar em' : 'Destino', texto: offer.dropoffAddress, cor: AppColors.danger),
           _BotoesNavegar(destino: offer.dropoffCoords),
         ],
         const SizedBox(height: Spacing.lg),
-        Deslizar(texto: 'FINALIZAR VIAGEM', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: d.finishRide),
+        if (offer.entrega != null)
+          Deslizar(texto: 'CONFIRMAR ENTREGA', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: () => pedirCodigoDaEntrega(context, d))
+        else
+          Deslizar(texto: 'FINALIZAR VIAGEM', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: d.finishRide),
       ],
     );
   }
@@ -723,4 +736,108 @@ class _IconeSaldo extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Entrega (Etapa 5): o que vai e, na viagem, quem recebe (com o telefone).
+class _FaixaEntrega extends StatelessWidget {
+  const _FaixaEntrega({required this.entrega, this.comQuemRecebe = false});
+
+  final EntregaDoChamado entrega;
+  final bool comQuemRecebe;
+
+  @override
+  Widget build(BuildContext context) {
+    final tel = entrega.destinatarioTelefone.replaceAll(RegExp(r'\D'), '');
+    return Container(
+      key: const ValueKey('faixa-entrega'),
+      padding: const EdgeInsets.all(Spacing.md),
+      decoration: BoxDecoration(color: AppColors.brandSoft, borderRadius: BorderRadius.circular(Radii.sm)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.inventory_2_outlined, color: AppColors.brand),
+              const SizedBox(width: Spacing.sm),
+              Text('ENTREGA', style: AppText.bodyStrong.copyWith(color: AppColors.brand, letterSpacing: 1)),
+            ],
+          ),
+          const SizedBox(height: Spacing.xs),
+          Text(entrega.descricao, style: AppText.bodyStrong),
+          if (comQuemRecebe) ...[
+            const SizedBox(height: Spacing.xs),
+            Row(
+              children: [
+                Expanded(child: Text('Quem recebe: ${entrega.destinatarioNome}', style: AppText.body)),
+                if (tel.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () => launchUrl(Uri.parse('tel:+$tel')),
+                    icon: const Icon(Icons.call, size: 18),
+                    label: const Text('Ligar'),
+                  ),
+              ],
+            ),
+            Text(
+              'Na entrega, peça a quem recebe o código de 4 números.',
+              style: AppText.caption.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Janela do codigo da entrega: o motorista digita os 4 numeros que quem
+/// recebe disse. Errado: mostra o motivo (quantas tentativas restam).
+Future<void> pedirCodigoDaEntrega(BuildContext context, DriverState d) async {
+  final campo = TextEditingController();
+  var enviando = false;
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) {
+        Future<void> confirmar() async {
+          if (enviando) return;
+          setState(() => enviando = true);
+          final ok = await d.finishRide(codigoEntrega: campo.text.trim());
+          if (!ctx.mounted) return;
+          if (ok) {
+            Navigator.of(ctx).pop();
+          } else {
+            setState(() => enviando = false);
+          }
+        }
+
+        return AlertDialog(
+          title: const Text('Código da entrega'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Peça a quem recebe o código de 4 números e digite aqui.'),
+              const SizedBox(height: Spacing.md),
+              TextField(
+                key: const ValueKey('campo-codigo-entrega'),
+                controller: campo,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: AppText.title.copyWith(letterSpacing: 8),
+                decoration: const InputDecoration(counterText: '', hintText: '0000'),
+                onSubmitted: (_) => confirmar(),
+              ),
+              if (d.erroDaEntrega != null)
+                Text(d.erroDaEntrega!, style: AppText.body.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Voltar')),
+            FilledButton(onPressed: enviando ? null : confirmar, child: const Text('Confirmar entrega')),
+          ],
+        );
+      },
+    ),
+  );
 }

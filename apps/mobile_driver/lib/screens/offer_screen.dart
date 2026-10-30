@@ -203,6 +203,33 @@ class OfferScreen extends StatelessWidget {
 
                           const SizedBox(height: Spacing.md),
 
+                          // Etapa 5: entrega de encomenda, bem marcada.
+                          if (offer.entrega != null) ...[
+                            Container(
+                              key: const ValueKey('chamado-entrega'),
+                              padding: const EdgeInsets.all(Spacing.sm),
+                              decoration: BoxDecoration(
+                                color: AppColors.brandSoft,
+                                borderRadius: BorderRadius.circular(Radii.sm),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.inventory_2_outlined, color: AppColors.brand),
+                                  const SizedBox(width: Spacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      'ENTREGA · ${offer.entrega!.descricao}',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SheetText.heading.copyWith(color: AppColors.brand, fontSize: 16),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: Spacing.sm),
+                          ],
+
                           // Rota primeiro: e o que decide o aceite.
                           Row(
                             children: [
@@ -210,7 +237,9 @@ class OfferScreen extends StatelessWidget {
                               const SizedBox(width: Spacing.md),
                               Expanded(
                                 child: Text(
-                                  '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
+                                  offer.entrega != null
+                                      ? '${formatDistance(offer.distanceToPickupMeters.toDouble())} até a coleta'
+                                      : '${formatDistance(offer.distanceToPickupMeters.toDouble())} até o embarque',
                                   style: SheetText.body,
                                 ),
                               ),
