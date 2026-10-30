@@ -1,10 +1,10 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart
-00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada de 5 minutos no meio da viagem entra no tempo parado
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: sinal fechado (40 s) e transito lento nao contam como parada
-00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada acontecendo agora ja aparece (o valor corre enquanto espera)
-00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
-00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
-00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
+00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Telefone da conta aparece formatado
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
 00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
 00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
@@ -28,270 +28,58 @@
 00:04 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:04 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
 00:04 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:06 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Cadastro: botao Sair para entrar com outro telefone
-00:06 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
-00:06 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
-00:06 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
-00:06 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
-00:06 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cadastro_motorista_test.dart: Mesma pessoa: reconhece a conta de passageiro, entra com o codigo e termina o cadastro
-00:06 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:05 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:05 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:05 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:05 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:05 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:05 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:05 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
 00:06 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:07 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
-00:08 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 01 entrada, telefone e e-mail
-00:08 +38 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 04 termos, cadastro e em analise
-00:08 +38 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 07 inicio desconectado e conectado
-00:08 +38 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 09 chamado
-00:08 +38 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 10 corrida: a caminho, esperando, viagem e fim
-00:08 +38 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 16 menu, atividades, carteira e historico
-00:08 +38 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 24 meus dados
-00:08 +38 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: (tearDownAll)
+00:06 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
+00:07 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 01 entrada, telefone e e-mail
+00:07 +38 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 04 termos, cadastro e em analise
+00:07 +38 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 07 inicio desconectado e conectado
+00:07 +38 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 09 chamado
+00:07 +38 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 10 corrida: a caminho, esperando, viagem e fim
+00:07 +38 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 16 menu, atividades, carteira e historico
+00:07 +38 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: 24 meus dados
+00:07 +38 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/fotos_test.dart: (tearDownAll)
 00:08 +38 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Pede o link do PDF com o periodo e devolve o endereco completo
 00:08 +39 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Cidades da operacao vem da configuracao do servidor
 00:08 +40 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:10 +41 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:09 +41 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
 00:10 +42 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
 00:10 +43 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
 00:10 +44 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:11 +45 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 0.750 pixels on the right.
-
-The relevant error-causing widget was:
-  Row
-  Row:file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/lib/screens/home_screen.dart:124:22
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#b454e relayoutBoundary=up4 NEEDS-PAINT OVERFLOWING:
-  creator: Row ← Padding ← MediaQuery ← Padding ← SafeArea ← Stack ← KeyedSubtree-[GlobalKey#8a221] ←
-    _BodyBuilder ← MediaQuery ← LayoutId-[<_ScaffoldSlot.body>] ← CustomMultiChildLayout ←
-    _ActionsScope ← ⋯
-  parentData: offset=Offset(16.0, 12.0) (can use size)
-  constraints: BoxConstraints(0.0<=w<=328.0, 0.0<=h<=768.0)
-  size: Size(328.0, 768.0)
-  direction: horizontal
-  mainAxisAlignment: start
-  mainAxisSize: max
-  crossAxisAlignment: start
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: exactly one matching candidate
-  Actual: _TypeWidgetFinder:<Found 0 widgets with type "CupertinoNavigationBarBackButton": []>
-   Which: means none were found but one was expected
-One back button expected on screen
-
-When the exception was thrown, this was the stack:
-#0      fail (package:matcher/src/expect/expect.dart:187:31)
-#1      _expect (package:matcher/src/expect/expect.dart:182:3)
-#2      expect (package:matcher/src/expect/expect.dart:65:3)
-#3      expectSync (package:flutter_test/src/widget_tester.dart:486:18)
-#4      WidgetTester.pageBack.<anonymous closure> (package:flutter_test/src/widget_tester.dart:1177:7)
-#7      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
-#8      WidgetTester.pageBack (package:flutter_test/src/widget_tester.dart:1171:27)
-#9      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart:166:18)
-<asynchronous suspension>
-#10     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#11     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided 3 frames from dart:async and package:stack_trace)
-
-The test description was:
-  Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following message was thrown:
-Multiple exceptions (2) were detected during the running of the current test, and at least one was
-unexpected.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:11 +45 ~7 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:11 +45 ~7 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho [E]
-  Test failed. See exception logs above.
-  The test description was: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-  
-00:11 +46 ~7 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
-00:12 +47 ~7 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
-00:12 +48 ~7 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas
-
-Warning: A call to tap() with finder "Found 1 widget with text "DESFAZER": [
-  Text("DESFAZER", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(267.6, 872.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-Indeed, Offset(267.6, 872.0) is outside the bounds of the root of the render tree, Size(360.0, 780.0).
-The finder corresponds to this RenderBox: RenderParagraph#61acd relayoutBoundary=up29
-The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#86170(_ReusableRenderView#704f1), HitTestEntry<HitTestTarget>#9c55a(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart:235:18)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: exactly one matching candidate
-  Actual: _TextWidgetFinder:<Found 0 widgets with text "Chegou agora": []>
-   Which: means none were found but one was expected
-
-When the exception was thrown, this was the stack:
-#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart:237:5)
-<asynchronous suspension>
-#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided one frame from package:stack_trace)
-
-This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart line 237
-The test description was:
-  Apagar todas (com desfazer) e Marcar todas como lidas
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:12 +48 ~7 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
-00:12 +48 ~7 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas [E]
-  Test failed. See exception logs above.
-  The test description was: Apagar todas (com desfazer) e Marcar todas como lidas
-  
-00:13 +49 ~7 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-00:13 +50 ~7 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-00:13 +51 ~7 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 0.750 pixels on the right.
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#d2788 DISPOSED OVERFLOWING:
-  creator: MultiChildRenderObjectElement#9905f(DEFUNCT) ←
-    SingleChildRenderObjectElement#bd679(DEFUNCT) ←
-    InheritedModelElement<_MediaQueryAspect>#5c063(DEFUNCT) ←
-    SingleChildRenderObjectElement#e5d0e(DEFUNCT) ← StatelessElement#55993(DEFUNCT) ←
-    MultiChildRenderObjectElement#5222b(DEFUNCT) ← StatelessElement#19b0a(DEFUNCT) ←
-    StatelessElement#6c593(DEFUNCT) ← InheritedModelElement<_MediaQueryAspect>#1b231(DEFUNCT) ←
-    ParentDataElement<MultiChildLayoutParentData>#92af7(DEFUNCT) ←
-    MultiChildRenderObjectElement#bfeee(DEFUNCT) ← InheritedElement#151ca(DEFUNCT) ← ⋯
-  parentData: offset=Offset(16.0, 12.0) (can use size)
-  constraints: BoxConstraints(0.0<=w<=328.0, 0.0<=h<=768.0)
-  size: Size(328.0, 768.0)
-  direction: horizontal
-  mainAxisAlignment: start
-  mainAxisSize: max
-  crossAxisAlignment: start
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:13 +51 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte [E]
-  Test failed. See exception logs above.
-  The test description was: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-  
-══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
-The following assertion was thrown:
-Looking up a deactivated widget's ancestor is unsafe.
-At this point the state of the widget's element tree is no longer stable.
-To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
-calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
-
-When the exception was thrown, this was the stack:
-#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:5062:9)
-#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:5076:6)
-#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5187:12)
-#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4342:13)
-#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4261:12)
-#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4240:21)
-#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1300:31)
-#7      DiagnosticableNode.getProperties (package:flutter/src/foundation/diagnostics.dart:2943:68)
-#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1270:63)
-#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
-#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1030:13)
-#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
-#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:1714:28)
-<asynchronous suspension>
-(elided 8 frames from dart:async and package:stack_trace)
-
-This exception was caught while trying to describe the user-relevant code of another error.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY WIDGET INSPECTOR ╞══════════════════════════════════════════════════════════
-The following assertion was thrown:
-Looking up a deactivated widget's ancestor is unsafe.
-At this point the state of the widget's element tree is no longer stable.
-To safely refer to a widget's ancestor in its dispose() method, save a reference to the ancestor by
-calling dependOnInheritedWidgetOfExactType() in the widget's didChangeDependencies() method.
-
-When the exception was thrown, this was the stack:
-#0      Element._debugCheckStateIsActiveForAncestorLookup.<anonymous closure> (package:flutter/src/widgets/framework.dart:5062:9)
-#1      Element._debugCheckStateIsActiveForAncestorLookup (package:flutter/src/widgets/framework.dart:5076:6)
-#2      Element.visitAncestorElements (package:flutter/src/widgets/framework.dart:5187:12)
-#3      _describeRelevantUserCode (package:flutter/src/widgets/widget_inspector.dart:4342:13)
-#4      _parseDiagnosticsNode (package:flutter/src/widgets/widget_inspector.dart:4261:12)
-#5      debugTransformDebugCreator (package:flutter/src/widgets/widget_inspector.dart:4240:21)
-#6      _FlutterErrorDetailsNode.builder (package:flutter/src/foundation/assertions.dart:1300:31)
-#7      DiagnosticableNode.emptyBodyDescription (package:flutter/src/foundation/diagnostics.dart:2939:45)
-#8      TextTreeRenderer._debugRender (package:flutter/src/foundation/diagnostics.dart:1307:14)
-#9      TextTreeRenderer.render (package:flutter/src/foundation/diagnostics.dart:1137:14)
-#10     FlutterError.dumpErrorToConsole (package:flutter/src/foundation/assertions.dart:1030:13)
-#11     _defaultTestExceptionReporter (package:flutter_test/src/test_exception_reporter.dart:29:16)
-#12     TestWidgetsFlutterBinding._createTestCompletionHandler.<anonymous closure> (package:flutter_test/src/binding.dart:1714:28)
-<asynchronous suspension>
-(elided 8 frames from dart:async and package:stack_trace)
-
-This exception was caught while trying to describe the user-relevant code of another error.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:13 +51 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
-00:13 +52 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
-00:14 +53 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/datas_test.dart: Data que nao existe ou incompleta e recusada
-00:14 +54 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/datas_test.dart: Data vai para o servidor no formato AAAA-MM-DD
-00:14 +55 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/datas_test.dart: Mascara coloca as barras e os pontos sozinha
-00:14 +56 ~7 -3: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart
-00:14 +56 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
-00:14 +57 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) km alem do incluso e espera alem da inclusa
-00:14 +58 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) multiplicador dinamico vale sobre o total
-00:14 +59 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS soma o trajeto e ignora tremida parado
-00:14 +60 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS ignora leitura imprecisa e salto impossivel
-00:14 +61 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS guarda e recupera (aplicativo fechado no meio da viagem)
-00:14 +62 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas le os pontos que o servidor manda
-00:14 +63 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas o traco some atras do carro
-00:14 +64 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:14 +65 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:14 +66 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:14 +67 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:15 +68 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:15 +69 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:15 +70 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:15 +71 ~7 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: A caminho do passageiro: mostra o valor estimado
-00:16 +72 ~7 -3: Some tests failed.
-
-Failing tests:
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:10 +45 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:11 +46 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
+00:11 +47 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
+00:11 +48 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
+00:12 +49 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas
+00:12 +50 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
+00:12 +51 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:12 +52 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:12 +53 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:13 +54 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:13 +55 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:13 +56 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:13 +57 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:13 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Durante a corrida: so um icone pequeno de saldo, sem faixa
+00:14 +59 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
+00:14 +60 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) km alem do incluso e espera alem da inclusa
+00:14 +61 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) multiplicador dinamico vale sobre o total
+00:14 +62 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS soma o trajeto e ignora tremida parado
+00:14 +63 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS ignora leitura imprecisa e salto impossivel
+00:14 +64 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS guarda e recupera (aplicativo fechado no meio da viagem)
+00:14 +65 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas le os pontos que o servidor manda
+00:14 +66 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas o traco some atras do carro
+00:14 +67 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:14 +68 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:14 +69 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:14 +70 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:15 +71 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:15 +72 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:15 +73 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:15 +74 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: A caminho do passageiro: mostra o valor estimado
+00:15 +75 ~7: All tests passed!
