@@ -91,7 +91,8 @@ class _EntregasApi {
   }
 
   Future<List<PedidoDeEntrega>> pedidos() async {
-    final r = await _c.request('GET', '/admin/entregas', query: _praca == null ? null : {'praca': _praca}) as Map<String, dynamic>;
+    final praca = _praca;
+    final r = await _c.request('GET', '/admin/entregas', query: praca == null ? null : {'praca': praca}) as Map<String, dynamic>;
     return [for (final p in (r['itens'] as List? ?? const []).whereType<Map<String, dynamic>>()) PedidoDeEntrega(p)];
   }
 
