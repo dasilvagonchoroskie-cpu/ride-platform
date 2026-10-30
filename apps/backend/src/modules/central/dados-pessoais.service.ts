@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
-import { PushService } from '../../integrations/notifications/push.service';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { liberarTelefoneDeContaVazia } from '../auth/conta-existente';
 
 /**
@@ -63,7 +63,7 @@ export function normalizarTelefone(texto: string): string {
 export class DadosPessoaisService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly push: PushService,
+    private readonly caixa: CaixaDeEntradaService,
   ) {}
 
   // ------------------------------------------------------------------
@@ -264,7 +264,7 @@ export class DadosPessoaisService {
       alteracaoPendente: null,
       ultimaAlteracao: { em: new Date().toISOString(), por: adminId, campos: Object.keys(novo) },
     });
-    this.push.aviso(userId, 'Dados atualizados', 'A Central aprovou a mudança nos seus dados.');
+    await this.caixa.avisar(userId, 'Dados atualizados', 'A Central aprovou a mudança nos seus dados.', { tipo: 'dados', abrir: 'dados' });
     return { aprovado: true };
   }
 
@@ -278,7 +278,7 @@ export class DadosPessoaisService {
       where: { id: userId },
       data: { metadata: { ...meta, alteracaoRecusada: { motivo, em: new Date().toISOString(), por: adminId } } as never },
     });
-    this.push.aviso(userId, 'Mudança nos dados recusada', motivo);
+    await this.caixa.avisar(userId, 'Mudança nos dados recusada', motivo, { tipo: 'dados', abrir: 'dados' });
     return { recusado: true };
   }
 

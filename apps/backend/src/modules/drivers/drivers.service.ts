@@ -3,6 +3,7 @@ import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira'
 import { Injectable, Logger } from '@nestjs/common';
 import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { PracasService } from '../pracas/pracas.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
@@ -33,6 +34,7 @@ export class DriversService {
     private readonly storage: StorageService,
     private readonly notifications: NotificationService,
     private readonly pracas: PracasService,
+    private readonly caixa: CaixaDeEntradaService,
   ) {}
 
   /** Onboarding do motorista: cria o registro e a carteira virtual. */
@@ -475,6 +477,17 @@ export class DriversService {
       });
     }
 
+    if (input.status !== driver.status) {
+      const motivo = input.reason?.trim();
+      const texto: Partial<Record<string, [string, string]>> = {
+        APPROVED: ['Cadastro aprovado', 'A Central aprovou seu cadastro. Conecte-se para receber corridas.'],
+        REJECTED: ['Cadastro recusado', motivo || 'A Central recusou o cadastro. Fale com a Central.'],
+        SUSPENDED: ['Cadastro suspenso', motivo || 'A Central suspendeu seu cadastro. Fale com a Central.'],
+        BLOCKED: ['Cadastro bloqueado', motivo || 'A Central bloqueou seu cadastro. Fale com a Central.'],
+      };
+      const t = texto[input.status];
+      if (t) await this.caixa.avisar(driver.userId, t[0], t[1], { tipo: 'conta' });
+    }
     this.logger.log(`Motorista ${driverId} revisado -> ${input.status} por ${reviewerId}`);
     return this.withProgress(updated.id);
   }
