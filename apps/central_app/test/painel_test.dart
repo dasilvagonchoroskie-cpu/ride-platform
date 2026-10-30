@@ -1033,15 +1033,14 @@ void main() {
     expect(find.text('Carro'), findsWidgets);
     expect(find.text('Moto (desligada)'), findsOneWidget);
 
+    await tester.tap(find.text('Moto (desligada)'));
+    await tester.pumpAndSettle();
+    // A tela ficou mais longa (figura, descricao, lugares): rola ate a bandeira.
     await tester.ensureVisible(find.text('Noturna'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Noturna'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Moto (desligada)'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Moto (desligada)'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Nova categoria'));
+    await tester.scrollUntilVisible(find.text('Nova categoria'), -300, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nova categoria'));
     await tester.pumpAndSettle();

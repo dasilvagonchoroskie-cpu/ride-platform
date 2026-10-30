@@ -237,9 +237,10 @@ void main() {
     await tester.pumpAndSettle();
     // A escolha da categoria (29/10/2026) fica antes das fotos.
     expect(find.text('Categoria do carro'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Foto do CRLV'), 200, scrollable: find.byType(Scrollable).last);
+    final lista = find.descendant(of: find.byType(NovoCarroScreen), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('Foto do CRLV'), 200, scrollable: lista);
     expect(find.text('Foto do CRLV'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Enviar para a Central'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.scrollUntilVisible(find.text('Enviar para a Central'), 200, scrollable: lista);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Enviar para a Central'));
     await tester.pumpAndSettle();
