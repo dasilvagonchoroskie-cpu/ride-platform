@@ -1,6 +1,6 @@
 # PENDÊNCIAS — Fortaleza Move
 
-Atualizado em 30/10/2026 (tarde): pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) pronta esperando os 3 símbolos, etapa 7 (loja) feita (montagem 282).
+Atualizado em 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**.
 
 Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou esteira) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
@@ -11,13 +11,13 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 | O quê | Resultado | Onde ver |
 |---|---|---|
-| Servidor: testes automáticos | **105 passaram, 0 falharam** (17 grupos; novos: caixa de entrada, aviso de saldo, rota medida uma vez, entregas) | rodado aqui (`jest`) |
-| App do passageiro: análise / testes de tela | nenhum problema / **81 passaram, 0 falharam** (12 pulados: fotos) | logs/analyze-mobile_passenger.txt, logs/test-mobile_passenger.txt |
-| App do motorista: análise / testes de tela | nenhum problema / **81 passaram, 0 falharam** (7 pulados) | logs/analyze-mobile_driver.txt, logs/test-mobile_driver.txt |
+| Servidor: testes automáticos | **109 passaram, 0 falharam** (18 grupos; novo: carros por perto com rumo) | rodado aqui (`jest`) |
+| App do passageiro: análise / testes de tela | nenhum problema / **93 passaram, 0 falharam** (12 pulados: fotos) | logs/analyze-mobile_passenger.txt, logs/test-mobile_passenger.txt |
+| App do motorista: análise / testes de tela | nenhum problema / **91 passaram, 0 falharam** (7 pulados) | logs/analyze-mobile_driver.txt, logs/test-mobile_driver.txt |
 | Central: análise / testes de tela | nenhum problema / **51 passaram, 0 falharam** (1 pulado) | logs/analyze-central_app.txt, logs/test-central_app.txt |
-| Teste de ponta a ponta no servidor real | **345 etapas, 0 falhas** (30/10 13:28 UTC, com as entregas no ar) | logs/teste-ponta-a-ponta.txt |
+| Teste de ponta a ponta no servidor real | **349 etapas, 0 falhas** (30/10 18:45 UTC; novas: rumo do carro por perto e da corrida, id estável, leitura imprecisa ignorada) | logs/teste-ponta-a-ponta.txt |
 | Gerador de ícones | **0 falhas** (transparente, fundo branco, xadrez desenhado e fundo preto) | `python3 scripts/testar-icones.py` |
-| APKs 282 | nome no celular, ícone redondo, alvo API 36 e alinhamento de 16 KB conferidos **dentro do APK** pela esteira; chave da TomTom não está dentro; textos das entregas presentes | esteira Android APKs (montagem 282) |
+| APKs 285 | nome no celular, ícone redondo, alvo API 36 e 16 KB conferidos **dentro do APK** pela esteira; chave da TomTom não está dentro; figuras novas do carro e da moto (3 cores) dentro do passageiro e do motorista | esteira Android APKs (montagem 285) |
 
 Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a internet daqui bloqueia o download). Tudo que é Flutter roda no GitHub Actions.
 
@@ -50,7 +50,21 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a int
 
 ---
 
-## 3. Situação do pedido de 30/10 01:37 (7 etapas)
+## 3. Carro no mapa e GPS (pedido de 30/10 15:20)
+
+| O quê | Situação |
+|---|---|
+| Carro gira no sentido em que anda (rumo do GPS; sem ele, a direção do caminho; parado, fica o último) — motorista e passageiro | **[REAL]** servidor manda o rumo (90 e 180 conferidos no ponta a ponta) + **[AUTO]** telas (gira, inclusive pelo lado curto de 350 para 10) |
+| Cor pela disponibilidade: verde livre, laranja em corrida, cinza offline (as da Central); moto também | **[AUTO]** telas; **[SEM TESTE]** no celular |
+| Carros por perto a cada 10 s, mesmo id no dia (o mesmo carro anda, não troca de lugar), posição de ~11 m (era ~55 m) | **[REAL]** servidor + **[AUTO]** |
+| GPS do motorista: navegação a cada 1 s e 5 m (era 15 m), filtro (tremida parado, leitura ruim, salto, suaviza) | **[AUTO]** testes do filtro; **[SEM TESTE]** na rua |
+| Serviço do Android (app fechado): GPS 3 s / 8 m (era 10 s / 20 m), rede de celular só sem GPS há 30 s, parado reenvia a última boa | compilado na 285; **[SEM TESTE]** na rua |
+| Servidor: leitura imprecisa (mais de 60 m) logo após uma boa não mexe no carro | **[REAL]** (leitura de 300 m ignorada no ponta a ponta) |
+| GPS do passageiro acompanha andando (antes só trocava se ficasse mais preciso) | **[AUTO]**; **[SEM TESTE]** na rua |
+
+---
+
+## 4. Situação do pedido de 30/10 01:37 (7 etapas)
 
 | Etapa | Situação |
 |---|---|
@@ -65,7 +79,7 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a int
 
 ---
 
-## 4. APKs 265 (30/10/2026, histórico) — conferidos por dentro
+## 4.1 APKs 265 (30/10/2026, histórico) — conferidos por dentro
 
 | App | Pacote | Versão | Conferido |
 |---|---|---|---|
