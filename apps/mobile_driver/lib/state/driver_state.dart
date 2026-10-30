@@ -1471,8 +1471,11 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Caminho pelas ruas entre dois pontos (servidor -> TomTom).
   /// null = sem rota agora (sem rede ou o servico de rotas nao respondeu).
-  Future<List<Coords>?> _rotaPelaRua(Coords de, Coords para) async {
-    if (!AppConfig.hasApi) return buildRoute(de, para, steps: 30);
+  Future<List<Coords>?> _rotaPelaRua(Coords de, Coords para) async => (await _rotaComMedida(de, para))?.$1;
+
+  /// Caminho pelas ruas e a distancia dele em metros (quando o servidor manda).
+  Future<(List<Coords>, int?)?> _rotaComMedida(Coords de, Coords para) async {
+    if (!AppConfig.hasApi) return (buildRoute(de, para, steps: 30), null);
     UsoLocal.contar('rotas');
     try {
       final r = await _client.request('GET', '/geo/rota', query: {
@@ -1483,11 +1486,16 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       });
       if (r is Map && r['porRua'] != true) return null;
       final pontos = pontosDaRota(r);
-      return pontos.length >= 2 ? pontos : null;
+      final metros = r is Map ? (r['distanceMeters'] as num?)?.round() : null;
+      return pontos.length >= 2 ? (pontos, metros) : null;
     } catch (_) {
       return null;
     }
   }
+
+  /// O carro esta em cima da linha (a menos de 80 m): a rota que ja temos
+  /// serve, sem pedir outra a TomTom (Etapa 4, 30/10/2026).
+  static bool _naLinha(Coords p, List<Coords> rota) => rota.length > 2 && trechoMaisPerto(p, rota).$2 <= 80;
 
   /// Caminho da viagem: [de] -> paradas -> destino (sem destino: so ate a
   /// ultima parada). Cada trecho vem do guardado do servidor.
@@ -1507,13 +1515,18 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     rotaOfertaViagem = const [];
     // A rota embarque -> destino ja foi calculada no orcamento e vem do
     // guardado do servidor. No modo economia, ate o embarque fica a linha reta.
-    final resultados = await Future.wait([
-      MapaConfig.economia ? Future<List<Coords>?>.value(null) : _rotaPelaRua(position, o.pickupCoords),
+    final resultados = await Future.wait<Object?>([
+      MapaConfig.economia ? Future<(List<Coords>, int?)?>.value(null) : _rotaComMedida(position, o.pickupCoords),
       _rotaDaViagem(o, o.pickupCoords),
     ]);
     if (offer?.id != o.id) return;
-    rotaOfertaAteEmbarque = resultados[0] ?? const [];
-    rotaOfertaViagem = resultados[1] ?? const [];
+    final ate = resultados[0] as (List<Coords>, int?)?;
+    rotaOfertaAteEmbarque = ate?.$1 ?? const [];
+    rotaOfertaViagem = resultados[1] as List<Coords>? ?? const [];
+    // Distancia ate o embarque pelas ruas, da rota que o app acabou de pedir
+    // (o servidor nao pede mais a mesma rota para o chamado).
+    final metros = ate?.$2;
+    if (metros != null && metros > 0) offer = offer!.comAteEmbarque(metros);
     notifyListeners();
   }
 
@@ -1545,13 +1558,21 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       final o = ride.offer;
       switch (ride.phase) {
         case RidePhase.toPickup:
-          routeToPickup = await _rotaPelaRua(position, o.pickupCoords) ?? (routeToPickup.length > 2 ? routeToPickup : [position, o.pickupCoords]);
+          // Aceitou: a rota ate o embarque veio com o chamado, segundos
+          // antes. Com o carro em cima dela, nao pede de novo.
+          if (!(forcar && _naLinha(position, routeToPickup))) {
+            routeToPickup = await _rotaPelaRua(position, o.pickupCoords) ?? (routeToPickup.length > 2 ? routeToPickup : [position, o.pickupCoords]);
+          }
           if (tripRoute.length <= 2) tripRoute = await _rotaDaViagem(o, o.pickupCoords);
         case RidePhase.waitingPassenger:
           if (tripRoute.length <= 2) tripRoute = await _rotaDaViagem(o, o.pickupCoords);
         case RidePhase.inProgress:
-          // Com paradas, o caminho e sempre embarque -> paradas -> destino
-          // (vem do guardado do servidor); sem paradas, de onde o carro esta.
+          // Iniciou a viagem no embarque: a rota embarque -> destino ja veio
+          // com o chamado. Com o carro em cima dela, nao pede de novo
+          // (Etapa 4, 30/10/2026). Fora dela (comecou longe), pede como antes.
+          if (forcar && !o.semDestino && _naLinha(position, tripRoute)) break;
+          // Com paradas, o caminho e sempre embarque -> paradas -> destino;
+          // sem paradas, de onde o carro esta.
           final r = o.paradas.isEmpty && !o.semDestino
               ? await _rotaPelaRua(position, o.dropoffCoords)
               : await _rotaDaViagem(o, o.pickupCoords);

@@ -29,6 +29,11 @@ class RideState extends ChangeNotifier {
   List<Coords> driverRoute = [];
   List<Coords> tripRoute = [];
 
+  /// Caminho embarque -> destino que veio no orcamento desta corrida (do
+  /// proprio passageiro). Na hora da viagem, com o carro em cima dele, serve
+  /// de rota sem pedir outra a TomTom (Etapa 4, 30/10/2026).
+  List<Coords> _caminhoDoPedido = const [];
+
   /// Caminho pelas ruas na tela de confirmar (embarque -> destino).
   List<Coords> rotaPrevia = [];
   List<Ride> history = [];
@@ -279,6 +284,8 @@ class RideState extends ChangeNotifier {
     );
 
     cupomCodigo = null;
+    // Guarda antes de novaViagem() limpar a rota da confirmacao.
+    final caminho = semDestino ? const <Coords>[] : List<Coords>.of(rotaPrevia);
     novaViagem();
     if (ride.status == RideStatus.scheduled) {
       // Agendada nao abre a tela de procura: fica na lista ate o horario.
@@ -290,6 +297,7 @@ class RideState extends ChangeNotifier {
     activeRide = ride;
     driverRoute = [];
     tripRoute = [];
+    _caminhoDoPedido = caminho;
     await _persist();
     notifyListeners();
     _acompanhar();
@@ -525,6 +533,18 @@ class RideState extends ChangeNotifier {
     }
     _rotaEm = agora;
     _rotaFase = fase;
+    // Comecou a viagem no embarque: o caminho do orcamento e a mesma rota.
+    // Com o carro em cima dele (ate 150 m), usa ele (sem pedir a TomTom).
+    final c = _caminhoDoPedido;
+    final daMesmaCorrida = c.length > 2 &&
+        distanceKm(c.first, r.pickup.coords) <= 0.15 &&
+        distanceKm(c.last, r.dropoff.coords) <= 0.15;
+    if (emViagem && _rotasRefeitas == 0 && daMesmaCorrida && trechoMaisPerto(carro.position, c).$2 <= 150) {
+      tripRoute = _caminhoDoPedido;
+      driverRoute = [];
+      notifyListeners();
+      return;
+    }
     final pontos = await rotaPelaRua(carro.position, emViagem ? r.dropoff.coords : r.pickup.coords);
     if (pontos == null || activeRide?.id != r.id) return;
     if (emViagem) {

@@ -750,12 +750,14 @@ rota() { get "/geo/rota?deLat=$1&deLng=$2&paraLat=$3&paraLng=$4" "$5" >/dev/null
 if [ -n "$RMED" ]; then
   for t in 1 2 3; do sleep 2; get /driver/rides/offers "$TM" | jq -e --arg r "$RMED" '[.data[] | select(.rideId==$r)] | length == 1' >/dev/null && break; done
   post "/driver/rides/$RMED/accept" '{}' "$TM" >/dev/null
-  rota -18.0130 -49.3550 -18.0125 -49.3547 "$TM"   # motorista: ate o embarque
-  rota -18.0125 -49.3547 -18.0050 -49.3610 "$TM"   # motorista: a viagem (para mostrar)
+  # Etapa 4 (30/10/2026): o app do motorista pede as 2 rotas quando o
+  # chamado chega e as usa ao aceitar e ao iniciar (com o carro em cima da
+  # linha); o passageiro usa o caminho do orcamento na viagem. O servidor
+  # nao pede rota para o chamado nem no fim (medida dentro do teto).
+  rota -18.0130 -49.3550 -18.0125 -49.3547 "$TM"   # motorista: ate o embarque (chamado)
+  rota -18.0125 -49.3547 -18.0050 -49.3610 "$TM"   # motorista: a viagem (chamado)
   rota -18.0130 -49.3550 -18.0125 -49.3547 "$TP"   # passageiro: o carro vindo
   for passo in arriving arrived start; do post "/driver/rides/$RMED/$passo" '{"latitude":-18.0126,"longitude":-49.3548}' "$TM" >/dev/null; done
-  rota -18.0126 -49.3548 -18.0050 -49.3610 "$TM"   # motorista: em viagem, de onde esta
-  rota -18.0126 -49.3548 -18.0050 -49.3610 "$TP"   # passageiro: em viagem
   post "/driver/rides/$RMED/finish" '{"distanceMeters":1400,"stoppedSeconds":0,"latitude":-18.0050,"longitude":-49.3610}' "$TM" >/dev/null
 fi
 sleep 2
@@ -763,6 +765,8 @@ U1=$(uso_total)
 MED=$(python3 -c "import json,sys; a=json.loads(sys.argv[1] or '{}'); b=json.loads(sys.argv[2] or '{}'); d={k:b.get(k,0)-a.get(k,0) for k in b}; print(sum(d.values()), json.dumps(d))" "$U0" "$U1")
 NMED=${MED%% *}
 [ "${NMED:-0}" -ge 3 ] 2>/dev/null && [ "${NMED:-99}" -le 15 ] 2>/dev/null && ok "TomTom: $NMED chamadas numa corrida completa simulada (por servico: ${MED#* }) — sem guardado no servidor" || falha "TomTom: chamadas por corrida" "$MED"
+NROT=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('routing',0))" "${MED#* }" 2>/dev/null)
+[ "${NROT:-99}" -le 4 ] 2>/dev/null && ok "TomTom: $NROT rotas por corrida (eram 8: orcamento 1, chamado no servidor 1, apps 5, fim 1)" || falha "TomTom: rotas por corrida (esperado ate 4)" "$MED"
 
 # ================= Painel da Central =================
 X=$(get /admin/overview "$TA")

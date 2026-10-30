@@ -249,6 +249,28 @@ class RideOffer {
     final parts = passengerName.split(' ').where((p) => p.isNotEmpty).take(2);
     return parts.map((p) => p[0].toUpperCase()).join();
   }
+
+  /// Mesma oferta com a distancia ate o embarque pelas ruas (a rota que o
+  /// proprio app pediu quando o chamado chegou).
+  RideOffer comAteEmbarque(int metros) => RideOffer(
+        id: id,
+        code: code,
+        passengerName: passengerName,
+        passengerRating: passengerRating,
+        pickupAddress: pickupAddress,
+        pickupCoords: pickupCoords,
+        dropoffAddress: dropoffAddress,
+        dropoffCoords: dropoffCoords,
+        distanceToPickupMeters: metros,
+        tripDistanceMeters: tripDistanceMeters,
+        durationSeconds: durationSeconds,
+        fareCents: fareCents,
+        earningCents: earningCents,
+        paymentMethod: paymentMethod,
+        expiresInSeconds: expiresInSeconds,
+        paradas: paradas,
+        semDestino: semDestino,
+      );
 }
 
 /// Uma parada no caminho (etapa 3).
