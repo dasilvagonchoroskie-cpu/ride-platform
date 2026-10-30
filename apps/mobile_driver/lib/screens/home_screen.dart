@@ -100,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final driver = context.watch<DriverState>();
     final carteira = driver.carteira;
-    final avisos = avisosDo(driver);
 
     return Scaffold(
       body: Stack(
@@ -135,9 +134,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => _abrir(const ActivityScreen()),
                       ),
                       const SizedBox(height: Spacing.md),
+                      // Ponto vermelho = nao lidas contadas pelo servidor
+                      // (some ao abrir e nao volta sozinho).
                       BotaoRedondo(
                         icone: Icons.notifications,
-                        marcado: avisos.isNotEmpty,
+                        marcado: driver.naoLidas > 0,
                         onTap: () => _abrir(const AvisosScreen()),
                       ),
                       const SizedBox(height: Spacing.md),
@@ -172,7 +173,8 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (carteira != null && (carteira.isLow || carteira.isInsufficient))
+                // Pode fechar (X): so volta se o saldo piorar ou depois de 24 h.
+                if (carteira != null && driver.mostrarAvisoSaldo)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.md),
                     child: _AvisoSaldo(
@@ -180,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       bloqueado: carteira.blocking,
                       saldo: formatMoney(carteira.balanceCents),
                       onTap: () => _abrir(const WalletScreen()),
+                      onFechar: () => unawaited(driver.fecharAvisoSaldo()),
                     ),
                   ),
                 _PainelInferior(
@@ -269,12 +272,13 @@ class _PilulaGanhos extends StatelessWidget {
 }
 
 class _AvisoSaldo extends StatelessWidget {
-  const _AvisoSaldo({required this.critico, required this.saldo, required this.onTap, this.bloqueado = false});
+  const _AvisoSaldo({required this.critico, required this.saldo, required this.onTap, required this.onFechar, this.bloqueado = false});
 
   final bool critico;
   final bool bloqueado;
   final String saldo;
   final VoidCallback onTap;
+  final VoidCallback onFechar;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +292,7 @@ class _AvisoSaldo extends StatelessWidget {
         borderRadius: BorderRadius.circular(Radii.sm),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.md),
+          padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.xs, Spacing.xs, Spacing.xs),
           child: Row(
             children: [
               Icon(Icons.error, color: cor),
@@ -303,7 +307,11 @@ class _AvisoSaldo extends StatelessWidget {
                   style: AppText.body.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+              IconButton(
+                tooltip: 'Fechar aviso',
+                onPressed: onFechar,
+                icon: const Icon(Icons.close, color: AppColors.textMuted),
+              ),
             ],
           ),
         ),

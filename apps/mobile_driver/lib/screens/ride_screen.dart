@@ -15,6 +15,7 @@ import '../widgets/deslizar.dart';
 import '../widgets/ride_map.dart';
 import 'chat_screen.dart';
 import 'sos_screen.dart';
+import 'wallet_screen.dart';
 
 /// Execucao da corrida em 3 etapas:
 /// 1. A caminho do passageiro (navegar, ligar, "Cheguei ao local");
@@ -95,14 +96,25 @@ class RideScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: Spacing.sm),
-                        if (fase != RidePhase.completed)
-                          FloatingActionButton(
-                            heroTag: 'sos-corrida',
-                            backgroundColor: AppColors.danger,
-                            tooltip: 'SOS',
-                            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SosScreen())),
-                            child: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-                          ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (fase != RidePhase.completed)
+                              FloatingActionButton(
+                                heroTag: 'sos-corrida',
+                                backgroundColor: AppColors.danger,
+                                tooltip: 'SOS',
+                                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SosScreen())),
+                                child: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                              ),
+                            // Saldo baixo durante a corrida: so este icone
+                            // pequeno (sem faixa cobrindo mapa ou botoes).
+                            if (d.saldoEmAlerta) ...[
+                              const SizedBox(height: Spacing.sm),
+                              _IconeSaldo(critico: d.carteira?.isInsufficient == true),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -679,6 +691,36 @@ class _Estrelas extends StatelessWidget {
             icon: Icon((nota ?? 0) >= i ? Icons.star : Icons.star_border, color: AppColors.gold),
           ),
       ],
+    );
+  }
+}
+
+/// Icone pequeno de saldo baixo durante a corrida (Evandro, 30/10/2026).
+class _IconeSaldo extends StatelessWidget {
+  const _IconeSaldo({required this.critico});
+
+  final bool critico;
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = critico ? AppColors.danger : AppColors.warning;
+    return Tooltip(
+      message: critico ? 'Saldo insuficiente' : 'Saldo se esgotando',
+      child: Material(
+        color: AppColors.surface,
+        shape: const CircleBorder(),
+        elevation: 2,
+        child: InkWell(
+          key: const ValueKey('icone-saldo-corrida'),
+          customBorder: const CircleBorder(),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const WalletScreen())),
+          child: SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(Icons.account_balance_wallet, size: 20, color: cor),
+          ),
+        ),
+      ),
     );
   }
 }

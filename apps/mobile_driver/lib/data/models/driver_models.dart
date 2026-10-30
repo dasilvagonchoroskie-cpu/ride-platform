@@ -569,10 +569,15 @@ class WalletInfo {
     required this.central,
     required this.entries,
     this.blocking = false,
+    this.warningCents,
   });
 
   final int balanceCents;
   final int minimumCents;
+
+  /// Abaixo disto o servidor diz "low" (Saldo se esgotando). A Central muda
+  /// por cidade; servidor antigo nao manda.
+  final int? warningCents;
 
   /// A Central ligou o bloqueio e o saldo esta abaixo do minimo: nao chega
   /// chamado ate recarregar.
@@ -591,6 +596,7 @@ class WalletInfo {
         minimumCents: _int(j['minimumCents']),
         status: j['status'] as String? ?? 'ok',
         blocking: j['blocking'] == true,
+        warningCents: (j['warningCents'] as num?)?.toInt(),
         central: CentralContact.fromJson(j['central'] as Map<String, dynamic>?),
         entries: [
           for (final t in (j['transactions'] as List<dynamic>? ?? const []))
@@ -646,5 +652,44 @@ class RideHistoryItem {
         dropoffAddress: j['dropoffAddress'] as String? ?? '',
         fareCents: _int(j['finalFareCents'] ?? j['estimatedFareCents']),
         earningCents: _int(j['driverEarningCents']),
+      );
+}
+
+/// Notificacao do sino: fica no servidor, so da conta do motorista
+/// (Evandro, 30/10/2026: o ponto vermelho nao pode voltar sozinho).
+class Notificacao {
+  const Notificacao({
+    required this.id,
+    required this.titulo,
+    required this.texto,
+    required this.tipo,
+    required this.criadaEm,
+    required this.lida,
+    this.abrir,
+  });
+
+  final String id;
+  final String titulo;
+  final String texto;
+
+  /// conta | carro | categoria | documento | carteira | saque | dados
+  final String tipo;
+
+  /// Tela que abre ao tocar: carteira | carros | documentos | dados | saques.
+  final String? abrir;
+  final DateTime criadaEm;
+  final bool lida;
+
+  Notificacao comoLida() =>
+      Notificacao(id: id, titulo: titulo, texto: texto, tipo: tipo, criadaEm: criadaEm, lida: true, abrir: abrir);
+
+  factory Notificacao.fromJson(Map<String, dynamic> j) => Notificacao(
+        id: j['id'] as String? ?? '',
+        titulo: j['titulo'] as String? ?? '',
+        texto: j['texto'] as String? ?? '',
+        tipo: j['tipo'] as String? ?? 'aviso',
+        abrir: j['abrir'] as String?,
+        criadaEm: DateTime.tryParse(j['criadaEm'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+        lida: j['lida'] == true,
       );
 }

@@ -212,6 +212,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (activeRide != null) await _lerTaximetro();
+    await _lerAvisoSaldoFechado();
     // Mapa primeiro: a ultima posicao guardada ja abre o mapa.
     await _lerPosicaoGuardada();
 
@@ -476,6 +477,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
     // Garante o vigia de chamados de pe (o Android pode ter derrubado).
     if (isOnline) unawaited(_ligarServicoNativo());
+    if (profile != null && isApproved) unawaited(conferirNaoLidas());
     // Aceitou na tela de chamado nativa e voltou para o app: abre na corrida.
     if (activeRide == null && profile != null && isApproved) unawaited(retomarCorridaDoServidor());
   }
@@ -886,6 +888,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         refreshFromServer();
       } else if (profile != null) {
         conferirCarteira();
+        // Ponto vermelho do sino: o servidor conta as nao lidas (1 vez por minuto).
+        if (_voltasDoSino++ % 3 == 0) unawaited(conferirNaoLidas());
       }
     });
   }
@@ -907,20 +911,29 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       final mudou = idUltimo != null && _ultimoLancamento != null && idUltimo != _ultimoLancamento;
       final primeiraVez = _ultimoLancamento == null && _estavaBloqueado == null;
 
-      if (mudou && ultimo?['kind'] == 'CREDIT') {
+      // Durante a corrida nada de faixa embaixo cobrindo os botoes: a recarga
+      // fica no sino e o saldo aparece como um icone pequeno no alto.
+      final emCorrida = activeRide != null;
+      if (!emCorrida && mudou && ultimo?['kind'] == 'CREDIT') {
         final valor = (ultimo?['amountCents'] as num?)?.toInt() ?? 0;
         avisar('Recarga confirmada: +${formatMoney(valor)}. Saldo: ${formatMoney(saldo)}.');
-      } else if (mudou && ultimo?['kind'] == 'DEBIT' && (ultimo?['description'] as String? ?? '').isNotEmpty) {
+      } else if (!emCorrida && mudou && ultimo?['kind'] == 'DEBIT' && (ultimo?['description'] as String? ?? '').isNotEmpty) {
         final valor = (ultimo?['amountCents'] as num?)?.toInt() ?? 0;
         final desc = ultimo?['description'] as String? ?? '';
         if (!desc.toLowerCase().contains('comiss')) {
           avisar('Saldo removido pela Central: -${formatMoney(valor.abs())} ($desc). Saldo: ${formatMoney(saldo)}.');
         }
       }
-      if (!primeiraVez && bloqueado && _estavaBloqueado == false) {
+      if (!primeiraVez && !emCorrida && bloqueado && _estavaBloqueado == false) {
         _avisar('Saldo insuficiente: você não recebe corridas até fazer uma recarga com a Central.');
       }
-      final precisaRecarregar = mudou || _estavaBloqueado != bloqueado || carteira == null || carteira!.balanceCents != saldo;
+      final status = r['status'] as String?;
+      final precisaRecarregar = mudou ||
+          _estavaBloqueado != bloqueado ||
+          carteira == null ||
+          carteira!.balanceCents != saldo ||
+          (status != null && status != carteira!.status);
+      if (mudou) unawaited(conferirNaoLidas());
       _ultimoLancamento = idUltimo ?? _ultimoLancamento;
       _estavaBloqueado = bloqueado;
       if (precisaRecarregar) await carregarCarteira();
@@ -1930,6 +1943,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       carregarHoje(),
       carregarCarteira(),
       sincronizarCadastro(),
+      conferirNaoLidas(),
     ]);
   }
 
@@ -1955,11 +1969,143 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     await carregarAtividade('day', 0);
   }
 
+  // ===================== Sino (notificacoes) =====================
+  // Evandro, 30/10/2026: ao abrir a lista marca como lidas e o ponto some;
+  // as nao lidas sao contadas pelo servidor, para o ponto nao voltar sozinho.
+
+  /// Nao lidas, contadas pelo servidor (ponto vermelho do sino).
+  int naoLidas = 0;
+
+  /// Lista do sino (null = ainda nao carregou).
+  List<Notificacao>? notificacoes;
+  bool falhouNotificacoes = false;
+  int _voltasDoSino = 0;
+
+  int _numero(Object? r) => r is Map ? ((r['naoLidas'] as num?)?.toInt() ?? 0) : 0;
+
+  Future<void> conferirNaoLidas() async {
+    if (!AppConfig.hasApi || profile == null) return;
+    try {
+      final n = _numero(await _client.request('GET', '/notificacoes/nao-lidas'));
+      if (n != naoLidas) {
+        naoLidas = n;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Sem rede (ou servidor antigo): fica como estava.
+    }
+  }
+
+  Future<void> carregarNotificacoes() async {
+    if (!AppConfig.hasApi) return;
+    try {
+      final r = await _client.request('GET', '/notificacoes') as Map<String, dynamic>;
+      notificacoes = [
+        for (final n in (r['itens'] as List<dynamic>? ?? const [])) Notificacao.fromJson(n as Map<String, dynamic>),
+      ];
+      naoLidas = _numero(r);
+      falhouNotificacoes = false;
+    } catch (_) {
+      falhouNotificacoes = true;
+    }
+    notifyListeners();
+  }
+
+  /// Marca todas como lidas (o ponto some na hora; o servidor confirma).
+  Future<void> marcarNotificacoesLidas() async {
+    naoLidas = 0;
+    notificacoes = notificacoes?.map((n) => n.comoLida()).toList();
+    notifyListeners();
+    if (!AppConfig.hasApi) return;
+    try {
+      naoLidas = _numero(await _client.request('POST', '/notificacoes/lidas', body: const {}));
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: na proxima abertura marca de novo.
+    }
+  }
+
+  /// Apaga no servidor (so da conta deste motorista). Falhou: traz a lista de volta.
+  Future<bool> apagarNotificacoes(List<String> ids) async {
+    if (ids.isEmpty) return true;
+    notificacoes = notificacoes?.where((n) => !ids.contains(n.id)).toList();
+    notifyListeners();
+    if (!AppConfig.hasApi) return true;
+    try {
+      naoLidas = _numero(await _client.request('POST', '/notificacoes/apagar', body: {'ids': ids}));
+      notifyListeners();
+      return true;
+    } catch (_) {
+      await carregarNotificacoes();
+      avisar('Não foi possível apagar agora. Tente de novo.');
+      return false;
+    }
+  }
+
+  // ============ Aviso "Saldo se esgotando" (pode fechar) ============
+  // Fechado (X), so volta se o saldo piorar (de "se esgotando" para "sem
+  // saldo") ou depois de 24 horas.
+
+  /// Relogio do aviso (o teste troca para "passar" um dia).
+  DateTime Function() relogio = DateTime.now;
+  DateTime? _avisoSaldoFechadoEm;
+  int _avisoSaldoFechadoNivel = 0;
+
+  /// 0 tranquilo, 1 se esgotando, 2 sem saldo.
+  int get _nivelDoSaldo {
+    final c = carteira;
+    if (c == null) return 0;
+    return c.isInsufficient ? 2 : (c.isLow ? 1 : 0);
+  }
+
+  /// Saldo baixo agora (icone pequeno durante a corrida).
+  bool get saldoEmAlerta => _nivelDoSaldo > 0;
+
+  /// A faixa de aviso aparece na tela inicial?
+  bool get mostrarAvisoSaldo {
+    final nivel = _nivelDoSaldo;
+    if (nivel == 0) return false;
+    final em = _avisoSaldoFechadoEm;
+    if (em == null) return true;
+    if (nivel > _avisoSaldoFechadoNivel) return true;
+    return relogio().difference(em) >= const Duration(hours: 24);
+  }
+
+  Future<void> fecharAvisoSaldo() async {
+    _avisoSaldoFechadoEm = relogio();
+    _avisoSaldoFechadoNivel = _nivelDoSaldo;
+    notifyListeners();
+    await AppStorage.write(
+      AppStorage.avisoSaldoFechado,
+      jsonEncode({'em': _avisoSaldoFechadoEm!.toIso8601String(), 'nivel': _avisoSaldoFechadoNivel}),
+    );
+  }
+
+  Future<void> _lerAvisoSaldoFechado() async {
+    try {
+      final raw = await AppStorage.read(AppStorage.avisoSaldoFechado);
+      if (raw == null || raw.isEmpty) return;
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      _avisoSaldoFechadoEm = DateTime.tryParse(j['em'] as String? ?? '');
+      _avisoSaldoFechadoNivel = (j['nivel'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      _avisoSaldoFechadoEm = null;
+    }
+  }
+
+  Future<void> _esquecerAvisoSaldoFechado() async {
+    _avisoSaldoFechadoEm = null;
+    _avisoSaldoFechadoNivel = 0;
+    await AppStorage.remove(AppStorage.avisoSaldoFechado);
+  }
+
   Future<void> carregarCarteira() async {
     if (!AppConfig.hasApi) return;
     try {
       final r = await _client.request('GET', '/driver/wallet') as Map<String, dynamic>;
       carteira = WalletInfo.fromJson(r);
+      // Recarregou (saldo ok): a proxima queda mostra o aviso de novo.
+      if (_nivelDoSaldo == 0 && _avisoSaldoFechadoEm != null) await _esquecerAvisoSaldoFechado();
       notifyListeners();
     } catch (_) {
       // Sem rede: fica o ultimo valor conhecido.
@@ -2184,6 +2330,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     _statusTimer?.cancel();
     _pararVigia();
     telefonePassageiro = null;
+    naoLidas = 0;
+    notificacoes = null;
+    _avisoSaldoFechadoEm = null;
     await CorridasNativo.parar();
     await AppStorage.clearDriverSession();
     await MapaConfig.esquecer();

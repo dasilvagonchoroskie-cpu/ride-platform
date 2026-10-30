@@ -18,6 +18,10 @@ class AppStorage {
   /// (pedido do Evandro, 29/10/2026).
   static const String ultimaPosicao = 'ride.ultimaPosicao';
 
+  /// Quando o motorista fechou (X) o aviso "Saldo se esgotando" e em que
+  /// nivel estava (1 se esgotando, 2 sem saldo).
+  static const String avisoSaldoFechado = 'ride.avisoSaldoFechado';
+
   static Future<void> write(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
@@ -44,6 +48,7 @@ class AppStorage {
     await prefs.remove(activeRide);
     await prefs.remove(taximetro);
     await prefs.remove(ultimaPosicao);
+    await prefs.remove(avisoSaldoFechado);
   }
 
   static Future<void> clearSession() async {
