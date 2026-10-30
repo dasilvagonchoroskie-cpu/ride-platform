@@ -8,6 +8,7 @@ import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { CreateVehicleInput, UpdateVehicleInput } from '@ride/shared';
 import { decodificarFoto, soArquivosDoBanco } from '../arquivos/arquivos.service';
 import { lerCategorias } from '../rides/categorias';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import {
   CHAVE_VEICULOS,
   carroLiberado,
@@ -41,7 +42,10 @@ export type CarroPublico = Vehicle & {
 export class VehiclesService {
   private readonly logger = new Logger(VehiclesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly caixa: CaixaDeEntradaService,
+  ) {}
 
   // --------------------------- SITUACAO ---------------------------
 
@@ -160,6 +164,13 @@ export class VehiclesService {
         after: { category: aprovar ? pedida : v.category, pedida, motivo: motivo ?? null },
       },
     });
+    const nomeDaCategoria = (await lerCategorias(this.prisma)).find((c) => c.codigo === pedida)?.nome ?? pedida;
+    await this.caixa.avisarMotorista(
+      v.driverId,
+      aprovar ? `Categoria ${nomeDaCategoria} aprovada` : `Categoria ${nomeDaCategoria} recusada`,
+      aprovar ? `O carro ${v.plate} já recebe corridas ${nomeDaCategoria}.` : `Carro ${v.plate}: ${motivo!.trim()}`,
+      { tipo: 'categoria', abrir: 'carros' },
+    );
     this.logger.log(`Carro ${v.plate}: Central ${aprovar ? 'aprovou' : 'recusou'} a categoria ${pedida}`);
     return this.carrosDoMotorista(v.driverId);
   }
@@ -488,6 +499,12 @@ export class VehiclesService {
         after: { plate: v.plate, motivo: motivo ?? null },
       },
     });
+    await this.caixa.avisarMotorista(
+      v.driverId,
+      aprovar ? `Carro ${v.plate} aprovado` : `Carro ${v.plate} recusado`,
+      aprovar ? `${v.model} liberado pela Central.` : motivo!.trim(),
+      { tipo: 'carro', abrir: 'carros' },
+    );
     return this.carrosDoMotorista(v.driverId);
   }
 

@@ -15,6 +15,7 @@ import { PracasService } from '../pracas/pracas.service';
 import { decodificarFoto } from '../arquivos/arquivos.service';
 import { aparenciaDoApp, CHAVE_APARENCIA, gravarAparencia, lerAparencia } from './aparencia';
 import { mapaDoApp } from './mapa.config';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { apagarAviso, gravarCidades, lerAvisos, lerCidades, publicarAviso, whatsappDaCentral } from './operacao.store';
 
 const cidadesSchema = z.object({
@@ -150,7 +151,10 @@ export class AdminAparenciaController {
 @UseGuards(DonoGravaGuard)
 @Controller('admin/operacao')
 export class AdminOperacaoController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly caixa: CaixaDeEntradaService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Cidades atendidas e avisos publicados' })
@@ -182,6 +186,9 @@ export class AdminOperacaoController {
   @Delete('avisos/:id')
   @ApiOperation({ summary: 'Apaga um aviso' })
   async apagar(@CurrentUser('id') adminId: string, @Param('id') id: string) {
-    return { cidades: await lerCidades(this.prisma), avisos: await apagarAviso(this.prisma, id, adminId) };
+    const avisos = await apagarAviso(this.prisma, id, adminId);
+    // Some tambem do sino de quem ja tinha recebido.
+    await this.caixa.tirarAvisoDaCentral(id);
+    return { cidades: await lerCidades(this.prisma), avisos };
   }
 }

@@ -1029,3 +1029,36 @@ class DestinoRecente {
         ),
       );
 }
+
+/// Notificacao do sino: fica no servidor, so da conta do passageiro
+/// (avisos da Central e avisos da conta). Evandro, 30/10/2026.
+class Notificacao {
+  const Notificacao({
+    required this.id,
+    required this.titulo,
+    required this.texto,
+    required this.tipo,
+    required this.criadaEm,
+    required this.lida,
+  });
+
+  final String id;
+  final String titulo;
+  final String texto;
+
+  /// aviso-central | dados | conta ...
+  final String tipo;
+  final DateTime criadaEm;
+  final bool lida;
+
+  Notificacao comoLida() => Notificacao(id: id, titulo: titulo, texto: texto, tipo: tipo, criadaEm: criadaEm, lida: true);
+
+  factory Notificacao.fromJson(Map<String, dynamic> j) => Notificacao(
+        id: j['id'] as String? ?? '',
+        titulo: j['titulo'] as String? ?? '',
+        texto: j['texto'] as String? ?? '',
+        tipo: j['tipo'] as String? ?? 'aviso',
+        criadaEm: DateTime.tryParse(j['criadaEm'] as String? ?? '')?.toLocal() ?? DateTime.now(),
+        lida: j['lida'] == true,
+      );
+}

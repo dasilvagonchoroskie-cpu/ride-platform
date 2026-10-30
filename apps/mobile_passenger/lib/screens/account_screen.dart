@@ -54,8 +54,11 @@ class AccountScreen extends StatelessWidget {
     );
     if (sair != true || !context.mounted) return;
     final corridas = context.read<RideState>();
+    final config = context.read<ConfigState>();
     await context.read<AuthState>().logout();
     await corridas.limpar();
+    // A proxima conta tem o seu proprio sino.
+    config.esquecerNotificacoes();
   }
 
   /// Etapa 4 (Evandro, 29/10/2026): "Apagar tudo" do historico de destinos.

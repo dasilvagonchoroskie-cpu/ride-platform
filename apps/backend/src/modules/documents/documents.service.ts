@@ -6,7 +6,21 @@ import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { StorageService } from '../../integrations/storage/storage.service';
 import { DriversService } from '../drivers/drivers.service';
 import { soArquivosDoBanco } from '../arquivos/arquivos.service';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { RequestDocumentUploadInput, ReviewDocumentInput } from '@ride/shared';
+
+/** Nome que o motorista entende, para o aviso no sino. */
+const NOME_DO_DOCUMENTO: Record<string, string> = {
+  PROFILE_PHOTO: 'Foto de perfil',
+  CNH_FRONT: 'CNH (frente)',
+  CNH_BACK: 'CNH (verso)',
+  CRLV: 'CRLV do carro',
+  VEHICLE_FRONT: 'Foto da frente do carro',
+  VEHICLE_BACK: 'Foto de trás do carro',
+  VEHICLE_PLATE: 'Foto da placa',
+  RESIDENCE_PROOF: 'Comprovante de endereço',
+  CRIMINAL_RECORD: 'Antecedentes criminais',
+};
 
 @Injectable()
 export class DocumentsService {
@@ -16,6 +30,7 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly drivers: DriversService,
+    private readonly caixa: CaixaDeEntradaService,
   ) {}
 
   /** Passo 1: devolve URL assinada para o app enviar o arquivo direto ao storage. */
@@ -150,6 +165,15 @@ export class DocumentsService {
     });
 
     await this.depoisDaConferencia(updated);
+    const nome = NOME_DO_DOCUMENTO[updated.type] ?? 'Documento';
+    await this.caixa.avisarMotorista(
+      updated.driverId,
+      updated.status === DocumentStatus.APPROVED ? `${nome}: aprovado` : `${nome}: recusado`,
+      updated.status === DocumentStatus.APPROVED
+        ? 'A Central conferiu e aprovou.'
+        : `${updated.rejectionReason ?? 'A Central recusou.'} Envie de novo pelo aplicativo.`,
+      { tipo: 'documento', abrir: 'documentos' },
+    );
 
     const progress = await this.drivers.getDocumentProgress(document.driverId);
     this.logger.log(`Documento ${documentId} -> ${updated.status} por ${reviewerId}`);

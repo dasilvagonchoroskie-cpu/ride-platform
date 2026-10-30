@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show Color;
 
@@ -47,8 +48,100 @@ class ConfigState extends ChangeNotifier {
   Color get corDaMarca => Marca.cor;
   String get nomeDoApp => Marca.nome;
 
-  /// Ha aviso mais novo do que o ultimo que a pessoa abriu.
-  bool get temAvisoNovo => avisos.isNotEmpty && avisos.first.id != _ultimoVisto;
+  /// Ponto vermelho do sino: nao lidas contadas pelo SERVIDOR (so desta
+  /// conta). Antes era "aviso mais novo que o ultimo aberto", guardado no
+  /// celular: a Central apagar o aviso mais novo fazia o ponto voltar sozinho.
+  /// Servidor antigo (sem a caixa): continua o jeito antigo.
+  bool get temAvisoNovo => caixaAntiga ? (avisos.isNotEmpty && avisos.first.id != _ultimoVisto) : naoLidas > 0;
+
+  // ===================== Sino (caixa do servidor) =====================
+
+  /// Nao lidas desta conta (servidor).
+  int naoLidas = 0;
+
+  /// Lista do sino (null = ainda nao carregou).
+  List<Notificacao>? notificacoes;
+  bool falhouNotificacoes = false;
+
+  /// O servidor respondeu "nao existe" (montagem antiga): usa os avisos do /app/config.
+  bool caixaAntiga = false;
+
+  int _numero(Object? r) => r is Map ? ((r['naoLidas'] as num?)?.toInt() ?? 0) : 0;
+
+  Future<bool> _logado() async => ((await AppStorage.read(AppStorage.accessToken)) ?? '').isNotEmpty;
+
+  Future<void> conferirNaoLidas() async {
+    if (!AppConfig.hasApi || !await _logado()) return;
+    try {
+      final n = _numero(await _client.request('GET', '/notificacoes/nao-lidas'));
+      caixaAntiga = false;
+      if (n != naoLidas) naoLidas = n;
+      notifyListeners();
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) {
+        caixaAntiga = true;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Sem rede: fica como estava.
+    }
+  }
+
+  Future<void> carregarNotificacoes() async {
+    if (!AppConfig.hasApi || !await _logado()) return;
+    try {
+      final r = await _client.request('GET', '/notificacoes') as Map<String, dynamic>;
+      notificacoes = [
+        for (final n in (r['itens'] as List<dynamic>? ?? const [])) Notificacao.fromJson(n as Map<String, dynamic>),
+      ];
+      naoLidas = _numero(r);
+      caixaAntiga = false;
+      falhouNotificacoes = false;
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) caixaAntiga = true;
+      falhouNotificacoes = !caixaAntiga;
+    } catch (_) {
+      falhouNotificacoes = true;
+    }
+    notifyListeners();
+  }
+
+  /// Marca todas como lidas: o ponto some na hora (o servidor confirma).
+  Future<void> marcarNotificacoesLidas() async {
+    naoLidas = 0;
+    notificacoes = notificacoes?.map((n) => n.comoLida()).toList();
+    notifyListeners();
+    if (!AppConfig.hasApi || caixaAntiga) return;
+    try {
+      naoLidas = _numero(await _client.request('POST', '/notificacoes/lidas', body: const {}));
+      notifyListeners();
+    } catch (_) {
+      // Sem rede: marca de novo na proxima abertura.
+    }
+  }
+
+  /// Apaga no servidor (so desta conta). Falhou: a lista volta.
+  Future<bool> apagarNotificacoes(List<String> ids) async {
+    if (ids.isEmpty) return true;
+    notificacoes = notificacoes?.where((n) => !ids.contains(n.id)).toList();
+    notifyListeners();
+    if (!AppConfig.hasApi) return true;
+    try {
+      naoLidas = _numero(await _client.request('POST', '/notificacoes/apagar', body: {'ids': ids}));
+      notifyListeners();
+      return true;
+    } catch (_) {
+      await carregarNotificacoes();
+      return false;
+    }
+  }
+
+  /// Saiu da conta: o sino fica vazio (a proxima conta tem o seu).
+  void esquecerNotificacoes() {
+    naoLidas = 0;
+    notificacoes = null;
+    notifyListeners();
+  }
 
   Future<void> iniciar() async {
     _ultimoVisto = await AppStorage.read(AppStorage.avisoVisto);
@@ -75,6 +168,7 @@ class ConfigState extends ChangeNotifier {
       carregado = true;
       falhou = false;
       await AppStorage.write(AppStorage.configApp, jsonEncode(data));
+      unawaited(conferirNaoLidas());
     } catch (_) {
       falhou = true;
     } finally {

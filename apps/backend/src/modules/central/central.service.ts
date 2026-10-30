@@ -10,6 +10,7 @@ import { PracasService } from '../pracas/pracas.service';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { avisarOfertaNova } from '../rides/ofertas-ao-vivo';
 import { PushService } from '../../integrations/notifications/push.service';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { DadosPessoaisService } from './dados-pessoais.service';
 import { PedidosExclusaoService } from './pedidos-exclusao.service';
 
@@ -59,6 +60,7 @@ export class CentralService {
     private readonly vehicles: VehiclesService,
     private readonly push: PushService,
     private readonly exclusoes: PedidosExclusaoService,
+    private readonly caixa: CaixaDeEntradaService,
   ) {}
 
   // ================= Visao geral =================
@@ -819,13 +821,16 @@ export class CentralService {
     const p = await this.prisma.payout.findUnique({ where: { id: payoutId } });
     if (!p) throw BusinessException.notFound('Saque nao encontrado.');
     if (p.status !== 'REQUESTED' && p.status !== 'PROCESSING') throw BusinessException.validation('Este saque ja foi decidido.');
+    const valor = (p.amountCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\u00a0/g, ' ');
     if (!pago) {
-      return this.prisma.payout.update({
+      const r = await this.prisma.payout.update({
         where: { id: payoutId },
         data: { status: 'FAILED', failureReason: motivo?.trim() || 'Recusado pela Central.', processedAt: new Date() },
       });
+      await this.caixa.avisarMotorista(p.driverId, 'Saque recusado', `${valor}: ${r.failureReason}`, { tipo: 'saque', abrir: 'saques' });
+      return r;
     }
-    return this.prisma.withTransaction(async (tx) => {
+    const feito = await this.prisma.withTransaction(async (tx) => {
       const w = await tx.wallet.upsert({ where: { driverId: p.driverId }, update: {}, create: { driverId: p.driverId } });
       if (w.balanceCents < p.amountCents) throw BusinessException.validation('Saldo da carteira ficou menor que o saque.');
       const saldo = w.balanceCents - p.amountCents;
@@ -845,6 +850,8 @@ export class CentralService {
       });
       return tx.payout.update({ where: { id: payoutId }, data: { status: 'PAID', processedAt: new Date() } });
     });
+    await this.caixa.avisarMotorista(p.driverId, 'Saque pago', `A Central fez o PIX de ${valor}.`, { tipo: 'saque', abrir: 'saques' });
+    return feito;
   }
 
   // ================= Relatorio financeiro =================

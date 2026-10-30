@@ -100,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final driver = context.watch<DriverState>();
     final carteira = driver.carteira;
-    final avisos = avisosDo(driver);
 
     return Scaffold(
       body: Stack(
@@ -126,39 +125,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _PilulaMenu(onTap: () => _abrir(const MenuScreen())),
-                  const Spacer(),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _PilulaGanhos(
-                        valor: dinheiro(driver.ganhosHojeCents, oculto: driver.ocultarValores),
-                        onTap: () => _abrir(const ActivityScreen()),
-                      ),
-                      const SizedBox(height: Spacing.md),
-                      BotaoRedondo(
-                        icone: Icons.notifications,
-                        marcado: avisos.isNotEmpty,
-                        onTap: () => _abrir(const AvisosScreen()),
-                      ),
-                      const SizedBox(height: Spacing.md),
-                      // Botao de panico sempre a mao.
-                      Material(
-                        color: AppColors.danger,
-                        shape: const CircleBorder(),
-                        elevation: 3,
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => _abrir(const SosScreen()),
-                          child: const SizedBox(
-                            width: 52,
-                            height: 52,
-                            child: Center(
-                              child: Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                  const SizedBox(width: Spacing.sm),
+                  // Ganho grande em celular pequeno (ou letra grande): encolhe
+                  // em vez de passar da tela.
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _PilulaGanhos(
+                          valor: dinheiro(driver.ganhosHojeCents, oculto: driver.ocultarValores),
+                          onTap: () => _abrir(const ActivityScreen()),
+                        ),
+                        const SizedBox(height: Spacing.md),
+                        // Ponto vermelho = nao lidas contadas pelo servidor
+                        // (some ao abrir e nao volta sozinho).
+                        BotaoRedondo(
+                          icone: Icons.notifications,
+                          marcado: driver.naoLidas > 0,
+                          onTap: () => _abrir(const AvisosScreen()),
+                        ),
+                        const SizedBox(height: Spacing.md),
+                        // Botao de panico sempre a mao.
+                        Material(
+                          color: AppColors.danger,
+                          shape: const CircleBorder(),
+                          elevation: 3,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _abrir(const SosScreen()),
+                            child: const SizedBox(
+                              width: 52,
+                              height: 52,
+                              child: Center(
+                                child: Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -172,7 +177,8 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (carteira != null && (carteira.isLow || carteira.isInsufficient))
+                // Pode fechar (X): so volta se o saldo piorar ou depois de 24 h.
+                if (carteira != null && driver.mostrarAvisoSaldo)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.md),
                     child: _AvisoSaldo(
@@ -180,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       bloqueado: carteira.blocking,
                       saldo: formatMoney(carteira.balanceCents),
                       onTap: () => _abrir(const WalletScreen()),
+                      onFechar: () => unawaited(driver.fecharAvisoSaldo()),
                     ),
                   ),
                 _PainelInferior(
@@ -257,7 +264,12 @@ class _PilulaGanhos extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(valor, style: AppText.heading.copyWith(fontSize: 21, fontWeight: FontWeight.w700)),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(valor, style: AppText.heading.copyWith(fontSize: 21, fontWeight: FontWeight.w700)),
+                ),
+              ),
               const SizedBox(width: Spacing.sm),
               const Icon(Icons.chevron_right, color: AppColors.text),
             ],
@@ -269,12 +281,13 @@ class _PilulaGanhos extends StatelessWidget {
 }
 
 class _AvisoSaldo extends StatelessWidget {
-  const _AvisoSaldo({required this.critico, required this.saldo, required this.onTap, this.bloqueado = false});
+  const _AvisoSaldo({required this.critico, required this.saldo, required this.onTap, required this.onFechar, this.bloqueado = false});
 
   final bool critico;
   final bool bloqueado;
   final String saldo;
   final VoidCallback onTap;
+  final VoidCallback onFechar;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +301,7 @@ class _AvisoSaldo extends StatelessWidget {
         borderRadius: BorderRadius.circular(Radii.sm),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.md),
+          padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.xs, Spacing.xs, Spacing.xs),
           child: Row(
             children: [
               Icon(Icons.error, color: cor),
@@ -303,7 +316,11 @@ class _AvisoSaldo extends StatelessWidget {
                   style: AppText.body.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+              IconButton(
+                tooltip: 'Fechar aviso',
+                onPressed: onFechar,
+                icon: const Icon(Icons.close, color: AppColors.textMuted),
+              ),
             ],
           ),
         ),
