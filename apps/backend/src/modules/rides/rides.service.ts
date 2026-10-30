@@ -510,8 +510,10 @@ export class RidesService {
           return {
             rideId,
             driverId: m.driverId,
-            distanceKm: (r?.distanceMeters ?? m.distanceMeters) / 1000,
-            etaSeconds: r?.durationSeconds ?? Math.round((m.distanceMeters / 1000 / 25) * 3600),
+            // Sem a rota: linha reta x 1,35 (a mesma conta do tempo de chegada
+            // que o passageiro ve), a 25 km/h.
+            distanceKm: (r?.distanceMeters ?? m.distanceMeters * 1.35) / 1000,
+            etaSeconds: r?.durationSeconds ?? Math.round(((m.distanceMeters * 1.35) / 1000 / 25) * 3600),
             expiresAt: expiraEm,
           };
         }),
@@ -532,12 +534,18 @@ export class RidesService {
   /**
    * Quantos dos motoristas mais perto (em linha reta) ganham a rota pelas
    * ruas ate o embarque, para o tempo de chegada certo. Variavel
-   * ROTA_NOS_MAIS_PROXIMOS no Render (padrao 3; 0 desliga). Cada um gasta 1
-   * pedido de rota da TomTom; no modo economia nao pede (fica a linha reta).
+   * ROTA_NOS_MAIS_PROXIMOS no Render (0 desliga). Cada um gasta 1 pedido de
+   * rota da TomTom; no modo economia nao pede (fica a linha reta).
+   *
+   * Padrao 0 desde 30/10/2026 (Etapa 4, custo da TomTom): o app do motorista
+   * ja pede a mesma rota (dele ate o embarque) quando o chamado chega e mostra
+   * a distancia e o tempo dela. O servidor manda so a conta aproximada
+   * (linha reta x 1,35 a 25 km/h) e nao paga a rota duas vezes. Nao mexe no
+   * preco (o preco vem do orcamento).
    */
   static quantosPelaRua(env: Record<string, string | undefined> = process.env): number {
-    const n = Number(env.ROTA_NOS_MAIS_PROXIMOS ?? 3);
-    return Number.isInteger(n) && n >= 0 && n <= 5 ? n : 3;
+    const n = Number(env.ROTA_NOS_MAIS_PROXIMOS ?? 0);
+    return Number.isInteger(n) && n >= 0 && n <= 5 ? n : 0;
   }
 
   private async chegadaPelaRua(
