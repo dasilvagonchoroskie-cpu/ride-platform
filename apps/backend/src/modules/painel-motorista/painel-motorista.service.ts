@@ -1,9 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { OfferStatus, RideStatus, UserRole } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { segundosOnline } from './jornada';
-import { CHAVE_BLOQUEAR, CHAVE_MINIMO, regrasDaCarteira, semSaldo } from './regras-carteira';
+import {
+  CHAVE_AVISO_SALDO,
+  CHAVE_BLOQUEAR,
+  CHAVE_MINIMO,
+  lerAvisoDeSaldo,
+  limiteDoAviso,
+  regrasDaCarteira,
+  semSaldo,
+  situacaoDoSaldo,
+} from './regras-carteira';
+import { PracasService } from '../pracas/pracas.service';
 
 /** Brasilia (UTC-3, sem horario de verao desde 2019). */
 const FUSO_MS = 3 * 60 * 60 * 1000;
@@ -33,9 +44,24 @@ function diaLocal(instante: Date): string {
   return new Date(instante.getTime() - FUSO_MS).toISOString().slice(0, 10);
 }
 
+/** 1234 -> "R$ 12,34" (texto do aviso no sino). */
+export function reais(cents: number): string {
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\u00a0/g, ' ');
+}
+
 @Injectable()
 export class PainelMotoristaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly caixa: CaixaDeEntradaService,
+    private readonly pracas: PracasService,
+  ) {}
+
+  /** Limite do aviso "Saldo se esgotando" para a cidade do motorista. */
+  async avisoDoMotorista(driverId: string, minimoCents: number): Promise<number> {
+    const praca = await this.pracas.pracaDoMotorista(driverId).catch(() => null);
+    return limiteDoAviso(await lerAvisoDeSaldo(this.prisma), praca, minimoCents).cents;
+  }
 
   /** Intervalo do periodo pedido: hoje, esta semana (seg-dom) ou este mes, recuando `offset`. */
   static intervalo(periodo: Periodo, offset: number, agora = new Date()) {
@@ -163,6 +189,7 @@ export class PainelMotoristaService {
     });
     const { minimoCents: minimo, bloquear } = await regrasDaCarteira(this.prisma);
     const saldo = carteira.balanceCents;
+    const aviso = await this.avisoDoMotorista(id, minimo);
 
     return {
       balanceCents: saldo,
@@ -171,7 +198,9 @@ export class PainelMotoristaService {
       blocking: bloquear && semSaldo(saldo, minimo),
       blockEnabled: bloquear,
       // ok: tranquilo | low: se esgotando | insufficient: abaixo do minimo
-      status: semSaldo(saldo, minimo) ? 'insufficient' : saldo < minimo * 3 ? 'low' : 'ok',
+      status: situacaoDoSaldo(saldo, minimo, aviso),
+      /** Abaixo disto aparece "Saldo se esgotando" (a Central muda por cidade). */
+      warningCents: aviso,
       central: await this.contato(),
       transactions: lancamentos.map((t) => ({
         id: t.id,
@@ -230,6 +259,14 @@ export class PainelMotoristaService {
       });
     });
 
+    await this.caixa.avisar(
+      motorista.userId,
+      debito ? 'Saldo removido pela Central' : 'Recarga confirmada',
+      debito
+        ? `-${reais(Math.abs(movimento))}${descricao?.trim() ? ` (${descricao.trim()})` : ''}.`
+        : `+${reais(movimento)} na sua carteira.`,
+      { tipo: 'carteira', abrir: 'carteira' },
+    );
     return this.carteira(driverId);
   }
 
@@ -246,11 +283,15 @@ export class PainelMotoristaService {
       orderBy: { createdAt: 'desc' },
     });
     const { minimoCents, bloquear } = await regrasDaCarteira(this.prisma);
+    const aviso = await this.avisoDoMotorista(id, minimoCents);
     return {
       balanceCents: carteira.balanceCents,
       minimumCents: minimoCents,
       blockEnabled: bloquear,
       blocking: bloquear && semSaldo(carteira.balanceCents, minimoCents),
+      // O app usa para mostrar (ou nao) "Saldo se esgotando" sem pedir o extrato.
+      status: situacaoDoSaldo(carteira.balanceCents, minimoCents, aviso),
+      warningCents: aviso,
       last: ultimo
         ? {
             id: ultimo.id,
@@ -356,6 +397,36 @@ export class PainelMotoristaService {
       });
     }
     return this.lerConfiguracao();
+  }
+
+  /** Aviso de saldo: padrao e o valor de cada cidade (Central > Carteiras / Recargas). */
+  async lerAvisoDeSaldo(praca: string | null) {
+    const { minimoCents } = await regrasDaCarteira(this.prisma);
+    const aviso = await lerAvisoDeSaldo(this.prisma);
+    const vale = limiteDoAviso(aviso, praca, minimoCents);
+    return { praca, minimoCents, padraoCents: aviso.padraoCents, porCidade: aviso.porCidade, valeCents: vale.cents, origem: vale.origem };
+  }
+
+  /** Grava o aviso da cidade (praca) ou o padrao (sem praca). null volta ao padrao/automatico. */
+  async gravarAvisoDeSaldo(praca: string | null, avisoCents: number | null, adminId: string) {
+    const aviso = await lerAvisoDeSaldo(this.prisma);
+    if (praca) {
+      if (avisoCents == null) delete aviso.porCidade[praca];
+      else aviso.porCidade[praca] = avisoCents;
+    } else {
+      aviso.padraoCents = avisoCents;
+    }
+    await this.prisma.setting.upsert({
+      where: { key: CHAVE_AVISO_SALDO },
+      update: { value: aviso as never, updatedBy: adminId },
+      create: {
+        key: CHAVE_AVISO_SALDO,
+        value: aviso as never,
+        updatedBy: adminId,
+        description: 'Aviso "Saldo se esgotando" do motorista: padrao e por cidade (centavos)',
+      },
+    });
+    return this.lerAvisoDeSaldo(praca);
   }
 
   async lerConfiguracao() {

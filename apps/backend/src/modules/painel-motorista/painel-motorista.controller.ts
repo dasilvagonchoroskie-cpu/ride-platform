@@ -8,6 +8,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { PainelMotoristaService, type Periodo } from './painel-motorista.service';
 import { PracasService } from '../pracas/pracas.service';
 import { SoDonoGuard } from '../pracas/so-dono.guard';
+import { BusinessException } from '../../common/errors/business.exception';
 
 const atividadeSchema = z.object({
   period: z.enum(['day', 'week', 'month']).default('day'),
@@ -19,6 +20,13 @@ const creditoSchema = z.object({
   /** Adicionar saldo (+) ou remover saldo (-). */
   operation: z.enum(['CREDIT', 'DEBIT']).default('CREDIT'),
   description: z.string().max(200).optional(),
+});
+
+const avisoSaldoSchema = z.object({
+  /** Cidade (id da praca); sem ela, grava o padrao de todas as cidades. */
+  praca: z.string().trim().min(1).max(80).nullable().optional(),
+  /** Em centavos; null = sem valor proprio (volta ao padrao ou ao automatico). */
+  avisoCents: z.number().int().min(0).max(1_000_000).nullable(),
 });
 
 const centralSchema = z.object({
@@ -97,6 +105,24 @@ export class AdminCarteiraController {
   @ApiOperation({ summary: 'Motoristas com o saldo da carteira (por cidade)' })
   async carteiras(@CurrentUser() user: AuthenticatedUser, @Query('praca') praca?: string) {
     return this.painel.carteiras(await this.pracas.idsDeMotoristas(await this.pracas.filtro(user, praca)));
+  }
+
+  @Get('settings/aviso-saldo')
+  @ApiOperation({ summary: 'Limite do aviso "Saldo se esgotando": padrao e por cidade' })
+  async lerAvisoDeSaldo(@CurrentUser() user: AuthenticatedUser, @Query('praca') praca?: string) {
+    return this.painel.lerAvisoDeSaldo(await this.pracas.filtro(user, praca));
+  }
+
+  @Put('settings/aviso-saldo')
+  @UseGuards(SoDonoGuard)
+  @ApiOperation({ summary: 'Grava o limite do aviso de saldo da cidade (ou o padrao, sem cidade)' })
+  async gravarAvisoDeSaldo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(new ZodValidationPipe(avisoSaldoSchema)) body: { praca?: string | null; avisoCents: number | null },
+  ) {
+    const praca = body.praca ? await this.pracas.filtro(user, body.praca) : null;
+    if (body.praca && !praca) throw BusinessException.notFound('Cidade nao encontrada.');
+    return this.painel.gravarAvisoDeSaldo(praca, body.avisoCents, user.id);
   }
 
   @Get('settings/central')
