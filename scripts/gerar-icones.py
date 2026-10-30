@@ -168,6 +168,42 @@ def tirar_fundo_claro(img: Image.Image) -> Image.Image:
     return Image.fromarray(saida.round().clip(0, 255).astype(np.uint8), 'RGBA')
 
 
+def limpar_transparencia(img: Image.Image):
+    """PNG transparente de verdade, mas com sujeira comum de exportacao.
+
+    - Nevoa quase invisivel (alfa ate 8 de 255) espalhada pelo fundo: some.
+      Sem isso o corte pelas bordas pega a imagem inteira e o desenho fica
+      pequeno e fora do centro.
+    - Miolo quase opaco (alfa 245 a 254): vira opaco (senao o azul vaza).
+    - Contorno com cor escura ou clara por baixo da transparencia: ganha a
+      cor do desenho vizinho (senao aparece uma borda suja no azul).
+    Devolve (imagem, lista de avisos).
+    """
+    a = np.asarray(img.convert('RGBA')).astype(np.float64)
+    alfa = a[..., 3]
+    avisos = []
+    nevoa = (alfa > 0) & (alfa <= 8)
+    if nevoa.sum() > 200:
+        avisos.append(f'havia uma nevoa quase invisivel em volta do desenho ({int(nevoa.sum())} pontos): removida.')
+    alfa = np.where(alfa <= 8, 0, alfa)
+    alfa = np.where(alfa >= 245, 255, alfa)
+    cheio = alfa >= 255
+    meio = (alfa > 0) & ~cheio
+    rgb = a[..., :3]
+    peso = _soma_janela(cheio.astype(np.float64), 4)
+    soma = _soma_janela(rgb * cheio[..., None], 4)
+    perto = np.where(peso[..., None] > 0, soma / np.maximum(peso, 1)[..., None], rgb)
+    if cheio.any() and meio.any():
+        lum = lambda c: (0.2126 * c[..., 0] + 0.7152 * c[..., 1] + 0.0722 * c[..., 2])
+        sujo = meio & (peso > 0) & (np.abs(lum(rgb) - lum(perto)) > 60)
+        if sujo.sum() > 50:
+            avisos.append(f'o contorno tinha cor suja por baixo da transparencia ({int(sujo.sum())} pontos): corrigido com a cor do desenho.')
+    rgb = np.where((meio & (peso > 0))[..., None], perto, rgb)
+    rgb = np.where((alfa == 0)[..., None], 0, rgb)
+    saida = np.dstack([rgb, alfa])
+    return Image.fromarray(saida.round().clip(0, 255).astype(np.uint8), 'RGBA'), avisos
+
+
 # ------------------------------------------------------- monocromatico
 
 def monocromatico(simbolo: Image.Image):
@@ -211,7 +247,7 @@ def raio_relativo(simbolo: Image.Image) -> float:
     return float(np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2).max()) / max(simbolo.size)
 
 
-def avisos_da_imagem(original: Image.Image, simbolo: Image.Image, fundo, tipo) -> list:
+def avisos_da_imagem(original: Image.Image, simbolo: Image.Image, fundo, tipo, escala: float = 0.60) -> list:
     """O que foge do padrao (nao para a geracao; so avisa)."""
     avisos = []
     if original.format != 'PNG':
@@ -224,10 +260,12 @@ def avisos_da_imagem(original: Image.Image, simbolo: Image.Image, fundo, tipo) -
         avisos.append(f'a imagem tem fundo de cor {tipo[1]} (nao e transparente nem branco): NAO removi. Mande o simbolo com fundo transparente.')
     if original.width != original.height:
         avisos.append(f'a imagem nao e quadrada ({original.width}x{original.height}); o desenho foi centralizado.')
+    # O maior uso e o icone de 1024 da App Store, com o desenho a [escala].
+    precisa = round(1024 * escala)
     if max(simbolo.size) < 512:
         avisos.append(f'desenho pequeno ({simbolo.width}x{simbolo.height}); o ideal e 1024 px (no minimo 512) para nao ficar borrado.')
-    elif max(simbolo.size) < 1024:
-        avisos.append(f'desenho de {simbolo.width}x{simbolo.height}: serve, mas o icone de 1024 da App Store fica menos nitido.')
+    elif max(simbolo.size) < precisa:
+        avisos.append(f'desenho de {simbolo.width}x{simbolo.height}: serve, mas o icone de 1024 da App Store pede {precisa} px e fica menos nitido.')
     w, h = simbolo.size
     if max(w, h) > 3 * min(w, h):
         avisos.append(f'desenho muito comprido ({w}x{h}): no icone ele fica fino; prefira um simbolo mais quadrado.')
@@ -311,11 +349,12 @@ def main() -> int:
     simbolo = original.convert('RGBA')
     if tipo in ('branco', 'xadrez'):
         simbolo = tirar_fundo_claro(simbolo)
+    simbolo, avisos_limpeza = limpar_transparencia(simbolo)
     caixa = simbolo.getchannel('A').getbbox()
     if not caixa:
         raise SystemExit('O simbolo esta vazio (todo transparente).')
     simbolo = simbolo.crop(caixa)
-    avisos = avisos_da_imagem(original, simbolo, fundo, tipo)
+    avisos = avisos_limpeza + avisos_da_imagem(original, simbolo, fundo, tipo, escala)
 
     # Adaptativo: caixa do simbolo = escala x 72 dp. Se o desenho passar do
     # circulo seguro de 66 dp (icone redondo), diminui ate caber.
