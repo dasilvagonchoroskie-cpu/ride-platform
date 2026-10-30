@@ -131,6 +131,20 @@ class _CarteiraApi {
 
   Future<Map<String, dynamic>> salvarRegras(Map<String, dynamic> dados) async =>
       await _c.request('PUT', '/admin/settings/central', body: dados) as Map<String, dynamic>;
+
+  /// Aviso "Saldo se esgotando": o da cidade escolhida no topo (ou o padrao).
+  Future<Map<String, dynamic>> avisoDeSaldo() async => await _c.request(
+        'GET',
+        '/admin/settings/aviso-saldo',
+        query: _praca == null ? null : {'praca': _praca},
+      ) as Map<String, dynamic>;
+
+  /// null = sem valor proprio (a cidade volta ao padrao; o padrao volta ao automatico).
+  Future<Map<String, dynamic>> salvarAvisoDeSaldo(int? cents) async => await _c.request(
+        'PUT',
+        '/admin/settings/aviso-saldo',
+        body: {'praca': _praca, 'avisoCents': cents},
+      ) as Map<String, dynamic>;
 }
 
 _CarteiraApi _api(BuildContext context) {
@@ -184,6 +198,9 @@ class _CarteirasTelaState extends State<CarteirasTela> {
             padding: const EdgeInsets.all(Spacing.md),
             children: [
               _Regras(minimoCents: minimo, ligado: ligado, depois: _recarregar),
+              const SizedBox(height: Spacing.md),
+              // Troca de cidade no topo: carrega o valor dela.
+              _AvisoDeSaldo(key: ValueKey('aviso-${Provider.of<PainelState>(context).api.praca ?? 'todas'}')),
               const SizedBox(height: Spacing.md),
               TextField(
                 style: AppText.body,
@@ -346,6 +363,155 @@ class _RegrasState extends State<_Regras> {
               ),
               const SizedBox(height: Spacing.sm),
               FilledButton(onPressed: _salvando ? null : _salvar, child: Text(_salvando ? 'Salvando...' : 'Salvar regras')),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Limite do aviso "Saldo se esgotando" no app do motorista, por cidade
+/// (Evandro, 30/10/2026). Escolha a cidade no topo da Central; com "Todas as
+/// cidades" muda o padrao. Sem valor, vale 3 vezes o saldo minimo.
+class _AvisoDeSaldo extends StatefulWidget {
+  const _AvisoDeSaldo({super.key});
+
+  @override
+  State<_AvisoDeSaldo> createState() => _AvisoDeSaldoState();
+}
+
+class _AvisoDeSaldoState extends State<_AvisoDeSaldo> {
+  final _valor = TextEditingController();
+  Map<String, dynamic>? _dados;
+  String? _erro;
+  bool _salvando = false;
+  bool _aberto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregar();
+  }
+
+  @override
+  void dispose() {
+    _valor.dispose();
+    super.dispose();
+  }
+
+  Future<void> _carregar() async {
+    try {
+      final d = await _api(context).avisoDeSaldo();
+      if (!mounted) return;
+      setState(() {
+        _dados = d;
+        _erro = null;
+        _valor.text = paraReais(_int(d['valeCents']));
+      });
+    } catch (e) {
+      if (mounted) setState(() => _erro = mensagemDe(e));
+    }
+  }
+
+  Future<void> _salvar({bool voltarAoPadrao = false}) async {
+    int? cents;
+    if (!voltarAoPadrao) {
+      cents = centavos(_valor.text);
+      if (cents == null || cents < 0) {
+        avisar(context, 'Valor inválido. Ex.: 30,00', erro: true);
+        return;
+      }
+    }
+    setState(() => _salvando = true);
+    final api = _api(context);
+    await tentar(
+      context,
+      () async {
+        final d = await api.salvarAvisoDeSaldo(cents);
+        if (mounted) {
+          setState(() {
+            _dados = d;
+            _valor.text = paraReais(_int(d['valeCents']));
+          });
+        }
+      },
+      sucesso: voltarAoPadrao ? 'Aviso de saldo voltou ao padrão.' : 'Aviso de saldo salvo. Vale na próxima conferência do app (até 2 minutos).',
+    );
+    if (mounted) setState(() => _salvando = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final painel = Provider.of<PainelState>(context);
+    final d = _dados;
+    final praca = painel.api.praca;
+    final nomeDaCidade = painel.eu?.pracas.where((p) => p.id == praca).firstOrNull?.rotulo ?? praca;
+    final origem = d?['origem'] as String?;
+    final minimo = _int(d?['minimoCents']);
+    return CartaoDeLista(
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: () => setState(() => _aberto = !_aberto),
+              child: Row(
+                children: [
+                  const Expanded(child: Text('Aviso "Saldo se esgotando"', style: AppText.heading)),
+                  Icon(_aberto ? Icons.expand_less : Icons.expand_more, color: AppColors.textMuted),
+                ],
+              ),
+            ),
+            const SizedBox(height: Spacing.xs),
+            if (d != null)
+              Text(
+                'O motorista vê o aviso com saldo abaixo de ${reais(_int(d['valeCents']))}'
+                '${origem == 'automatico' ? ' (automático: 3 vezes o mínimo)' : origem == 'cidade' ? ' (desta cidade)' : ' (padrão)'}.',
+                style: AppText.caption,
+              ),
+            if (_aberto) Text(
+              praca == null
+                  ? 'Padrão de todas as cidades. Para mudar só uma cidade, escolha a cidade no topo.'
+                  : 'Só em $nomeDaCidade. ${origem == 'cidade' ? 'Esta cidade tem valor próprio.' : 'Esta cidade usa o padrão.'}',
+              style: AppText.caption.copyWith(color: praca == null ? AppColors.textMuted : AppColors.brand, fontWeight: FontWeight.w600),
+            ),
+            if (_erro != null)
+              Padding(
+                padding: const EdgeInsets.only(top: Spacing.sm),
+                child: Text('Não foi possível carregar: $_erro', style: AppText.caption.copyWith(color: AppColors.danger)),
+              )
+            else if (d == null)
+              const Padding(padding: EdgeInsets.all(Spacing.md), child: Center(child: CircularProgressIndicator()))
+            else if (_aberto) ...[
+              const SizedBox(height: Spacing.sm),
+              TextField(
+                controller: _valor,
+                enabled: painel.dono,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: AppText.body,
+                decoration: InputDecoration(
+                  labelText: 'Avisar quando o saldo ficar abaixo de (R\$)',
+                  helperText: origem == 'automatico'
+                      ? 'Automático: 3 vezes o saldo mínimo (${reais(minimo * 3)}).'
+                      : 'O motorista vê o aviso abaixo deste valor e pode fechar (volta 1 vez por dia ou se piorar).',
+                  helperMaxLines: 3,
+                ),
+              ),
+              if (painel.dono) ...[
+                const SizedBox(height: Spacing.sm),
+                FilledButton(
+                  onPressed: _salvando ? null : _salvar,
+                  child: Text(_salvando ? 'Salvando...' : (praca == null ? 'Salvar aviso (todas as cidades)' : 'Salvar aviso nesta cidade')),
+                ),
+                if ((praca != null && origem == 'cidade') || (praca == null && origem == 'padrao'))
+                  TextButton(
+                    onPressed: _salvando ? null : () => _salvar(voltarAoPadrao: true),
+                    child: Text(praca == null ? 'Voltar ao automático (3 vezes o mínimo)' : 'Voltar ao padrão nesta cidade'),
+                  ),
+              ] else
+                Text('Só o dono da Central muda este valor.', style: AppText.caption.copyWith(color: AppColors.textMuted)),
             ],
           ],
         ),

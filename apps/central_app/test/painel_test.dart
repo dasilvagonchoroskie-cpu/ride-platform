@@ -120,6 +120,10 @@ final List<String> _atendimentosExclusao = [];
 /// O que a Central mandou de tarifas e categorias (metodo, caminho, cidade, corpo).
 final List<String> _pedidosDeTarifa = [];
 
+/// Aviso de saldo gravado pela Central no teste (null = automatico).
+int? _avisoSaldoCents;
+final List<String> _pedidosDeAviso = [];
+
 /// Conta de operador de uma cidade (Teutonia), e nao o dono.
 bool _operador = false;
 
@@ -549,6 +553,16 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       ],
     };
   }
+  if (caminho == '/api/admin/settings/aviso-saldo') {
+    return {
+      'praca': null,
+      'minimoCents': 1000,
+      'padraoCents': null,
+      'porCidade': <String, int>{},
+      'valeCents': _avisoSaldoCents ?? 3000,
+      'origem': _avisoSaldoCents == null ? 'automatico' : 'padrao',
+    };
+  }
   if (caminho == '/api/admin/settings/central') {
     return {
       'central': {'whatsapp': '5564999998888', 'pixKey': 'pix@fortalezamov.com.br', 'pixHolder': 'Evandro'},
@@ -621,6 +635,11 @@ MockClient _servidor() => MockClient((http.Request r) async {
       }
       if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
         _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
+      }
+      if (r.url.path == '/api/admin/settings/aviso-saldo' && r.method == 'PUT') {
+        _pedidosDeAviso.add(r.body);
+        final c = (jsonDecode(r.body) as Map)['avisoCents'];
+        _avisoSaldoCents = c is num ? c.toInt() : null;
       }
       if ((r.url.path.startsWith('/api/admin/tariffs') || r.url.path.endsWith('/category-review')) && r.method != 'GET') {
         _pedidosDeTarifa.add('${r.method} ${r.url.path} ${r.url.queryParameters['praca'] ?? '-'} ${r.body}');
@@ -1288,6 +1307,33 @@ void main() {
     await _carregar(tester);
     expect(find.textContaining('Recarga confirmada'), findsOneWidget);
     expect(find.textContaining('98,50'), findsWidgets);
+  });
+
+  // Evandro, 30/10/2026: "o limite do aviso de saldo configuravel pela
+  // Central, por cidade, em reais".
+  testWidgets('Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)', (tester) async {
+    _avisoSaldoCents = null;
+    _pedidosDeAviso.clear();
+    await _abrir(tester, const CarteirasTela());
+    await _carregar(tester);
+    expect(find.text('Aviso "Saldo se esgotando"'), findsOneWidget);
+    expect(find.textContaining('30,00 (automático: 3 vezes o mínimo)'), findsOneWidget);
+    await tester.tap(find.text('Aviso "Saldo se esgotando"'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Avisar quando o saldo ficar abaixo de (R\$)'), '25,00');
+    await tester.ensureVisible(find.text('Salvar aviso (todas as cidades)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salvar aviso (todas as cidades)'));
+    await _carregar(tester);
+    expect(_pedidosDeAviso.last, '{"praca":null,"avisoCents":2500}');
+    expect(find.textContaining('25,00 (padrão)'), findsOneWidget);
+    await tester.ensureVisible(find.text('Voltar ao automático (3 vezes o mínimo)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voltar ao automático (3 vezes o mínimo)'));
+    await _carregar(tester);
+    expect(_pedidosDeAviso.last, '{"praca":null,"avisoCents":null}');
+    expect(find.textContaining('(automático: 3 vezes o mínimo)'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   // Evandro (08/10/2026): "la na Central eu nao recebi notificacao nenhuma
