@@ -1121,6 +1121,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('ligada só nesta cidade'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).first, 'Executivo');
+    // Fecha o teclado: com o campo em foco, a lista volta a mostrar o campo.
+    await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Criar categoria'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Criar categoria'));
