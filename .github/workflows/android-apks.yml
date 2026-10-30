@@ -349,6 +349,39 @@ jobs:
           echo "sha256=$(sha256sum "$FINAL" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
           ls -la "$FINAL"
 
+      # Etapa 6 (30/10/2026): confere no APK pronto o nome que aparece no
+      # celular, o icone redondo e (se gerado) o monocromatico do Android 13+.
+      - name: Conferir nome e icones no APK
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          AAPT2="$(ls -d "$SDK"/build-tools/*/aapt2 | sort -V | tail -n 1)"
+          APK="${{ steps.apk.outputs.path }}"
+          case "${{ matrix.app }}" in
+            mobile_passenger) NOME="Fortaleza Move" ;;
+            mobile_driver) NOME="Fortaleza Move Motorista" ;;
+            central_app) NOME="Fortaleza Move Central" ;;
+          esac
+          "$AAPT2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
+          grep -q "application-label:'$NOME'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Nome no celular nao e '$NOME'"; grep application-label "$RUNNER_TEMP/badging.txt" || true; exit 1; }
+          grep -q "application-icon-" "$RUNNER_TEMP/badging.txt" || { echo "::error::APK sem icone"; exit 1; }
+          "$AAPT2" dump xmltree --file AndroidManifest.xml "$APK" | grep -q 'roundIcon' || { echo "::error::Sem android:roundIcon"; exit 1; }
+          "$AAPT2" dump resources "$APK" > "$RUNNER_TEMP/recursos.txt"
+          if ls apps/${{ matrix.app }}/android/app/src/main/res/mipmap-*/ic_launcher_monochrome.png >/dev/null 2>&1; then
+            grep -q 'mipmap/ic_launcher_monochrome' "$RUNNER_TEMP/recursos.txt" || { echo "::error::Sem o icone monocromatico"; exit 1; }
+            MONO="com monocromatico"
+          else
+            MONO="sem monocromatico (simbolo novo ainda nao gerado)"
+          fi
+          echo "OK: '$NOME', icone redondo, $MONO"
+          # Exigencias da Google Play (Etapa 7): alvo Android 16 (API 36) desde
+          # 31/08/2026 e bibliotecas nativas alinhadas em 16 KB. So avisa: a
+          # Central nao vai para a loja e o APK de teste continua saindo.
+          ALVO="$(sed -n "s/^targetSdkVersion:'\([0-9]*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt")"
+          if [ "${ALVO:-0}" -ge 36 ]; then echo "OK: alvo Android API $ALVO"; else echo "::warning::alvo API ${ALVO:-?}: a Google Play exige 36 desde 31/08/2026"; fi
+          ZIPALIGN="$(ls -d "$SDK"/build-tools/*/zipalign | sort -V | tail -n 1)"
+          if "$ZIPALIGN" -c -P 16 -v 4 "$APK" > "$RUNNER_TEMP/zipalign.txt" 2>&1; then echo "OK: bibliotecas nativas alinhadas em 16 KB"; else echo "::warning::bibliotecas nativas sem alinhamento de 16 KB"; grep -i 'BAD' "$RUNNER_TEMP/zipalign.txt" | head -n 5 || true; fi
+
       # Pacote da loja (AAB) para a Google Play (Evandro aprovou em
       # 09/10/2026). So passageiro e motorista: a Central fica fora da loja
       # (so a equipe usa). Mesma assinatura do APK = chave de envio da Play.

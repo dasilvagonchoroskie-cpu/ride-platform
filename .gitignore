@@ -57,3 +57,4 @@ google-services.json
 
 # Fotos das telas (esteira "Fotos da Central" guarda no ramo fotos-central)
 apps/*/test/fotos/
+__pycache__/
