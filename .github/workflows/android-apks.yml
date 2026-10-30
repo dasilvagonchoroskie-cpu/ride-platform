@@ -24,7 +24,7 @@ on:
   # Envio de codigo (main ou a branch de trabalho): so analise e testes dos
   # apps que mudaram. APK/AAB so pelo botao (economia de minutos, 29/10/2026).
   push:
-    branches: [main, fortaleza-move]
+    branches: ['**']
     paths:
       - 'apps/mobile_*/**'
       - 'apps/central_app/**'
@@ -67,6 +67,9 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then
             if [ -n "$ANTES" ] && git cat-file -e "$ANTES^{commit}" 2>/dev/null; then
               MUDOU=$(git diff --name-only "$ANTES" "${{ github.sha }}")
+            elif BASE=$(git merge-base origin/main "${{ github.sha }}" 2>/dev/null) && [ "$BASE" != "${{ github.sha }}" ]; then
+              # Branch nova: tudo o que mudou desde o main.
+              MUDOU=$(git diff --name-only "$BASE" "${{ github.sha }}")
             else
               MUDOU=$(git show --name-only --format= "${{ github.sha }}")
             fi
