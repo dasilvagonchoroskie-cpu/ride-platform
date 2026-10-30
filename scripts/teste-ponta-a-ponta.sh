@@ -106,6 +106,18 @@ sucesso "$X" && ok "App: configuracao publica ($(echo "$X" | jq -r '.data.cidade
 # do que vem do /geo/mapa e impresso aqui (o relatorio e publico).
 [ "$(echo "$X" | jq -r '.data.mapa.provedor')" = "tomtom" ] && ! echo "$X" | grep -q 'key=' && ok "App: configuracao publica do mapa (TomTom) sem a chave" || falha "App: mapa na configuracao publica" "$(echo "$X" | jq -c '.data.mapa | {provedor, atribuicao, temTiles: has("tiles")}')"
 X=$(get /admin/operacao "$TA"); sucesso "$X" && ok "Central: cidades e avisos carregados" || falha "Central: cidades e avisos" "$X"
+# Sino do passageiro (30/10/2026): o aviso da Central entra na caixa da conta,
+# uma vez so, e some do sino quando a Central apaga. Apagado em segundos.
+TIT="Teste automatico do sistema $SUF"
+X=$(post /admin/operacao/avisos "{\"titulo\":\"$TIT\",\"texto\":\"Pode ignorar: some em segundos.\"}" "$TA"); AVID=$(echo "$X" | jq -r '.data.avisos[0].id // empty')
+X=$(get /notificacoes "$TP"); [ "$(echo "$X" | jq -r --arg t "$TIT" '[.data.itens[] | select(.titulo==$t and .tipo=="aviso-central" and .lida==false)] | length')" = "1" ] \
+  && ok "Sino do passageiro: aviso da Central chegou na caixa da conta ($(echo "$X" | jq -r '.data.naoLidas') nao lida(s))" || falha "Sino do passageiro: aviso da Central" "$X"
+X=$(get /notificacoes "$TP"); [ "$(echo "$X" | jq -r --arg t "$TIT" '[.data.itens[] | select(.titulo==$t)] | length')" = "1" ] && ok "Sino do passageiro: abrir de novo nao duplica o aviso" || falha "Sino do passageiro: aviso duplicado" "$X"
+post /notificacoes/lidas '{}' "$TP" >/dev/null
+X=$(get /notificacoes/nao-lidas "$TP"); [ "$(echo "$X" | jq -r '.data.naoLidas')" = "0" ] && ok "Sino do passageiro: abriu, ponto vermelho some (0 nao lidas pelo servidor)" || falha "Sino do passageiro: nao lidas" "$X"
+[ -n "$AVID" ] && curl -s -m 60 -X DELETE "$API/admin/operacao/avisos/$AVID" -H "Authorization: Bearer $TA" >/dev/null
+X=$(get /notificacoes "$TP"); [ "$(echo "$X" | jq -r --arg t "$TIT" '[.data.itens[] | select(.titulo==$t)] | length')" = "0" ] && [ "$(echo "$X" | jq -r '.data.naoLidas')" = "0" ] \
+  && ok "Sino do passageiro: a Central apagou o aviso e ele saiu do sino (o ponto nao volta)" || falha "Sino do passageiro: aviso apagado pela Central" "$X"
 # Etapa 6 (29/10/2026): nome, cor, logo e faixa do app pela Central. O teste
 # grava de volta o mesmo que ja estava (nao muda o app de verdade).
 A=$(get /admin/aparencia "$TA"); NOME_APP=$(echo "$A" | jq -r '.data.nome // empty')
@@ -701,6 +713,25 @@ X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && falha "
 X=$(post "/admin/drivers/$DID/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga PIX comprovante teste"}' "$TA")
 X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '.data.last.kind')" = "CREDIT" ] && [ "$(echo "$X" | jq -r '.data.last.amountCents')" = "5000" ] && ok "Carteira: o aplicativo fica sabendo da recarga (+R\$ 50,00)" || falha "Carteira: recarga no aplicativo" "$X"
 X=$(patch /drivers/me/online '{"isOnline":true}' "$TM"); sucesso "$X" && ok "Carteira: com a recarga, ficou online de novo" || falha "Carteira: online depois da recarga" "$X"
+# Sino (30/10/2026): a recarga entra na caixa do motorista (so dele).
+X=$(get /notificacoes "$TM"); [ "$(echo "$X" | jq -r '[.data.itens[] | select(.tipo=="carteira" and .titulo=="Recarga confirmada")] | length')" -ge 1 ] 2>/dev/null \
+  && ok "Sino do motorista: 'Recarga confirmada' chegou ($(echo "$X" | jq -r '.data.naoLidas') nao lida(s), contadas pelo servidor)" || falha "Sino: recarga no sino" "$X"
+# Aviso "Saldo se esgotando" com limite por cidade, em reais (30/10/2026).
+AV=$(get "/admin/settings/aviso-saldo?praca=$PRACA" "$TA"); AV_TINHA=$(echo "$AV" | jq -r --arg p "$PRACA" '.data.porCidade[$p] // empty')
+R=$(get /driver/wallet/resumo "$TM"); SAL=$(echo "$R" | jq -r '.data.balanceCents'); MIN=$(echo "$R" | jq -r '.data.minimumCents')
+if [ -n "$PRACA" ] && [ "${SAL:-0}" -gt "${MIN:-0}" ] 2>/dev/null; then
+  LIM=$((SAL + 100))
+  X=$(put /admin/settings/aviso-saldo "{\"praca\":\"$PRACA\",\"avisoCents\":$LIM}" "$TA")
+  [ "$(echo "$X" | jq -r '"\(.data.origem)/\(.data.valeCents)"')" = "cidade/$LIM" ] && ok "Central: limite do aviso de saldo so nesta cidade ($LIM centavos)" || falha "Central: aviso de saldo por cidade" "$X"
+  X=$(get /driver/wallet/resumo "$TM"); [ "$(echo "$X" | jq -r '"\(.data.status)/\(.data.warningCents)"')" = "low/$LIM" ] && ok "Motorista: 'Saldo se esgotando' pelo limite da cidade (saldo $SAL abaixo de $LIM)" || falha "Motorista: aviso pelo limite da cidade" "$X"
+  X=$(put /admin/settings/aviso-saldo "{\"praca\":\"$PRACA\",\"avisoCents\":0}" "$TO"); sucesso "$X" && falha "Operador nao deveria mudar o aviso de saldo" "$X" || ok "Operador: nao muda o aviso de saldo (so o dono)"
+  put /admin/settings/aviso-saldo "{\"praca\":\"$PRACA\",\"avisoCents\":$((SAL - 1))}" "$TA" >/dev/null
+  X=$(get /driver/wallet "$TM"); [ "$(echo "$X" | jq -r '.data.status')" = "ok" ] && ok "Motorista: acima do limite da cidade o aviso some (status ok)" || falha "Motorista: aviso com saldo acima do limite" "$(echo "$X" | jq -c '{status: .data.status, w: .data.warningCents, s: .data.balanceCents}')"
+  X=$(put /admin/settings/aviso-saldo "{\"praca\":\"$PRACA\",\"avisoCents\":${AV_TINHA:-null}}" "$TA")
+  [ "$(echo "$X" | jq -r --arg p "$PRACA" '.data.porCidade[$p] // "nenhum"')" = "${AV_TINHA:-nenhum}" ] && ok "Central: aviso de saldo da cidade voltou como estava (${AV_TINHA:-padrao})" || falha "Central: restaurar aviso de saldo" "$X"
+else
+  echo "AVISO  aviso de saldo por cidade nao conferido (sem cidade ou saldo do teste no minimo)" | tee -a "$REL"
+fi
 # Chamadas a TomTom numa corrida completa (29/10/2026): o mesmo que os 2 apps
 # fazem — endereco do embarque, busca do destino, orcamento (o caminho vem
 # junto), pedido com a cotacao (sem pedir a rota de novo), escolha do
@@ -807,6 +838,18 @@ if [ -n "$PRACA" ] && [ -n "${VID1:-}" ]; then
   patch "/vehicles/$VID1/categoria" '{"categoria":"CONFORTO"}' "$TM" >/dev/null
   X=$(patch "/admin/vehicles/$VID1/category-review" '{"aprovar":true}' "$TA")
   [ "$(echo "$X" | jq -r --arg v "$VID1" '.data[] | select(.id==$v) | "\(.category)/\(.categoriaPedida)"')" = "CONFORTO/null" ] && ok "Central: aprovou o Conforto (passa a valer no carro)" || falha "Central: aprovar categoria" "$X"
+  # Sino (30/10/2026): recusa e aprovacao chegam na caixa do motorista.
+  X=$(get /notificacoes "$TM"); NL=$(echo "$X" | jq -r '.data.naoLidas // -1')
+  [ "$(echo "$X" | jq -r '[.data.itens[] | select(.tipo=="categoria")] | length')" -ge 2 ] 2>/dev/null && [ "$NL" -ge 2 ] 2>/dev/null \
+    && ok "Sino do motorista: recusa e aprovacao da categoria chegaram ($NL nao lidas)" || falha "Sino: notificacoes da categoria" "$X"
+  NID=$(echo "$X" | jq -r '[.data.itens[] | select(.tipo=="categoria")][0].id // empty')
+  X=$(post /notificacoes/lidas '{}' "$TM"); [ "$(echo "$X" | jq -r '.data.naoLidas')" = "0" ] && ok "Sino: abriu a lista e marcou como lidas (ponto vermelho some)" || falha "Sino: marcar como lidas" "$X"
+  sleep 2; X=$(get /notificacoes/nao-lidas "$TM"); [ "$(echo "$X" | jq -r '.data.naoLidas')" = "0" ] && ok "Sino: perguntou de novo e continua 0 (o ponto nao volta sozinho)" || falha "Sino: o ponto voltou sozinho" "$X"
+  X=$(post /notificacoes/apagar "{\"ids\":[\"$NID\"]}" "$TP"); [ "$(echo "$X" | jq -r '.data.apagadas')" = "0" ] && ok "Seguranca: o passageiro nao apaga notificacao do motorista" || falha "Seguranca: apagou notificacao de outra conta" "$X"
+  X=$(curl -s -m 90 -X DELETE "$API/notificacoes/$NID" -H "Authorization: Bearer $TM"); [ "$(echo "$X" | jq -r '.data.apagadas')" = "1" ] && ok "Sino: o motorista apagou uma" || falha "Sino: apagar uma" "$X"
+  X=$(get /notificacoes "$TM"); echo "$X" | jq -e --arg n "$NID" '[.data.itens[] | select(.id==$n)] | length == 0' >/dev/null && ok "Sino: a apagada nao volta na lista" || falha "Sino: a apagada voltou" "$X"
+  X=$(post /notificacoes/apagar '{"todas":true}' "$TM"); X2=$(get /notificacoes "$TM")
+  [ "$(echo "$X2" | jq -r '.data.itens | length')" = "0" ] && [ "$(echo "$X2" | jq -r '.data.naoLidas')" = "0" ] && ok "Sino: apagar todas ($(echo "$X" | jq -r '.data.apagadas') apagadas, so da conta dele)" || falha "Sino: apagar todas" "$X $X2"
   # Passageiro pede Conforto: o chamado vai para o carro aprovado no Conforto.
   post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
   X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"category\":\"CONFORTO\",\"cotacao\":\"$COTE\"}" "$TP"); RCAT=$(echo "$X" | jq -r '.data.ride.id // empty')
