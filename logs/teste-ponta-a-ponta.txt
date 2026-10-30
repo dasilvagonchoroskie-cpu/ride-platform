@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: ba995df (TomTom: chave separada so para as imagens do mapa (opcional))
-No ar agora: feb95bc
+Ultima mudanca do servidor no GitHub: 51da601 (Tarifas: nao gravar por cima e 'Popular' de volta)
+No ar agora: 7239668
 OK: servidor em dia.
-Teste de ponta a ponta - 30/10/2026 03:40 UTC
+Teste de ponta a ponta - 30/10/2026 05:13 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -67,7 +67,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST1933)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST8492)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -137,25 +137,25 @@ OK     Central: recarga de R$ 50,00 (credito no extrato)
 OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
-OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1917 km)
+OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1902 km)
 OK     Passageiro: busca fica na regiao de operacao ('Porto Alegre' -> Rua Porto Alegre - Morrinhos - GO, 40.3 km)
 OK     Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, 1295.9 km)
 OK     Seguranca: busca no Brasil todo so na Central
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 116 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 112 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE03410584 criado (R$ 3,00)
+OK     Central: cupom TESTE0513298 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 978 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1027 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1017 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1010 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 5902 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 8422 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -173,9 +173,9 @@ OK     Passageiro: ve o taximetro correndo (2000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 2000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (1700 centavos)
-OK     Bandeira certa pela hora de Brasilia (0h, noturna: 2000 centavos)
+OK     Bandeira certa pela hora de Brasilia (2h, noturna: 2000 centavos)
 OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1800 centavos, online 22s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1800 centavos, online 23s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 31 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -238,19 +238,21 @@ OK     TomTom: 11 chamadas numa corrida completa simulada (por servico: {"geocod
 OK     Central: visao geral (ativas 0, concluidas hoje 2, online 2, faturamento 4000)
 OK     Central: ganho da Central hoje = comissao (400) + mensalidades (0) = 400 (total das corridas: 4000)
 OK     Central: relatorio financeiro com o ganho da Central (400)
-OK     Central: tarifas por categoria (Carro, Conforto, Premium)
+OK     Central: tarifas por categoria (Popular, Conforto, Premium)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
+OK     Central: tela velha nao grava por cima das tarifas (pede para abrir de novo)
+OK     Central: nome da categoria comum (CARRO) continua 'Popular' depois de salvar sem versao (Central antiga nao troca o nome)
 OK     Central: multiplicador dinamico salvo (1x)
 OK     Central: modelo financeiro do motorista (taxa fixa R$ 2,00)
 OK     Central: categoria do veiculo do motorista
-OK     Central: categorias padrao criadas (Carro (CARRO, ligada), Conforto (CONFORTO, desligada), Premium (PREMIUM, desligada))
+OK     Central: categorias padrao criadas (Popular (CARRO, ligada), Conforto (CONFORTO, desligada), Premium (PREMIUM, desligada))
 OK     Central: ligou o Conforto so na cidade goiatuba (x1,1)
 OK     Central: o padrao das outras cidades nao mudou
-OK     Passageiro: ve as categorias com preco e chegada (Carro 2000 centavos, chega em 2 min; Conforto 2750 centavos, chega em - min)
+OK     Passageiro: ve as categorias com preco e chegada (Popular 2000 centavos, chega em 2 min; Conforto 2750 centavos, chega em - min)
 OK     Passageiro: trocar para Conforto nao pede a rota de novo (mesma medida, 2750 centavos)
 OK     Passageiro: sem destino (taximetro) tambem pela tarifa do Conforto (2750 x Popular 2000)
 OK     Passageiro: Conforto com parada extra (2884 m, 3298 centavos)
-OK     Motorista: ve as categorias para escolher, ja no primeiro cadastro (sem login) (Carro, Conforto, Premium)
+OK     Motorista: ve as categorias para escolher, ja no primeiro cadastro (sem login) (Popular, Conforto, Premium)
 OK     Motorista: pediu Conforto (continua no Popular ate a Central aprovar)
 OK     Motorista: categoria que nao existe e recusada
 OK     Central: painel avisa pedido de categoria (Motorista Teste Automatico: CONFORTO)
@@ -300,7 +302,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 12/666, reverse 4/666, routing 72/666, search 2/83, tiles 0/6666)
+OK     Central: uso da TomTom hoje (geocode 18/666, reverse 7/666, routing 109/666, search 3/83, tiles 10/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
