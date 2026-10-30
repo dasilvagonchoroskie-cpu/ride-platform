@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: b2fab66 (Aparencia: "Voltar ao padrao" (Central) e teste de ponta a ponta sem efeito cola)
-No ar agora: 8cc2a9c
+Ultima mudanca do servidor no GitHub: 17f1214 (TomTom: nada guardado no servidor, alerta de 70%, busca so na regiao, rota nos 3)
+No ar agora: bebe687
 OK: servidor em dia.
-Teste de ponta a ponta - 29/10/2026 22:54 UTC
+Teste de ponta a ponta - 30/10/2026 00:22 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -31,7 +31,7 @@ OK     App: configuracao publica (6 cidade(s), WhatsApp 5564996472794)
 OK     App: configuracao publica do mapa (TomTom) sem a chave
 OK     Central: cidades e avisos carregados
 OK     Central: aparencia recusa nome curto e cor fora do formato #RRGGBB
-OK     Central: aparencia do app (nome Fortaleza Mov, cor #1E5BB8, faixa desligada, personalizada: false)
+OK     Central: aparencia do app (nome Fortaleza Mov, cor #0070B8, faixa desligada, personalizada: true)
 OK     App: nome e cor do app vem da Central
 OK     App: logo publico (sem logo, usa o padrao: 404)
 OK     Passageiro: cadastro completo gravado (cidade: Goiatuba - GO)
@@ -47,8 +47,12 @@ OK     Passageiro: sem destino so com a opcao marcada
 OK     Passageiro: parada extra entra no caminho (1375 m -> 2884 m)
 OK     Passageiro: busca com token de sessao
 OK     Passageiro: carros perto dizem se sao moto (0 perto)
-OK     Passageiro: busca de destino real (12 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
+OK     Passageiro: busca de destino real (5 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
 OK     Mapa: imagens da TomTom com login (512 px, economia: false)
+FALHA  Mapa: imagem de teste da TomTom
+       resposta:          cache-control: max-age=86400
+         cache-control: max-age=86400
+         etag: W/"e3dbf42e2c5644d92cb288c4eed7c2bc"
 OK     Seguranca: a chave do mapa nao sai sem login
 OK     Passageiro: endereco do embarque pelo GPS (Rua Minas Gerais)
 OK     Motorista: login pelo codigo de teste
@@ -63,7 +67,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST0400)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST2371)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -134,22 +138,23 @@ OK     Motorista: ficou disponivel
 OK     Motorista: posicao enviada
 OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1902 km)
-OK     Passageiro: busca acha destino fora da regiao (Porto Alegre)
+FALHA  Passageiro: busca fora da regiao
+       resposta: {"success":true,"data":[{"address":"Rua Porto Alegre","detail":"Morrinhos - GO","latitude":-17.7385073,"longitude":-49.1060108,"distanceKm":40.3},{"address":"Avenida Porto Alegre","detail":"Itumbiara - GO","latitude":-18.3906733,"longitude":-49.1985063,"distanceKm":45.2},{"address":"Viela da R Porto Alegre","detail":"Morrinhos - GO","latitude":-17.739379,"longitude":-49.1074164,"distanceKm":40.2},
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 115 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 113 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE2254259 criado (R$ 3,00)
+OK     Central: cupom TESTE00222353 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 881 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (904 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 964 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (986 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 9165 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 2760 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Chat: passageiro manda mensagem ao motorista
 OK     Chat: o app do motorista sabe que chegou 1 mensagem
@@ -167,7 +172,7 @@ OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (19h, diurna: 1000 centavos)
+OK     Bandeira certa pela hora de Brasilia (21h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 1 corrida(s)
 OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 920 centavos, online 20s
 OK     Motorista: grafico week com 7 dias
@@ -227,9 +232,11 @@ OK     Motorista: chamado mostra valor liquido (920), taxa 8% e nota do passagei
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
-OK     Central: visao geral (ativas 0, concluidas hoje 1, online 2, faturamento 1000)
-OK     Central: ganho da Central hoje = comissao (80) + mensalidades (0) = 80 (total das corridas: 1000)
-OK     Central: relatorio financeiro com o ganho da Central (80)
+OK     TomTom: o pedido usou a medida assinada do orcamento (1375 m; caminho com 24 pontos ja veio no orcamento)
+OK     TomTom: 11 chamadas numa corrida completa simulada (por servico: {"geocode": 1, "reverse": 1, "routing": 8, "search": 1}) — sem guardado no servidor
+OK     Central: visao geral (ativas 0, concluidas hoje 2, online 2, faturamento 2000)
+OK     Central: ganho da Central hoje = comissao (160) + mensalidades (0) = 160 (total das corridas: 2000)
+OK     Central: relatorio financeiro com o ganho da Central (160)
 OK     Central: tarifas por categoria (Carro)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: multiplicador dinamico salvo (1x)
@@ -243,7 +250,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 700, PIX/app 0, comissao 80)
+OK     Central: relatorio de receitas (dinheiro 1700, PIX/app 0, comissao 160)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -273,7 +280,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 30/666, reverse 5/666, routing 25/666, search 0/83)
+OK     Central: uso da TomTom hoje (geocode 35/666, reverse 7/666, routing 57/666, search 1/83, tiles 0/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
@@ -285,6 +292,6 @@ OK     Seguranca: codigo de recuperacao vale uma vez so
 OK     Seguranca: desafio do login alterado e recusado
 OK     Operador: desligou as duas etapas com um codigo valido
 OK     Central: apagou a conta do operador de teste
-OK     Limpeza: apagou as 7 contas deste teste e 9 corridas delas
+OK     Limpeza: apagou as 7 contas deste teste e 10 corridas delas
 
-Resultado: 0 falha(s).
+Resultado: 2 falha(s).
