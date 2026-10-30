@@ -44,7 +44,7 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a int
 17. **Pagamento com cartão — [NÃO EXISTE], por decisão.** "Meus cartões" mostra só "Em breve".
 18. **Banco grátis de 500 MB com as fotos dentro.** Aperta perto de 250–300 motoristas com documentos. A foto do comprovante de entrega (Fase 2) vai fora do banco (plano em docs/ENTREGAS.md).
 19. **E-mail só pelo Gmail (~100 por dia).**
-20. **Ícones novos — não recebidos.** Gerador pronto e testado: símbolo a ~60% do ícone visível, fundo #0070B8, redondo, legado, monocromático do Android 13+, fundo branco removido, prévia em folha (scripts/previa-icones.py). Os APKs já conferem o ícone redondo e o nome.
+20. **Ícones novos — APLICADOS (30/10, montagem dos ícones).** Passageiro: alfinete com pessoa, carro e estrada; motorista: carro com volante; Central: mapa com alfinete. Amarelo sobre #0070B8 a 60%, redondo, legado, monocromático do Android 13+, Play 512 e iPhone. Os PNG vieram transparentes, com uma névoa quase invisível em volta (removida). **[REAL na esteira]** (ícone redondo e monocromático conferidos dentro do APK); **[SEM TESTE]** na tela do seu celular. O logo DENTRO dos apps (emblema com asas no canto) continua o antigo.
 21. **20 ruas de Goiatuba para o teste da busca — não recebidas.**
 22. **Destinos recentes:** hoje ficam no servidor, só da conta. Se for para ficar **só no celular**, me confirme.
 
@@ -73,7 +73,7 @@ Ambiente: **não existe Flutter nem Android SDK no computador do Claude** (a int
 | 3. Caixa de entrada (motorista e passageiro) e aviso de saldo por cidade | FEITO — **[REAL]** servidor (326 OK) + **[AUTO]** telas |
 | 4. Economia da TomTom (rota medida uma vez) | FEITO — **[REAL]**: 7 chamadas e 4 rotas por corrida (eram 11 e 8) |
 | 5. Entregas, Fase 1 (desligada em todas as cidades) | FEITO — **[REAL]** servidor (345 OK; entrega 4 rotas = corrida) + **[AUTO]** telas; Fase 2 só plano (docs/ENTREGAS.md) |
-| 6. Ícones (#0070B8, ~60%, redondo, legado, monocromático, fundo branco) | gerador PRONTO e testado; **esperando os 3 PNG amarelos** |
+| 6. Ícones (#0070B8, ~60%, redondo, legado, monocromático, fundo branco) | FEITO (PR #15): os 3 símbolos aplicados; prévia enviada; APKs com os ícones novos |
 | 7. Loja | FEITO: docs/GOOGLE-PLAY.md (lista completa), passo a passo itens 6 e 7, docs/CONTAS.md |
 | zod 4 / Nest 11 | NÃO mexido (esperando o seu OK) |
 
