@@ -140,3 +140,86 @@ como fica em cada formato de celular antes dos APKs.
 **20 ruas de Goiatuba** — uma por linha, como o passageiro digitaria (ex.:
 "Rua Goiás 150", "Avenida Brasília", "Rodoviária"). Eu rodo a busca de cada
 uma no servidor real e mostro o que voltou em primeiro lugar.
+
+---
+
+## 6. Limpezas rápidas (uns 10 minutos, quando puder)
+
+**6.1 Apagar o token antigo do GitHub** (eu não uso mais: a sessão entra pelo
+conector do GitHub)
+1. github.com → sua foto (canto de cima) → Settings ("Configurações").
+2. No fim do menu: Developer settings ("Configurações do desenvolvedor") →
+   Personal access tokens ("Tokens de acesso pessoal").
+3. Veja em Fine-grained tokens ("Tokens refinados") e em Tokens (classic)
+   ("Tokens clássicos"): abra o token antigo → Delete ("Excluir") → confirme.
+
+**6.2 Apagar o segredo `ADMIN_SENHA`** (nenhuma esteira usa desde 30/10)
+1. github.com/dasilvagonchoroskie-cpu/ride-platform → Settings
+   ("Configurações") → Secrets and variables ("Segredos e variáveis") → Actions.
+2. Na linha `ADMIN_SENHA`, toque na lixeira → Yes, remove this secret ("Sim,
+   remover este segredo").
+3. Na mesma lista, apague também `DATABASE_URL`: aponta para o banco antigo e
+   só serve à esteira que não pode rodar nunca mais (db-bootstrap).
+
+**6.3 Guardar a chave privada da cópia do banco**
+- Baixe o arquivo `CHAVE-PRIVADA-COPIA-DO-BANCO-30-10-2026.txt` que eu mandei e
+  guarde fora do celular (pendrive, papel ou cofre de senhas). Sem ela,
+  **nenhuma** cópia do banco abre. Depois de guardar, pode apagar o arquivo
+  do celular.
+- Para o teste de restauração ela também vai como segredo `COPIA_BANCO_CHAVE`
+  (item 4, passo 3).
+
+**6.4 Depois do teste de restauração dar OK (item 4)**
+- Me diga **"pode apagar as cópias antigas"**: eu apago as cópias feitas com a
+  chave antiga (ficam nos artefatos da esteira).
+
+**6.5 Apagar o projeto antigo do Supabase** (sem uso desde 09/10)
+1. supabase.com/dashboard → abra o projeto **fortaleza-mov** de **São Paulo**
+   (endereço termina em `tuohtguzfywmrcigcems`). **Não** é o `fortaleza-mov-eua`
+   (Califórnia), que é o banco em uso.
+2. Project Settings ("Configurações do projeto") → General ("Geral") → no fim,
+   Delete project ("Excluir projeto") → digite o nome que ele pedir → confirme.
+
+**6.6 (Opcional) Servidor publicar sozinho a cada mudança**
+1. dashboard.render.com → **fortaleza-mov-backend** → Settings
+   ("Configurações") → Deploy Hook ("Gancho de publicação") → copie (não
+   mande no chat).
+2. GitHub → Settings → Secrets and variables → Actions → New repository
+   secret ("Novo segredo do repositório") → Name ("Nome") `RENDER_DEPLOY_HOOK` →
+   Secret ("Segredo"): cole → Add secret ("Adicionar segredo").
+Sem isso tudo funciona: eu publico o servidor pelo conector do Render.
+
+**6.7 (Opcional) Trocar a senha do banco**
+- Só se quiser trocar por segurança. Me avise antes ("vou trocar a senha do
+  banco"): a troca derruba o servidor até o endereço novo ir para o Render, e
+  eu te guio passo a passo sem a senha passar pelo chat.
+
+---
+
+## 7. Loja: CNPJ, D-U-N-S, Google Play e domínio
+
+A lista completa do que a Google Play pede está em `docs/GOOGLE-PLAY.md`. O que
+só você pode fazer, nesta ordem:
+
+**7.1 CNPJ** da empresa que vai ser dona dos apps (tudo depois sai no nome
+dela).
+
+**7.2 Número D-U-N-S** (grátis): pelo formulário da Dun & Bradstreet. O
+próprio Play Console mostra o link na hora de criar a conta de organização.
+Pode levar **até 28 dias**: peça assim que tiver o CNPJ. Nome e endereço
+precisam ser iguais aos do CNPJ.
+
+**7.3 Domínio próprio** (ex.: `fortalezamove.com.br`)
+1. registro.br → digite o nome → se estiver livre, Registrar.
+2. Titular: o **CNPJ** da empresa. Pague a taxa anual (confira o valor na
+   tela). Me avise "registrei o domínio": eu ligo no Render e te passo os 2
+   campos para preencher no DNS do Registro.br.
+
+**7.4 Conta da Google Play** (taxa única de US$ 25)
+1. play.google.com/console → criar conta → escolha **organização**
+   (Organization or business → "Organização ou empresa").
+2. Informe o D-U-N-S, o e-mail e o telefone da empresa e o site (o domínio
+   do 7.3) → pague → faça a verificação de identidade que o Google pedir.
+3. Me avise "conta da Play pronta": eu preparo a ficha, as capturas de tela,
+   o recurso gráfico, as contas de revisão e as respostas dos formulários; você
+   só confere e aperta os botões de enviar.
