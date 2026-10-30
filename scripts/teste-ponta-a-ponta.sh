@@ -448,6 +448,12 @@ ID1=$(echo "$X" | jq -r '[.data[] | select(.rumo == 90)][0].id')
 X2=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
 [ -n "$ID1" ] && [ "$ID1" != "null" ] && [ "$(echo "$X2" | jq -r --arg i "$ID1" '[.data[] | select(.id == $i)] | length')" = "1" ] && [ "$(echo "$ID1" | grep -c -- "$DID")" = "0" ] \
   && ok "Passageiro: o mesmo carro tem o mesmo id anonimo nas duas consultas (sem o id do motorista)" || falha "Passageiro: id estavel do carro" "$ID1"
+# Leitura ruim (300 m de erro, como a da rede de celular) logo depois de uma
+# boa nao tira o carro do lugar certo; e sem rumo, o rumo anterior fica.
+post /drivers/me/location '{"latitude":-18.0200,"longitude":-49.3700,"accuracy":300}' "$TM" >/dev/null
+X=$(get "/rides/nearby-drivers?lat=-18.0125&lng=-49.3547" "$TP")
+[ "$(echo "$X" | jq -r --arg i "$ID1" '[.data[] | select(.id == $i and .latitude == -18.013 and .rumo == 90)] | length')" = "1" ] \
+  && ok "GPS: leitura imprecisa (300 m) nao tira o carro da posicao boa e o rumo continua" || falha "GPS: leitura imprecisa mexeu no carro" "$(echo "$X" | jq -c --arg i "$ID1" '[.data[] | select(.id == $i)]')"
 
 X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":{\"address\":\"Porto Alegre - RS\",\"latitude\":-30.0346,\"longitude\":-51.2177}}" "$TP")
 [ "$(echo "$X" | jq -r '.data.distanceMeters')" -gt 1000000 ] 2>/dev/null && ok "Passageiro: ve o preco para fora da regiao (Porto Alegre, $(echo "$X" | jq -r '.data.distanceMeters/1000|floor') km)" || falha "Passageiro: preco para longe" "$X"

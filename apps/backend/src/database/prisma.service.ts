@@ -69,10 +69,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         NOW()
       )
       ON CONFLICT (driver_id) DO UPDATE SET
-        location = EXCLUDED.location,
-        heading = EXCLUDED.heading,
+        -- 30/10/2026 (Evandro: "melhorar a precisao do GPS"): leitura ruim
+        -- (mais de 60 m de erro, ex.: rede de celular) nao tira o carro de uma
+        -- posicao boa (ate 30 m) de menos de 1 minuto; so renova o "visto".
+        location = CASE WHEN EXCLUDED.accuracy > 60 AND driver_locations.accuracy <= 30 AND driver_locations.last_seen_at > NOW() - INTERVAL '60 seconds' THEN driver_locations.location ELSE EXCLUDED.location END,
+        -- Sem rumo nesta leitura (parado, celular sem bussola): fica o ultimo.
+        heading = COALESCE(EXCLUDED.heading, driver_locations.heading),
         speed = EXCLUDED.speed,
-        accuracy = EXCLUDED.accuracy,
+        accuracy = CASE WHEN EXCLUDED.accuracy > 60 AND driver_locations.accuracy <= 30 AND driver_locations.last_seen_at > NOW() - INTERVAL '60 seconds' THEN driver_locations.accuracy ELSE EXCLUDED.accuracy END,
         is_online = EXCLUDED.is_online,
         is_available = EXCLUDED.is_available,
         last_seen_at = NOW(),

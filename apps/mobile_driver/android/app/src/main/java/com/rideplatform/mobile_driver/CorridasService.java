@@ -75,7 +75,16 @@ public class CorridasService extends Service {
     private static final long INTERVALO_MS = 4000;
     /** Quanto o servidor segura a pergunta esperando chamado. */
     private static final int ESPERA_SERVIDOR_S = 25;
-    private static final long POSICAO_MIN_MS = 10000;
+    /**
+     * Posicao a cada 4 s no maximo (igual ao app aberto). Evandro, 30/10/2026:
+     * "melhorar a precisao do GPS" — antes era 10 s e 20 m, e o passageiro via
+     * o carro pulando quando o motorista usava outro app (Waze) por cima.
+     */
+    private static final long POSICAO_MIN_MS = 4000;
+    /** Leitura da rede de celular/Wi-Fi so entra sem GPS ha 30 s. */
+    private static final long SEM_GPS_MS = 30000;
+    /** Precisao pior que isto so vale sem nenhuma boa ha [POSICAO_MAX_MS]. */
+    private static final float PRECISAO_BOA_M = 50f;
     /** Parado: manda a ultima posicao pelo menos a cada 45 s. */
     private static final long POSICAO_MAX_MS = 45000;
     private static final long CARTEIRA_MS = 20000;
@@ -105,6 +114,14 @@ public class CorridasService extends Service {
     private PowerManager.WakeLock trava;
     private LocationManager gps;
     private long ultimaPosicaoMs = 0;
+    /** Ultima posicao boa enviada (parado, reenvia esta e nao uma pior). */
+    private Location ultimaEnviada;
+    /** Quando chegou a ultima leitura do GPS de verdade. */
+    private long ultimoGpsMs = 0;
+    /** Para onde o carro aponta (graus, 0 = norte); -1 = ainda nao sabe. */
+    private float rumo = -1f;
+    /** Ponto de onde o rumo foi medido pela ultima vez. */
+    private Location ancoraDoRumo;
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -466,11 +483,18 @@ public class CorridasService extends Service {
     }
 
     /**
-     * Motorista parado (GPS nao manda posicao se ele nao anda 20 m): a cada
-     * 45 s manda a ultima posicao conhecida, para continuar na busca.
+     * Motorista parado (GPS nao manda posicao se ele nao anda): a cada 45 s
+     * reenvia a ultima posicao BOA (antes pegava a ultima conhecida do
+     * Android, que podia ser a da rede de celular, com centenas de metros de
+     * erro). Sem nenhuma boa ainda, usa a ultima conhecida.
      */
     private void posicaoParado() {
         if (System.currentTimeMillis() - ultimaPosicaoMs < POSICAO_MAX_MS) return;
+        if (ultimaEnviada != null && System.currentTimeMillis() - ultimaEnviada.getTime() < 10 * 60 * 1000L) {
+            ultimaPosicaoMs = System.currentTimeMillis();
+            mandar(ultimaEnviada);
+            return;
+        }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) return;
         try {
@@ -480,7 +504,10 @@ public class CorridasService extends Service {
                 Location l = gps.getLastKnownLocation(fonte);
                 if (l != null && (melhor == null || l.getTime() > melhor.getTime())) melhor = l;
             }
-            if (melhor != null) enviarPosicao(melhor);
+            if (melhor != null) {
+                ultimaPosicaoMs = System.currentTimeMillis();
+                mandar(melhor);
+            }
         } catch (SecurityException ignored) { }
     }
 
@@ -507,7 +534,7 @@ public class CorridasService extends Service {
             if (gps == null) gps = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
             gps.removeUpdates(ouvinte);
             if (gps.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                gps.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 20f, ouvinte, Looper.getMainLooper());
+                gps.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000, 8f, ouvinte, Looper.getMainLooper());
             }
             if (gps.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 gps.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 15000, 30f, ouvinte, Looper.getMainLooper());
@@ -519,10 +546,49 @@ public class CorridasService extends Service {
         try { if (gps != null) gps.removeUpdates(ouvinte); } catch (Exception ignored) { }
     }
 
+    /**
+     * Leitura nova do Android. Filtra antes de mandar (Evandro, 30/10/2026):
+     * - da rede de celular/Wi-Fi so entra se o GPS sumiu ha 30 s;
+     * - precisao pior que 50 m so entra se faz 45 s sem nenhuma boa;
+     * - no maximo uma a cada 4 s.
+     */
     private void enviarPosicao(Location l) {
         long agora = System.currentTimeMillis();
+        boolean doGps = LocationManager.GPS_PROVIDER.equals(l.getProvider());
+        if (doGps) ultimoGpsMs = agora;
+        else if (agora - ultimoGpsMs < SEM_GPS_MS) return;
+        boolean boa = l.hasAccuracy() && l.getAccuracy() <= PRECISAO_BOA_M;
+        if (!boa && agora - ultimaPosicaoMs < POSICAO_MAX_MS) return;
         if (agora - ultimaPosicaoMs < POSICAO_MIN_MS) return;
         ultimaPosicaoMs = agora;
+        atualizarRumo(l);
+        if (boa) ultimaEnviada = l;
+        mandar(l);
+    }
+
+    /**
+     * Rumo do carro (para a figura andar no sentido da rua): o do GPS andando
+     * a mais de 7 km/h; senao, pela direcao dos ultimos 12 m; parado, fica o
+     * ultimo (antes ia vazio e o servidor perdia o rumo).
+     */
+    private void atualizarRumo(Location l) {
+        if (l.hasBearing() && l.hasSpeed() && l.getSpeed() >= 2f && l.getBearing() > 0f) {
+            rumo = l.getBearing() % 360f;
+            ancoraDoRumo = l;
+            return;
+        }
+        if (ancoraDoRumo == null) {
+            ancoraDoRumo = l;
+            return;
+        }
+        if (ancoraDoRumo.distanceTo(l) >= 12f) {
+            float b = ancoraDoRumo.bearingTo(l);
+            rumo = (b + 360f) % 360f;
+            ancoraDoRumo = l;
+        }
+    }
+
+    private void mandar(Location l) {
         final JSONObject corpo = new JSONObject();
         try {
             corpo.put("latitude", l.getLatitude());
@@ -530,7 +596,7 @@ public class CorridasService extends Service {
             // O servidor recusa precisao acima de 1000 m: limita aqui.
             if (l.hasAccuracy()) corpo.put("accuracy", Math.min(l.getAccuracy(), 999f));
             if (l.hasSpeed()) corpo.put("speed", Math.min(l.getSpeed(), 299f));
-            if (l.hasBearing()) corpo.put("heading", Math.min(l.getBearing(), 359.9f));
+            if (rumo >= 0f) corpo.put("heading", Math.min(rumo, 359.9f));
         } catch (Exception e) {
             return;
         }
