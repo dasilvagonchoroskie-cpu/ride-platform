@@ -18,6 +18,8 @@ import { HistoricoDeDestinos } from './destinos';
 import { PushService } from '../../integrations/notifications/push.service';
 import { AppConfigService } from '../../config/app-config.service';
 import { assinarCotacao, lerCotacao } from './cotacao';
+import { EntregasService } from '../entregas/entregas.service';
+import { CODIGO_ENTREGA, ehEntrega } from '../entregas/entregas.regras';
 import type {
   CancelRideInput,
   EstimateRideInput,
@@ -123,6 +125,7 @@ export class RidesService {
     private readonly geo: GeoService,
     private readonly push: PushService,
     private readonly config: AppConfigService,
+    private readonly entregas: EntregasService,
   ) {
     this.destinos = new HistoricoDeDestinos(prisma);
   }
@@ -197,6 +200,12 @@ export class RidesService {
   // pode ver quanto da uma corrida para qualquer lugar, mesmo fora da regiao.
 
   async estimar(input: EstimateRideInput, passengerId?: string) {
+    // Entrega (Etapa 5): so na cidade com entrega ligada; nunca sem destino.
+    const entrega = ehEntrega(input.category);
+    if (entrega) {
+      await this.entregas.exigirLigada(input.pickup);
+      if (!input.dropoff || input.semDestino) throw BusinessException.validation('Informe o endereço de entrega.');
+    }
     const destino = this.destinoDe(input);
     const semDestino = destino.placeId === SEM_DESTINO;
     // Trocou so a categoria ou o cupom (mesmos pontos, cotacao no prazo):
@@ -241,7 +250,9 @@ export class RidesService {
       moto: ehMoto(orcamento.category),
       // Mototaxi (Evandro, 10/10/2026): o passageiro escolhe Carro ou Moto,
       // vendo o preco de cada categoria ativa.
-      opcoes: await this.opcoesDeCategoria(input, rota, passengerId),
+      opcoes: entrega ? [] : await this.opcoesDeCategoria(input, rota, passengerId),
+      /** Entrega de encomenda (tarifa propria da cidade). */
+      entrega,
       /** Medida assinada: o app manda de volta no pedido (a rota nao e pedida de novo). */
       cotacao: medida && input.cotacao ? input.cotacao : assinarCotacao(pontos, rota, this.config.jwt.accessSecret),
       /** true = mesma medida da consulta anterior (o app mantem o caminho que ja desenhou). */
@@ -265,7 +276,8 @@ export class RidesService {
     rota: { distanceMeters: number; durationSeconds: number },
     passengerId?: string,
   ) {
-    const ativas = (await this.fare.categoriasNoPonto(input.pickup)).filter((c) => c.ativa);
+    // A tarifa "Entrega" nunca aparece como opcao de corrida.
+    const ativas = (await this.fare.categoriasNoPonto(input.pickup)).filter((c) => c.ativa && !ehEntrega(c.codigo));
     const teste = passengerId ? await this.prisma.contaDeTeste(passengerId) : false;
     const opcoes: Array<{
       category: string;
@@ -338,9 +350,19 @@ export class RidesService {
       );
     }
 
-    if (input.category) {
+    // Entrega (Etapa 5): com os dados de quem recebe vira categoria ENTREGA.
+    const entrega = input.entrega ?? null;
+    if (entrega || ehEntrega(input.category)) {
+      if (!entrega) throw BusinessException.validation('Faltam os dados da entrega (o que vai e quem recebe).');
+      if (!input.dropoff || input.semDestino) throw BusinessException.validation('Informe o endereço de entrega.');
+      if (input.scheduledFor) throw BusinessException.validation('Entrega agendada ainda não está disponível.');
+      if ((input.paradas ?? []).length > 0) throw BusinessException.validation('Entrega com paradas ainda não está disponível.');
+      input = { ...input, category: CODIGO_ENTREGA };
+    }
+    const daEntrega = entrega ? await this.entregas.exigirLigada(input.pickup) : null;
+    if (input.category && !entrega) {
       const categorias = await this.fare.categoriasNoPonto(input.pickup);
-      if (!categorias.some((c) => c.codigo === input.category && c.ativa)) {
+      if (!categorias.some((c) => c.codigo === input.category && c.ativa && !ehEntrega(c.codigo))) {
         throw BusinessException.validation('Esta categoria não está disponível agora.');
       }
     }
@@ -405,6 +427,7 @@ export class RidesService {
           paymentMethodType: input.paymentMethodType,
         },
       });
+      if (entrega && daEntrega) await this.entregas.criar(tx, criada.id, entrega, daEntrega.veiculos);
       if (paradas.length > 0) {
         await tx.rideStop.createMany({
           data: paradas.map((p, i) => ({
@@ -434,7 +457,7 @@ export class RidesService {
     // nao pode depender de haver motorista livre neste instante. A
     // agendada espera a rotina de minuto (10 min antes do horario).
     if (!agendadaPara) await this.procurarMotorista(corrida.id);
-    return this.detalhe(corrida.id);
+    return this.detalhe(corrida.id, { userId: passengerId, papel: UserRole.PASSENGER });
   }
 
   /**
@@ -474,12 +497,15 @@ export class RidesService {
 
     // Uma busca so, no raio maior; os raios menores saem da mesma lista
     // (ela vem do mais perto para o mais longe).
+    const daEntrega = ehEntrega(corrida.category) ? await this.entregas.daCorrida(rideId) : null;
     const achados = await this.prisma.findNearbyDrivers({
       latitude: corrida.pickupLat,
       longitude: corrida.pickupLng,
       radiusMeters: RidesService.RAIOS_METROS[RidesService.RAIOS_METROS.length - 1],
       limit: 30,
       category: corrida.category,
+      // Entrega: carro, moto ou os dois, como a Central ligou na cidade.
+      ...(daEntrega ? { veiculos: (daEntrega.veiculos as 'CARRO' | 'MOTO' | 'TODOS') ?? 'TODOS' } : {}),
       teste,
     });
     let aptos = achados.filter(
@@ -602,6 +628,7 @@ export class RidesService {
         ride: Ride & {
           passenger: { name: string };
           stops: Array<{ sequence: number; address: string; latitude: number; longitude: number }>;
+          entrega: Parameters<EntregasService['publico']>[0];
         };
       }
     > =
@@ -612,6 +639,7 @@ export class RidesService {
           include: {
             passenger: { select: { name: true } },
             stops: { orderBy: { sequence: 'asc' }, select: { sequence: true, address: true, latitude: true, longitude: true } },
+            entrega: true,
           },
         },
       },
@@ -678,6 +706,8 @@ export class RidesService {
         /** Etapa 3: paradas no caminho e corrida sem destino (taximetro). */
         paradas: o.ride.stops,
         semDestino: o.ride.dropoffPlaceId === SEM_DESTINO,
+        /** Etapa 5: entrega de encomenda (o item e quem recebe; o codigo nunca). */
+        entrega: this.entregas.publico(o.ride.entrega, 'motorista'),
       }));
   }
 
@@ -828,6 +858,8 @@ export class RidesService {
       data: { status: RideStatus.IN_PROGRESS, startedAt: new Date() },
     });
     await this.registrar(rideId, RideStatus.IN_PROGRESS, driverId, UserRole.DRIVER, onde);
+    // Entrega: "iniciar" e o motorista confirmando que coletou a encomenda.
+    if (ehEntrega(corrida.category)) await this.entregas.coletou(rideId);
     return this.detalhe(rideId);
   }
 
@@ -967,6 +999,8 @@ export class RidesService {
   async finalizar(driverId: string, rideId: string, input: FinishRideInput) {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.COMPLETED);
+    // Entrega: so termina com o codigo de 4 digitos de quem recebe.
+    if (ehEntrega(corrida.category)) await this.entregas.conferirAoEntregar(rideId, input.codigoEntrega);
 
     const medida = await this.medicaoFinal(corrida, input);
     const distancia = medida.distanceMeters;
@@ -1568,6 +1602,7 @@ export class RidesService {
         vehicle: { select: { plate: true, brand: true, model: true, color: true } },
         ratings: { select: { authorId: true, score: true, targetDriverId: true } },
         stops: { orderBy: { sequence: 'asc' }, select: { sequence: true, address: true, latitude: true, longitude: true, arrivedAt: true } },
+        entrega: true,
       },
     });
     if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
@@ -1595,7 +1630,11 @@ export class RidesService {
             (quem.papel === UserRole.DRIVER ? r.targetDriverId == null : r.targetDriverId != null),
         )?.score ?? null)
       : null;
-    const { ratings: _notas, stops: paradas, ...semNotas } = corrida;
+    const { ratings: _notas, stops: paradas, entrega: daEntrega, ...semNotas } = corrida;
+    // Entrega: o codigo so vai para o cliente e a Central (o motorista pede a
+    // quem recebe). Sem saber quem pergunta, trata como motorista.
+    const quemVe: 'cliente' | 'motorista' | 'central' =
+      quem?.papel === UserRole.ADMIN ? 'central' : quem && quem.userId === corrida.passengerId ? 'cliente' : 'motorista';
     // Foto do carro (de frente): a do carro desta corrida (carro cadastrado
     // depois, conferido pela Central) ou a que o motorista mandou nos documentos.
     const fotoDoCarro = corrida.vehicleId
@@ -1634,6 +1673,8 @@ export class RidesService {
         /** Etapa 3: paradas no caminho, na ordem, e "sem destino" (taximetro). */
         paradas,
         semDestino: corrida.dropoffPlaceId === SEM_DESTINO,
+        /** Etapa 5: entrega de encomenda (null = corrida de passageiro). */
+        entrega: this.entregas.publico(daEntrega, quemVe),
       },
     };
   }

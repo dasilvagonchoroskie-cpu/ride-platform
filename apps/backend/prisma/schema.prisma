@@ -476,6 +476,8 @@ model Ride {
   ratings       Rating[]
   safetyEvents  SafetyEvent[]
   walletTransactions WalletTransaction[]
+  /// Etapa 5 (30/10/2026): a corrida e uma entrega de encomenda.
+  entrega       Entrega?
 
   @@index([passengerId, status])
   @@index([driverId, status])
@@ -499,6 +501,29 @@ model RideStop {
 
   @@unique([rideId, sequence])
   @@map("ride_stops")
+}
+
+/// Entrega de encomenda (Etapa 5, 30/10/2026). A corrida guarda coleta
+/// (embarque), entrega (destino), preco e motorista; aqui ficam o item, quem
+/// recebe e o codigo de 4 digitos que o motorista digita ao entregar.
+/// A tabela e criada pelo proprio servidor ao subir (CREATE TABLE IF NOT
+/// EXISTS em EntregasService), sem mexer nas outras.
+model Entrega {
+  rideId               String    @id @map("ride_id") @db.Uuid
+  descricao            String    @db.VarChar(200)
+  destinatarioNome     String    @map("destinatario_nome") @db.VarChar(120)
+  destinatarioTelefone String    @map("destinatario_telefone") @db.VarChar(20)
+  codigo               String    @db.VarChar(4)
+  /// Quem podia levar no pedido: CARRO, MOTO ou TODOS (da Central, na cidade).
+  veiculos             String    @default("TODOS") @db.VarChar(10)
+  tentativas           Int       @default(0)
+  coletadaEm           DateTime? @map("coletada_em")
+  entregueEm           DateTime? @map("entregue_em")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  ride Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
+
+  @@map("entregas")
 }
 
 model RideStatusHistory {
