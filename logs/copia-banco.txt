@@ -1,4 +1,4 @@
-Copia do banco - 31/10/2026 12:47 UTC
+Copia do banco - 01/11/2026 13:37 UTC
 Tabelas e linhas:
   arquivos: 5
   audit_logs: 1276
@@ -6,7 +6,7 @@ Tabelas e linhas:
   devices: 11
   driver_documents: 1
   driver_locations: 1
-  driver_online_sessions: 44
+  driver_online_sessions: 46
   drivers: 1
   entregas: 0
   fare_configs: 8
@@ -16,16 +16,16 @@ Tabelas e linhas:
   payouts: 0
   ratings: 23
   ride_messages: 16
-  ride_offers: 24
-  ride_status_history: 210
+  ride_offers: 29
+  ride_status_history: 245
   ride_stops: 0
-  rides: 25
+  rides: 30
   safety_events: 1
   settings: 16
   user_addresses: 0
   users: 3
   vehicles: 1
-  wallet_transactions: 21
+  wallet_transactions: 26
   wallets: 1
-Arquivo: fortaleza-mov-20261031-1247.json.gz.age (580K, criptografado)
+Arquivo: fortaleza-mov-20261101-1337.json.gz.age (584K, criptografado)
 OK
