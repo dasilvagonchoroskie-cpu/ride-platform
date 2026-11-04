@@ -1,4 +1,4 @@
-Copia do banco - 03/11/2026 14:28 UTC
+Copia do banco - 04/11/2026 14:42 UTC
 Tabelas e linhas:
   arquivos: 5
   audit_logs: 1277
@@ -6,7 +6,7 @@ Tabelas e linhas:
   devices: 11
   driver_documents: 1
   driver_locations: 1
-  driver_online_sessions: 51
+  driver_online_sessions: 61
   drivers: 1
   entregas: 0
   fare_configs: 8
@@ -27,5 +27,5 @@ Tabelas e linhas:
   vehicles: 1
   wallet_transactions: 26
   wallets: 1
-Arquivo: fortaleza-mov-20261103-1428.json.gz.age (584K, criptografado)
+Arquivo: fortaleza-mov-20261104-1442.json.gz.age (584K, criptografado)
 OK
