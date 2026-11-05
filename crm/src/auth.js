@@ -95,6 +95,10 @@ function requireAuth(req, res, next) {
 const KEY_PATH = path.join(DATA_DIR, 'installation-key.txt');
 
 function installationKey() {
+  // FM_INSTALL_KEY: chave definida pelo dono na hospedagem (útil sem acesso ao terminal/log). Só serve antes do
+  // primeiro administrador: depois disso a rota de configuração inicial fica fechada para sempre.
+  const doAmbiente = String(process.env.FM_INSTALL_KEY || '').trim().toUpperCase();
+  if (/^[A-Z0-9-]{12,64}$/.test(doAmbiente)) return doAmbiente;
   try {
     const existing = fs.readFileSync(KEY_PATH, 'utf8').trim();
     if (existing) return existing;

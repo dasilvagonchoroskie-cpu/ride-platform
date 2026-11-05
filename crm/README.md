@@ -204,7 +204,8 @@ O Render grátis apaga o disco a cada reinício. Por isso, em produção o CRM s
 ele restaura a pasta `data/` de um retrato **criptografado** guardado no Supabase e envia um retrato novo a cada 30 s
 quando algo muda. Variáveis: `SNAPSHOT_URL`, `SNAPSHOT_ANON`, `SNAPSHOT_TOKEN`, `SNAPSHOT_KEY`, além de
 `TRUST_PROXY=1`, `COOKIE_SECURE=true` e `PUBLIC_URL`. Se o cofre não responder, o CRM não sobe (para não começar vazio).
-Senha esquecida (sem terminal no Render): defina `FM_RESET_EMAIL=email`, reinicie, pegue o código no log e apague a variável.
+Chave de instalação sem acesso ao log: defina `FM_INSTALL_KEY` (12+ letras/números/hífen) antes do primeiro
+administrador. Senha esquecida (sem terminal no Render): defina `FM_RESET_EMAIL=email`, reinicie, pegue o código no log e apague a variável.
 
 ## IA grátis
 Configurações > Inteligência (IA) > provedor **Google Gemini (grátis)** ou **Groq (grátis)**. A chave sai de graça, sem

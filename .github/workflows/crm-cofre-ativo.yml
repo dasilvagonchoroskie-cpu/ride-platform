@@ -10,5 +10,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -fsS -X POST "https://myfktvjbdczfxgppnbua.supabase.co/rest/v1/rpc/crm_cofre_ping" \
-            -H "apikey: sb_publishable_npSVzfLhJ7-B6BmoXlHcwQ_nt9rhyF7" -H "content-type: application/json" -d '{}'
+          curl -fsS -X POST "https://xefeimjmvofeujcqlnuv.supabase.co/rest/v1/rpc/crm_cofre_ping" \
+            -H "apikey: sb_publishable_Oyj6mKR1egG5KOY_bKuAkA_KN5QM-Dv" -H "content-type: application/json" -d '{}'

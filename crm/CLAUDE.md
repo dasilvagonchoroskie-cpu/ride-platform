@@ -48,7 +48,7 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 ## Hospedagem no Render grátis + cofre (05/11/2026)
 - Render grátis tem disco temporário (apaga tudo a cada reinício/deploy/hibernação) e hiberna após 15 min sem acesso.
 - Solução: `start.js` + `src/persist.js`. Ao ligar, restaura `data/` (banco, `wa-auth`, chaves da IA) de um retrato
-  **cifrado (AES-256-GCM)** guardado no Supabase (projeto `crm-fortaleza-move-cofre`, ref `myfktvjbdczfxgppnbua`,
+  **cifrado (AES-256-GCM)** guardado no Supabase (projeto Supabase da conta Fortaleza Move, ref `xefeimjmvofeujcqlnuv`,
   esquema `cofre`, funções `crm_snapshot_assumir/gravar` protegidas por token). Envia retrato novo a cada 30 s quando
   algo muda e no SIGTERM. **Fail-closed:** se o cofre não responder, o CRM não sobe (nunca sobe vazio por cima).
   Processo antigo de um deploy não grava por cima do novo ("dono").
