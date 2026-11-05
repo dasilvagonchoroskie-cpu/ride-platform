@@ -7,13 +7,13 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
-## 0. Clube de Vantagens (05/11/2026, PR #20)
-- [AUTO] Servidor: 12 testes das regras (cadastro, telefone, QR cifrado, vencimento, QR alterado, nome curto, situação). Jest total 125.
-- [AUTO] Central: cadastro, edição, desativação, benefício, exclusão com confirmação, lista vazia, erro de conexão, operador só consulta.
-- [AUTO] Motorista: lista, mapa, WhatsApp, ligar, detalhe, mudança da Central, lista vazia, erro de conexão, identificação sem campos editáveis.
-- [REAL] Ponta a ponta no servidor de verdade, execução 76: 369 OK, 0 falhas (Central cria/edita/desativa/exclui; motorista vê só ativos; motorista, passageiro e operador barrados; QR válido e QR alterado recusado). APKs: Central 305, Motorista 306.
-- [NÃO EXISTE] Parceiros de verdade: esperando o Evandro autorizar/mandar os dados. Localização exata (latitude/longitude) não tem campo na Central: o mapa abre pelo endereço escrito.
-- [SEM TESTE] Ler o QR com a câmera de outro celular (teste de rua do Evandro).
+## 0. Clube de Vantagens (05/11/2026, PRs #20, #21 e #23)
+- Carteirinha sem QR Code e sem página de consulta (pedido do Evandro 05/11 16:10): verde APTO / vermelha NÃO APTO.
+- [AUTO] Servidor: regra da recarga (R$ 100 em 30 dias, não soma menores, só recarga confirmada, vence sozinha). Jest 127.
+- [AUTO] Central 54 testes; Motorista 100 testes (lista, mapa, WhatsApp, detalhe, vazio, erro, carteirinha verde e vermelha).
+- [REAL] Ponta a ponta: ver logs/teste-ponta-a-ponta.txt (sem recarga, R$ 50, R$ 50+60, R$ 100, suspenso, app não bloqueado).
+- Limitações: o sistema não tem recarga "pendente/cancelada" — a recarga só existe quando a Central lança o crédito. Se a Central lançar errado e tirar com "Remover saldo", a recarga continua contando para o clube.
+- [NÃO EXISTE] Parceiros de verdade (esperando o Evandro).
 
 ## 1. Resultado real dos testes (30/10/2026, tarde)
 
