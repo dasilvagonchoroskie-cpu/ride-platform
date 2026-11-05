@@ -11,7 +11,7 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 - [AUTO] Servidor: 12 testes das regras (cadastro, telefone, QR cifrado, vencimento, QR alterado, nome curto, situação). Jest total 125.
 - [AUTO] Central: cadastro, edição, desativação, benefício, exclusão com confirmação, lista vazia, erro de conexão, operador só consulta.
 - [AUTO] Motorista: lista, mapa, WhatsApp, ligar, detalhe, mudança da Central, lista vazia, erro de conexão, identificação sem campos editáveis.
-- [REAL] Ponta a ponta no servidor de verdade: ver logs/teste-ponta-a-ponta.txt (Central cria/edita/desativa/exclui; motorista vê só ativos; motorista, passageiro e operador barrados; QR válido e QR alterado recusado).
+- [REAL] Ponta a ponta no servidor de verdade, execução 76: 369 OK, 0 falhas (Central cria/edita/desativa/exclui; motorista vê só ativos; motorista, passageiro e operador barrados; QR válido e QR alterado recusado). APKs: Central 305, Motorista 306.
 - [NÃO EXISTE] Parceiros de verdade: esperando o Evandro autorizar/mandar os dados. Localização exata (latitude/longitude) não tem campo na Central: o mapa abre pelo endereço escrito.
 - [SEM TESTE] Ler o QR com a câmera de outro celular (teste de rua do Evandro).
 
