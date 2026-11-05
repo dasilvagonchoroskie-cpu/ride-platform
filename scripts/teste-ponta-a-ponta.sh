@@ -1033,6 +1033,45 @@ X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] 
 CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
 X=$(get /geo/uso "$TA"); [ "$(echo "$X" | jq -r '.data.ligado')" = "true" ] && ok "Central: uso da TomTom hoje ($(echo "$X" | jq -r '[.data.servicos[] | "\(.servico) \(.hoje)/\(.parteDoDia)"] | join(", ")'))" || falha "Central: uso da TomTom" "$(echo "$X" | jq -c '{ligado: .data.ligado, erro: .error.code}')"
 X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso da TomTom" "$X" || ok "Seguranca: so a Central ve o uso da TomTom"
+# ---- Clube de Vantagens (05/11/2026): a Central cadastra, o motorista ve
+# so os ativos, a identificacao digital tem QR conferido no servidor e so o
+# dono grava. O parceiro de teste e apagado no fim. ----
+del()   { curl -s -m 90 -X DELETE "$API$1" ${2:+-H "Authorization: Bearer $2"}; }
+X=$(get /clube/parceiros "$TM"); sucesso "$X" && ok "Motorista: abre o Clube de Vantagens ($(echo "$X" | jq -r '.data | length') parceiro(s) ativo(s))" || falha "Motorista: lista do clube" "$X"
+X=$(post /admin/clube/parceiros '{"nome":"Parceiro Teste Automatico","categoria":"Outros","endereco":"Endereco de teste automatico, 1","whatsapp":"(64) 99999-0000","vantagens":"Vantagem de teste automatico","condicoes":"Teste"}' "$TA")
+CLUBE=$(echo "$X" | jq -r '.data.id // empty')
+[ -n "$CLUBE" ] && [ "$(echo "$X" | jq -r '.data.whatsapp')" = "5564999990000" ] && [ "$(echo "$X" | jq -r '.data.ativo')" = "true" ] && ok "Central: cadastrou parceiro no clube (WhatsApp normalizado, ativo)" || falha "Central: cadastrar parceiro do clube" "$X"
+X=$(post /admin/clube/parceiros '{"nome":"","categoria":"Outros","endereco":"x","vantagens":""}' "$TA"); sucesso "$X" && falha "Central: cadastro do clube sem nome passou" "$X" || ok "Central: cadastro do clube sem nome e endereco e recusado"
+if [ -n "$CLUBE" ]; then
+  X=$(post "/admin/clube/parceiros/$CLUBE/beneficios" '{"titulo":"Beneficio de teste","condicoes":"Mostrar a identificacao"}' "$TA")
+  [ "$(echo "$X" | jq -r '.data.beneficios | length')" = "1" ] && ok "Central: cadastrou beneficio com condicao livre" || falha "Central: beneficio do clube" "$X"
+  X=$(get /clube/parceiros "$TM"); [ "$(echo "$X" | jq -r --arg i "$CLUBE" '[.data[] | select(.id==$i)] | length')" = "1" ] && ok "Motorista: o parceiro novo da Central aparece na hora" || falha "Motorista: parceiro novo no clube" "$X"
+  [ "$(echo "$X" | jq -r --arg i "$CLUBE" '.data[] | select(.id==$i) | has("ativo") or has("cadastradoEm")')" = "false" ] && ok "Seguranca: o motorista nao recebe dados internos do cadastro" || falha "Seguranca: dados internos no clube do motorista" "$X"
+  X=$(put "/admin/clube/parceiros/$CLUBE" '{"nome":"Parceiro Teste Editado","categoria":"Outros","endereco":"Endereco de teste automatico, 1","vantagens":"Vantagem editada","ativo":true}' "$TA")
+  X=$(get "/clube/parceiros/$CLUBE" "$TM"); [ "$(echo "$X" | jq -r '.data.nome')" = "Parceiro Teste Editado" ] && [ "$(echo "$X" | jq -r '.data.beneficios[0].titulo')" = "Beneficio de teste" ] && ok "Motorista: ve a edicao da Central no detalhe" || falha "Motorista: edicao no detalhe do clube" "$X"
+  X=$(post /admin/clube/parceiros '{"nome":"Invasor","categoria":"Outros","endereco":"Rua invasora, 1","vantagens":"Nada"}' "$TM"); sucesso "$X" && falha "Seguranca: motorista cadastrou parceiro" "$X" || ok "Seguranca: motorista nao cadastra parceiro (so le)"
+  X=$(del "/admin/clube/parceiros/$CLUBE" "$TM"); sucesso "$X" && falha "Seguranca: motorista excluiu parceiro" "$X" || ok "Seguranca: motorista nao exclui parceiro"
+  X=$(get /clube/parceiros "$TP"); sucesso "$X" && falha "Seguranca: passageiro viu o clube dos motoristas" "$X" || ok "Seguranca: passageiro nao ve o clube dos motoristas"
+  if [ -n "${TO:-}" ]; then
+    X=$(get /admin/clube/parceiros "$TO"); sucesso "$X" && ok "Operador: consulta os parceiros do clube" || falha "Operador: consultar o clube" "$X"
+    X=$(patch "/admin/clube/parceiros/$CLUBE/ativo" '{"ativo":false}' "$TO"); sucesso "$X" && falha "Seguranca: operador desativou parceiro" "$X" || ok "Seguranca: operador nao altera o clube (so o dono)"
+  fi
+  X=$(patch "/admin/clube/parceiros/$CLUBE/ativo" '{"ativo":false}' "$TA"); [ "$(echo "$X" | jq -r '.data.ativo')" = "false" ] && ok "Central: desativou o parceiro" || falha "Central: desativar parceiro" "$X"
+  X=$(get /clube/parceiros "$TM"); [ "$(echo "$X" | jq -r --arg i "$CLUBE" '[.data[] | select(.id==$i)] | length')" = "0" ] && ok "Motorista: parceiro desativado some da lista" || falha "Motorista: desativado continua na lista" "$X"
+  X=$(get "/clube/parceiros/$CLUBE" "$TM"); sucesso "$X" && falha "Motorista: abriu parceiro desativado" "$X" || ok "Motorista: detalhe de parceiro desativado avisa que saiu do clube"
+  X=$(get /admin/clube/parceiros "$TA"); [ "$(echo "$X" | jq -r --arg i "$CLUBE" '[.data[] | select(.id==$i and .ativo==false)] | length')" = "1" ] && ok "Central: o inativo continua na lista da Central" || falha "Central: lista com inativos" "$X"
+  X=$(del "/admin/clube/parceiros/$CLUBE" "$TA"); [ "$(echo "$X" | jq -r '.data.excluido')" = "true" ] && ok "Central: excluiu o parceiro de teste (com os beneficios)" || falha "Central: excluir parceiro" "$X"
+fi
+X=$(get /clube/carteirinha "$TM"); QR=$(echo "$X" | jq -r '.data.qr // empty')
+[ -n "$QR" ] && echo "$X" | jq -e '.data.codigo | test("^FM-[0-9A-F]{8}$")' >/dev/null && [ "$(echo "$X" | jq -r '.data.situacao')" = "ATIVO" ] && ok "Motorista: identificacao digital da conta logada ($(echo "$X" | jq -r '.data.codigo'), $(echo "$X" | jq -r '.data.situacaoTexto'))" || falha "Motorista: identificacao digital" "$X"
+echo "$X" | jq -e '.data | has("phone") or has("cpf") or has("email") or has("telefone")' >/dev/null && falha "Seguranca: identificacao com dado pessoal" "$X" || ok "Seguranca: identificacao sem telefone, CPF ou e-mail"
+if [ -n "$QR" ]; then
+  H=$(curl -s -m 60 "$QR"); echo "$H" | grep -q 'Identificação válida' && ! echo "$H" | grep -q "$CPF" && ok "Comerciante: le o QR e o servidor confirma a identificacao" || falha "Comerciante: validar QR" "$(echo "$H" | head -c 300)"
+  U=${QR: -1}; [ "$U" = "A" ] && U=B || U=A
+  H=$(curl -s -m 60 "${QR%?}$U"); echo "$H" | grep -q 'não confirmada' && ok "Seguranca: QR alterado e recusado" || falha "Seguranca: QR alterado passou" "$(echo "$H" | head -c 300)"
+fi
+X=$(get /clube/carteirinha "$TP"); sucesso "$X" && falha "Seguranca: passageiro tirou identificacao de motorista" "$X" || ok "Seguranca: passageiro nao tem identificacao de motorista"
+
 # Etapa 7: verificacao em duas etapas da Central (Google Authenticator) — a
 # rota existe e responde a situacao; ligar de verdade e na Central.
 X=$(get /auth/2fa "$TA"); [ "$(echo "$X" | jq -r '.data.ativo | type')" = "boolean" ] && ok "Central: verificacao em duas etapas disponivel (ligada: $(echo "$X" | jq -r '.data.ativo'))" || falha "Central: verificacao em duas etapas" "$X"

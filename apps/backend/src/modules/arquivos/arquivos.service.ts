@@ -19,7 +19,8 @@ const MAX_BYTES = 2 * 1024 * 1024;
 
 /** Fotos que qualquer pessoa logada pode ver (o rosto de quem vai na corrida). */
 // Rosto do motorista e foto do carro aparecem para o passageiro da corrida.
-const PUBLICAS = new Set(['AVATAR', 'PROFILE_PHOTO', 'VEHICLE_FRONT']);
+// Logotipo do parceiro do Clube de Vantagens: os motoristas veem.
+const PUBLICAS = new Set(['AVATAR', 'PROFILE_PHOTO', 'VEHICLE_FRONT', 'CLUBE_LOGO']);
 
 /** Confere e decodifica a foto mandada pelo aplicativo (base64). */
 export function decodificarFoto(mime: string, base64: string): Buffer {

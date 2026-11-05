@@ -871,3 +871,46 @@ model RideMessage {
   @@index([rideId, createdAt])
   @@map("ride_messages")
 }
+
+/// Clube de Vantagens (Evandro, 05/11/2026): estabelecimentos parceiros com
+/// condicoes especiais para os motoristas. Cadastro so pela Central (dono);
+/// o app do motorista so consulta os ativos. Tabelas criadas pelo proprio
+/// servidor ao subir (CREATE TABLE IF NOT EXISTS em ClubeService).
+model ClubeParceiro {
+  id         String           @id @default(uuid()) @db.Uuid
+  nome       String           @db.VarChar(120)
+  categoria  String           @db.VarChar(60)
+  descricao  String           @default("") @db.VarChar(1000)
+  endereco   String           @db.VarChar(300)
+  latitude   Float?
+  longitude  Float?
+  telefone   String?          @db.VarChar(20)
+  whatsapp   String?          @db.VarChar(20)
+  horario    String           @default("") @db.VarChar(300)
+  vantagens  String           @default("") @db.VarChar(1500)
+  condicoes  String           @default("") @db.VarChar(1500)
+  logoUrl    String?          @map("logo_url") @db.VarChar(80)
+  ativo      Boolean          @default(true)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @default(now()) @updatedAt @map("updated_at")
+  beneficios ClubeBeneficio[]
+
+  @@index([ativo])
+  @@map("clube_parceiros")
+}
+
+model ClubeBeneficio {
+  id         String        @id @default(uuid()) @db.Uuid
+  parceiroId String        @map("parceiro_id") @db.Uuid
+  titulo     String        @db.VarChar(120)
+  descricao  String        @default("") @db.VarChar(1000)
+  condicoes  String        @default("") @db.VarChar(1000)
+  ativo      Boolean       @default(true)
+  ordem      Int           @default(0)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @default(now()) @updatedAt @map("updated_at")
+  parceiro   ClubeParceiro @relation(fields: [parceiroId], references: [id], onDelete: Cascade)
+
+  @@index([parceiroId])
+  @@map("clube_beneficios")
+}

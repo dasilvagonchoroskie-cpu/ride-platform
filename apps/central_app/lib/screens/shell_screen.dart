@@ -5,6 +5,7 @@ import '../core/alarme.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
+import '../painel/clube.dart';
 import '../painel/alertas.dart';
 import '../painel/ao_vivo.dart';
 import '../painel/carteiras.dart';
@@ -70,6 +71,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _Aba('financeiro', 'Financeiro', Icons.payments_outlined),
     _Aba('alertas', 'Alertas e Segurança', Icons.sos_outlined, menu: 'Alertas'),
     _Aba('cupons', 'Cupons', Icons.local_offer_outlined, soDono: true),
+    _Aba('clube', 'Clube de Vantagens', Icons.card_membership_outlined),
     _Aba('carteiras', 'Carteiras / Recargas', Icons.account_balance_wallet_outlined),
     _Aba('cidades', 'Cidades e equipe', Icons.location_city_outlined, soDono: true),
     _Aba('limpeza', 'Limpeza de dados', Icons.cleaning_services_outlined, soDono: true),
@@ -390,6 +392,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         return const Alertas();
       case 'cupons':
         return const CuponsTela();
+      case 'clube':
+        return const ClubeTela();
       case 'carteiras':
         return const CarteirasTela();
       case 'entregas':

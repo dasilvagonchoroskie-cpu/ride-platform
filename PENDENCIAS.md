@@ -1,11 +1,19 @@
 # PENDÊNCIAS — Fortaleza Move
 
-Atualizado em 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
+Atualizado em 05/11/2026: Clube de Vantagens (seção 0). Antes, 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**.
 
 Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou esteira) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
 
 ---
+
+## 0. Clube de Vantagens (05/11/2026, PR #20)
+- [AUTO] Servidor: 12 testes das regras (cadastro, telefone, QR cifrado, vencimento, QR alterado, nome curto, situação). Jest total 125.
+- [AUTO] Central: cadastro, edição, desativação, benefício, exclusão com confirmação, lista vazia, erro de conexão, operador só consulta.
+- [AUTO] Motorista: lista, mapa, WhatsApp, ligar, detalhe, mudança da Central, lista vazia, erro de conexão, identificação sem campos editáveis.
+- [REAL] Ponta a ponta no servidor de verdade: ver logs/teste-ponta-a-ponta.txt (Central cria/edita/desativa/exclui; motorista vê só ativos; motorista, passageiro e operador barrados; QR válido e QR alterado recusado).
+- [NÃO EXISTE] Parceiros de verdade: esperando o Evandro autorizar/mandar os dados. Localização exata (latitude/longitude) não tem campo na Central: o mapa abre pelo endereço escrito.
+- [SEM TESTE] Ler o QR com a câmera de outro celular (teste de rua do Evandro).
 
 ## 1. Resultado real dos testes (30/10/2026, tarde)
 
