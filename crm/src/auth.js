@@ -118,7 +118,8 @@ const limiters = {
   loginPair: createLimiter({ max: 6, windowMs: 15 * 60 * 1000 }),     // falhas por IP + e-mail
   loginEmail: createLimiter({ max: 40, windowMs: 15 * 60 * 1000 }),   // retaguarda contra ataque distribuído
   sensitiveIp: createLimiter({ max: 10, windowMs: 15 * 60 * 1000 }),  // chave de instalação / código de recuperação
-  passwordUser: createLimiter({ max: 8, windowMs: 15 * 60 * 1000 })   // senha atual errada ao trocar a senha (por usuário)
+  passwordUser: createLimiter({ max: 8, windowMs: 15 * 60 * 1000 }),  // senha atual errada ao trocar a senha (por usuário)
+  recoverEmail: createLimiter({ max: 8, windowMs: 60 * 60 * 1000 })   // código de recuperação errado por e-mail (por hora)
 };
 
 const emailKey = (email) => String(email || '').trim().toLowerCase().slice(0, 254);
@@ -152,6 +153,49 @@ function checkInstallationKey(provided) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+/* ------------------------- códigos de recuperação -------------------------- */
+// 8 códigos de 12 caracteres (alfabeto de 32 símbolos = 60 bits cada). Guardados só como SHA-256 com pimenta por usuário.
+const RECOVERY_COUNT = 8;
+const RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const normalizeRecovery = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const recoveryHash = (userId, code) => sha256(`fm-recovery|${userId}|${normalizeRecovery(code)}`);
+
+function generateRecoveryCodes(userId) {
+  const codes = Array.from({ length: RECOVERY_COUNT }, () => {
+    const raw = Array.from({ length: 12 }, () => RECOVERY_ALPHABET[crypto.randomInt(RECOVERY_ALPHABET.length)]).join('');
+    return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8)}`;
+  });
+  const now = nowISO();
+  db.transaction(() => {
+    db.prepare('DELETE FROM recovery_codes WHERE user_id = ?').run(userId);
+    const ins = db.prepare('INSERT INTO recovery_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)');
+    for (const c of codes) ins.run(userId, recoveryHash(userId, c), now);
+  })();
+  return codes;
+}
+
+function recoveryStatus(userId) {
+  const r = db.prepare('SELECT COUNT(*) AS total, SUM(used_at IS NULL) AS restantes, MAX(created_at) AS gerados_em FROM recovery_codes WHERE user_id = ?').get(userId);
+  return { total: r.total || 0, restantes: r.restantes || 0, gerados_em: r.gerados_em || null };
+}
+
+// Consome um código (uso único). Devolve true se valeu. Compara em tempo constante.
+function consumeRecoveryCode(userId, code) {
+  if (normalizeRecovery(code).length !== 12) return false;
+  const alvo = Buffer.from(recoveryHash(userId, code));
+  const rows = db.prepare('SELECT id, code_hash FROM recovery_codes WHERE user_id = ? AND used_at IS NULL').all(userId);
+  let achado = null;
+  for (const r of rows) {
+    const b = Buffer.from(r.code_hash);
+    if (b.length === alvo.length && crypto.timingSafeEqual(b, alvo)) achado = r.id;
+  }
+  if (!achado) return false;
+  return db.prepare('UPDATE recovery_codes SET used_at = ? WHERE id = ? AND used_at IS NULL').run(nowISO(), achado).changes === 1;
+}
+
+const recoverBlocked = (ip, email) => limiters.sensitiveIp.isBlocked(ip) || limiters.recoverEmail.isBlocked(emailKey(email));
+function recoverFailed(ip, email) { limiters.sensitiveIp.fail(ip); limiters.recoverEmail.fail(emailKey(email)); }
+
 function passwordProblem(password) {
   const value = String(password || '');
   if (value.length < 10) return 'A senha deve ter no mínimo 10 caracteres.';
@@ -183,6 +227,12 @@ module.exports = {
   sensitiveFailed,
   checkInstallationKey,
   passwordProblem,
+  generateRecoveryCodes,
+  recoveryStatus,
+  consumeRecoveryCode,
+  recoverBlocked,
+  recoverFailed,
+  RECOVERY_COUNT,
   sha256,
   nowISO
 };

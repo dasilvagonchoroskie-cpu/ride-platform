@@ -133,21 +133,74 @@ function renderLogin(org) {
 
   document.getElementById('forgot-link').addEventListener('click', (e) => {
     e.preventDefault();
-    const m = ui.modal({
-      title: 'Recuperação de senha',
-      size: 'small',
-      body: `<p style="font-size:13.5px;color:#33455e">O sistema não envia e-mail automaticamente. Para redefinir a senha, o responsável pelo servidor deve executar o comando abaixo, que gera um código de uso único válido por 30 minutos:</p>
-        <pre style="background:#0b2545;color:#dfe8f5;padding:12px;border-radius:10px;font-size:12px;overflow:auto">npm run reset -- seu@email.com</pre>
-        <p style="font-size:13px;color:#5b6b82">O comando imprime um link e um código. Abra o link, ou use o botão abaixo e cole o código. Nenhuma senha é exibida ou enviada por e-mail.</p>`,
-      footer: '<button class="btn btn-ghost" data-has-code>Já tenho o código</button><button class="btn btn-primary" data-close-modal>Entendi</button>'
-    });
-    const dlg = m.dialog;
-    dlg.querySelector('[data-close-modal]').addEventListener('click', () => dlg.close());
-    dlg.querySelector('[data-has-code]').addEventListener('click', () => {
-      dlg.close();
-      history.replaceState(null, '', '/reset');
-      renderReset('');
-    });
+    renderRecover(document.getElementById('login-email').value);
+  });
+}
+
+// Recuperação pelo próprio usuário: e-mail + um dos códigos de recuperação gerados em Configurações.
+function renderRecover(emailInicial) {
+  authShell({
+    title: 'Recuperar acesso',
+    subtitle: 'Use um dos seus códigos de recuperação.',
+    sideTitle: 'Recuperação de acesso|defina uma nova senha',
+    body: `<form id="recover-form" novalidate>
+        <div class="form-errors" id="recover-error" hidden></div>
+        <div class="field">
+          <label for="rec-email">E-mail</label>
+          <input id="rec-email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="rec-codigo">Código de recuperação</label>
+          <input id="rec-codigo" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required>
+          <div class="form-hint">Um dos códigos que você gerou e guardou em Configurações &gt; Códigos de recuperação. Cada código vale uma vez.</div>
+        </div>
+        <div class="field">
+          <label for="rec-senha">Nova senha</label>
+          <input id="rec-senha" type="password" autocomplete="new-password" required>
+          <div class="form-hint">Mínimo de 10 caracteres, com letras e números.</div>
+        </div>
+        <div class="field">
+          <label for="rec-senha2">Confirmar nova senha</label>
+          <input id="rec-senha2" type="password" autocomplete="new-password" required>
+        </div>
+        <button class="btn btn-primary" type="submit" id="rec-submit">Redefinir senha</button>
+      </form>`,
+    foot: `<div class="auth-note">Sem código? Um <b>gestor</b> pode pedir ao administrador para definir uma senha nova (Configurações &gt; Usuários).
+             O administrador sem código pode pedir ao responsável pelo servidor um código temporário: <a href="#" id="rec-servidor">tenho um código do servidor</a>.</div>
+           <div class="auth-foot"><a href="/" id="rec-voltar">Voltar para o login</a></div>`
+  });
+  document.getElementById('rec-email').value = emailInicial || '';
+  document.getElementById('rec-voltar').addEventListener('click', (e) => { e.preventDefault(); renderLogin(); });
+  document.getElementById('rec-servidor').addEventListener('click', (e) => {
+    e.preventDefault();
+    history.replaceState(null, '', '/reset');
+    renderReset('');
+  });
+  document.getElementById('recover-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('recover-error');
+    errorBox.hidden = true;
+    const senha = document.getElementById('rec-senha').value;
+    if (senha !== document.getElementById('rec-senha2').value) {
+      errorBox.hidden = false;
+      errorBox.textContent = 'As senhas não coincidem.';
+      return;
+    }
+    const button = document.getElementById('rec-submit');
+    button.disabled = true;
+    try {
+      const r = await api.post('/auth/recover', {
+        email: document.getElementById('rec-email').value,
+        codigo: document.getElementById('rec-codigo').value,
+        senha
+      });
+      ui.toast(`Senha redefinida. Entre com a nova senha. Restam ${r.restantes} código(s) de recuperação.`, 'success');
+      renderLogin();
+    } catch (err) {
+      errorBox.hidden = false;
+      errorBox.textContent = err.message;
+      button.disabled = false;
+    }
   });
 }
 
@@ -229,7 +282,7 @@ function renderReset(initialToken) {
         ${token ? '' : `<div class="field">
           <label for="reset-codigo">Código de recuperação</label>
           <input id="reset-codigo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-          <div class="form-hint">O código impresso pelo comando <code>npm run reset</code>.</div>
+          <div class="form-hint">Código temporário gerado no servidor (comando <code>npm run reset</code> ou variável <code>FM_RESET_EMAIL</code>).</div>
         </div>`}
         <div class="field">
           <label for="reset-senha">Nova senha</label>
@@ -356,6 +409,10 @@ async function enterApp() {
   window.removeEventListener('hashchange', route);
   window.addEventListener('hashchange', route);
   await route();
+  // Lembrete: sem códigos de recuperação, a pessoa não consegue redefinir a senha sozinha.
+  api.get('/auth/recovery-codes').then((st) => {
+    if (!st.restantes) ui.toast('Gere seus códigos de recuperação em Configurações, para poder redefinir a senha se esquecer.', 'info');
+  }).catch(() => {});
 }
 
 function initials(name) {

@@ -279,3 +279,14 @@ CREATE TABLE IF NOT EXISTS ia_analises (
 );
 CREATE INDEX IF NOT EXISTS ix_ia_conversa ON ia_analises (conversa_id, id);
 CREATE INDEX IF NOT EXISTS ix_ia_data ON ia_analises (criado_em);
+
+-- Códigos de recuperação pessoais (como os de verificação em duas etapas): o próprio usuário gera em Configurações,
+-- guarda num lugar seguro e usa um deles para redefinir a senha sem depender do servidor. Uso único; só o hash fica aqui.
+CREATE TABLE IF NOT EXISTS recovery_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  used_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_recovery_codes_user ON recovery_codes(user_id);

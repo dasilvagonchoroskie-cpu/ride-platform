@@ -136,6 +136,19 @@ export async function renderSettings(view, state) {
           </div>
         </div>
 
+        <div class="card" id="rec-card">
+          <div class="card-head"><div><h3>Códigos de recuperação</h3><p class="sub">Para redefinir a senha sozinho, se esquecer</p></div></div>
+          <div class="card-body">
+            <div id="rec-estado" class="muted">Carregando…</div>
+            <div class="form-errors" id="rec-error" hidden></div>
+            <div class="stack" style="gap:12px;margin-top:10px">
+              <div class="field"><label for="rec-senha-atual">Senha atual (para gerar)</label><input id="rec-senha-atual" type="password" autocomplete="current-password"></div>
+              <button class="btn btn-primary" id="rec-gerar" type="button">${ui.icon('lock', 15)} Gerar códigos novos</button>
+            </div>
+            <div id="rec-lista" hidden style="margin-top:12px"></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-head"><div><h3>Sessões ativas</h3><p class="sub">Dispositivos conectados à sua conta</p></div></div>
           <div class="card-body">
@@ -201,6 +214,8 @@ export async function renderSettings(view, state) {
       errorBox.textContent = err.message;
     }
   });
+
+  setupRecuperacao(view);
 
   view.querySelectorAll('[data-session]').forEach((b) => b.addEventListener('click', async () => {
     try {
@@ -429,4 +444,48 @@ function setupIA(view) {
   });
 
   carregar();
+}
+
+// Códigos de recuperação: mostrados UMA vez, na hora de gerar. Gerar de novo invalida os anteriores.
+function setupRecuperacao(view) {
+  const $ = (sel) => view.querySelector(sel);
+  let emailConta = '';
+  api.get('/auth/me').then((r) => { emailConta = (r.user && r.user.email) || ''; }).catch(() => {});
+  async function estado() {
+    try {
+      const st = await api.get('/auth/recovery-codes');
+      $('#rec-estado').innerHTML = st.restantes
+        ? `${ui.badge(`${st.restantes} código(s) disponível(is)`, 'success')} <span class="muted">gerados em ${ui.esc(ui.fmtDateTime(st.gerados_em))}</span>`
+        : `${ui.badge('Nenhum código', 'warn')} <span class="muted">Gere agora: sem código, só o administrador ou o servidor conseguem trocar sua senha.</span>`;
+    } catch (err) { $('#rec-estado').textContent = ''; }
+  }
+  $('#rec-gerar').addEventListener('click', async () => {
+    const errorBox = $('#rec-error');
+    errorBox.hidden = true;
+    try {
+      const r = await api.post('/auth/recovery-codes', { senha_atual: $('#rec-senha-atual').value });
+      $('#rec-senha-atual').value = '';
+      const texto = `CRM Fortaleza Move - códigos de recuperação\nConta: ${emailConta}\nGerados em: ${new Date().toLocaleString('pt-BR')}\nCada código vale uma vez. Guarde fora do celular/computador do dia a dia.\n\n${r.codigos.join('\n')}\n`;
+      const lista = $('#rec-lista');
+      lista.hidden = false;
+      lista.innerHTML = `<div class="notice warn">Guarde estes códigos agora (anote no papel ou baixe o arquivo). Eles <b>não aparecem de novo</b>. Os códigos antigos deixaram de valer.</div>
+        <pre style="background:#0b2545;color:#dfe8f5;padding:12px;border-radius:10px;font-size:14px;letter-spacing:1px;margin-top:10px">${r.codigos.map(ui.esc).join('\n')}</pre>
+        <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-ghost" id="rec-copiar" type="button">Copiar</button><button class="btn btn-ghost" id="rec-baixar" type="button">Baixar arquivo</button></div>`;
+      $('#rec-copiar').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(texto); ui.toast('Códigos copiados.', 'success'); } catch (e) { ui.toast('Não consegui copiar: anote os códigos.', 'error'); }
+      });
+      $('#rec-baixar').addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([texto], { type: 'text/plain;charset=utf-8' }));
+        a.download = 'codigos-recuperacao-crm.txt';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      });
+      estado();
+    } catch (err) {
+      errorBox.hidden = false;
+      errorBox.textContent = err.message;
+    }
+  });
+  estado();
 }

@@ -194,6 +194,31 @@ router.post('/auth/reset', (req, res) => {
   res.json({ ok: true });
 });
 
+// Recuperação pelo próprio usuário: e-mail + um dos códigos de recuperação que ele gerou em Configurações.
+// Mesma resposta para e-mail inexistente, sem códigos ou código errado (sem enumeração). Limite por IP e por e-mail.
+router.post('/auth/recover', (req, res) => {
+  const ip = req.ip || '';
+  const email = String(req.body.email || '').trim().toLowerCase().slice(0, 254);
+  const codigo = String(req.body.codigo || '').slice(0, 40);
+  const senha = String(req.body.senha || '');
+  if (auth.recoverBlocked(ip, email)) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde e tente novamente mais tarde.');
+  const pwdError = auth.passwordProblem(senha);
+  if (pwdError) return fail(res, 422, 'weak_password', pwdError);
+  const user = email ? db.prepare('SELECT id, ativo FROM users WHERE lower(email) = ?').get(email) : null;
+  const ok = !!(user && user.ativo) && auth.consumeRecoveryCode(user.id, codigo);
+  if (!ok) {
+    auth.recoverFailed(ip, email);
+    audit(req, 'recuperacao_falha', 'users', user ? user.id : null, `Código de recuperação inválido (${email.replace(/[\r\n\t]/g, ' ').slice(0, 120)})`);
+    return fail(res, 400, 'invalid_recovery', 'E-mail ou código de recuperação inválido (ou o código já foi usado).');
+  }
+  db.prepare('UPDATE users SET senha_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
+    .run(auth.hashPassword(senha), nowISO(), user.id);
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
+  const st = auth.recoveryStatus(user.id);
+  audit(req, 'senha_recuperada', 'users', user.id, `Senha redefinida com código de recuperação (restam ${st.restantes})`);
+  res.json({ ok: true, restantes: st.restantes });
+});
+
 /* ------------------------------- autenticado ------------------------------- */
 router.use(auth.requireAuth);
 
@@ -233,6 +258,24 @@ router.post('/auth/change-password', (req, res) => {
   db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(user.id, req.user.sid);
   audit(req, 'senha_alterada', 'users', user.id, 'Senha alterada pelo próprio usuário');
   res.json({ ok: true });
+});
+
+router.get('/auth/recovery-codes', (req, res) => {
+  res.json(auth.recoveryStatus(req.user.id));
+});
+
+// Gerar (ou trocar) os códigos exige a senha atual: quem pegar uma sessão aberta não consegue criar códigos para si.
+router.post('/auth/recovery-codes', (req, res) => {
+  if (auth.passwordBlocked(req.user.id)) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !auth.verifyPassword(String(req.body.senha_atual || ''), user.senha_hash)) {
+    auth.passwordFailed(req.user.id);
+    return fail(res, 422, 'invalid_password', 'A senha atual não confere.');
+  }
+  auth.passwordOk(req.user.id);
+  const codigos = auth.generateRecoveryCodes(user.id);
+  audit(req, 'codigos_recuperacao', 'users', user.id, 'Códigos de recuperação gerados (os anteriores deixaram de valer)');
+  res.json({ codigos, ...auth.recoveryStatus(user.id) });
 });
 
 router.get('/auth/sessions', (req, res) => {
