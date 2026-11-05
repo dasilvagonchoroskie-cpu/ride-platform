@@ -1058,8 +1058,9 @@ X=$(get /clube/carteirinha "$TM"); QR=$(echo "$X" | jq -r '.data.qr // empty')
 echo "$X" | jq -e '.data | has("phone") or has("cpf") or has("email") or has("telefone")' >/dev/null && falha "Seguranca: identificacao com dado pessoal" "$X" || ok "Seguranca: identificacao sem telefone, CPF ou e-mail"
 if [ -n "$QR" ]; then
   H=$(curl -s -m 60 "$QR"); echo "$H" | grep -q 'Identificação válida' && ! echo "$H" | grep -q "$CPF" && ok "Comerciante: le o QR e o servidor confirma a identificacao" || falha "Comerciante: validar QR" "$(echo "$H" | head -c 300)"
-  U=${QR: -1}; [ "$U" = "A" ] && U=B || U=A
-  H=$(curl -s -m 60 "${QR%?}$U"); echo "$H" | grep -q 'não confirmada' && ok "Seguranca: QR alterado e recusado" || falha "Seguranca: QR alterado passou" "$(echo "$H" | head -c 300)"
+  # Troca uma letra no meio do codigo (a ultima pode cair nos bits que o base64 ignora).
+  C=${QR##*/}; M=$(( ${#C} / 2 )); L=${C:$M:1}; [ "$L" = "A" ] && L=B || L=A
+  H=$(curl -s -m 60 "${QR%/*}/${C:0:$M}$L${C:$((M+1))}"); echo "$H" | grep -q 'não confirmada' && ok "Seguranca: QR alterado e recusado" || falha "Seguranca: QR alterado passou" "$(echo "$H" | head -c 300)"
 fi
 X=$(get /clube/carteirinha "$TP"); sucesso "$X" && falha "Seguranca: passageiro tirou identificacao de motorista" "$X" || ok "Seguranca: passageiro nao tem identificacao de motorista"
 
