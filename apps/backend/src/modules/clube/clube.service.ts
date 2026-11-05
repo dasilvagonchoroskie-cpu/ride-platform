@@ -281,11 +281,13 @@ export class ClubeService implements OnModuleInit {
   async carteirinha(userId: string) {
     const m = await this.prisma.driver.findUnique({
       where: { userId },
-      select: { id: true, status: true, user: { select: { name: true, status: true, deletedAt: true } } },
+      select: { id: true, status: true, user: { select: { name: true, status: true, deletedAt: true, avatarUrl: true } } },
     });
     if (!m) throw BusinessException.notFound('Cadastro de motorista não encontrado.');
     return {
       nome: m.user.name,
+      // A mesma foto do perfil (aprovada pela Central); o motorista nao troca aqui.
+      fotoUrl: m.user.avatarUrl,
       codigo: codigoDoMotorista(m.id),
       ...(await this.situacaoNoClube(m)),
     };

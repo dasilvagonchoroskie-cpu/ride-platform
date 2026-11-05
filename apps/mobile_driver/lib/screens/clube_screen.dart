@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import '../core/config/app_config.dart';
+import '../core/fotos.dart';
 import '../core/mapa/map_provider.dart';
 import '../core/marca.dart';
 import '../core/storage/app_storage.dart';
@@ -84,6 +85,7 @@ class ParceiroClube {
 class Carteirinha {
   const Carteirinha({
     required this.nome,
+    this.fotoUrl,
     required this.codigo,
     required this.situacao,
     required this.situacaoTexto,
@@ -94,6 +96,9 @@ class Carteirinha {
   });
 
   final String nome;
+
+  /// Foto do perfil do motorista (a mesma do cadastro).
+  final String? fotoUrl;
   final String codigo;
 
   /// APTO ou NAO_APTO (calculado no servidor).
@@ -112,6 +117,7 @@ class Carteirinha {
 
   factory Carteirinha.fromJson(Map<String, dynamic> j) => Carteirinha(
         nome: _txt(j['nome']),
+        fotoUrl: (j['fotoUrl'] as String?)?.isEmpty == true ? null : j['fotoUrl'] as String?,
         codigo: _txt(j['codigo']),
         situacao: _txt(j['situacao']),
         situacaoTexto: _txt(j['situacaoTexto']),
@@ -553,6 +559,25 @@ class _Bloco extends StatelessWidget {
       );
 }
 
+/// Iniciais no lugar da foto (motorista ainda sem foto de perfil).
+class _SemFoto extends StatelessWidget {
+  const _SemFoto({required this.nome});
+
+  final String nome;
+
+  @override
+  Widget build(BuildContext context) {
+    final iniciais = nome.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).take(2).map((p) => p[0].toUpperCase()).join();
+    return Container(
+      width: 112,
+      height: 112,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: AppColors.brandSoft, shape: BoxShape.circle),
+      child: Text(iniciais.isEmpty ? '?' : iniciais, style: AppText.display.copyWith(color: AppColors.brand)),
+    );
+  }
+}
+
 String _dataHora(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
 
 /// Carteirinha digital do motorista parceiro. Os dados vem da conta logada
@@ -626,7 +651,17 @@ class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: Spacing.xl),
+                      const SizedBox(height: Spacing.lg),
+                      // Foto do perfil (Evandro, 05/11/2026), com borda branca.
+                      Container(
+                        key: const ValueKey('foto-carteirinha'),
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        child: c.fotoUrl == null
+                            ? _SemFoto(nome: c.nome)
+                            : FotoDoServidor(caminho: c.fotoUrl!, tamanho: 112, reserva: _SemFoto(nome: c.nome)),
+                      ),
+                      const SizedBox(height: Spacing.md),
                       Text(c.nome, textAlign: TextAlign.center, style: AppText.title.copyWith(color: Colors.white)),
                       const SizedBox(height: 2),
                       Text('MOTORISTA PARCEIRO', style: AppText.caption.copyWith(color: Colors.white70, letterSpacing: 2, fontWeight: FontWeight.w700)),

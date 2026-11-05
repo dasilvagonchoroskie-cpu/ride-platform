@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile_driver/core/api/api_client.dart';
+import 'package:mobile_driver/core/fotos.dart';
 import 'package:mobile_driver/core/mapa/map_provider.dart';
 import 'package:mobile_driver/screens/clube_screen.dart';
 import 'package:mobile_driver/screens/menu_screen.dart';
@@ -54,6 +55,7 @@ MockClient _servidor() => MockClient((http.Request r) async {
       if (r.url.path == '/api/clube/carteirinha') {
         d = {
           'nome': 'Motorista de Teste',
+          'fotoUrl': _apto ? '/arquivos/foto-perfil' : null,
           'codigo': 'FM-1A2B3C4D',
           'situacao': _apto ? 'APTO' : 'NAO_APTO',
           'situacaoTexto': _apto ? 'APTO' : 'NÃO APTO',
@@ -192,6 +194,9 @@ void main() {
     expect(find.textContaining('Situação atualizada em'), findsOneWidget);
     expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFF1E9E5A));
     expect(find.byType(Image), findsWidgets);
+    // Foto do perfil na carteirinha (a mesma do cadastro).
+    final foto = tester.widget<FotoDoServidor>(find.descendant(of: find.byKey(const ValueKey('foto-carteirinha')), matching: find.byType(FotoDoServidor)));
+    expect(foto.caminho, '/arquivos/foto-perfil');
     expect(find.text('Clube de Vantagens'), findsOneWidget);
     // Sem QR Code, sem campo para editar e sem telefone ou CPF.
     expect(find.textContaining('QR'), findsNothing);
@@ -206,6 +211,8 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'NÃO APTO');
     expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFFD93A3A));
     expect(find.textContaining('passou de 30 dias'), findsOneWidget);
+    // Sem foto no perfil: as iniciais no lugar.
+    expect(find.descendant(of: find.byKey(const ValueKey('foto-carteirinha')), matching: find.text('MD')), findsOneWidget);
     expect(find.textContaining('Vale até'), findsNothing);
     await tester.scrollUntilVisible(find.textContaining('continua rodando normalmente'), 200,
         scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first);

@@ -22,6 +22,10 @@ class AppStorage {
   /// nivel estava (1 se esgotando, 2 sem saldo).
   static const String avisoSaldoFechado = 'ride.avisoSaldoFechado';
 
+  /// Escolha da bussola do mapa: '1' automatica, '0' norte travado para cima
+  /// (Evandro, 05/11/2026: "travei no norte e quando saio volta").
+  static const String bussolaAutomatica = 'ride.bussolaAutomatica';
+
   static Future<void> write(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
