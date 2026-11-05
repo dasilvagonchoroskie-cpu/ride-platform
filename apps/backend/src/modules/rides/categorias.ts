@@ -108,3 +108,32 @@ export function multiplicadorNoPonto(m: MultiplierInput, ponto?: { latitude: num
 export function ehMoto(codigo: string | null | undefined): boolean {
   return (codigo ?? '').toUpperCase().includes('MOTO');
 }
+
+/** Ordem das categorias de carro (a de codigo novo, criada pela Central, fica no meio). */
+const NIVEL: Record<string, number> = { CARRO: 0, CONFORTO: 1, PREMIUM: 2 };
+const nivelDe = (codigo: string) => NIVEL[codigo.toUpperCase()] ?? 1;
+
+/**
+ * Quais categorias de carro podem atender um pedido (Evandro, 05/11/2026:
+ * "mudei o carro para Conforto e o chamado nao chegava"). O carro de
+ * categoria igual ou MAIS ALTA atende (Premium e Conforto tambem levam um
+ * pedido Popular), como nos apps grandes, desde que tenha os lugares que a
+ * categoria pedida promete. Moto so atende moto e carro so carro. A Entrega
+ * nao entra (tem a regra propria de carro/moto da cidade). Vale mesmo para
+ * categoria desligada na cidade: o carro aprovado nela continua trabalhando.
+ */
+export function categoriasQueAtendem(pedida: string, categorias: Pick<Categoria, 'codigo' | 'capacidade'>[]): string[] {
+  const alvo = pedida.toUpperCase();
+  const base = categorias.find((c) => c.codigo.toUpperCase() === alvo);
+  const moto = ehMoto(alvo);
+  const lista = categorias
+    .filter(
+      (c) =>
+        c.codigo.toUpperCase() !== 'ENTREGA' &&
+        ehMoto(c.codigo) === moto &&
+        nivelDe(c.codigo) >= nivelDe(alvo) &&
+        c.capacidade >= (base?.capacidade ?? 0),
+    )
+    .map((c) => c.codigo);
+  return Array.from(new Set([pedida, ...lista]));
+}
