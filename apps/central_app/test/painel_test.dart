@@ -1189,7 +1189,6 @@ void main() {
     // Cadastro: sem os obrigatorios o servidor nem e chamado.
     await tester.tap(find.text('Novo parceiro'));
     await _carregar(tester);
-    await _rolarAte(tester, find.byKey(const ValueKey('clube-salvar')));
     await tester.tap(find.byKey(const ValueKey('clube-salvar')));
     await _carregar(tester);
     expect(find.text('Informe o nome comercial.'), findsOneWidget);
@@ -1207,7 +1206,6 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('clube-whatsapp')), '(85) 99999-0000');
     await _rolarAte(tester, find.byKey(const ValueKey('clube-vantagens')));
     await tester.enterText(find.byKey(const ValueKey('clube-vantagens')), 'Condição especial combinada com o parceiro');
-    await _rolarAte(tester, find.byKey(const ValueKey('clube-salvar')));
     await tester.tap(find.byKey(const ValueKey('clube-salvar')));
     await _carregar(tester);
     final criado = _pedidosDoClube.singleWhere((x) => x.startsWith('POST /parceiros '));
@@ -1222,7 +1220,7 @@ void main() {
     await tester.tap(find.text('Novo benefício'));
     await _carregar(tester);
     await tester.enterText(find.byKey(const ValueKey('beneficio-titulo')), 'Benefício de teste');
-    await tester.tap(find.text('Salvar'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Salvar'));
     await _carregar(tester);
     expect(_pedidosDoClube.where((x) => x.contains('/beneficios ')), hasLength(1));
     expect(find.text('Benefício de teste'), findsOneWidget);
@@ -1246,7 +1244,6 @@ void main() {
     await _carregar(tester);
     await _rolarAte(tester, find.byKey(const ValueKey('clube-nome')));
     await tester.enterText(find.byKey(const ValueKey('clube-nome')), 'Parceiro Editado');
-    await _rolarAte(tester, find.byKey(const ValueKey('clube-salvar')));
     await tester.tap(find.byKey(const ValueKey('clube-salvar')));
     await _carregar(tester);
     expect(_pedidosDoClube.last, startsWith('PUT /parceiros/'));

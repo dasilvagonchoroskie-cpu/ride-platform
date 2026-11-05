@@ -611,6 +611,13 @@ class _FormParceiroState extends State<_FormParceiro> {
           title: Text(p == null ? 'Novo parceiro' : p.nome),
           actions: [
             if (p != null && dono) IconButton(tooltip: 'Excluir parceiro', icon: const Icon(Icons.delete_outline), onPressed: _excluir),
+            // Salvar sempre a mao no topo (o formulario e comprido).
+            if (dono)
+              TextButton(
+                key: const ValueKey('clube-salvar'),
+                onPressed: _salvando ? null : _salvar,
+                child: Text(_salvando ? 'Salvando...' : 'Salvar'),
+              ),
           ],
         ),
         body: ListView(
@@ -674,7 +681,6 @@ class _FormParceiroState extends State<_FormParceiro> {
             if (dono) ...[
               const SizedBox(height: Spacing.sm),
               FilledButton(
-                key: const ValueKey('clube-salvar'),
                 onPressed: _salvando ? null : _salvar,
                 child: Text(_salvando ? 'Salvando...' : (p == null ? 'Cadastrar parceiro' : 'Salvar alterações')),
               ),
