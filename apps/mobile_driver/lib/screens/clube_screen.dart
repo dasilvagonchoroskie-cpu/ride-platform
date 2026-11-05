@@ -1,8 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/api/api_client.dart';
 import '../core/avisos.dart';
@@ -89,26 +87,38 @@ class Carteirinha {
     required this.codigo,
     required this.situacao,
     required this.situacaoTexto,
-    required this.qr,
-    required this.qrValidoAte,
+    required this.motivo,
+    this.atualizadoEm,
+    this.validoAte,
+    required this.conferidoEm,
   });
 
   final String nome;
   final String codigo;
 
-  /// ATIVO, PENDENTE ou SUSPENSO.
+  /// APTO ou NAO_APTO (calculado no servidor).
   final String situacao;
   final String situacaoTexto;
-  final String qr;
-  final DateTime qrValidoAte;
+  final String motivo;
+
+  /// Quando a situacao mudou pela ultima vez (null = nunca teve recarga valida).
+  final DateTime? atualizadoEm;
+  final DateTime? validoAte;
+  final DateTime conferidoEm;
+
+  bool get apto => situacao == 'APTO';
+
+  static DateTime? _data(Object? v) => DateTime.tryParse(_txt(v))?.toLocal();
 
   factory Carteirinha.fromJson(Map<String, dynamic> j) => Carteirinha(
         nome: _txt(j['nome']),
         codigo: _txt(j['codigo']),
         situacao: _txt(j['situacao']),
         situacaoTexto: _txt(j['situacaoTexto']),
-        qr: _txt(j['qr']),
-        qrValidoAte: DateTime.tryParse(_txt(j['qrValidoAte']))?.toLocal() ?? DateTime.now(),
+        motivo: _txt(j['motivo']),
+        atualizadoEm: _data(j['atualizadoEm']),
+        validoAte: _data(j['validoAte']),
+        conferidoEm: _data(j['conferidoEm']) ?? DateTime.now(),
       );
 }
 
@@ -333,7 +343,7 @@ class _BotaoCarteirinha extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(Icons.qr_code_2, color: Colors.white, size: 32),
+                  const Icon(Icons.chevron_right, color: Colors.white, size: 32),
                 ],
               ),
             ),
@@ -503,7 +513,7 @@ class _ParceiroScreenState extends State<ParceiroScreen> {
               const SizedBox(height: Spacing.sm),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CarteirinhaScreen())),
-                icon: const Icon(Icons.qr_code_2),
+                icon: const Icon(Icons.badge_outlined),
                 label: const Text('Mostrar minha identificação'),
               ),
             ],
@@ -543,9 +553,11 @@ class _Bloco extends StatelessWidget {
       );
 }
 
-/// Identificacao digital do motorista parceiro. Os dados vem da conta logada
-/// (o motorista nao edita) e o QR e conferido no servidor; vale 10 minutos e
-/// se renova sozinho com a tela aberta.
+String _dataHora(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
+
+/// Carteirinha digital do motorista parceiro. Os dados vem da conta logada
+/// (o motorista nao edita) e a situacao APTO / NAO APTO e calculada no
+/// servidor: verde APTO, vermelho NAO APTO.
 class CarteirinhaScreen extends StatefulWidget {
   const CarteirinhaScreen({super.key});
 
@@ -555,135 +567,133 @@ class CarteirinhaScreen extends StatefulWidget {
 
 class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
   late final ClubeApi _api = ClubeApi(context.read<DriverState>().api);
-  late Future<Carteirinha> _dados = _buscar();
-  Timer? _relogio;
-  DateTime? _validoAte;
+  late Future<Carteirinha> _dados = _api.carteirinha();
 
-  Future<Carteirinha> _buscar() async {
-    final c = await _api.carteirinha();
-    _validoAte = c.qrValidoAte;
-    return c;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Renova o QR um minuto antes de vencer.
-    _relogio = Timer.periodic(const Duration(seconds: 20), (_) {
-      final ate = _validoAte;
-      if (!mounted || ate == null) return;
-      if (ate.difference(DateTime.now()) < const Duration(minutes: 1)) {
-        setState(() {
-          _validoAte = null;
-          _dados = _buscar();
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _relogio?.cancel();
-    super.dispose();
-  }
+  void _atualizar() => setState(() {
+        _dados = _api.carteirinha();
+      });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Minha identificação')),
+      appBar: AppBar(
+        title: const Text('Minha identificação'),
+        actions: [IconButton(tooltip: 'Atualizar', icon: const Icon(Icons.refresh), onPressed: _atualizar)],
+      ),
       body: FutureBuilder<Carteirinha>(
         future: _dados,
         builder: (context, s) {
           if (s.hasError) {
-            return _Erro(
-              texto: 'Não foi possível carregar a identificação. ${_mensagem(s.error!)}',
-              tentarDeNovo: () => setState(() => _dados = _buscar()),
-            );
+            return _Erro(texto: 'Não foi possível carregar a identificação. ${_mensagem(s.error!)}', tentarDeNovo: _atualizar);
           }
           if (!s.hasData) return const Center(child: CircularProgressIndicator());
           final c = s.data!;
-          final ativo = c.situacao == 'ATIVO';
-          final cor = ativo ? AppColors.primary : (c.situacao == 'PENDENTE' ? AppColors.warning : AppColors.danger);
-          final hora = '${c.qrValidoAte.hour.toString().padLeft(2, '0')}:${c.qrValidoAte.minute.toString().padLeft(2, '0')}';
-          return ListView(
-            padding: const EdgeInsets.all(Spacing.lg),
-            children: [
-              Container(
-                key: const ValueKey('carteirinha'),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(Radii.xl),
-                  gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.brand, AppColors.brandDark]),
-                  boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 6))],
-                ),
-                padding: const EdgeInsets.all(Spacing.lg),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        ClipOval(child: Image.asset('assets/brand/logo_redondo.png', width: 44, height: 44, errorBuilder: (context, error, stack) => const SizedBox(width: 44, height: 44))),
-                        const SizedBox(width: Spacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(Marca.nome, style: AppText.heading.copyWith(color: Colors.white)),
-                              Text('Clube de Vantagens', style: AppText.caption.copyWith(color: AppColors.gold, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: Spacing.lg),
-                    Text(c.nome, textAlign: TextAlign.center, style: AppText.title.copyWith(color: Colors.white)),
-                    const SizedBox(height: 2),
-                    Text('MOTORISTA PARCEIRO', style: AppText.caption.copyWith(color: Colors.white70, letterSpacing: 2, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: Spacing.lg),
-                    Container(
-                      padding: const EdgeInsets.all(Spacing.sm),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(Radii.md)),
-                      child: QrImageView(
-                        key: const ValueKey('qr-carteirinha'),
-                        data: c.qr,
-                        size: 200,
-                        backgroundColor: Colors.white,
-                        semanticsLabel: 'QR Code da identificação',
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.md),
-                    Text('Identificação ${c.codigo}', style: AppText.bodyStrong.copyWith(color: Colors.white)),
-                    const SizedBox(height: Spacing.sm),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: 6),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(Radii.pill)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+          final cor = c.apto ? const Color(0xFF1E9E5A) : AppColors.danger;
+          return RefreshIndicator(
+            onRefresh: () async {
+              _atualizar();
+              await _dados.catchError((Object _) => c);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(Spacing.lg),
+              children: [
+                Container(
+                  key: const ValueKey('carteirinha'),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(Radii.xl),
+                    gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.brand, AppColors.brandDark]),
+                    boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 6))],
+                  ),
+                  padding: const EdgeInsets.all(Spacing.lg),
+                  child: Column(
+                    children: [
+                      Row(
                         children: [
-                          Icon(ativo ? Icons.verified : Icons.info_outline, size: 18, color: cor),
-                          const SizedBox(width: 6),
-                          Flexible(child: Text(c.situacaoTexto, textAlign: TextAlign.center, style: AppText.bodyStrong.copyWith(color: cor))),
+                          ClipOval(
+                            child: Image.asset('assets/brand/logo_redondo.png', width: 48, height: 48,
+                                errorBuilder: (context, error, stack) => const SizedBox(width: 48, height: 48)),
+                          ),
+                          const SizedBox(width: Spacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(Marca.nome, style: AppText.heading.copyWith(color: Colors.white)),
+                                Text('Clube de Vantagens', style: AppText.caption.copyWith(color: AppColors.gold, fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: Spacing.xl),
+                      Text(c.nome, textAlign: TextAlign.center, style: AppText.title.copyWith(color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text('MOTORISTA PARCEIRO', style: AppText.caption.copyWith(color: Colors.white70, letterSpacing: 2, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: Spacing.lg),
+                      Text('Número de identificação', style: AppText.caption.copyWith(color: Colors.white70)),
+                      SelectableText(
+                        c.codigo,
+                        key: const ValueKey('codigo-carteirinha'),
+                        textAlign: TextAlign.center,
+                        style: AppText.display.copyWith(color: Colors.white, letterSpacing: 2),
+                      ),
+                      const SizedBox(height: Spacing.lg),
+                      // Verde = APTO, vermelho = NAO APTO (Evandro, 05/11/2026).
+                      Container(
+                        key: const ValueKey('selo-carteirinha'),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.lg),
+                        decoration: BoxDecoration(
+                          color: cor,
+                          borderRadius: BorderRadius.circular(Radii.lg),
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(c.apto ? Icons.check_circle : Icons.cancel, color: Colors.white, size: 36),
+                                const SizedBox(width: Spacing.sm),
+                                Flexible(
+                                  child: Text(
+                                    c.situacaoTexto,
+                                    key: const ValueKey('situacao-carteirinha'),
+                                    style: AppText.display.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(c.motivo, textAlign: TextAlign.center, style: AppText.caption.copyWith(color: Colors.white)),
+                            if (c.apto && c.validoAte != null)
+                              Text('Vale até ${_dataHora(c.validoAte!)}', textAlign: TextAlign.center, style: AppText.bodyStrong.copyWith(color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.md),
+                      Text(
+                        c.atualizadoEm == null
+                            ? 'Situação conferida em ${_dataHora(c.conferidoEm)}'
+                            : 'Situação atualizada em ${_dataHora(c.atualizadoEm!)}',
+                        textAlign: TextAlign.center,
+                        style: AppText.caption.copyWith(color: Colors.white70),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: Spacing.md),
-              Text(
-                'O parceiro lê o QR Code com a câmera do celular e confere na hora, no site da ${Marca.nome}. '
-                'O código muda sozinho a cada 10 minutos (este vale até $hora), então print não serve.',
-                textAlign: TextAlign.center,
-                style: AppText.caption.copyWith(color: AppColors.textMuted),
-              ),
-              if (!ativo) ...[
-                const SizedBox(height: Spacing.sm),
-                Text(
-                  'As vantagens valem para motorista com cadastro ativo. Fale com a Central se precisar.',
-                  textAlign: TextAlign.center,
-                  style: AppText.caption.copyWith(color: cor),
-                ),
+                if (!c.apto) ...[
+                  const SizedBox(height: Spacing.sm),
+                  Text(
+                    'Para ficar APTO: uma recarga de R\$ 100,00 ou mais na carteira, confirmada pela Central. Vale por 30 dias. '
+                    'Sem isso você continua rodando normalmente; só as vantagens do clube ficam suspensas.',
+                    textAlign: TextAlign.center,
+                    style: AppText.caption.copyWith(color: AppColors.danger),
+                  ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),

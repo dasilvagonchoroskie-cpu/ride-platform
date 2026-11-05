@@ -1025,7 +1025,7 @@ X=$(post /driver/meus-dados/alteracao "{\"phone\":\"$FONE_VAZIO\"}" "$TM")
 post /driver/meus-dados/alteracao '{}' "$TM" >/dev/null; curl -s -m 30 -X DELETE "$API/driver/meus-dados/alteracao" -H "Authorization: Bearer $TM" >/dev/null
 
 # ---- Clube de Vantagens (05/11/2026): a Central cadastra, o motorista ve
-# so os ativos, a identificacao digital tem QR conferido no servidor e so o
+# so os ativos, a carteirinha diz APTO / NAO APTO pela recarga e so o
 # dono grava. O parceiro de teste e apagado no fim. ----
 del()   { curl -s -m 90 -X DELETE "$API$1" ${2:+-H "Authorization: Bearer $2"}; }
 X=$(get /clube/parceiros "$TM"); sucesso "$X" && ok "Motorista: abre o Clube de Vantagens ($(echo "$X" | jq -r '.data | length') parceiro(s) ativo(s))" || falha "Motorista: lista do clube" "$X"
@@ -1053,14 +1053,25 @@ if [ -n "$CLUBE" ]; then
   X=$(get /admin/clube/parceiros "$TA"); [ "$(echo "$X" | jq -r --arg i "$CLUBE" '[.data[] | select(.id==$i and .ativo==false)] | length')" = "1" ] && ok "Central: o inativo continua na lista da Central" || falha "Central: lista com inativos" "$X"
   X=$(del "/admin/clube/parceiros/$CLUBE" "$TA"); [ "$(echo "$X" | jq -r '.data.excluido')" = "true" ] && ok "Central: excluiu o parceiro de teste (com os beneficios)" || falha "Central: excluir parceiro" "$X"
 fi
-X=$(get /clube/carteirinha "$TM"); QR=$(echo "$X" | jq -r '.data.qr // empty')
-[ -n "$QR" ] && echo "$X" | jq -e '.data.codigo | test("^FM-[0-9A-F]{8}$")' >/dev/null && [ "$(echo "$X" | jq -r '.data.situacao')" = "ATIVO" ] && ok "Motorista: identificacao digital da conta logada ($(echo "$X" | jq -r '.data.codigo'), $(echo "$X" | jq -r '.data.situacaoTexto'))" || falha "Motorista: identificacao digital" "$X"
-echo "$X" | jq -e '.data | has("phone") or has("cpf") or has("email") or has("telefone")' >/dev/null && falha "Seguranca: identificacao com dado pessoal" "$X" || ok "Seguranca: identificacao sem telefone, CPF ou e-mail"
-if [ -n "$QR" ]; then
-  H=$(curl -s -m 60 "$QR"); echo "$H" | grep -q 'Identificação válida' && ! echo "$H" | grep -q "$CPF" && ok "Comerciante: le o QR e o servidor confirma a identificacao" || falha "Comerciante: validar QR" "$(echo "$H" | head -c 300)"
-  # Troca uma letra no meio do codigo (a ultima pode cair nos bits que o base64 ignora).
-  C=${QR##*/}; M=$(( ${#C} / 2 )); L=${C:$M:1}; [ "$L" = "A" ] && L=B || L=A
-  H=$(curl -s -m 60 "${QR%/*}/${C:0:$M}$L${C:$((M+1))}"); echo "$H" | grep -q 'não confirmada' && ok "Seguranca: QR alterado e recusado" || falha "Seguranca: QR alterado passou" "$(echo "$H" | head -c 300)"
+X=$(get /clube/carteirinha "$TM")
+echo "$X" | jq -e '.data.codigo | test("^FM-[0-9A-F]{8}$")' >/dev/null && echo "$X" | jq -e '.data.situacao | test("^(APTO|NAO_APTO)$")' >/dev/null && ok "Motorista: carteirinha da conta logada ($(echo "$X" | jq -r '.data.codigo'), $(echo "$X" | jq -r '.data.situacaoTexto'))" || falha "Motorista: carteirinha" "$X"
+echo "$X" | jq -e '.data | has("qr") or has("phone") or has("cpf") or has("email") or has("telefone") or has("saldo")' >/dev/null && falha "Seguranca: carteirinha com QR ou dado pessoal" "$X" || ok "Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo"
+C=$(curl -s -m 60 -o /dev/null -w "%{http_code}" "$API/clube/validar/abc"); [ "$C" = "404" ] && ok "Clube: pagina do QR removida" || falha "Clube: pagina do QR ainda existe" "$C"
+# Regra (Evandro 05/11): APTO = UMA recarga confirmada de R$ 100,00 ou mais nos ultimos 30 dias.
+if [ -n "${DIDC:-}" ] && [ -n "${TC:-}" ]; then
+  X=$(get /clube/carteirinha "$TC"); COD=$(echo "$X" | jq -r '.data.codigo // empty')
+  [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: motorista sem recarga esta NAO APTO ($(echo "$X" | jq -r '.data.motivo'))" || falha "Clube: sem recarga deveria ser NAO APTO" "$X"
+  post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga teste clube 1"}' "$TA" >/dev/null
+  X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: recarga de R\$ 50,00 nao deixa APTO" || falha "Clube: recarga menor deixou APTO" "$X"
+  post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":6000,"operation":"CREDIT","description":"Recarga teste clube 2"}' "$TA" >/dev/null
+  X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: duas recargas menores somando R\$ 110,00 nao deixam APTO (nao soma)" || falha "Clube: somou recargas menores" "$X"
+  post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":10000,"operation":"CREDIT","description":"Recarga teste clube 3"}' "$TA" >/dev/null
+  X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "APTO" ] && [ -n "$(echo "$X" | jq -r '.data.validoAte // empty')" ] && ok "Clube: recarga confirmada de R\$ 100,00 deixa APTO (vale ate $(echo "$X" | jq -r '.data.validoAte'))" || falha "Clube: recarga de 100 nao deixou APTO" "$X"
+  X=$(get /drivers/me "$TC"); sucesso "$X" && ok "Clube: a situacao do clube nao mexe no acesso ao aplicativo" || falha "Clube: acesso do motorista" "$X"
+  X=$(post /clube/carteirinha '{"situacao":"APTO"}' "$TC"); sucesso "$X" && falha "Seguranca: motorista mudou a propria situacao" "$X" || ok "Seguranca: motorista nao altera a propria situacao"
+  patch "/admin/drivers/$DIDC/review" '{"status":"SUSPENDED","reason":"Teste do clube: motorista inativo"}' "$TA" >/dev/null
+  X=$(get /clube/carteirinha "$TC"); { [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] || ! sucesso "$X"; } && ok "Clube: motorista suspenso fica NAO APTO mesmo com recarga" || falha "Clube: suspenso continuou APTO" "$X"
+  patch "/admin/drivers/$DIDC/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Teste do clube: voltou a ativo"}' "$TA" >/dev/null
 fi
 X=$(get /clube/carteirinha "$TP"); sucesso "$X" && falha "Seguranca: passageiro tirou identificacao de motorista" "$X" || ok "Seguranca: passageiro nao tem identificacao de motorista"
 

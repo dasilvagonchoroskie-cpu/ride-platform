@@ -2,17 +2,15 @@ import { randomUUID } from 'crypto';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type { ClubeBeneficio, ClubeParceiro } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
-import { AppConfigService } from '../../config/app-config.service';
 import { PrismaService } from '../../database/prisma.service';
 import { decodificarFoto } from '../arquivos/arquivos.service';
 import {
   CATEGORIAS_PADRAO,
   CHAVE_CATEGORIAS_CLUBE,
   MAX_LOGO_BYTES,
+  RECARGA_MINIMA_CENTS,
   codigoDoMotorista,
-  codigoDoQr,
-  lerCodigoDoQr,
-  nomeCurto,
+  elegibilidade,
   situacaoDoMotorista,
   type DadosDoBeneficio,
   type DadosDoParceiro,
@@ -63,7 +61,6 @@ export class ClubeService implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: AppConfigService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -249,43 +246,48 @@ export class ClubeService implements OnModuleInit {
     return this.publico(p, 'motorista');
   }
 
-  /** Carteirinha do motorista logado (dados vem do cadastro; ele nao edita). */
-  async carteirinha(userId: string, base: string) {
-    const m = await this.prisma.driver.findUnique({
-      where: { userId },
-      select: { id: true, status: true, user: { select: { name: true, status: true } } },
+  /** Situacao do beneficio de um motorista, calculada agora no servidor. */
+  private async situacaoNoClube(m: { id: string; status: string; user: { status: string; deletedAt?: Date | null } }, agora = new Date()) {
+    const cadastro = situacaoDoMotorista(m.status, m.user.status !== 'ACTIVE' || !!m.user.deletedAt);
+    // So a recarga valida mais recente importa (nao soma recargas menores).
+    const recarga = await this.prisma.walletTransaction.findFirst({
+      where: { wallet: { driverId: m.id }, type: 'ADJUSTMENT', amountCents: { gte: RECARGA_MINIMA_CENTS }, createdAt: { lte: agora } },
+      orderBy: { createdAt: 'desc' },
+      select: { type: true, amountCents: true, createdAt: true },
     });
-    if (!m) throw BusinessException.notFound('Cadastro de motorista não encontrado.');
-    const situacao = situacaoDoMotorista(m.status, m.user.status !== 'ACTIVE');
-    const { codigo, validoAte } = codigoDoQr(m.id, this.config.jwt.accessSecret);
+    const e = elegibilidade(recarga ? [recarga] : [], agora);
+    const ativo = cadastro.codigo === 'ATIVO';
+    const apto = ativo && e.apto;
+    let motivo: string;
+    if (!ativo) motivo = `${cadastro.texto}: os benefícios ficam suspensos.`;
+    else if (apto) motivo = 'Recarga confirmada nos últimos 30 dias.';
+    else if (e.atualizadoEm) motivo = 'A última recarga de R$ 100,00 ou mais passou de 30 dias.';
+    else motivo = 'Ainda sem recarga confirmada de R$ 100,00 ou mais.';
     return {
-      nome: m.user.name,
-      codigo: codigoDoMotorista(m.id),
-      situacao: situacao.codigo,
-      situacaoTexto: situacao.texto,
-      qr: `${base}/api/clube/validar/${codigo}`,
-      qrValidoAte: validoAte.toISOString(),
+      situacao: apto ? ('APTO' as const) : ('NAO_APTO' as const),
+      situacaoTexto: apto ? 'APTO' : 'NÃO APTO',
+      motivo,
+      atualizadoEm: e.atualizadoEm?.toISOString() ?? null,
+      validoAte: apto ? e.validoAte!.toISOString() : null,
+      conferidoEm: agora.toISOString(),
     };
   }
 
-  /** O comerciante le o QR: confere no servidor, sem mostrar dados pessoais. */
-  async validar(codigo: string) {
-    const lido = lerCodigoDoQr(codigo, this.config.jwt.accessSecret);
-    if (!lido) return { valida: false as const, motivo: 'Identificação inválida: este QR Code não é da Fortaleza Move.' };
-    if (lido.vencido) return { valida: false as const, motivo: 'QR Code vencido. Peça ao motorista para abrir a identificação de novo no aplicativo.' };
+  /**
+   * Carteirinha do motorista logado: os dados vem do cadastro e a situacao
+   * e calculada no servidor (ele nao altera nada). NAO APTO nao bloqueia o
+   * aplicativo: so os beneficios do clube.
+   */
+  async carteirinha(userId: string) {
     const m = await this.prisma.driver.findUnique({
-      where: { id: lido.driverId },
+      where: { userId },
       select: { id: true, status: true, user: { select: { name: true, status: true, deletedAt: true } } },
     });
-    if (!m || m.user.deletedAt) return { valida: false as const, motivo: 'Motorista não encontrado.' };
-    const situacao = situacaoDoMotorista(m.status, m.user.status !== 'ACTIVE');
+    if (!m) throw BusinessException.notFound('Cadastro de motorista não encontrado.');
     return {
-      valida: situacao.codigo === 'ATIVO',
-      nome: nomeCurto(m.user.name),
+      nome: m.user.name,
       codigo: codigoDoMotorista(m.id),
-      situacao: situacao.texto,
-      validoAte: lido.validoAte.toISOString(),
-      ...(situacao.codigo === 'ATIVO' ? {} : { motivo: situacao.texto }),
+      ...(await this.situacaoNoClube(m)),
     };
   }
 }

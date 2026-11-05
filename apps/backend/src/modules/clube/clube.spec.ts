@@ -1,7 +1,6 @@
-import { beneficioSchema, codigoDoMotorista, codigoDoQr, lerCodigoDoQr, nomeCurto, parceiroSchema, situacaoDoMotorista, VALIDADE_DO_QR_MS } from './clube.regras';
+import { beneficioSchema, codigoDoMotorista, ehRecargaConfirmada, elegibilidade, parceiroSchema, situacaoDoMotorista } from './clube.regras';
 import { idDoLogo } from './clube.service';
 
-const SEGREDO = 'segredo-de-teste-que-nao-e-o-real';
 const ID = '2b7c9a1e-3f4d-4c5b-9a8e-1f2e3d4c5b6a';
 
 describe('Clube de Vantagens - cadastro do parceiro', () => {
@@ -33,50 +32,59 @@ describe('Clube de Vantagens - cadastro do parceiro', () => {
   });
 });
 
-describe('Clube de Vantagens - carteirinha (QR Code)', () => {
-  it('o codigo do QR volta para o mesmo motorista e nao mostra o id', () => {
-    const agora = Date.UTC(2026, 10, 5, 12);
-    const { codigo, validoAte } = codigoDoQr(ID, SEGREDO, agora);
-    expect(codigo).not.toContain(ID);
-    expect(validoAte.getTime()).toBe(agora + VALIDADE_DO_QR_MS);
-    expect(lerCodigoDoQr(codigo, SEGREDO, agora + 60_000)).toEqual({ driverId: ID, validoAte, vencido: false });
+describe('Clube de Vantagens - APTO / NAO APTO pela recarga', () => {
+  const agora = new Date('2026-11-05T15:00:00-03:00');
+  const dias = (n: number) => new Date(agora.getTime() - n * 24 * 60 * 60 * 1000);
+  const recarga = (reais: number, diasAtras: number) => ({ type: 'ADJUSTMENT', amountCents: Math.round(reais * 100), createdAt: dias(diasAtras) });
+
+  it('recarga confirmada de R$ 100,00 ou mais nos ultimos 30 dias: APTO', () => {
+    const e = elegibilidade([recarga(100, 3)], agora);
+    expect(e.apto).toBe(true);
+    expect(e.validoAte).toEqual(new Date(dias(3).getTime() + 30 * 24 * 60 * 60 * 1000));
+    expect(e.atualizadoEm).toEqual(dias(3));
+    expect(elegibilidade([recarga(250, 29)], agora).apto).toBe(true);
   });
 
-  it('vence depois de 10 minutos', () => {
-    const agora = Date.UTC(2026, 10, 5, 12);
-    const { codigo } = codigoDoQr(ID, SEGREDO, agora);
-    expect(lerCodigoDoQr(codigo, SEGREDO, agora + VALIDADE_DO_QR_MS + 1)?.vencido).toBe(true);
+  it('recarga menor que R$ 100,00: NAO APTO', () => {
+    expect(elegibilidade([recarga(99.99, 1)], agora)).toEqual({ apto: false, validoAte: null, atualizadoEm: null });
   });
 
-  it('codigo alterado, de outro segredo ou lixo nao vale', () => {
-    const { codigo } = codigoDoQr(ID, SEGREDO);
-    const [iv, corpo, tag] = codigo.split('.');
-    const trocado = corpo[0] === 'A' ? 'B' + corpo.slice(1) : 'A' + corpo.slice(1);
-    expect(lerCodigoDoQr(`${iv}.${trocado}.${tag}`, SEGREDO)).toBeNull();
-    expect(lerCodigoDoQr(codigo, 'outro-segredo')).toBeNull();
-    expect(lerCodigoDoQr('abc', SEGREDO)).toBeNull();
-    // Ultima letra trocada so nos bits que o base64 ignora: tambem recusa.
-    const ultima = tag[tag.length - 1];
-    const vizinha = String.fromCharCode(ultima.charCodeAt(0) ^ 1);
-    expect(lerCodigoDoQr(`${iv}.${corpo}.${tag.slice(0, -1)}${vizinha}`, SEGREDO)).toBeNull();
-    expect(lerCodigoDoQr('', SEGREDO)).toBeNull();
+  it('varias recargas menores que somam mais de R$ 100,00: NAO APTO (nao soma)', () => {
+    expect(elegibilidade([recarga(50, 1), recarga(50, 2), recarga(60, 3)], agora).apto).toBe(false);
   });
 
-  it('dois QR do mesmo motorista sao diferentes (nao da para copiar um velho)', () => {
-    expect(codigoDoQr(ID, SEGREDO).codigo).not.toBe(codigoDoQr(ID, SEGREDO).codigo);
+  it('o que nao e recarga confirmada nao conta (debito, cupom, ganho, saque)', () => {
+    const outros = [
+      { type: 'ADJUSTMENT', amountCents: -15000, createdAt: dias(1) },
+      { type: 'BONUS', amountCents: 15000, createdAt: dias(1) },
+      { type: 'RIDE_EARNING', amountCents: 15000, createdAt: dias(1) },
+      { type: 'PAYOUT', amountCents: 15000, createdAt: dias(1) },
+    ];
+    expect(outros.every((l) => !ehRecargaConfirmada(l))).toBe(true);
+    expect(elegibilidade(outros, agora).apto).toBe(false);
   });
 
+  it('recarga valida com mais de 30 dias: NAO APTO, com a data em que venceu', () => {
+    const e = elegibilidade([recarga(150, 31)], agora);
+    expect(e.apto).toBe(false);
+    expect(e.atualizadoEm).toEqual(new Date(dias(31).getTime() + 30 * 24 * 60 * 60 * 1000));
+    expect(elegibilidade([recarga(150, 30)], agora).apto).toBe(false);
+  });
+
+  it('a recarga valida mais recente manda', () => {
+    expect(elegibilidade([recarga(200, 40), recarga(100, 10), recarga(20, 1)], agora).apto).toBe(true);
+  });
+
+  it('lancamento com data no futuro nao vale', () => {
+    expect(elegibilidade([{ type: 'ADJUSTMENT', amountCents: 20000, createdAt: new Date(agora.getTime() + 60_000) }], agora).apto).toBe(false);
+  });
+});
+
+describe('Clube de Vantagens - carteirinha', () => {
   it('identificador interno curto e fixo por motorista', () => {
     expect(codigoDoMotorista(ID)).toMatch(/^FM-[0-9A-F]{8}$/);
     expect(codigoDoMotorista(ID)).toBe(codigoDoMotorista(ID));
     expect(codigoDoMotorista(ID)).not.toBe(codigoDoMotorista(ID.replace('a', 'b')));
-  });
-
-  it('pagina publica mostra so o primeiro nome e a inicial', () => {
-    expect(nomeCurto('Evandro da Silva Gonchoroski')).toBe('Evandro G.');
-    expect(nomeCurto('Maria')).toBe('Maria');
-    expect(nomeCurto('  ')).toBe('Motorista');
-    expect(nomeCurto(null)).toBe('Motorista');
   });
 
   it('situacao do cadastro', () => {

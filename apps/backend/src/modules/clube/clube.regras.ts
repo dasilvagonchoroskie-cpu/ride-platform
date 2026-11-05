@@ -1,9 +1,9 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { createHash } from 'crypto';
 import { z } from 'zod';
 
 /**
  * Clube de Vantagens (Evandro, 05/11/2026). Regras puras: validacao do que a
- * Central manda e a carteirinha digital do motorista (QR Code).
+ * Central manda e a carteirinha digital do motorista (APTO / NAO APTO).
  */
 
 const texto = (max: number) => z.string().trim().max(max);
@@ -69,60 +69,56 @@ export const CATEGORIAS_PADRAO = [
 
 // ------------------------------------------------------------ carteirinha
 
-/** O QR vale por 10 minutos (print antigo nao serve). */
-export const VALIDADE_DO_QR_MS = 10 * 60 * 1000;
+/** Recarga que deixa o motorista APTO: uma so, de R$ 100,00 ou mais. */
+export const RECARGA_MINIMA_CENTS = 100_00;
+/** A recarga vale 30 dias a partir do momento em que foi confirmada. */
+export const DIAS_DA_RECARGA = 30;
+const DIA_MS = 24 * 60 * 60 * 1000;
 
-function chave(segredo: string): Buffer {
-  return createHash('sha256').update(`clube-carteirinha:${segredo}`).digest();
+/** Lancamento da carteira como o banco guarda (wallet_transactions). */
+export interface LancamentoDaCarteira {
+  type: string;
+  amountCents: number;
+  createdAt: Date;
 }
-
-const b64url = (b: Buffer) => b.toString('base64url');
 
 /**
- * Codigo do QR: cifrado e assinado (AES-256-GCM) com um segredo do servidor.
- * Quem le o QR nao ve nada do motorista; ninguem fabrica um codigo valido.
+ * Recarga confirmada = credito que a Central lancou depois de receber o Pix
+ * (ADJUSTMENT positivo; e o mesmo criterio do relatorio de recargas). Pedido
+ * que nao foi confirmado nao vira lancamento; debito, cupom, ganho de corrida
+ * e saque nao sao recarga.
  */
-export function codigoDoQr(driverId: string, segredo: string, agora = Date.now()): { codigo: string; validoAte: Date } {
-  const validoAte = new Date(agora + VALIDADE_DO_QR_MS);
-  const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', chave(segredo), iv);
-  const corpo = Buffer.concat([c.update(JSON.stringify({ d: driverId, e: validoAte.getTime() }), 'utf8'), c.final()]);
-  return { codigo: `${b64url(iv)}.${b64url(corpo)}.${b64url(c.getAuthTag())}`, validoAte };
+export function ehRecargaConfirmada(l: LancamentoDaCarteira): boolean {
+  return l.type === 'ADJUSTMENT' && l.amountCents > 0;
 }
 
-/** Le o codigo do QR. null = falso, alterado ou malformado; vencido diz que venceu. */
-export function lerCodigoDoQr(
-  codigo: string,
-  segredo: string,
-  agora = Date.now(),
-): { driverId: string; validoAte: Date; vencido: boolean } | null {
-  try {
-    const [iv, corpo, tag] = codigo.split('.');
-    if (!iv || !corpo || !tag) return null;
-    // Base64 com bits sobrando trocados decodifica igual: so aceita a forma
-    // exata que o servidor gerou (um codigo, um texto).
-    if ([iv, corpo, tag].some((x) => b64url(Buffer.from(x, 'base64url')) !== x)) return null;
-    const d = createDecipheriv('aes-256-gcm', chave(segredo), Buffer.from(iv, 'base64url'));
-    d.setAuthTag(Buffer.from(tag, 'base64url'));
-    const json = JSON.parse(Buffer.concat([d.update(Buffer.from(corpo, 'base64url')), d.final()]).toString('utf8')) as { d?: unknown; e?: unknown };
-    if (typeof json.d !== 'string' || typeof json.e !== 'number') return null;
-    return { driverId: json.d, validoAte: new Date(json.e), vencido: json.e < agora };
-  } catch {
-    return null;
-  }
+export interface Elegibilidade {
+  apto: boolean;
+  /** Ate quando vale (so quando APTO). */
+  validoAte: Date | null;
+  /** Quando a situacao mudou pela ultima vez (recarga ou vencimento); null = nunca teve recarga valida. */
+  atualizadoEm: Date | null;
+}
+
+/**
+ * APTO = tem pelo menos UMA recarga confirmada de R$ 100,00 ou mais nos
+ * ultimos 30 dias. Nao soma recargas menores. Passados 30 dias da ultima
+ * recarga valida, vira NAO APTO sozinho (a conta e feita a cada consulta).
+ */
+export function elegibilidade(lancamentos: LancamentoDaCarteira[], agora = new Date()): Elegibilidade {
+  const validas = lancamentos
+    .filter((l) => ehRecargaConfirmada(l) && l.amountCents >= RECARGA_MINIMA_CENTS && l.createdAt.getTime() <= agora.getTime())
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const ultima = validas[0];
+  if (!ultima) return { apto: false, validoAte: null, atualizadoEm: null };
+  const vence = new Date(ultima.createdAt.getTime() + DIAS_DA_RECARGA * DIA_MS);
+  if (vence.getTime() > agora.getTime()) return { apto: true, validoAte: vence, atualizadoEm: ultima.createdAt };
+  return { apto: false, validoAte: null, atualizadoEm: vence };
 }
 
 /** Identificador do motorista na carteirinha: curto, sem expor o id do banco. */
 export function codigoDoMotorista(driverId: string): string {
   return 'FM-' + createHash('sha256').update(`clube-id:${driverId}`).digest('hex').slice(0, 8).toUpperCase();
-}
-
-/** "Evandro Da Silva Gonchoroski" -> "Evandro G." (pagina publica do QR). */
-export function nomeCurto(nome: string | null | undefined): string {
-  const partes = (nome ?? '').trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return 'Motorista';
-  if (partes.length === 1) return partes[0];
-  return `${partes[0]} ${partes[partes.length - 1][0].toUpperCase()}.`;
 }
 
 /** Situacao do cadastro como aparece na carteirinha. */
