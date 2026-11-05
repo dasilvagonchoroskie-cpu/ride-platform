@@ -661,7 +661,7 @@ class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
                         children: [
                           Icon(ativo ? Icons.verified : Icons.info_outline, size: 18, color: cor),
                           const SizedBox(width: 6),
-                          Text(c.situacaoTexto, style: AppText.bodyStrong.copyWith(color: cor)),
+                          Flexible(child: Text(c.situacaoTexto, textAlign: TextAlign.center, style: AppText.bodyStrong.copyWith(color: cor))),
                         ],
                       ),
                     ),

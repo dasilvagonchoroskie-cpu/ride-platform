@@ -311,20 +311,13 @@ class _ClubeTelaState extends State<ClubeTela> {
                         leading: _Logo(url: p.logoUrl),
                         title: Text(p.nome, style: AppText.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(
-                          '${p.categoria} · ${p.beneficios.length} benefício(s)\n${p.endereco}',
+                          '${p.ativo ? 'Ativo' : 'Inativo'} · ${p.categoria} · ${p.beneficios.length} benefício(s)\n${p.endereco}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.caption.copyWith(color: AppColors.textMuted),
                         ),
                         isThreeLine: true,
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Switch(value: p.ativo, onChanged: dono ? (v) => _ligar(p, v) : null),
-                            Text(p.ativo ? 'Ativo' : 'Inativo',
-                                style: AppText.caption.copyWith(color: p.ativo ? AppColors.success : AppColors.textFaint, fontSize: 11)),
-                          ],
-                        ),
+                        trailing: Switch(value: p.ativo, onChanged: dono ? (v) => _ligar(p, v) : null),
                         onTap: () => _abrir(p),
                       ),
                     ),

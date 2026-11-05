@@ -794,6 +794,19 @@ Future<void> _mostrarNoMenu(WidgetTester tester, String aba) async {
 }
 
 /// Espera as respostas do servidor de mentira chegarem e a tela redesenhar.
+/// Rola a tela de cadastro do Clube (para baixo e para cima) ate o alvo aparecer.
+Future<void> _rolarAte(WidgetTester tester, Finder alvo) async {
+  final rolagem = find.descendant(of: find.byType(Scaffold).last, matching: find.byType(Scrollable)).first;
+  for (final passo in const [Offset(0, -150), Offset(0, 150)]) {
+    for (var i = 0; i < 30 && alvo.evaluate().isEmpty; i++) {
+      await tester.drag(rolagem, passo);
+      await tester.pumpAndSettle();
+    }
+  }
+  await tester.ensureVisible(alvo);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _carregar(WidgetTester tester) async {
   for (var i = 0; i < 5; i++) {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
@@ -1176,30 +1189,36 @@ void main() {
     // Cadastro: sem os obrigatorios o servidor nem e chamado.
     await tester.tap(find.text('Novo parceiro'));
     await _carregar(tester);
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-salvar')));
     await tester.tap(find.byKey(const ValueKey('clube-salvar')));
     await _carregar(tester);
     expect(find.text('Informe o nome comercial.'), findsOneWidget);
     expect(_pedidosDoClube, isEmpty);
 
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-nome')));
     await tester.enterText(find.byKey(const ValueKey('clube-nome')), 'Parceiro de Teste');
     await tester.tap(find.byKey(const ValueKey('clube-categoria')));
     await _carregar(tester);
     await tester.tap(find.text('Oficina mecânica').last);
     await _carregar(tester);
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-endereco')));
     await tester.enterText(find.byKey(const ValueKey('clube-endereco')), 'Rua de Teste, 100 - Centro');
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-whatsapp')));
     await tester.enterText(find.byKey(const ValueKey('clube-whatsapp')), '(85) 99999-0000');
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-vantagens')));
     await tester.enterText(find.byKey(const ValueKey('clube-vantagens')), 'Condição especial combinada com o parceiro');
-    await tester.ensureVisible(find.byKey(const ValueKey('clube-salvar')));
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-salvar')));
     await tester.tap(find.byKey(const ValueKey('clube-salvar')));
     await _carregar(tester);
     final criado = _pedidosDoClube.singleWhere((x) => x.startsWith('POST /parceiros '));
     expect(criado, contains('"categoria":"Oficina mecânica"'));
     expect(criado, contains('"whatsapp":"85999990000"'));
     expect(criado, contains('"ativo":true'));
+    await _rolarAte(tester, find.text('Benefícios'));
     expect(find.text('Benefícios'), findsOneWidget);
 
     // Beneficio com condicao livre (sem percentual no codigo).
-    await tester.ensureVisible(find.text('Novo benefício'));
+    await _rolarAte(tester, find.text('Novo benefício'));
     await tester.tap(find.text('Novo benefício'));
     await _carregar(tester);
     await tester.enterText(find.byKey(const ValueKey('beneficio-titulo')), 'Benefício de teste');
@@ -1224,8 +1243,9 @@ void main() {
     // Editar o nome.
     await tester.tap(find.text('Parceiro de Teste'));
     await _carregar(tester);
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-nome')));
     await tester.enterText(find.byKey(const ValueKey('clube-nome')), 'Parceiro Editado');
-    await tester.ensureVisible(find.byKey(const ValueKey('clube-salvar')));
+    await _rolarAte(tester, find.byKey(const ValueKey('clube-salvar')));
     await tester.tap(find.byKey(const ValueKey('clube-salvar')));
     await _carregar(tester);
     expect(_pedidosDoClube.last, startsWith('PUT /parceiros/'));
@@ -1254,8 +1274,10 @@ void main() {
       });
     _clubeFora = true;
     _operador = true;
-    await _abrir(tester, const ClubeTela());
+    final painel = await _abrir(tester, const ClubeTela());
+    await tester.runAsync(() => painel.carregarEu());
     await _carregar(tester);
+    expect(painel.dono, isFalse);
     expect(find.textContaining('Não foi possível carregar o clube'), findsOneWidget);
     _clubeFora = false;
     await tester.tap(find.text('Tentar de novo'));
@@ -1267,7 +1289,7 @@ void main() {
     await tester.tap(find.text('Parceiro de Teste'));
     await _carregar(tester);
     expect(find.text('Só o dono cadastra ou altera parceiros.'), findsOneWidget);
-    expect(find.byKey(const ValueKey('clube-salvar')), findsNothing);
+    expect(find.byKey(const ValueKey('clube-salvar'), skipOffstage: false), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

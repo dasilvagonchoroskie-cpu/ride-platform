@@ -139,7 +139,8 @@ void main() {
     expect(find.text('Seg a sex, 8h às 18h'), findsOneWidget);
     expect(find.text('(85) 3333-4444'), findsOneWidget);
     expect(find.text('Chamar no WhatsApp'), findsNothing);
-    await tester.ensureVisible(find.text('Ligar'));
+    await tester.scrollUntilVisible(find.text('Ligar'), 200, scrollable: find.byType(Scrollable).last);
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.text('Ligar'));
     await _esperar(tester);
     expect(_links.last, 'tel:+558533334444');
