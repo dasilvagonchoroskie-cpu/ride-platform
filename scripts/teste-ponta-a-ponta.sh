@@ -1024,15 +1024,6 @@ X=$(post /driver/meus-dados/alteracao "{\"phone\":\"$FONE_VAZIO\"}" "$TM")
 [ "$(echo "$X" | jq -r '[.data.pendente.mudancas[] | select(.campo=="phone")] | length')" = "1" ] && ok "Motorista: telefone preso numa conta vazia (cadastro nao terminado) fica livre" || falha "Motorista: liberar telefone de conta vazia" "$X"
 post /driver/meus-dados/alteracao '{}' "$TM" >/dev/null; curl -s -m 30 -X DELETE "$API/driver/meus-dados/alteracao" -H "Authorization: Bearer $TM" >/dev/null
 
-IDS=$(for i in $DID $DIDC $DIDV $DIDW; do printf '"%s",' "$i"; done | sed 's/,$//'); NIDS=$(echo $DID $DIDC $DIDV $DIDW | wc -w)
-X=$(post /admin/drivers/excluir "{\"ids\":[$IDS]}" "$TA")
-[ "$(echo "$X" | jq -r '.data.excluidos')" = "$NIDS" ] && ok "Central: excluiu $NIDS motoristas de teste ($(echo "$X" | jq -r '[.data.itens[].resultado] | join(", ")'))" || falha "Central: excluir motoristas" "$X"
-X=$(get "/admin/drivers/$DIDC" "$TA"); sucesso "$X" && falha "Motorista excluido ainda existe" "$X" || ok "Central: motorista excluido sumiu"
-X=$(get "/rides/history?page=1&pageSize=5" "$TP"); sucesso "$X" && ok "Passageiro: historico de corridas continua depois de excluir o motorista" || falha "Passageiro: historico sem o motorista" "$X"
-X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] && [ "$(echo "$X" | jq -r '.data.driverId')" = "null" ] && ok "Quem tambem e passageiro continua com a conta de passageiro" || falha "Conta de passageiro depois de excluir o motorista" "$X"
-CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
-X=$(get /geo/uso "$TA"); [ "$(echo "$X" | jq -r '.data.ligado')" = "true" ] && ok "Central: uso da TomTom hoje ($(echo "$X" | jq -r '[.data.servicos[] | "\(.servico) \(.hoje)/\(.parteDoDia)"] | join(", ")'))" || falha "Central: uso da TomTom" "$(echo "$X" | jq -c '{ligado: .data.ligado, erro: .error.code}')"
-X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso da TomTom" "$X" || ok "Seguranca: so a Central ve o uso da TomTom"
 # ---- Clube de Vantagens (05/11/2026): a Central cadastra, o motorista ve
 # so os ativos, a identificacao digital tem QR conferido no servidor e so o
 # dono grava. O parceiro de teste e apagado no fim. ----
@@ -1072,6 +1063,15 @@ if [ -n "$QR" ]; then
 fi
 X=$(get /clube/carteirinha "$TP"); sucesso "$X" && falha "Seguranca: passageiro tirou identificacao de motorista" "$X" || ok "Seguranca: passageiro nao tem identificacao de motorista"
 
+IDS=$(for i in $DID $DIDC $DIDV $DIDW; do printf '"%s",' "$i"; done | sed 's/,$//'); NIDS=$(echo $DID $DIDC $DIDV $DIDW | wc -w)
+X=$(post /admin/drivers/excluir "{\"ids\":[$IDS]}" "$TA")
+[ "$(echo "$X" | jq -r '.data.excluidos')" = "$NIDS" ] && ok "Central: excluiu $NIDS motoristas de teste ($(echo "$X" | jq -r '[.data.itens[].resultado] | join(", ")'))" || falha "Central: excluir motoristas" "$X"
+X=$(get "/admin/drivers/$DIDC" "$TA"); sucesso "$X" && falha "Motorista excluido ainda existe" "$X" || ok "Central: motorista excluido sumiu"
+X=$(get "/rides/history?page=1&pageSize=5" "$TP"); sucesso "$X" && ok "Passageiro: historico de corridas continua depois de excluir o motorista" || falha "Passageiro: historico sem o motorista" "$X"
+X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] && [ "$(echo "$X" | jq -r '.data.driverId')" = "null" ] && ok "Quem tambem e passageiro continua com a conta de passageiro" || falha "Conta de passageiro depois de excluir o motorista" "$X"
+CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
+X=$(get /geo/uso "$TA"); [ "$(echo "$X" | jq -r '.data.ligado')" = "true" ] && ok "Central: uso da TomTom hoje ($(echo "$X" | jq -r '[.data.servicos[] | "\(.servico) \(.hoje)/\(.parteDoDia)"] | join(", ")'))" || falha "Central: uso da TomTom" "$(echo "$X" | jq -c '{ligado: .data.ligado, erro: .error.code}')"
+X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso da TomTom" "$X" || ok "Seguranca: so a Central ve o uso da TomTom"
 # Etapa 7: verificacao em duas etapas da Central (Google Authenticator) — a
 # rota existe e responde a situacao; ligar de verdade e na Central.
 X=$(get /auth/2fa "$TA"); [ "$(echo "$X" | jq -r '.data.ativo | type')" = "boolean" ] && ok "Central: verificacao em duas etapas disponivel (ligada: $(echo "$X" | jq -r '.data.ativo'))" || falha "Central: verificacao em duas etapas" "$X"
