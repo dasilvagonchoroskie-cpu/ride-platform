@@ -1,5 +1,4 @@
-import { FreioDaConsulta } from './clube.controller';
-import { beneficioSchema, codigoDoMotorista, ehRecargaConfirmada, elegibilidade, nomeCurto, normalizarCodigo, parceiroSchema, situacaoDoMotorista } from './clube.regras';
+import { beneficioSchema, codigoDoMotorista, ehRecargaConfirmada, elegibilidade, parceiroSchema, situacaoDoMotorista } from './clube.regras';
 import { idDoLogo } from './clube.service';
 
 const ID = '2b7c9a1e-3f4d-4c5b-9a8e-1f2e3d4c5b6a';
@@ -81,43 +80,11 @@ describe('Clube de Vantagens - APTO / NAO APTO pela recarga', () => {
   });
 });
 
-describe('Clube de Vantagens - consulta pelo numero', () => {
-  it('aceita o numero digitado de varios jeitos', () => {
-    expect(normalizarCodigo('FM-1A2B3C4D')).toBe('FM-1A2B3C4D');
-    expect(normalizarCodigo(' fm 1a2b 3c4d ')).toBe('FM-1A2B3C4D');
-    expect(normalizarCodigo('1a2b3c4d')).toBe('FM-1A2B3C4D');
-    expect(normalizarCodigo('FM-123')).toBeNull();
-    expect(normalizarCodigo("1' OR '1'='1")).toBeNull();
-    expect(normalizarCodigo('')).toBeNull();
-  });
-
-  it('freio: poucas consultas por minuto e espera depois de varios erros', () => {
-    const f = new FreioDaConsulta(3, 2, 60_000);
-    const t0 = 1_000_000;
-    for (let i = 0; i < 3; i++) {
-      expect(f.pode('a', t0)).toBeNull();
-      f.contar('a', false, t0);
-    }
-    expect(f.pode('a', t0)).not.toBeNull();
-    expect(f.pode('b', t0)).toBeNull();
-    expect(f.pode('a', t0 + 61_000)).toBeNull();
-    f.contar('c', true, t0);
-    f.contar('c', true, t0);
-    expect(f.pode('c', t0 + 1000)).toBe(59);
-    expect(f.pode('c', t0 + 61_000)).toBeNull();
-  });
-
+describe('Clube de Vantagens - carteirinha', () => {
   it('identificador interno curto e fixo por motorista', () => {
     expect(codigoDoMotorista(ID)).toMatch(/^FM-[0-9A-F]{8}$/);
     expect(codigoDoMotorista(ID)).toBe(codigoDoMotorista(ID));
     expect(codigoDoMotorista(ID)).not.toBe(codigoDoMotorista(ID.replace('a', 'b')));
-  });
-
-  it('pagina publica mostra so o primeiro nome e a inicial', () => {
-    expect(nomeCurto('Evandro da Silva Gonchoroski')).toBe('Evandro G.');
-    expect(nomeCurto('Maria')).toBe('Maria');
-    expect(nomeCurto('  ')).toBe('Motorista');
-    expect(nomeCurto(null)).toBe('Motorista');
   });
 
   it('situacao do cadastro', () => {

@@ -61,7 +61,6 @@ MockClient _servidor() => MockClient((http.Request r) async {
           'atualizadoEm': '2026-11-01T13:00:00.000Z',
           'validoAte': _apto ? '2026-12-01T13:00:00.000Z' : null,
           'conferidoEm': '2026-11-05T18:00:00.000Z',
-          'consulta': 'https://servidor.teste/api/clube/consulta',
         };
       }
       return http.Response(
@@ -191,7 +190,7 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'APTO');
     expect(find.textContaining('Vale até'), findsOneWidget);
     expect(find.textContaining('Situação atualizada em'), findsOneWidget);
-    expect(find.textContaining('servidor.teste/api/clube/consulta'), findsOneWidget);
+    expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFF1E9E5A));
     expect(find.byType(Image), findsWidgets);
     expect(find.text('Clube de Vantagens'), findsOneWidget);
     // Sem QR Code, sem campo para editar e sem telefone ou CPF.
@@ -205,6 +204,7 @@ void main() {
     _apto = false;
     await _abrir(tester, const CarteirinhaScreen());
     expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'NÃO APTO');
+    expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFFD93A3A));
     expect(find.textContaining('passou de 30 dias'), findsOneWidget);
     expect(find.textContaining('Vale até'), findsNothing);
     await tester.scrollUntilVisible(find.textContaining('continua rodando normalmente'), 200,

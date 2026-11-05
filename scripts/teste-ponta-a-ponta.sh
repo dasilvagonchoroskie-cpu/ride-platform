@@ -1057,7 +1057,6 @@ X=$(get /clube/carteirinha "$TM")
 echo "$X" | jq -e '.data.codigo | test("^FM-[0-9A-F]{8}$")' >/dev/null && echo "$X" | jq -e '.data.situacao | test("^(APTO|NAO_APTO)$")' >/dev/null && ok "Motorista: carteirinha da conta logada ($(echo "$X" | jq -r '.data.codigo'), $(echo "$X" | jq -r '.data.situacaoTexto'))" || falha "Motorista: carteirinha" "$X"
 echo "$X" | jq -e '.data | has("qr") or has("phone") or has("cpf") or has("email") or has("telefone") or has("saldo")' >/dev/null && falha "Seguranca: carteirinha com QR ou dado pessoal" "$X" || ok "Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo"
 C=$(curl -s -m 60 -o /dev/null -w "%{http_code}" "$API/clube/validar/abc"); [ "$C" = "404" ] && ok "Clube: pagina do QR removida" || falha "Clube: pagina do QR ainda existe" "$C"
-consulta() { curl -s -m 60 "$API/clube/consulta?codigo=$1"; }
 # Regra (Evandro 05/11): APTO = UMA recarga confirmada de R$ 100,00 ou mais nos ultimos 30 dias.
 if [ -n "${DIDC:-}" ] && [ -n "${TC:-}" ]; then
   X=$(get /clube/carteirinha "$TC"); COD=$(echo "$X" | jq -r '.data.codigo // empty')
@@ -1068,20 +1067,12 @@ if [ -n "${DIDC:-}" ] && [ -n "${TC:-}" ]; then
   X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: duas recargas menores somando R\$ 110,00 nao deixam APTO (nao soma)" || falha "Clube: somou recargas menores" "$X"
   post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":10000,"operation":"CREDIT","description":"Recarga teste clube 3"}' "$TA" >/dev/null
   X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "APTO" ] && [ -n "$(echo "$X" | jq -r '.data.validoAte // empty')" ] && ok "Clube: recarga confirmada de R\$ 100,00 deixa APTO (vale ate $(echo "$X" | jq -r '.data.validoAte'))" || falha "Clube: recarga de 100 nao deixou APTO" "$X"
-  H=$(consulta "$COD"); echo "$H" | grep -q '✔ APTO' && echo "$H" | grep -q "$COD" && ! echo "$H" | grep -qE "R\\\$ ?1[01]0|$CPF|Motorista Pela Central" && ok "Estabelecimento: consulta pelo numero mostra APTO (so primeiro nome, sem valor nem CPF)" || falha "Estabelecimento: consulta APTO" "$(echo "$H" | head -c 400)"
-  H=$(consulta "$(echo "$COD" | tr 'A-Z' 'a-z' | tr -d '-')"); echo "$H" | grep -q '✔ APTO' && ok "Estabelecimento: aceita o numero digitado em minusculas e sem traco" || falha "Estabelecimento: numero sem traco" "$(echo "$H" | head -c 300)"
   X=$(get /drivers/me "$TC"); sucesso "$X" && ok "Clube: a situacao do clube nao mexe no acesso ao aplicativo" || falha "Clube: acesso do motorista" "$X"
   X=$(post /clube/carteirinha '{"situacao":"APTO"}' "$TC"); sucesso "$X" && falha "Seguranca: motorista mudou a propria situacao" "$X" || ok "Seguranca: motorista nao altera a propria situacao"
   patch "/admin/drivers/$DIDC/review" '{"status":"SUSPENDED","reason":"Teste do clube: motorista inativo"}' "$TA" >/dev/null
-  H=$(consulta "$COD"); echo "$H" | grep -q '✘ NÃO APTO' && echo "$H" | grep -qi 'suspens' && ok "Estabelecimento: motorista inativo aparece NAO APTO" || falha "Estabelecimento: motorista inativo" "$(echo "$H" | head -c 400)"
+  X=$(get /clube/carteirinha "$TC"); { [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] || ! sucesso "$X"; } && ok "Clube: motorista suspenso fica NAO APTO mesmo com recarga" || falha "Clube: suspenso continuou APTO" "$X"
   patch "/admin/drivers/$DIDC/review" '{"status":"APPROVED","presentialCheck":true,"reason":"Teste do clube: voltou a ativo"}' "$TA" >/dev/null
 fi
-H=$(consulta "FM-00000000"); echo "$H" | grep -q 'Não encontrado' && ok "Estabelecimento: numero inexistente mostra Nao encontrado" || falha "Estabelecimento: numero inexistente" "$(echo "$H" | head -c 300)"
-H=$(consulta "x%27%20OR%201%3D1"); echo "$H" | grep -q 'Número inválido' && ok "Estabelecimento: texto estranho no numero e recusado" || falha "Estabelecimento: numero invalido" "$(echo "$H" | head -c 300)"
-H=$(curl -s -m 60 "$API/clube/consulta"); echo "$H" | grep -q 'name="codigo"' && ok "Estabelecimento: pagina de consulta abre com o campo do numero" || falha "Estabelecimento: pagina de consulta" "$(echo "$H" | head -c 300)"
-# Freio contra tentativas automaticas (por ultimo: depois dele este aparelho espera).
-BLOQ=0; for i in $(seq 1 12); do C=$(curl -s -m 30 -o /dev/null -w "%{http_code}" "$API/clube/consulta?codigo=FM-0000000$((i % 10))"); [ "$C" = "429" ] && { BLOQ=$i; break; }; done
-[ "$BLOQ" -gt 0 ] && ok "Seguranca: consulta publica trava depois de varias tentativas ($BLOQ)" || falha "Seguranca: consulta publica sem freio" "12 tentativas sem 429"
 X=$(get /clube/carteirinha "$TP"); sucesso "$X" && falha "Seguranca: passageiro tirou identificacao de motorista" "$X" || ok "Seguranca: passageiro nao tem identificacao de motorista"
 
 IDS=$(for i in $DID $DIDC $DIDV $DIDW; do printf '"%s",' "$i"; done | sed 's/,$//'); NIDS=$(echo $DID $DIDC $DIDV $DIDW | wc -w)

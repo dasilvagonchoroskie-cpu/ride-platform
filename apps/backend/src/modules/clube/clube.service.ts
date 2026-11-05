@@ -11,8 +11,6 @@ import {
   RECARGA_MINIMA_CENTS,
   codigoDoMotorista,
   elegibilidade,
-  nomeCurto,
-  normalizarCodigo,
   situacaoDoMotorista,
   type DadosDoBeneficio,
   type DadosDoParceiro,
@@ -280,7 +278,7 @@ export class ClubeService implements OnModuleInit {
    * e calculada no servidor (ele nao altera nada). NAO APTO nao bloqueia o
    * aplicativo: so os beneficios do clube.
    */
-  async carteirinha(userId: string, base: string) {
+  async carteirinha(userId: string) {
     const m = await this.prisma.driver.findUnique({
       where: { userId },
       select: { id: true, status: true, user: { select: { name: true, status: true, deletedAt: true } } },
@@ -290,31 +288,7 @@ export class ClubeService implements OnModuleInit {
       nome: m.user.name,
       codigo: codigoDoMotorista(m.id),
       ...(await this.situacaoNoClube(m)),
-      consulta: `${base}/api/clube/consulta`,
     };
-  }
-
-  /**
-   * Consulta do estabelecimento pelo numero da carteirinha. Mostra so o
-   * necessario: primeiro nome + inicial, numero e APTO / NAO APTO.
-   */
-  async consultar(codigoDigitado: string) {
-    const codigo = normalizarCodigo(codigoDigitado);
-    if (!codigo) return { encontrado: false as const, motivo: 'Número inválido. Ele tem o formato FM- seguido de 8 letras e números (ex.: FM-1A2B3C4D).' };
-    // O numero sai do id do motorista (sha256), o mesmo calculo de codigoDoMotorista.
-    const achados = await this.prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM drivers
-      WHERE upper(substr(encode(sha256(convert_to('clube-id:' || id::text, 'UTF8')), 'hex'), 1, 8)) = ${codigo.slice(3)}
-      LIMIT 2`;
-    const ids = achados.filter((a) => codigoDoMotorista(a.id) === codigo).map((a) => a.id);
-    if (ids.length !== 1) return { encontrado: false as const, motivo: 'Identificação não encontrada. Confira o número com o motorista.' };
-    const m = await this.prisma.driver.findUnique({
-      where: { id: ids[0] },
-      select: { id: true, status: true, user: { select: { name: true, status: true, deletedAt: true } } },
-    });
-    if (!m || m.user.deletedAt) return { encontrado: false as const, motivo: 'Identificação não encontrada. Confira o número com o motorista.' };
-    const s = await this.situacaoNoClube(m);
-    return { encontrado: true as const, nome: nomeCurto(m.user.name), codigo, ...s };
   }
 }
 

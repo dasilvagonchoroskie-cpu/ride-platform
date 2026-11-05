@@ -91,7 +91,6 @@ class Carteirinha {
     this.atualizadoEm,
     this.validoAte,
     required this.conferidoEm,
-    required this.consulta,
   });
 
   final String nome;
@@ -107,9 +106,6 @@ class Carteirinha {
   final DateTime? validoAte;
   final DateTime conferidoEm;
 
-  /// Pagina onde o estabelecimento digita o numero.
-  final String consulta;
-
   bool get apto => situacao == 'APTO';
 
   static DateTime? _data(Object? v) => DateTime.tryParse(_txt(v))?.toLocal();
@@ -123,7 +119,6 @@ class Carteirinha {
         atualizadoEm: _data(j['atualizadoEm']),
         validoAte: _data(j['validoAte']),
         conferidoEm: _data(j['conferidoEm']) ?? DateTime.now(),
-        consulta: _txt(j['consulta']),
       );
 }
 
@@ -562,7 +557,7 @@ String _dataHora(DateTime d) => DateFormat('dd/MM/yyyy HH:mm').format(d);
 
 /// Carteirinha digital do motorista parceiro. Os dados vem da conta logada
 /// (o motorista nao edita) e a situacao APTO / NAO APTO e calculada no
-/// servidor. O estabelecimento confere o numero na pagina de consulta.
+/// servidor: verde APTO, vermelho NAO APTO.
 class CarteirinhaScreen extends StatefulWidget {
   const CarteirinhaScreen({super.key});
 
@@ -594,7 +589,7 @@ class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
           }
           if (!s.hasData) return const Center(child: CircularProgressIndicator());
           final c = s.data!;
-          final cor = c.apto ? AppColors.primary : AppColors.danger;
+          final cor = c.apto ? const Color(0xFF1E9E5A) : AppColors.danger;
           return RefreshIndicator(
             onRefresh: () async {
               _atualizar();
@@ -644,26 +639,36 @@ class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
                         style: AppText.display.copyWith(color: Colors.white, letterSpacing: 2),
                       ),
                       const SizedBox(height: Spacing.lg),
+                      // Verde = APTO, vermelho = NAO APTO (Evandro, 05/11/2026).
                       Container(
+                        key: const ValueKey('selo-carteirinha'),
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(Radii.lg)),
+                        padding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.lg),
+                        decoration: BoxDecoration(
+                          color: cor,
+                          borderRadius: BorderRadius.circular(Radii.lg),
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
                         child: Column(
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(c.apto ? Icons.verified : Icons.block, color: cor, size: 28),
+                                Icon(c.apto ? Icons.check_circle : Icons.cancel, color: Colors.white, size: 36),
                                 const SizedBox(width: Spacing.sm),
                                 Flexible(
-                                  child: Text(c.situacaoTexto, key: const ValueKey('situacao-carteirinha'), style: AppText.title.copyWith(color: cor)),
+                                  child: Text(
+                                    c.situacaoTexto,
+                                    key: const ValueKey('situacao-carteirinha'),
+                                    style: AppText.display.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                                  ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(c.motivo, textAlign: TextAlign.center, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                            Text(c.motivo, textAlign: TextAlign.center, style: AppText.caption.copyWith(color: Colors.white)),
                             if (c.apto && c.validoAte != null)
-                              Text('Vale até ${_dataHora(c.validoAte!)}', textAlign: TextAlign.center, style: AppText.bodyStrong.copyWith(color: cor)),
+                              Text('Vale até ${_dataHora(c.validoAte!)}', textAlign: TextAlign.center, style: AppText.bodyStrong.copyWith(color: Colors.white)),
                           ],
                         ),
                       ),
@@ -677,13 +682,6 @@ class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: Spacing.md),
-                Text(
-                  'O estabelecimento confere este número na página de consulta da ${Marca.nome}'
-                  '${c.consulta.isEmpty ? '' : ' (${c.consulta})'}. Vale o que a consulta mostrar na hora: print não serve.',
-                  textAlign: TextAlign.center,
-                  style: AppText.caption.copyWith(color: AppColors.textMuted),
                 ),
                 if (!c.apto) ...[
                   const SizedBox(height: Spacing.sm),

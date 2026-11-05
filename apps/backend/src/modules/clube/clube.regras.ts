@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 /**
  * Clube de Vantagens (Evandro, 05/11/2026). Regras puras: validacao do que a
- * Central manda e a carteirinha digital do motorista (consulta pelo numero).
+ * Central manda e a carteirinha digital do motorista (APTO / NAO APTO).
  */
 
 const texto = (max: number) => z.string().trim().max(max);
@@ -116,23 +116,9 @@ export function elegibilidade(lancamentos: LancamentoDaCarteira[], agora = new D
   return { apto: false, validoAte: null, atualizadoEm: vence };
 }
 
-/** "fm-1a2b 3c4d" -> "FM-1A2B3C4D"; null se nao tiver o formato. */
-export function normalizarCodigo(texto: string | null | undefined): string | null {
-  const so = String(texto ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/^FM/, '');
-  return /^[0-9A-F]{8}$/.test(so) ? `FM-${so}` : null;
-}
-
 /** Identificador do motorista na carteirinha: curto, sem expor o id do banco. */
 export function codigoDoMotorista(driverId: string): string {
   return 'FM-' + createHash('sha256').update(`clube-id:${driverId}`).digest('hex').slice(0, 8).toUpperCase();
-}
-
-/** "Evandro Da Silva Gonchoroski" -> "Evandro G." (pagina publica do QR). */
-export function nomeCurto(nome: string | null | undefined): string {
-  const partes = (nome ?? '').trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return 'Motorista';
-  if (partes.length === 1) return partes[0];
-  return `${partes[0]} ${partes[partes.length - 1][0].toUpperCase()}.`;
 }
 
 /** Situacao do cadastro como aparece na carteirinha. */
