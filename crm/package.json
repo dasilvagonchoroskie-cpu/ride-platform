@@ -1,0 +1,25 @@
+{
+  "name": "crm-fortaleza-move",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CRM Fortaleza Move - gestão de motoristas, passageiros, parceiros, atendimento, marketing, tarefas e planejamento financeiro.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "start:cofre": "node start.js",
+    "key": "node scripts/installation-key.js",
+    "reset": "node scripts/reset-password.js",
+    "backup": "node scripts/backup.js",
+    "test": "node --test test/*.test.js",
+    "test:offline": "node --disable-warning=ExperimentalWarning test/offline-harness/run.js",
+    "wa:instalar": "bash scripts/instalar-whatsapp.sh"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.21.2"
+  }
+}

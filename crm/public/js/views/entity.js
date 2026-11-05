@@ -1,0 +1,511 @@
+import { api } from '../api.js';
+import * as ui from '../ui.js';
+
+export async function renderEntity(view, state, key, params) {
+  // O servidor valida de novo: esconder o botão é só conveniência.
+  const podeExcluir = ((state.meta.can && state.meta.can.excluir) || []).includes(key);
+  const def = state.meta.entities[key];
+  const hasCategoria = def.fields.some((f) => f.key === 'categoria');
+  let vista = params.get('vista') || 'lista';
+  if (!def.views.includes(vista)) vista = 'lista';
+  const filtros = { q: '', situacao: '', categoria: '', page: 1 };
+  let listSeq = 0; // descarta respostas antigas (a busca dispara várias requisições; a mais lenta não pode vencer a mais nova)
+  let calRef = null;
+  let calMes = ui.todayISO().slice(0, 7);
+
+  view.innerHTML = `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">${ui.esc(def.label)}</div>
+        <h2>${ui.esc(def.singular)}s</h2>
+        <p class="sub" id="ent-count">Carregando registros…</p>
+      </div>
+      <div class="page-actions">
+        ${def.views.length > 1 ? `<div class="segmented" style="display:flex;gap:4px;background:#e9eefa;padding:4px;border-radius:10px">
+          <button class="btn btn-sm ${vista === 'lista' ? 'btn-primary' : ''}" data-vista="lista" style="${vista === 'lista' ? '' : 'background:transparent;color:#5b6b82'}">${ui.icon('list', 15)} Lista</button>
+          <button class="btn btn-sm ${vista === 'kanban' ? 'btn-primary' : ''}" data-vista="kanban" style="${vista === 'kanban' ? '' : 'background:transparent;color:#5b6b82'}">${ui.icon('board', 15)} Kanban</button>
+          <button class="btn btn-sm ${vista === 'calendario' ? 'btn-primary' : ''}" data-vista="calendario" style="${vista === 'calendario' ? '' : 'background:transparent;color:#5b6b82'}">${ui.icon('calendar', 15)} Calendário</button>
+        </div>` : ''}
+        <button class="btn btn-primary" id="btn-new">${ui.icon('plus', 16)} Novo ${def.singular.toLowerCase()}</button>
+      </div>
+    </div>
+
+    <div class="toolbar ${vista !== 'lista' ? 'hidden' : ''}" id="toolbar">
+      <div class="search">
+        ${ui.icon('search', 16)}
+        <input type="search" id="f-q" placeholder="Pesquisar ${ui.esc(def.label.toLowerCase())}…" autocomplete="off">
+      </div>
+      <select id="f-situacao"><option value="">Todas as situações</option>
+        ${def.statuses.map((s) => `<option value="${ui.esc(s)}">${ui.esc(s)}</option>`).join('')}
+      </select>
+      ${hasCategoria ? `<select id="f-categoria"><option value="">Todas as categorias</option>
+        ${(def.fields.find((f) => f.key === 'categoria').options || []).map((s) => `<option value="${ui.esc(s)}">${ui.esc(s)}</option>`).join('')}
+      </select>` : ''}
+      <button class="btn btn-ghost btn-sm" id="f-limpar">Limpar</button>
+    </div>
+
+    <div id="content"></div>`;
+
+  const content = view.querySelector('#content');
+  const countEl = view.querySelector('#ent-count');
+
+  const queryString = () => {
+    const p = new URLSearchParams();
+    if (filtros.q) p.set('q', filtros.q);
+    if (filtros.situacao) p.set('f_situacao', filtros.situacao);
+    if (filtros.categoria) p.set('f_categoria', filtros.categoria);
+    p.set('page', String(filtros.page));
+    p.set('size', vista === 'lista' ? '20' : '200');
+    if (key === 'tarefas') { p.set('sort', 'data_vencimento'); p.set('dir', 'asc'); }
+    return p.toString();
+  };
+
+  const cell = (field, row) => {
+    const value = row[field.key];
+    if (!field) return ui.esc(value || '—');
+    if (field.key === def.statusField) return ui.badge(value);
+    if (field.key === 'prioridade') return ui.badge(value, ui.priorityTone(value));
+    if (field.type === 'date') return ui.fmtDate(value);
+    if (field.type === 'number') return /invest|custo|valor/.test(field.key) ? ui.fmtMoney(value) : ui.fmtInt(value);
+    if (['tipo', 'canal', 'categoria', 'origem'].includes(field.key)) return value ? `<span class="tag">${ui.esc(value)}</span>` : '—';
+    return value === null || value === undefined || value === '' ? '—' : ui.esc(value);
+  };
+
+  async function loadList() {
+    const seq = ++listSeq;
+    const data = await api.get(`/${key}?${queryString()}`);
+    if (seq !== listSeq) return;
+    filtros.page = data.page; // o servidor devolve a página real (ex.: após excluir o último item da última página)
+    countEl.textContent = `${ui.fmtInt(data.total)} ${data.total === 1 ? 'registro' : 'registros'}${filtros.q || filtros.situacao ? ' com os filtros aplicados' : ' na base'}`;
+    if (!data.items.length) {
+      content.innerHTML = `<div class="card">${ui.emptyState(
+        filtros.q || filtros.situacao || filtros.categoria ? 'Nenhum resultado' : `Nenhum ${def.singular.toLowerCase()} cadastrado`,
+        filtros.q || filtros.situacao || filtros.categoria
+          ? 'Ajuste a pesquisa ou remova os filtros para ver outros registros.'
+          : `Comece cadastrando o primeiro ${def.singular.toLowerCase()}. Os indicadores do dashboard passam a refletir esses dados.`,
+        `<button class="btn btn-primary" id="empty-new">${ui.icon('plus', 16)} Cadastrar ${def.singular.toLowerCase()}</button>`
+      )}</div>`;
+      const b = content.querySelector('#empty-new');
+      if (b) b.addEventListener('click', () => openForm(null));
+      return;
+    }
+
+    const columns = def.columns.map((colKey) => {
+      const field = def.fields.find((f) => f.key === colKey);
+      const first = colKey === def.columns[0];
+      return {
+        label: field ? field.label : colKey,
+        render: (row) => first
+          ? `<b>${ui.esc(row[colKey] || '—')}</b>${key === 'parceiros' && row.responsavel ? `<span class="sub">${ui.esc(row.responsavel)}</span>` : ''}`
+          : cell(field, row)
+      };
+    });
+    columns.push({
+      label: 'Ações',
+      cls: 'right row-actions-cell',
+      render: (row) => `<div class="row-actions">
+        <button class="btn btn-sm btn-ghost" data-edit="${row.id}" title="Editar">${ui.icon('edit', 15)}</button>
+        ${podeExcluir ? `<button class="btn btn-sm btn-ghost" data-del="${row.id}" title="Excluir">${ui.icon('trash', 15)}</button>` : ''}
+      </div>`
+    });
+
+    content.innerHTML = `<div class="card">
+      ${ui.tableHtml({ columns, rows: data.items, rowClick: true })}
+      <div class="pager">
+        <span>Página ${data.page} de ${data.pages} · ${ui.fmtInt(data.total)} registros</span>
+        <span class="row">
+          <button class="btn btn-sm btn-ghost" id="prev" ${data.page <= 1 ? 'disabled' : ''}>${ui.icon('arrowLeft', 14)} Anterior</button>
+          <button class="btn btn-sm btn-ghost" id="next" ${data.page >= data.pages ? 'disabled' : ''}>Próxima ${ui.icon('arrowRight', 14)}</button>
+        </span>
+      </div>
+    </div>`;
+
+    content.querySelectorAll('tbody tr[data-id]').forEach((tr) => {
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        openDetail(Number(tr.dataset.id));
+      });
+    });
+    content.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const item = data.items.find((i) => i.id === Number(b.dataset.edit));
+      openForm(item);
+    }));
+    content.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const item = data.items.find((i) => i.id === Number(b.dataset.del));
+      await removeItem(item);
+    }));
+    const prev = content.querySelector('#prev');
+    const next = content.querySelector('#next');
+    if (prev) prev.addEventListener('click', () => { filtros.page -= 1; loadList(); });
+    if (next) next.addEventListener('click', () => { filtros.page += 1; loadList(); });
+  }
+
+  function detailValue(field, row) {
+    const value = row[field.key];
+    if (field.key === def.statusField) return ui.badge(value);
+    if (field.key === 'prioridade') return ui.badge(value, ui.priorityTone(value));
+    if (field.type === 'date') return ui.fmtDate(value);
+    if (field.type === 'number') return /invest|custo|valor/.test(field.key) ? ui.fmtMoney(value) : ui.fmtInt(value);
+    if (field.type === 'relation' && value) return `#${value}`;
+    return value === null || value === undefined || value === '' ? '<span class="muted">—</span>' : ui.esc(value);
+  }
+
+  async function openDetail(id) {
+    let data;
+    try {
+      data = await api.get(`/${key}/${id}`);
+    } catch (err) { ui.toast(err.message, 'error'); return; }
+    const item = data.item;
+    const fields = def.fields
+      .filter((f) => !(f.type === 'relation' && !item[f.key]))
+      .map((f) => `<div class="detail-item ${f.full ? 'full' : ''}"><dt>${ui.esc(f.label)}</dt><dd>${detailValue(f, item)}</dd></div>`)
+      .join('');
+
+    const historico = (data.interacoes || []).length
+      ? `<div class="section-title">Histórico de acompanhamento</div><div class="timeline">${data.interacoes.map((i) => `
+          <div class="tl-item"><div class="tl-dot"></div><div>
+            <p>${ui.esc(i.resumo)}</p>
+            <div class="tl-meta">${ui.fmtDateTime(i.data)} · ${ui.esc(i.canal || 'Interno')}${i.created_by_nome ? ` · ${ui.esc(i.created_by_nome)}` : ''}${i.situacao_nova && i.situacao_anterior !== i.situacao_nova ? ` · ${ui.esc(i.situacao_anterior || '—')} → ${ui.esc(i.situacao_nova)}` : ''}</div>
+          </div></div>`).join('')}</div>`
+      : '';
+
+    const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
+
+    const m = ui.modal({
+      title: `${def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
+      subtitle: `Registro #${item.id}${item.created_at ? ` · criado em ${ui.fmtDate(item.created_at)}` : ''}`,
+      size: 'wide',
+      body: `<dl class="detail-list">${fields}</dl>
+             ${item[def.confirmStatus === 'Parceria confirmada' ? 'confirmado_em' : 'id'] && def.confirmStatus && item.confirmado_em ? `<div class="notice" style="margin-top:14px;background:#e2f7ee;border-color:#c7efdd;color:#0a7651">Parceria confirmada em ${ui.fmtDate(item.confirmado_em)}.</div>` : ''}
+             ${historico}
+             ${data.interacoes.length === 0 && def.interactions ? '<div class="notice" style="margin-top:14px">Nenhum acompanhamento registrado ainda. Use “Registrar acompanhamento” para manter o histórico.</div>' : ''}`,
+      footer: `
+        ${podeExcluir ? `<button class="btn btn-danger btn-sm" data-detail-del>${ui.icon('trash', 15)} Excluir</button>` : ''}
+        ${def.interactions ? `<button class="btn btn-ghost btn-sm" data-detail-hist>${ui.icon('headset', 15)} Registrar acompanhamento</button>` : ''}
+        ${podeConfirmar ? `<button class="btn btn-gold btn-sm" data-detail-confirm>${ui.icon('check', 15)} Confirmar parceria</button>` : ''}
+        <button class="btn btn-primary btn-sm" data-detail-edit>${ui.icon('edit', 15)} Editar</button>`
+    });
+
+    m.dialog.querySelector('[data-detail-edit]').addEventListener('click', () => { m.close(); openForm(item); });
+    const detailDel = m.dialog.querySelector('[data-detail-del]');
+    if (detailDel) detailDel.addEventListener('click', async () => { m.close(); await removeItem(item); });
+    const histBtn = m.dialog.querySelector('[data-detail-hist]');
+    if (histBtn) histBtn.addEventListener('click', () => openInteraction(item, m));
+    const confBtn = m.dialog.querySelector('[data-detail-confirm]');
+    if (confBtn) confBtn.addEventListener('click', async () => {
+      const ok = await ui.confirmDialog({
+        title: 'Confirmar parceria',
+        message: `Confirme que as condições com “${item.nome_estabelecimento}” foram acordadas. A situação passará a “Parceria confirmada” e o registro ficará datado.`,
+        confirmLabel: 'Confirmar parceria',
+        requireCheck: 'Confirmo que a parceria foi acordada e que esta marcação é manual.'
+      });
+      if (!ok) return;
+      try {
+        await api.post(`/parceiros/${item.id}/confirmar`, { confirmo: true });
+        ui.toast('Parceria confirmada.', 'success');
+        m.close();
+        loadList();
+      } catch (err) { ui.toast(err.message, 'error'); }
+    });
+  }
+
+  function openForm(item) {
+    const isNew = !item;
+    const values = {};
+    if (isNew) {
+      for (const f of def.fields) {
+        if (f.type === 'date' && f.key === def.dateField) values[f.key] = ui.todayISO();
+        if (f.key === def.statusField) values[f.key] = def.statuses[0];
+        if (f.key === 'prioridade') values[f.key] = 'Média';
+        if (f.key === 'tipo' && def.statuses.includes('Pendente')) values[f.key] = 'Campanha';
+      }
+      const pNovo = params.get('novo') === '1';
+      if (key === 'tarefas' && params.get('data')) values.data_vencimento = params.get('data');
+      if (pNovo) history.replaceState(null, '', `#/${location.hash.split('/')[1] || key}`);
+    } else {
+      for (const f of def.fields) values[f.key] = item[f.key];
+    }
+
+    const form = ui.buildForm(def, values);
+    const m = ui.modal({
+      title: isNew ? `Novo ${def.singular.toLowerCase()}` : `Editar ${def.singular.toLowerCase()}`,
+      subtitle: isNew ? 'Preencha os campos obrigatórios. Os dados ficam salvos no banco do sistema.' : `Registro #${item.id}`,
+      body: '<div class="form-errors" id="form-error" hidden></div>',
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button>
+               <button class="btn btn-primary" data-save>${ui.icon('save', 16)} ${isNew ? 'Cadastrar' : 'Salvar alterações'}</button>`
+    });
+    m.body.appendChild(form.el);
+    form.focus();
+
+    m.dialog.querySelector('[data-cancel]').addEventListener('click', () => m.close());
+    m.dialog.querySelector('[data-save]').addEventListener('click', async () => {
+      const errorBox = m.body.querySelector('#form-error');
+      errorBox.hidden = true;
+      const payload = form.getValues();
+      try {
+        if (isNew) {
+          await api.post(`/${key}`, payload);
+        } else {
+          // Envia só o que mudou: salvar o formulário inteiro sobrescrevia alterações feitas por outra pessoa no mesmo registro.
+          const changed = {};
+          for (const k of Object.keys(payload)) {
+            if (String(payload[k] ?? '') !== String(item[k] ?? '')) changed[k] = payload[k];
+          }
+          if (!Object.keys(changed).length) {
+            ui.toast('Nenhuma alteração para salvar.', 'info');
+            m.close();
+            return;
+          }
+          await api.patch(`/${key}/${item.id}`, changed);
+        }
+        ui.toast(isNew ? `${def.singular} cadastrado.` : `${def.singular} atualizado.`, 'success');
+        m.close();
+        await loadList();
+        state.refreshMeta();
+      } catch (err) {
+        if (err.fields) form.setErrors(err.fields);
+        errorBox.hidden = false;
+        errorBox.textContent = err.message;
+      }
+    });
+  }
+
+  async function removeItem(item) {
+    const label = item[def.columns[0]] || `#${item.id}`;
+    const ok = await ui.confirmDialog({
+      title: 'Excluir registro',
+      message: `Excluir “${label}” definitivamente? O histórico de acompanhamento também será removido. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      danger: true
+    });
+    if (!ok) return;
+    try {
+      await api.del(`/${key}/${item.id}`);
+      ui.toast('Registro excluído.', 'success');
+      await loadList();
+      state.refreshMeta();
+    } catch (err) { ui.toast(err.message, 'error'); }
+  }
+
+  function openInteraction(item, parentModal) {
+    if (parentModal) parentModal.close();
+    const body = document.createElement('div');
+    body.innerHTML = `
+      <div class="form-errors" id="hist-error" hidden></div>
+      <div class="form-grid">
+        <div class="field full">
+          <label for="hist-resumo">Acompanhamento realizado<span class="req">*</span></label>
+          <textarea id="hist-resumo" placeholder="Ex.: Ligação de retorno; solicitou envio da documentação."></textarea>
+        </div>
+        <div class="field">
+          <label for="hist-canal">Canal</label>
+          <select id="hist-canal">
+            ${['WhatsApp', 'Telefone', 'Presencial', 'Instagram', 'Facebook', 'TikTok', 'Interno'].map((c) => `<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="hist-situacao">Nova situação (opcional)</label>
+          <select id="hist-situacao"><option value="">Manter “${ui.esc(item[def.statusField])}”</option>
+            ${def.statuses.filter((s) => !(def.confirmStatus && s === def.confirmStatus && item[def.statusField] !== def.confirmStatus)).map((s) => `<option value="${ui.esc(s)}">${ui.esc(s)}</option>`).join('')}
+          </select>
+        </div>
+      </div>`;
+    const m = ui.modal({
+      title: 'Registrar acompanhamento',
+      subtitle: `${def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
+      body,
+      footer: '<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" data-save>Registrar</button>'
+    });
+    m.dialog.querySelector('[data-cancel]').addEventListener('click', () => m.close());
+    m.dialog.querySelector('[data-save]').addEventListener('click', async () => {
+      const errorBox = m.body.querySelector('#hist-error');
+      errorBox.hidden = true;
+      try {
+        await api.post(`/${key}/${item.id}/interacoes`, {
+          resumo: m.body.querySelector('#hist-resumo').value,
+          canal: m.body.querySelector('#hist-canal').value,
+          situacao_nova: m.body.querySelector('#hist-situacao').value || undefined
+        });
+        ui.toast('Acompanhamento registrado.', 'success');
+        m.close();
+        await loadList();
+        state.refreshMeta();
+      } catch (err) {
+        errorBox.hidden = false;
+        errorBox.textContent = err.message;
+      }
+    });
+  }
+
+  /* ------------------------------ kanban ------------------------------ */
+  async function loadKanban() {
+    // Uma consulta por coluna. Antes vinham as 200 tarefas de vencimento mais antigo de todas as situações:
+    // com o tempo as concluídas ocupavam tudo e as tarefas novas deixavam de aparecer.
+    const finalizadas = new Set(['Concluída', 'Cancelada']);
+    const results = await Promise.all(def.statuses.map((status) => {
+      const dir = finalizadas.has(status) ? 'desc' : 'asc';
+      return api.get(`/${key}?size=100&sort=data_vencimento&dir=${dir}&f_${def.statusField}=${encodeURIComponent(status)}`);
+    }));
+    const total = results.reduce((sum, r) => sum + r.total, 0);
+    countEl.textContent = `${ui.fmtInt(total)} tarefas · arraste os cartões para mudar a situação`;
+    const cols = def.statuses.map((status, idx) => {
+      const data = results[idx];
+      const items = data.items;
+      return `<div class="kanban-col" data-status="${ui.esc(status)}">
+        <h4><span>${ui.esc(status)}</span><span class="badge neutral">${data.total > items.length ? `${items.length} de ${data.total}` : data.total}</span></h4>
+        ${items.map((t) => `<div class="kanban-card" draggable="true" data-id="${t.id}">
+          <div class="t">${ui.esc(t.titulo)}</div>
+          <div class="m"><span>${ui.fmtDate(t.data_vencimento)}</span>${ui.badge(t.prioridade, ui.priorityTone(t.prioridade))}</div>
+          ${t.responsavel ? `<div class="m"><span class="muted">${ui.esc(t.responsavel)}</span></div>` : ''}
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+    content.innerHTML = `<div class="kanban">${cols}</div>`;
+
+    content.querySelectorAll('.kanban-card').forEach((card) => {
+      card.addEventListener('click', () => openDetail(Number(card.dataset.id)));
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', card.dataset.id);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+    });
+    content.querySelectorAll('.kanban-col').forEach((col) => {
+      col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('drag-over'); });
+      col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+      col.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        col.classList.remove('drag-over');
+        const id = Number(e.dataTransfer.getData('text/plain'));
+        if (!id) return;
+        try {
+          await api.patch(`/tarefas/${id}`, { situacao: col.dataset.status });
+          ui.toast(`Tarefa movida para “${col.dataset.status}”.`, 'success');
+          loadKanban();
+          state.refreshMeta();
+        } catch (err) { ui.toast(err.message, 'error'); }
+      });
+    });
+  }
+
+  /* ---------------------------- calendário ---------------------------- */
+  async function loadCalendar() {
+    const [ano, mes] = calMes.split('-').map(Number);
+    const first = new Date(ano, mes - 1, 1);
+    const start = new Date(first);
+    start.setDate(1 - first.getDay());
+    const last = new Date(ano, mes, 0);
+    const end = new Date(last);
+    end.setDate(last.getDate() + (6 - last.getDay()));
+
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const de = iso(start);
+    const ate = iso(end);
+    const data = await api.get(`/${key}?size=200&de=${de}&ate=${ate}&sort=data_vencimento&dir=asc`);
+    const porDia = {};
+    for (const t of data.items) {
+      const dia = String(t[def.dateField]).slice(0, 10);
+      (porDia[dia] = porDia[dia] || []).push(t);
+    }
+    countEl.textContent = `${ui.fmtInt(data.total)} tarefas entre ${ui.fmtDate(de)} e ${ui.fmtDate(ate)}`;
+
+    const hoje = ui.todayISO();
+    const cells = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const key2 = iso(new Date(d));
+      const out = d.getMonth() !== mes - 1;
+      const items = porDia[key2] || [];
+      cells.push(`<div class="cal-cell ${out ? 'out' : ''} ${key2 === hoje ? 'today' : ''}">
+        <span class="cal-day">${d.getDate()}</span>
+        <button class="cal-add" data-add="${key2}" title="Nova tarefa neste dia">+</button>
+        ${items.slice(0, 3).map((t) => `<span class="cal-item ${t.situacao === 'Concluída' ? 'done' : ''} ${t.situacao !== 'Concluída' && t.situacao !== 'Cancelada' && t.data_vencimento < hoje ? 'late' : ''}" data-task="${t.id}">${ui.esc(t.titulo)}</span>`).join('')}
+        ${items.length > 3 ? `<span class="small muted" style="display:block;margin-top:3px">+${items.length - 3} outras</span>` : ''}
+      </div>`);
+    }
+
+    const label = new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    content.innerHTML = `<div class="card">
+      <div class="card-head">
+        <div><h3 style="text-transform:capitalize">${ui.esc(label)}</h3><p class="sub">Calendário de vencimentos das tarefas</p></div>
+        <div class="row">
+          <button class="btn btn-sm btn-ghost" id="cal-prev">${ui.icon('arrowLeft', 14)}</button>
+          <button class="btn btn-sm btn-ghost" id="cal-hoje">Hoje</button>
+          <button class="btn btn-sm btn-ghost" id="cal-next">${ui.icon('arrowRight', 14)}</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding-top:10px">
+        <div class="calendar">
+          <div class="cal-head">${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => `<div>${d}</div>`).join('')}</div>
+          <div class="cal-grid">${cells.join('')}</div>
+        </div>
+      </div>
+    </div>`;
+
+    content.querySelectorAll('[data-task]').forEach((el) => el.addEventListener('click', () => openDetail(Number(el.dataset.task))));
+    content.querySelectorAll('[data-add]').forEach((el) => el.addEventListener('click', () => {
+      const form = { data_vencimento: el.dataset.add };
+      params.set('data', el.dataset.add);
+      openForm(null);
+      params.delete('data');
+    }));
+    content.querySelector('#cal-prev').addEventListener('click', () => {
+      const d = new Date(ano, mes - 2, 1);
+      calMes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      loadCalendar();
+    });
+    content.querySelector('#cal-next').addEventListener('click', () => {
+      const d = new Date(ano, mes, 1);
+      calMes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      loadCalendar();
+    });
+    content.querySelector('#cal-hoje').addEventListener('click', () => {
+      calMes = ui.todayISO().slice(0, 7);
+      loadCalendar();
+    });
+  }
+
+  async function load() {
+    if (vista === 'kanban') return loadKanban();
+    if (vista === 'calendario') return loadCalendar();
+    return loadList();
+  }
+
+  /* ------------------------------ eventos ----------------------------- */
+  view.querySelector('#btn-new').addEventListener('click', () => {
+    if (vista === 'calendario') params.set('data', ui.todayISO());
+    openForm(null);
+    params.delete('data');
+  });
+  view.querySelectorAll('[data-vista]').forEach((btn) => btn.addEventListener('click', () => {
+    vista = btn.dataset.vista;
+    const url = new URL(location.href);
+    view.querySelectorAll('[data-vista]').forEach((b) => {
+      b.classList.toggle('btn-primary', b.dataset.vista === vista);
+      if (b.dataset.vista !== vista) b.style.background = 'transparent';
+      else b.style.background = '';
+    });
+    view.querySelector('#toolbar').classList.toggle('hidden', vista !== 'lista');
+    load();
+  }));
+
+  const q = view.querySelector('#f-q');
+  q.addEventListener('input', ui.debounce(() => { filtros.q = q.value.trim(); filtros.page = 1; loadList(); }, 320));
+  view.querySelector('#f-situacao').addEventListener('change', (e) => { filtros.situacao = e.target.value; filtros.page = 1; loadList(); });
+  const cat = view.querySelector('#f-categoria');
+  if (cat) cat.addEventListener('change', (e) => { filtros.categoria = e.target.value; filtros.page = 1; loadList(); });
+  view.querySelector('#f-limpar').addEventListener('click', () => {
+    q.value = '';
+    view.querySelector('#f-situacao').value = '';
+    if (cat) cat.value = '';
+    Object.assign(filtros, { q: '', situacao: '', categoria: '', page: 1 });
+    loadList();
+  });
+
+  await load();
+
+  if (params.get('novo') === '1') {
+    openForm(null);
+    history.replaceState(null, '', `#/${key}`);
+  }
+}
