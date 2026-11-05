@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 
+import '../core/storage/app_storage.dart';
 import '../core/theme/app_theme.dart';
 
 /// Para onde o celular aponta (graus, 0 = norte, sentido horario), lido do
@@ -109,6 +110,10 @@ class BotaoBussola extends StatefulWidget {
   /// Avisa quem usa o mapa (ex.: para seguir a posicao no automatico).
   final ValueChanged<bool>? aoMudarModo;
 
+  /// Ultima escolha do motorista (null = ainda nao escolheu). Guardada no
+  /// celular: travou o norte, continua travado ao voltar para o mapa.
+  static bool? escolha;
+
   @override
   State<BotaoBussola> createState() => _BotaoBussolaState();
 }
@@ -127,11 +132,26 @@ class _BotaoBussolaState extends State<BotaoBussola> {
     _eventos = widget.controle.rotacoes.listen((r) {
       if (mounted && (r - _rotacao).abs() > 0.5) setState(() => _rotacao = r);
     });
-    if (widget.automatico) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _ligar();
+    // Vale a ultima escolha do motorista (fica guardada no celular); sem
+    // escolha ainda, o padrao da tela.
+    final lembrado = BotaoBussola.escolha;
+    if (lembrado != null) {
+      if (lembrado) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _ligar(guardar: false);
+        });
+      }
+    } else {
+      AppStorage.read(AppStorage.bussolaAutomatica).then((v) => v == null ? null : v == '1').catchError((Object _) => null).then((guardada) {
+        if (guardada != null) BotaoBussola.escolha = guardada;
+        if (mounted && (guardada ?? widget.automatico) && !_auto) _ligar(guardar: false);
       });
     }
+  }
+
+  void _guardar(bool automatica) {
+    BotaoBussola.escolha = automatica;
+    AppStorage.write(AppStorage.bussolaAutomatica, automatica ? '1' : '0').catchError((Object _) {});
   }
 
   @override
@@ -143,7 +163,8 @@ class _BotaoBussolaState extends State<BotaoBussola> {
 
   void _girar(double graus) => widget.controle.girar(graus);
 
-  void _ligar() {
+  void _ligar({bool guardar = true}) {
+    if (guardar) _guardar(true);
     _sensor?.cancel();
     _suave = null;
     _sensor = SensorDeDirecao.direcao.listen(
@@ -164,14 +185,15 @@ class _BotaoBussolaState extends State<BotaoBussola> {
         _ultimoGiro = agora;
         _girar(alvo);
       },
-      onError: (_) => _desligar(),
+      onError: (_) => _desligar(guardar: false),
       cancelOnError: true,
     );
     setState(() => _auto = true);
     widget.aoMudarModo?.call(true);
   }
 
-  void _desligar() {
+  void _desligar({bool guardar = true}) {
+    if (guardar) _guardar(false);
     _sensor?.cancel();
     _sensor = null;
     _girar(0);
