@@ -9,9 +9,10 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ## 0. Clube de Vantagens (05/11/2026, PRs #20, #21 e #23)
 - Carteirinha sem QR Code e sem página de consulta (pedido do Evandro 05/11 16:10): verde APTO / vermelha NÃO APTO.
-- [AUTO] Servidor: regra da recarga (R$ 100 em 30 dias, não soma menores, só recarga confirmada, vence sozinha). Jest 127.
-- [AUTO] Central 54 testes; Motorista 100 testes (lista, mapa, WhatsApp, detalhe, vazio, erro, carteirinha verde e vermelha).
-- [REAL] Ponta a ponta: ver logs/teste-ponta-a-ponta.txt (sem recarga, R$ 50, R$ 50+60, R$ 100, suspenso, app não bloqueado).
+- [AUTO] Servidor: regra da recarga (SOMA de R$ 100 em 30 dias, só recarga confirmada, sai da soma depois de 30 dias). Jest 127.
+- [AUTO] Central 54 testes; Motorista 103 testes (lista, mapa, WhatsApp, detalhe, vazio, erro, carteirinha verde e vermelha com foto, bússola lembra o norte).
+- [REAL] Ponta a ponta execução 78: 374 OK, 0 falhas (sem recarga, R$ 50, R$ 50+60 = APTO, suspenso, app não bloqueado). APK motorista 317.
+- Ramo diagnostico-clube ficou no GitHub (só leitura, não roda sozinho); o Claude não consegue apagar ramo por aqui.
 - Limitações: o sistema não tem recarga "pendente/cancelada" — a recarga só existe quando a Central lança o crédito. Se a Central lançar errado e tirar com "Remover saldo", a recarga continua contando para o clube.
 - [NÃO EXISTE] Parceiros de verdade (esperando o Evandro).
 
