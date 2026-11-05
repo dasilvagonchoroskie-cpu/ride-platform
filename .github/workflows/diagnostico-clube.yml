@@ -4,6 +4,8 @@ name: Diagnostico do Clube (temporario)
 # dias de cada motorista para conferir a regra APTO / NAO APTO.
 on:
   workflow_dispatch:
+  push:
+    branches: [diagnostico-clube]
 
 permissions:
   contents: read
