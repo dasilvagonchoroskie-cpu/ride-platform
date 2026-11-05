@@ -185,13 +185,19 @@ class TomTomMapProvider implements MapProvider {
         // No modo economia: sem as ruas mais de perto e sem buscar imagens
         // em volta da tela (so o que aparece).
         final teto = economia ? (maxZoom < 17 ? maxZoom : 17.0) : maxZoom;
+        // Nitidez (Evandro, 05/11/2026: "o mapa esta muito borrado"): a imagem
+        // de 512 px era desenhada em 512 pontos da tela, so 1 ponto da imagem
+        // por ponto da tela (o celular tem 2 a 3). Agora, em tela de alta
+        // resolucao, a de 512 px vai em 256 pontos: o dobro de nitidez, as
+        // letras e ruas do tamanho certo. No modo economia fica como antes.
+        final nitido = !economia && MapaConfig.tamanho >= 512 && MediaQuery.devicePixelRatioOf(context) >= 1.5;
         final camada = tiles == null
             ? const SizedBox.shrink()
             : TileLayer(
                 urlTemplate: tiles,
                 userAgentPackageName: pacote,
-                tileDimension: MapaConfig.tamanho,
-                zoomOffset: MapaConfig.tamanho >= 512 ? -1 : 0,
+                tileDimension: nitido ? 256 : MapaConfig.tamanho,
+                zoomOffset: nitido || MapaConfig.tamanho < 512 ? 0 : -1,
                 maxZoom: teto,
                 keepBuffer: economia ? 1 : 2,
                 // So as imagens que aparecem na tela (antes: mais uma volta
