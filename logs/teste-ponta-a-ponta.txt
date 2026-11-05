@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 69d76e8 (Clube: QR so vale na forma exata gerada pelo servidor (#21))
-No ar agora: 69d76e8
+Ultima mudanca do servidor no GitHub: 6915cba (Clube: carteirinha APTO / NAO APTO pela recarga, sem QR Code (#23))
+No ar agora: 6915cba
 OK: servidor em dia.
-Teste de ponta a ponta - 05/11/2026 18:49 UTC
+Teste de ponta a ponta - 05/11/2026 19:16 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -71,7 +71,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST1014)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST2322)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -150,19 +150,19 @@ OK     Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, 1295.9 km)
 OK     Seguranca: busca no Brasil todo so na Central
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (23 pontos, 1384 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 121 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 123 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (FECHADO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE18495861 criado (R$ 3,00)
+OK     Central: cupom TESTE19165479 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1048 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1026 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1342 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1345 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 5810 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 5593 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Passageiro: o carro da corrida vem com o rumo (180 graus: andando para o sul)
 OK     Chat: passageiro manda mensagem ao motorista
@@ -181,9 +181,9 @@ OK     Passageiro: corrida com preco fechado (sem taximetro ao vivo)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (15h, diurna: 1000 centavos)
+OK     Bandeira certa pela hora de Brasilia (16h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 3 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 28s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 23s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 30 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -352,16 +352,22 @@ OK     Motorista: parceiro desativado some da lista
 OK     Motorista: detalhe de parceiro desativado avisa que saiu do clube
 OK     Central: o inativo continua na lista da Central
 OK     Central: excluiu o parceiro de teste (com os beneficios)
-OK     Motorista: identificacao digital da conta logada (FM-E7A64870, Motorista parceiro ativo)
-OK     Seguranca: identificacao sem telefone, CPF ou e-mail
-OK     Comerciante: le o QR e o servidor confirma a identificacao
-OK     Seguranca: QR alterado e recusado
+OK     Motorista: carteirinha da conta logada (FM-6BF64B30, NÃO APTO)
+OK     Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo
+OK     Clube: pagina do QR removida
+OK     Clube: motorista sem recarga esta NAO APTO (Ainda sem recarga confirmada de R$ 100,00 ou mais.)
+OK     Clube: recarga de R$ 50,00 nao deixa APTO
+OK     Clube: duas recargas menores somando R$ 110,00 nao deixam APTO (nao soma)
+OK     Clube: recarga confirmada de R$ 100,00 deixa APTO (vale ate 2026-12-05T19:22:47.040Z)
+OK     Clube: a situacao do clube nao mexe no acesso ao aplicativo
+OK     Seguranca: motorista nao altera a propria situacao
+OK     Clube: motorista suspenso fica NAO APTO mesmo com recarga
 OK     Seguranca: passageiro nao tem identificacao de motorista
 OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSAGEIRO, APAGADO)
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 24/666, reverse 15/666, routing 125/666, search 4/83, tiles 674/6666)
+OK     Central: uso da TomTom hoje (geocode 30/666, reverse 17/666, routing 153/666, search 5/83, tiles 674/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
