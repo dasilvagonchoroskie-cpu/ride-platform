@@ -207,6 +207,8 @@ void main() {
     expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'NÃO APTO');
     expect(find.textContaining('passou de 30 dias'), findsOneWidget);
     expect(find.textContaining('Vale até'), findsNothing);
+    await tester.scrollUntilVisible(find.textContaining('continua rodando normalmente'), 200,
+        scrollable: find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first);
     expect(find.textContaining('continua rodando normalmente'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
