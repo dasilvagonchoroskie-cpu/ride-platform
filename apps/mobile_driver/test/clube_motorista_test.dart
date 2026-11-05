@@ -1,6 +1,6 @@
 // Clube de Vantagens no app do motorista (05/11/2026): lista dos parceiros
 // ativos, detalhe, mapa, WhatsApp, lista vazia, erro de conexao e a
-// identificacao digital com QR Code (dados da conta logada).
+// carteirinha digital com o numero e a situacao APTO / NAO APTO do servidor.
 
 import 'dart:convert';
 
@@ -15,7 +15,6 @@ import 'package:mobile_driver/screens/clube_screen.dart';
 import 'package:mobile_driver/screens/menu_screen.dart';
 import 'package:mobile_driver/state/driver_state.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _id = '77777777-0000-4000-8000-000000000000';
@@ -23,6 +22,9 @@ const _id = '77777777-0000-4000-8000-000000000000';
 /// Parceiros que o servidor de mentira devolve (so os ativos, como o real).
 List<Map<String, dynamic>> _parceiros = [];
 bool _fora = false;
+
+/// Situacao que o servidor de mentira devolve na carteirinha.
+bool _apto = true;
 final _links = <String>[];
 
 Map<String, dynamic> _parceiro({String nome = 'Parceiro de Teste', String? whatsapp = '5585999990000'}) => {
@@ -53,10 +55,13 @@ MockClient _servidor() => MockClient((http.Request r) async {
         d = {
           'nome': 'Motorista de Teste',
           'codigo': 'FM-1A2B3C4D',
-          'situacao': 'ATIVO',
-          'situacaoTexto': 'Motorista parceiro ativo',
-          'qr': 'https://servidor.teste/api/clube/validar/abc.def.ghi',
-          'qrValidoAte': DateTime.now().add(const Duration(minutes: 10)).toUtc().toIso8601String(),
+          'situacao': _apto ? 'APTO' : 'NAO_APTO',
+          'situacaoTexto': _apto ? 'APTO' : 'NÃO APTO',
+          'motivo': _apto ? 'Recarga confirmada nos últimos 30 dias.' : 'A última recarga de R\$ 100,00 ou mais passou de 30 dias.',
+          'atualizadoEm': '2026-11-01T13:00:00.000Z',
+          'validoAte': _apto ? '2026-12-01T13:00:00.000Z' : null,
+          'conferidoEm': '2026-11-05T18:00:00.000Z',
+          'consulta': 'https://servidor.teste/api/clube/consulta',
         };
       }
       return http.Response(
@@ -97,6 +102,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste'});
     _parceiros = [_parceiro()];
     _fora = false;
+    _apto = true;
     _links.clear();
     abrirLink = (url) async {
       _links.add(url);
@@ -177,20 +183,32 @@ void main() {
     expect(find.text('Parceiro de Teste'), findsOneWidget);
   });
 
-  testWidgets('Identificacao digital: nome da conta, codigo, situacao e QR do servidor', (tester) async {
+  testWidgets('Carteirinha APTO: nome, numero, logotipo, situacao e datas do servidor', (tester) async {
     await _abrir(tester, const CarteirinhaScreen());
     expect(find.text('Motorista de Teste'), findsOneWidget);
     expect(find.text('MOTORISTA PARCEIRO'), findsOneWidget);
-    expect(find.text('Identificação FM-1A2B3C4D'), findsOneWidget);
-    expect(find.text('Motorista parceiro ativo'), findsOneWidget);
+    expect(tester.widget<SelectableText>(find.byKey(const ValueKey('codigo-carteirinha'))).data, 'FM-1A2B3C4D');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'APTO');
+    expect(find.textContaining('Vale até'), findsOneWidget);
+    expect(find.textContaining('Situação atualizada em'), findsOneWidget);
+    expect(find.textContaining('servidor.teste/api/clube/consulta'), findsOneWidget);
+    expect(find.byType(Image), findsWidgets);
     expect(find.text('Clube de Vantagens'), findsOneWidget);
-    final qr = tester.widget<QrImageView>(find.byKey(const ValueKey('qr-carteirinha')));
-    expect(qr, isNotNull);
-    // Nada de campo para editar e nada de telefone ou CPF na tela.
+    // Sem QR Code, sem campo para editar e sem telefone ou CPF.
+    expect(find.textContaining('QR'), findsNothing);
     expect(find.byType(TextField), findsNothing);
     expect(find.textContaining('CPF'), findsNothing);
     expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Carteirinha NAO APTO: mostra o motivo e como voltar a ficar apto', (tester) async {
+    _apto = false;
+    await _abrir(tester, const CarteirinhaScreen());
+    expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'NÃO APTO');
+    expect(find.textContaining('passou de 30 dias'), findsOneWidget);
+    expect(find.textContaining('Vale até'), findsNothing);
+    expect(find.textContaining('continua rodando normalmente'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Identificacao sem conexao mostra o erro', (tester) async {
