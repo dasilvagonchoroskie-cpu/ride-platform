@@ -8,6 +8,7 @@ import '../core/utils/formatters.dart';
 import '../state/driver_state.dart';
 import '../widgets/painel_ui.dart';
 import 'activity_screen.dart';
+import 'clube_screen.dart';
 import 'legal_screen.dart';
 import 'permissions_screen.dart';
 import 'registration_screen.dart';
@@ -93,6 +94,7 @@ class MenuScreen extends StatelessWidget {
             onTap: () => _ir(context, const WalletScreen()),
           ),
           MenuLinha(titulo: 'Histórico de corridas', onTap: () => _ir(context, const RidesHistoryScreen())),
+          MenuLinha(titulo: 'Clube de Vantagens', onTap: () => _ir(context, const ClubeScreen())),
           MenuLinha(titulo: 'Segurança / SOS', cor: AppColors.danger, onTap: () => _ir(context, const SosScreen())),
           const Divider(height: Spacing.lg),
           MenuLinha(

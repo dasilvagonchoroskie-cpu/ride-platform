@@ -13,6 +13,7 @@ import 'package:central_app/painel/alertas.dart';
 import 'package:central_app/painel/ao_vivo.dart';
 import 'package:central_app/painel/carteiras.dart';
 import 'package:central_app/painel/categorias.dart';
+import 'package:central_app/painel/clube.dart';
 import 'package:central_app/painel/cidades_equipe.dart';
 import 'package:central_app/painel/limpeza.dart';
 import 'package:central_app/painel/comuns.dart';
@@ -650,10 +651,57 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
   return null;
 }
 
+
+/// Clube de Vantagens (05/11/2026): parceiros no servidor de mentira e os
+/// pedidos que a Central mandou. [_clubeFora] = servidor fora do ar.
+final List<Map<String, dynamic>> _clube = [];
+final List<String> _pedidosDoClube = [];
+bool _clubeFora = false;
+
+Object? _clubeResposta(http.Request r) {
+  final p = r.url.path.replaceFirst('/api/admin/clube', '');
+  final corpo = r.body.isEmpty ? <String, dynamic>{} : jsonDecode(r.body) as Map<String, dynamic>;
+  if (r.method != 'GET') _pedidosDoClube.add('${r.method} $p ${r.body}');
+  if (p == '/categorias') return r.method == 'PUT' ? corpo['categorias'] : ['Alimentação', 'Oficina mecânica', 'Outros'];
+  if (p == '/parceiros' && r.method == 'GET') return _clube;
+  if (p == '/parceiros' && r.method == 'POST') {
+    final novo = {...corpo, 'id': '9999999${_clube.length}-0000-4000-8000-000000000000', 'logoUrl': null, 'beneficios': <Object>[], 'cadastradoEm': '2026-11-05T15:00:00.000Z'};
+    _clube.add(novo);
+    return novo;
+  }
+  final m = RegExp(r'^/parceiros/([^/]+)(/.*)?$').firstMatch(p);
+  if (m == null) return null;
+  final i = _clube.indexWhere((c) => c['id'] == m.group(1));
+  if (i < 0) return null;
+  final resto = m.group(2) ?? '';
+  if (resto == '' && r.method == 'PUT') _clube[i] = {..._clube[i], ...corpo};
+  if (resto == '' && r.method == 'DELETE') {
+    _clube.removeAt(i);
+    return {'excluido': true};
+  }
+  if (resto == '/ativo') _clube[i] = {..._clube[i], 'ativo': corpo['ativo']};
+  if (resto == '/beneficios' && r.method == 'POST') {
+    _clube[i] = {
+      ..._clube[i],
+      'beneficios': [...(_clube[i]['beneficios'] as List), {...corpo, 'id': 'b${_pedidosDoClube.length}'}],
+    };
+  }
+  return _clube[i];
+}
+
 /// Passageiros que a Central mandou excluir.
 final List<String> _passageirosExcluidos = [];
 
 MockClient _servidor() => MockClient((http.Request r) async {
+      if (r.url.path.startsWith('/api/admin/clube')) {
+        if (_clubeFora) return http.Response('fora do ar', 503);
+        final d = _clubeResposta(r);
+        return http.Response(
+          jsonEncode(d == null ? {'success': false, 'error': {'code': 'NOT_FOUND', 'message': 'Parceiro não encontrado.'}} : {'success': true, 'data': d}),
+          d == null ? 404 : 200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
       if (r.url.path == '/api/admin/drivers/excluir') {
         final ids = [for (final i in (jsonDecode(r.body)['ids'] as List<dynamic>)) '$i'];
         _pedidosDeExclusao.addAll(ids);
@@ -1115,6 +1163,114 @@ void main() {
     expect(find.text('Multiplicador dinâmico'), findsOneWidget);
   });
 
+  // Clube de Vantagens (05/11/2026): lista vazia, cadastro, edicao,
+  // desativacao, beneficio, exclusao, erro de conexao e operador so consulta.
+  testWidgets('Clube de Vantagens: cadastra, edita, desativa e exclui parceiro', (tester) async {
+    _clube.clear();
+    _pedidosDoClube.clear();
+    _clubeFora = false;
+    await _abrir(tester, const ClubeTela());
+    await _carregar(tester);
+    expect(find.textContaining('Nenhum parceiro cadastrado ainda'), findsOneWidget);
+
+    // Cadastro: sem os obrigatorios o servidor nem e chamado.
+    await tester.tap(find.text('Novo parceiro'));
+    await _carregar(tester);
+    await tester.tap(find.byKey(const ValueKey('clube-salvar')));
+    await _carregar(tester);
+    expect(find.text('Informe o nome comercial.'), findsOneWidget);
+    expect(_pedidosDoClube, isEmpty);
+
+    await tester.enterText(find.byKey(const ValueKey('clube-nome')), 'Parceiro de Teste');
+    await tester.tap(find.byKey(const ValueKey('clube-categoria')));
+    await _carregar(tester);
+    await tester.tap(find.text('Oficina mecânica').last);
+    await _carregar(tester);
+    await tester.enterText(find.byKey(const ValueKey('clube-endereco')), 'Rua de Teste, 100 - Centro');
+    await tester.enterText(find.byKey(const ValueKey('clube-whatsapp')), '(85) 99999-0000');
+    await tester.enterText(find.byKey(const ValueKey('clube-vantagens')), 'Condição especial combinada com o parceiro');
+    await tester.ensureVisible(find.byKey(const ValueKey('clube-salvar')));
+    await tester.tap(find.byKey(const ValueKey('clube-salvar')));
+    await _carregar(tester);
+    final criado = _pedidosDoClube.singleWhere((x) => x.startsWith('POST /parceiros '));
+    expect(criado, contains('"categoria":"Oficina mecânica"'));
+    expect(criado, contains('"whatsapp":"85999990000"'));
+    expect(criado, contains('"ativo":true'));
+    expect(find.text('Benefícios'), findsOneWidget);
+
+    // Beneficio com condicao livre (sem percentual no codigo).
+    await tester.ensureVisible(find.text('Novo benefício'));
+    await tester.tap(find.text('Novo benefício'));
+    await _carregar(tester);
+    await tester.enterText(find.byKey(const ValueKey('beneficio-titulo')), 'Benefício de teste');
+    await tester.tap(find.text('Salvar'));
+    await _carregar(tester);
+    expect(_pedidosDoClube.where((x) => x.contains('/beneficios ')), hasLength(1));
+    expect(find.text('Benefício de teste'), findsOneWidget);
+
+    // Volta para a lista: o parceiro aparece ativo.
+    await tester.pageBack();
+    await _carregar(tester);
+    expect(find.text('Parceiro de Teste'), findsOneWidget);
+    expect(find.text('Ativos (1)'), findsOneWidget);
+
+    // Desativar pela chave da lista.
+    await tester.tap(find.byType(Switch).first);
+    await _carregar(tester);
+    expect(_pedidosDoClube.last, contains('PATCH /parceiros/'));
+    expect(_pedidosDoClube.last, contains('"ativo":false'));
+    expect(find.text('Inativos (1)'), findsOneWidget);
+
+    // Editar o nome.
+    await tester.tap(find.text('Parceiro de Teste'));
+    await _carregar(tester);
+    await tester.enterText(find.byKey(const ValueKey('clube-nome')), 'Parceiro Editado');
+    await tester.ensureVisible(find.byKey(const ValueKey('clube-salvar')));
+    await tester.tap(find.byKey(const ValueKey('clube-salvar')));
+    await _carregar(tester);
+    expect(_pedidosDoClube.last, startsWith('PUT /parceiros/'));
+    expect(find.text('Parceiro Editado'), findsOneWidget);
+
+    // Excluir pede confirmacao.
+    await tester.tap(find.text('Parceiro Editado'));
+    await _carregar(tester);
+    await tester.tap(find.byTooltip('Excluir parceiro'));
+    await _carregar(tester);
+    expect(find.textContaining('desative em vez de excluir'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Excluir'));
+    await _carregar(tester);
+    expect(_pedidosDoClube.last, startsWith('DELETE /parceiros/'));
+    expect(find.textContaining('Nenhum parceiro cadastrado ainda'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta', (tester) async {
+    _clube
+      ..clear()
+      ..add({
+        'id': '88888888-0000-4000-8000-000000000000', 'nome': 'Parceiro de Teste', 'categoria': 'Outros', 'descricao': '', 'endereco': 'Rua de Teste, 1',
+        'telefone': null, 'whatsapp': null, 'horario': '', 'vantagens': 'Condição de teste', 'condicoes': '', 'logoUrl': null, 'ativo': true,
+        'cadastradoEm': '2026-11-05T15:00:00.000Z', 'beneficios': <Object>[],
+      });
+    _clubeFora = true;
+    _operador = true;
+    await _abrir(tester, const ClubeTela());
+    await _carregar(tester);
+    expect(find.textContaining('Não foi possível carregar o clube'), findsOneWidget);
+    _clubeFora = false;
+    await tester.tap(find.text('Tentar de novo'));
+    await _carregar(tester);
+    expect(find.text('Parceiro de Teste'), findsOneWidget);
+    // Operador: sem "Novo parceiro" e a chave fica travada.
+    expect(find.text('Novo parceiro'), findsNothing);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+    await tester.tap(find.text('Parceiro de Teste'));
+    await _carregar(tester);
+    expect(find.text('Só o dono cadastra ou altera parceiros.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('clube-salvar')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas', (tester) async {
     _pedidosDeTarifa.clear();
     tester.view.physicalSize = const Size(1080, 2340);
@@ -1334,7 +1490,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Motoristas', 'Passageiros', 'Categorias', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
+    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Motoristas', 'Passageiros', 'Categorias', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Clube de Vantagens', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
       await _mostrarNoMenu(tester, aba);
       expect(_noMenu(aba), findsOneWidget, reason: 'aba $aba no menu');
     }
