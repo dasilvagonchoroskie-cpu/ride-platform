@@ -721,7 +721,7 @@ class _CarteirinhaScreenState extends State<CarteirinhaScreen> {
                 if (!c.apto) ...[
                   const SizedBox(height: Spacing.sm),
                   Text(
-                    'Para ficar APTO: uma recarga de R\$ 100,00 ou mais na carteira, confirmada pela Central. Vale por 30 dias. '
+                    'Para ficar APTO: R\$ 100,00 ou mais em recargas confirmadas nos últimos 30 dias (pode ser em várias recargas). '
                     'Sem isso você continua rodando normalmente; só as vantagens do clube ficam suspensas.',
                     textAlign: TextAlign.center,
                     style: AppText.caption.copyWith(color: AppColors.danger),

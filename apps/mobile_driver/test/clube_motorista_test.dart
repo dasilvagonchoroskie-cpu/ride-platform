@@ -59,7 +59,7 @@ MockClient _servidor() => MockClient((http.Request r) async {
           'codigo': 'FM-1A2B3C4D',
           'situacao': _apto ? 'APTO' : 'NAO_APTO',
           'situacaoTexto': _apto ? 'APTO' : 'NÃO APTO',
-          'motivo': _apto ? 'Recarga confirmada nos últimos 30 dias.' : 'A última recarga de R\$ 100,00 ou mais passou de 30 dias.',
+          'motivo': _apto ? 'R\$ 100,00 ou mais em recargas nos últimos 30 dias.' : 'Menos de R\$ 100,00 em recargas nos últimos 30 dias.',
           'atualizadoEm': '2026-11-01T13:00:00.000Z',
           'validoAte': _apto ? '2026-12-01T13:00:00.000Z' : null,
           'conferidoEm': '2026-11-05T18:00:00.000Z',
@@ -210,7 +210,7 @@ void main() {
     await _abrir(tester, const CarteirinhaScreen());
     expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'NÃO APTO');
     expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFFD93A3A));
-    expect(find.textContaining('passou de 30 dias'), findsOneWidget);
+    expect(find.textContaining('Menos de R\$ 100,00'), findsOneWidget);
     // Sem foto no perfil: as iniciais no lugar.
     expect(find.descendant(of: find.byKey(const ValueKey('foto-carteirinha')), matching: find.text('MD')), findsOneWidget);
     expect(find.textContaining('Vale até'), findsNothing);

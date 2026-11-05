@@ -32,25 +32,33 @@ describe('Clube de Vantagens - cadastro do parceiro', () => {
   });
 });
 
-describe('Clube de Vantagens - APTO / NAO APTO pela recarga', () => {
+describe('Clube de Vantagens - APTO / NAO APTO pela soma das recargas', () => {
   const agora = new Date('2026-11-05T15:00:00-03:00');
-  const dias = (n: number) => new Date(agora.getTime() - n * 24 * 60 * 60 * 1000);
+  const DIA = 24 * 60 * 60 * 1000;
+  const dias = (n: number) => new Date(agora.getTime() - n * DIA);
   const recarga = (reais: number, diasAtras: number) => ({ type: 'ADJUSTMENT', amountCents: Math.round(reais * 100), createdAt: dias(diasAtras) });
 
-  it('recarga confirmada de R$ 100,00 ou mais nos ultimos 30 dias: APTO', () => {
+  it('uma recarga de R$ 100,00 nos ultimos 30 dias: APTO', () => {
     const e = elegibilidade([recarga(100, 3)], agora);
-    expect(e.apto).toBe(true);
-    expect(e.validoAte).toEqual(new Date(dias(3).getTime() + 30 * 24 * 60 * 60 * 1000));
+    expect(e).toMatchObject({ apto: true, totalCents: 10000 });
+    expect(e.validoAte).toEqual(new Date(dias(3).getTime() + 30 * DIA));
     expect(e.atualizadoEm).toEqual(dias(3));
-    expect(elegibilidade([recarga(250, 29)], agora).apto).toBe(true);
   });
 
-  it('recarga menor que R$ 100,00: NAO APTO', () => {
-    expect(elegibilidade([recarga(99.99, 1)], agora)).toEqual({ apto: false, validoAte: null, atualizadoEm: null });
+  it('menos de R$ 100,00 no total: NAO APTO', () => {
+    expect(elegibilidade([recarga(50, 1), recarga(49.99, 2)], agora)).toEqual({ apto: false, totalCents: 9999, validoAte: null, atualizadoEm: null });
   });
 
-  it('varias recargas menores que somam mais de R$ 100,00: NAO APTO (nao soma)', () => {
-    expect(elegibilidade([recarga(50, 1), recarga(50, 2), recarga(60, 3)], agora).apto).toBe(false);
+  it('varias recargas menores que somam R$ 100,00 ou mais: APTO (soma)', () => {
+    const e = elegibilidade([recarga(50, 20), recarga(50, 10), recarga(50, 1)], agora);
+    expect(e).toMatchObject({ apto: true, totalCents: 15000 });
+    // Ficou apto na segunda (50 + 50); vale ate a de 20 dias atras sair e o total cair para 100.
+    expect(e.atualizadoEm).toEqual(dias(10));
+    expect(e.validoAte).toEqual(new Date(dias(10).getTime() + 30 * DIA));
+  });
+
+  it('caso do Evandro: 50 + 50 + 50 no mesmo dia = APTO', () => {
+    expect(elegibilidade([recarga(50, 0.01), recarga(50, 0.02), recarga(50, 0.03)], agora).apto).toBe(true);
   });
 
   it('o que nao e recarga confirmada nao conta (debito, cupom, ganho, saque)', () => {
@@ -62,17 +70,16 @@ describe('Clube de Vantagens - APTO / NAO APTO pela recarga', () => {
     ];
     expect(outros.every((l) => !ehRecargaConfirmada(l))).toBe(true);
     expect(elegibilidade(outros, agora).apto).toBe(false);
+    expect(elegibilidade([recarga(60, 1), ...outros], agora).totalCents).toBe(6000);
   });
 
-  it('recarga valida com mais de 30 dias: NAO APTO, com a data em que venceu', () => {
+  it('recargas com mais de 30 dias saem da soma: NAO APTO, com a data em que caiu', () => {
     const e = elegibilidade([recarga(150, 31)], agora);
     expect(e.apto).toBe(false);
-    expect(e.atualizadoEm).toEqual(new Date(dias(31).getTime() + 30 * 24 * 60 * 60 * 1000));
+    expect(e.atualizadoEm).toEqual(new Date(dias(31).getTime() + 30 * DIA));
     expect(elegibilidade([recarga(150, 30)], agora).apto).toBe(false);
-  });
-
-  it('a recarga valida mais recente manda', () => {
-    expect(elegibilidade([recarga(200, 40), recarga(100, 10), recarga(20, 1)], agora).apto).toBe(true);
+    // 60 de 35 dias atras + 50 de 5 dias atras: so 50 conta hoje.
+    expect(elegibilidade([recarga(60, 35), recarga(50, 5)], agora)).toMatchObject({ apto: false, totalCents: 5000 });
   });
 
   it('lancamento com data no futuro nao vale', () => {
