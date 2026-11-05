@@ -312,7 +312,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 SheetSurface(
-              padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.md, Spacing.xl, Spacing.xl),
+              // Compacto (Evandro, 05/11/2026: aproveitar o espaco do painel branco).
+              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.sm, Spacing.lg, Spacing.md),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -327,13 +328,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: Spacing.lg),
+                  const SizedBox(height: Spacing.sm),
                   Text(
                     nome == null || nome.isEmpty || nome == 'Passageiro' ? saudacao() : '${saudacao()}, $nome',
                     textAlign: TextAlign.center,
-                    style: SheetText.title.copyWith(fontSize: 24, fontWeight: FontWeight.w600),
+                    style: SheetText.title.copyWith(fontSize: 21, fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: Spacing.lg),
+                  const SizedBox(height: Spacing.sm),
                   if (agendarPara != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: Spacing.sm),
@@ -374,17 +375,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(Radii.pill),
                       onTap: _escolherDestino,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: Spacing.xl, vertical: 18),
+                        padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: 13),
                         child: Row(
                           children: [
-                            const Icon(Icons.search, color: AppColors.sheetText, size: 28),
+                            const Icon(Icons.search, color: AppColors.sheetText, size: 24),
                             const SizedBox(width: Spacing.md),
                             Flexible(
                               child: Text(
                                 'Buscar destino',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: SheetText.heading.copyWith(fontSize: 20),
+                                style: SheetText.heading.copyWith(fontSize: 18),
                               ),
                             ),
                           ],
@@ -399,8 +400,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: const CircleBorder(side: BorderSide(color: AppColors.sheetText, width: 1.5)),
                         child: IconButton(
                           tooltip: 'Agendar corrida',
-                          iconSize: 28,
-                          padding: const EdgeInsets.all(14),
+                          iconSize: 24,
+                          padding: const EdgeInsets.all(11),
                           onPressed: _agendar,
                           icon: const Icon(Icons.edit_calendar, color: AppColors.sheetText),
                         ),
@@ -409,17 +410,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   // Etapa 5: entrega de encomenda (so onde a Central ligou).
                   if (ride.entregaAqui) ...[
-                    const SizedBox(height: Spacing.md),
+                    const SizedBox(height: Spacing.sm),
                     OutlinedButton.icon(
                       onPressed: () => _abrir(const EntregaScreen()),
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52),
+                        minimumSize: const Size.fromHeight(44),
                         foregroundColor: AppColors.sheetText,
                         side: const BorderSide(color: AppColors.sheetText, width: 1.5),
                         shape: const StadiumBorder(),
                       ),
                       icon: const Icon(Icons.inventory_2_outlined),
-                      label: Text('Entrega de encomenda', style: SheetText.heading.copyWith(fontSize: 18)),
+                      label: Text('Entrega de encomenda', style: SheetText.heading.copyWith(fontSize: 16)),
                     ),
                   ],
                 ],

@@ -365,7 +365,8 @@ class _PainelInferior extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.xl),
+          // Compacto (Evandro, 05/11/2026: aproveitar o espaco do painel branco).
+          padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.sm, Spacing.lg, Spacing.sm),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -374,7 +375,7 @@ class _PainelInferior extends StatelessWidget {
                 height: 4,
                 decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
               ),
-              const SizedBox(height: Spacing.lg),
+              const SizedBox(height: Spacing.sm),
               Row(
                 children: [
                   const _Aba(icone: Icons.location_on, rotulo: 'Mapa', ativa: true),
@@ -398,7 +399,7 @@ class _PainelInferior extends StatelessWidget {
                             child: Text(
                               online ? 'Online' : 'Offline',
                               style: AppText.title.copyWith(
-                                fontSize: 26,
+                                fontSize: 23,
                                 color: online ? AppColors.primary : AppColors.danger,
                               ),
                             ),
@@ -410,7 +411,7 @@ class _PainelInferior extends StatelessWidget {
                   _Aba(icone: Icons.directions_car, rotulo: 'Corridas', onTap: onCorridas),
                 ],
               ),
-              const SizedBox(height: Spacing.md),
+              const SizedBox(height: Spacing.sm),
               // Resumo rapido do dia.
               Row(
                 children: [
@@ -424,10 +425,10 @@ class _PainelInferior extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: Spacing.lg),
+              const SizedBox(height: Spacing.sm),
               SizedBox(
                 width: 280,
-                height: 60,
+                height: 50,
                 child: FilledButton(
                   onPressed: ocupado ? null : onAlternar,
                   style: FilledButton.styleFrom(
@@ -445,19 +446,19 @@ class _PainelInferior extends StatelessWidget {
                         )
                       : Text(
                           online ? 'FICAR OFFLINE' : 'FICAR ONLINE',
-                          style: AppText.title.copyWith(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+                          style: AppText.title.copyWith(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w600),
                         ),
                 ),
               ),
               if (!online) ...[
-                const SizedBox(height: Spacing.md),
+                const SizedBox(height: Spacing.sm),
                 Text(
                   'Conecte-se para receber corridas.',
                   style: AppText.body.copyWith(color: AppColors.textMuted),
                 ),
               ],
               if (online) ...[
-                const SizedBox(height: Spacing.md),
+                const SizedBox(height: Spacing.xs),
                 OutlinedButton.icon(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(builder: (_) => const CorridaManualScreen()),
@@ -497,9 +498,9 @@ class _Aba extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icone, color: cor, size: 30),
+              Icon(icone, color: cor, size: 26),
               const SizedBox(height: 2),
-              Text(rotulo, style: AppText.body.copyWith(color: cor, fontSize: 17)),
+              Text(rotulo, style: AppText.body.copyWith(color: cor, fontSize: 15)),
             ],
           ),
         ),
