@@ -8,6 +8,7 @@ import '../data/painel.dart';
 import '../painel/alertas.dart';
 import '../painel/ao_vivo.dart';
 import '../painel/carteiras.dart';
+import '../painel/categorias.dart';
 import '../painel/cidades_equipe.dart';
 import '../painel/limpeza.dart';
 import '../painel/comuns.dart';
@@ -64,6 +65,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _Aba('entregas', 'Entregas', Icons.inventory_2_outlined),
     _Aba('motoristas', 'Motoristas', Icons.badge_outlined),
     _Aba('passageiros', 'Passageiros', Icons.people_outline, soDono: true),
+    _Aba('categorias', 'Categorias', Icons.category_outlined),
     _Aba('tarifas', 'Tarifas', Icons.price_change_outlined, soDono: true),
     _Aba('financeiro', 'Financeiro', Icons.payments_outlined),
     _Aba('alertas', 'Alertas e Segurança', Icons.sos_outlined, menu: 'Alertas'),
@@ -378,6 +380,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         return const Motoristas();
       case 'passageiros':
         return const Passageiros();
+      case 'categorias':
+        return const CategoriasTela();
       case 'tarifas':
         return const TarifasTela();
       case 'financeiro':

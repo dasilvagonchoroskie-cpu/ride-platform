@@ -224,3 +224,27 @@ describe('Tempo de chegada (linha reta, sem gastar a TomTom)', () => {
     expect(chegadaEmMinutos(10_000)).toBe(34);
   });
 });
+
+describe('Carro de categoria mais alta atende a mais baixa (05/11/2026)', () => {
+  const { categoriasQueAtendem } = jest.requireActual('./categorias') as typeof import('./categorias');
+  const cats = [
+    { codigo: 'CARRO', capacidade: 4 },
+    { codigo: 'CONFORTO', capacidade: 4 },
+    { codigo: 'PREMIUM', capacidade: 4 },
+    { codigo: 'MOTO', capacidade: 1 },
+    { codigo: 'ENTREGA', capacidade: 4 },
+    { codigo: 'VAN', capacidade: 7 },
+  ];
+  it('pedido Popular: Popular, Conforto e Premium atendem; moto e entrega nao', () => {
+    expect(categoriasQueAtendem('CARRO', cats).sort()).toEqual(['CARRO', 'CONFORTO', 'PREMIUM', 'VAN']); // van tem mais lugares: tambem leva
+  });
+  it('pedido Conforto: Conforto e Premium; Popular nao', () => {
+    expect(categoriasQueAtendem('CONFORTO', cats).sort()).toEqual(['CONFORTO', 'PREMIUM', 'VAN']);
+  });
+  it('pedido Van (7 lugares): so a van; carro de 4 lugares nao', () => {
+    expect(categoriasQueAtendem('VAN', cats).sort()).toEqual(['VAN']);
+  });
+  it('pedido Moto: so moto', () => {
+    expect(categoriasQueAtendem('MOTO', cats)).toEqual(['MOTO']);
+  });
+});

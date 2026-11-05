@@ -10,7 +10,7 @@ import { GeoService } from '../geo/geo.service';
 import { tocarJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { cuponsDisponiveis, descontoDoCupom, validarCupom } from './cupons';
-import { ehMoto } from './categorias';
+import { categoriasQueAtendem, ehMoto } from './categorias';
 import { distanciaDoTaximetro, lerCobranca, paradasQueValem } from './cobranca';
 import { CHAVE_VEICULOS, lerMapaDeCarros } from '../vehicles/vehicles.situacao';
 import { avisarOfertaNova, esperarOferta } from './ofertas-ao-vivo';
@@ -278,7 +278,8 @@ export class RidesService {
     passengerId?: string,
   ) {
     // A tarifa "Entrega" nunca aparece como opcao de corrida.
-    const ativas = (await this.fare.categoriasNoPonto(input.pickup)).filter((c) => c.ativa && !ehEntrega(c.codigo));
+    const todas = await this.fare.categoriasNoPonto(input.pickup);
+    const ativas = todas.filter((c) => c.ativa && !ehEntrega(c.codigo));
     const teste = passengerId ? await this.prisma.contaDeTeste(passengerId) : false;
     const opcoes: Array<{
       category: string;
@@ -316,6 +317,7 @@ export class RidesService {
           radiusMeters: 10_000,
           limit: 1,
           category: c.codigo,
+          categorias: categoriasQueAtendem(c.codigo, todas),
           teste,
         });
         opcoes.push({
@@ -505,6 +507,8 @@ export class RidesService {
       radiusMeters: RidesService.RAIOS_METROS[RidesService.RAIOS_METROS.length - 1],
       limit: 30,
       category: corrida.category,
+      // Carro de categoria igual ou mais alta tambem atende (Conforto leva Popular).
+      categorias: daEntrega ? undefined : categoriasQueAtendem(corrida.category, await this.fare.categoriasNoPonto({ latitude: corrida.pickupLat, longitude: corrida.pickupLng })),
       // Entrega: carro, moto ou os dois, como a Central ligou na cidade.
       ...(daEntrega ? { veiculos: (daEntrega.veiculos as 'CARRO' | 'MOTO' | 'TODOS') ?? 'TODOS' } : {}),
       teste,
@@ -720,11 +724,20 @@ export class RidesService {
   async carrosPerto(lat: number, lng: number, userId?: string) {
     const teste = userId ? await this.prisma.contaDeTeste(userId) : false;
     // Cada categoria ativa (carro e moto aparecem com o desenho certo).
-    const ativas = (await this.fare.categoriasNoPonto({ latitude: lat, longitude: lng })).filter((c) => c.ativa);
+    const todas = await this.fare.categoriasNoPonto({ latitude: lat, longitude: lng });
+    const ativas = todas.filter((c) => c.ativa);
     const listas = await Promise.all(
       ativas.map(async (c) =>
         (
-          await this.prisma.findNearbyDrivers({ latitude: lat, longitude: lng, radiusMeters: 5000, limit: 12, category: c.codigo, teste })
+          await this.prisma.findNearbyDrivers({
+            latitude: lat,
+            longitude: lng,
+            radiusMeters: 5000,
+            limit: 12,
+            category: c.codigo,
+            categorias: categoriasQueAtendem(c.codigo, todas),
+            teste,
+          })
         ).map((m) => ({ ...m, category: c.codigo })),
       ),
     );

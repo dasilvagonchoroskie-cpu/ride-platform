@@ -12,6 +12,7 @@ import 'package:central_app/data/repositories/central_repository.dart';
 import 'package:central_app/painel/alertas.dart';
 import 'package:central_app/painel/ao_vivo.dart';
 import 'package:central_app/painel/carteiras.dart';
+import 'package:central_app/painel/categorias.dart';
 import 'package:central_app/painel/cidades_equipe.dart';
 import 'package:central_app/painel/limpeza.dart';
 import 'package:central_app/painel/comuns.dart';
@@ -1114,6 +1115,37 @@ void main() {
     expect(find.text('Multiplicador dinâmico'), findsOneWidget);
   });
 
+  testWidgets('Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas', (tester) async {
+    _pedidosDeTarifa.clear();
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final painel = PainelState(PainelApi(ApiClient(client: _servidor())))..api.praca = 'goiatuba';
+    await tester.pumpWidget(
+      ChangeNotifierProvider<PainelState>.value(
+        value: painel,
+        child: MaterialApp(
+          theme: CentralTheme.light,
+          locale: const Locale('pt', 'BR'),
+          supportedLocales: const [Locale('pt', 'BR')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: const Scaffold(body: CategoriasTela()),
+        ),
+      ),
+    );
+    await _carregar(tester);
+    expect(find.text('Popular'), findsOneWidget);
+    expect(find.text('Conforto'), findsOneWidget);
+    expect(find.textContaining('aparece para o passageiro'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('categoria-CONFORTO')));
+    await _carregar(tester);
+    final pedido = _pedidosDeTarifa.singleWhere((p) => p.startsWith('PUT /api/admin/tariffs/categoria/CONFORTO goiatuba '));
+    expect(pedido, contains('"ativa":false'));
+    expect(pedido, contains('"versao":"2026-10-30T03:00:00.000Z"'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao', (tester) async {
     _pedidosDeTarifa.clear();
     tester.view.physicalSize = const Size(1080, 2340);
@@ -1302,7 +1334,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Motoristas', 'Passageiros', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
+    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Motoristas', 'Passageiros', 'Categorias', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
       await _mostrarNoMenu(tester, aba);
       expect(_noMenu(aba), findsOneWidget, reason: 'aba $aba no menu');
     }

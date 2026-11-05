@@ -92,6 +92,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     limit?: number;
     /** So motoristas com veiculo ativo desta categoria (CARRO, MOTO...). */
     category?: string;
+    /** Ou: qualquer uma destas categorias (carro de categoria mais alta atende a mais baixa). */
+    categorias?: string[];
     /**
      * Entrega (Etapa 5): em vez da categoria, o tipo de veiculo que a cidade
      * liberou — CARRO (qualquer carro), MOTO ou TODOS.
@@ -106,6 +108,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>> {
     const limit = params.limit ?? 20;
     const categoria = params.category ?? 'CARRO';
+    const categorias = params.categorias && params.categorias.length > 0 ? params.categorias : [categoria];
     const teste = params.teste === true;
     // '' = filtra pela categoria; senao pelo tipo de veiculo da entrega.
     const veiculos = params.veiculos ?? '';
@@ -128,7 +131,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           SELECT 1 FROM vehicles v
           WHERE v.driver_id = d.id AND v.is_active = TRUE
             AND (
-              (${veiculos} = '' AND v.category = ${categoria})
+              (${veiculos} = '' AND v.category = ANY(${categorias}::text[]))
               OR ${veiculos} = 'TODOS'
               OR (${veiculos} = 'MOTO' AND UPPER(v.category) LIKE '%MOTO%')
               OR (${veiculos} = 'CARRO' AND UPPER(v.category) NOT LIKE '%MOTO%')
