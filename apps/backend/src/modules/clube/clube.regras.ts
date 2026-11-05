@@ -99,6 +99,9 @@ export function lerCodigoDoQr(
   try {
     const [iv, corpo, tag] = codigo.split('.');
     if (!iv || !corpo || !tag) return null;
+    // Base64 com bits sobrando trocados decodifica igual: so aceita a forma
+    // exata que o servidor gerou (um codigo, um texto).
+    if ([iv, corpo, tag].some((x) => b64url(Buffer.from(x, 'base64url')) !== x)) return null;
     const d = createDecipheriv('aes-256-gcm', chave(segredo), Buffer.from(iv, 'base64url'));
     d.setAuthTag(Buffer.from(tag, 'base64url'));
     const json = JSON.parse(Buffer.concat([d.update(Buffer.from(corpo, 'base64url')), d.final()]).toString('utf8')) as { d?: unknown; e?: unknown };

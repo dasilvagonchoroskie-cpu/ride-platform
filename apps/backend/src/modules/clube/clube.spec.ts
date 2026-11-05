@@ -55,6 +55,10 @@ describe('Clube de Vantagens - carteirinha (QR Code)', () => {
     expect(lerCodigoDoQr(`${iv}.${trocado}.${tag}`, SEGREDO)).toBeNull();
     expect(lerCodigoDoQr(codigo, 'outro-segredo')).toBeNull();
     expect(lerCodigoDoQr('abc', SEGREDO)).toBeNull();
+    // Ultima letra trocada so nos bits que o base64 ignora: tambem recusa.
+    const ultima = tag[tag.length - 1];
+    const vizinha = String.fromCharCode(ultima.charCodeAt(0) ^ 1);
+    expect(lerCodigoDoQr(`${iv}.${corpo}.${tag.slice(0, -1)}${vizinha}`, SEGREDO)).toBeNull();
     expect(lerCodigoDoQr('', SEGREDO)).toBeNull();
   });
 
