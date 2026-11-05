@@ -8,7 +8,7 @@ import {
   CATEGORIAS_PADRAO,
   CHAVE_CATEGORIAS_CLUBE,
   MAX_LOGO_BYTES,
-  RECARGA_MINIMA_CENTS,
+  DIAS_DA_RECARGA,
   codigoDoMotorista,
   elegibilidade,
   situacaoDoMotorista,
@@ -249,20 +249,22 @@ export class ClubeService implements OnModuleInit {
   /** Situacao do beneficio de um motorista, calculada agora no servidor. */
   private async situacaoNoClube(m: { id: string; status: string; user: { status: string; deletedAt?: Date | null } }, agora = new Date()) {
     const cadastro = situacaoDoMotorista(m.status, m.user.status !== 'ACTIVE' || !!m.user.deletedAt);
-    // So a recarga valida mais recente importa (nao soma recargas menores).
-    const recarga = await this.prisma.walletTransaction.findFirst({
-      where: { wallet: { driverId: m.id }, type: 'ADJUSTMENT', amountCents: { gte: RECARGA_MINIMA_CENTS }, createdAt: { lte: agora } },
-      orderBy: { createdAt: 'desc' },
+    // Recargas confirmadas dos ultimos 60 dias (30 para a soma de hoje e 30
+    // antes para saber quando a situacao mudou).
+    const recargas = await this.prisma.walletTransaction.findMany({
+      where: { wallet: { driverId: m.id }, type: 'ADJUSTMENT', amountCents: { gt: 0 }, createdAt: { lte: agora, gt: new Date(agora.getTime() - 2 * DIAS_DA_RECARGA * 24 * 60 * 60 * 1000) } },
+      orderBy: { createdAt: 'asc' },
+      take: 500,
       select: { type: true, amountCents: true, createdAt: true },
     });
-    const e = elegibilidade(recarga ? [recarga] : [], agora);
+    const e = elegibilidade(recargas, agora);
     const ativo = cadastro.codigo === 'ATIVO';
     const apto = ativo && e.apto;
     let motivo: string;
     if (!ativo) motivo = `${cadastro.texto}: os benefícios ficam suspensos.`;
-    else if (apto) motivo = 'Recarga confirmada nos últimos 30 dias.';
-    else if (e.atualizadoEm) motivo = 'A última recarga de R$ 100,00 ou mais passou de 30 dias.';
-    else motivo = 'Ainda sem recarga confirmada de R$ 100,00 ou mais.';
+    else if (apto) motivo = 'R$ 100,00 ou mais em recargas nos últimos 30 dias.';
+    else if (e.totalCents > 0) motivo = 'Menos de R$ 100,00 em recargas nos últimos 30 dias.';
+    else motivo = 'Nenhuma recarga confirmada nos últimos 30 dias.';
     return {
       situacao: apto ? ('APTO' as const) : ('NAO_APTO' as const),
       situacaoTexto: apto ? 'APTO' : 'NÃO APTO',

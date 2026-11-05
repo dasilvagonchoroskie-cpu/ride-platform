@@ -1057,16 +1057,14 @@ X=$(get /clube/carteirinha "$TM")
 echo "$X" | jq -e '.data.codigo | test("^FM-[0-9A-F]{8}$")' >/dev/null && echo "$X" | jq -e '.data.situacao | test("^(APTO|NAO_APTO)$")' >/dev/null && ok "Motorista: carteirinha da conta logada ($(echo "$X" | jq -r '.data.codigo'), $(echo "$X" | jq -r '.data.situacaoTexto'))" || falha "Motorista: carteirinha" "$X"
 echo "$X" | jq -e '.data | has("qr") or has("phone") or has("cpf") or has("email") or has("telefone") or has("saldo")' >/dev/null && falha "Seguranca: carteirinha com QR ou dado pessoal" "$X" || ok "Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo"
 C=$(curl -s -m 60 -o /dev/null -w "%{http_code}" "$API/clube/validar/abc"); [ "$C" = "404" ] && ok "Clube: pagina do QR removida" || falha "Clube: pagina do QR ainda existe" "$C"
-# Regra (Evandro 05/11): APTO = UMA recarga confirmada de R$ 100,00 ou mais nos ultimos 30 dias.
+# Regra (Evandro 05/11 16:44): APTO = SOMA das recargas confirmadas dos ultimos 30 dias chega a R$ 100,00.
 if [ -n "${DIDC:-}" ] && [ -n "${TC:-}" ]; then
   X=$(get /clube/carteirinha "$TC"); COD=$(echo "$X" | jq -r '.data.codigo // empty')
   [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: motorista sem recarga esta NAO APTO ($(echo "$X" | jq -r '.data.motivo'))" || falha "Clube: sem recarga deveria ser NAO APTO" "$X"
   post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":5000,"operation":"CREDIT","description":"Recarga teste clube 1"}' "$TA" >/dev/null
   X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: recarga de R\$ 50,00 nao deixa APTO" || falha "Clube: recarga menor deixou APTO" "$X"
   post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":6000,"operation":"CREDIT","description":"Recarga teste clube 2"}' "$TA" >/dev/null
-  X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "NAO_APTO" ] && ok "Clube: duas recargas menores somando R\$ 110,00 nao deixam APTO (nao soma)" || falha "Clube: somou recargas menores" "$X"
-  post "/admin/drivers/$DIDC/wallet/credit" '{"amountCents":10000,"operation":"CREDIT","description":"Recarga teste clube 3"}' "$TA" >/dev/null
-  X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "APTO" ] && [ -n "$(echo "$X" | jq -r '.data.validoAte // empty')" ] && ok "Clube: recarga confirmada de R\$ 100,00 deixa APTO (vale ate $(echo "$X" | jq -r '.data.validoAte'))" || falha "Clube: recarga de 100 nao deixou APTO" "$X"
+  X=$(get /clube/carteirinha "$TC"); [ "$(echo "$X" | jq -r '.data.situacao')" = "APTO" ] && [ -n "$(echo "$X" | jq -r '.data.validoAte // empty')" ] && ok "Clube: R\$ 50 + R\$ 60 em recargas (total R\$ 110) deixam APTO (vale ate $(echo "$X" | jq -r '.data.validoAte'))" || falha "Clube: soma das recargas nao deixou APTO" "$X"
   X=$(get /drivers/me "$TC"); sucesso "$X" && ok "Clube: a situacao do clube nao mexe no acesso ao aplicativo" || falha "Clube: acesso do motorista" "$X"
   X=$(post /clube/carteirinha '{"situacao":"APTO"}' "$TC"); sucesso "$X" && falha "Seguranca: motorista mudou a propria situacao" "$X" || ok "Seguranca: motorista nao altera a propria situacao"
   patch "/admin/drivers/$DIDC/review" '{"status":"SUSPENDED","reason":"Teste do clube: motorista inativo"}' "$TA" >/dev/null
