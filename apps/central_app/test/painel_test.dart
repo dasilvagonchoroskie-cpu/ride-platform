@@ -1227,8 +1227,8 @@ void main() {
     expect(_pedidosDoClube.where((x) => x.contains('/beneficios ')), hasLength(1));
     expect(find.text('Benefício de teste'), findsOneWidget);
 
-    // Volta para a lista: o parceiro aparece ativo.
-    await tester.pageBack();
+    // Volta para a lista (botao voltar do celular): o parceiro aparece ativo.
+    await tester.runAsync(() => Navigator.of(tester.element(find.byKey(const ValueKey('clube-nome')))).maybePop());
     await _carregar(tester);
     expect(find.text('Parceiro de Teste'), findsOneWidget);
     expect(find.text('Ativos (1)'), findsOneWidget);
@@ -1288,6 +1288,7 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
     await tester.tap(find.text('Parceiro de Teste'));
     await _carregar(tester);
+    await _rolarAte(tester, find.text('Só o dono cadastra ou altera parceiros.'));
     expect(find.text('Só o dono cadastra ou altera parceiros.'), findsOneWidget);
     expect(find.byKey(const ValueKey('clube-salvar'), skipOffstage: false), findsNothing);
     expect(tester.takeException(), isNull);
