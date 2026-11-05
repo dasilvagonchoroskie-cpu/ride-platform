@@ -1,0 +1,35 @@
+name: Diagnostico do Clube (temporario)
+
+# So le: mostra, sem nome completo nem telefone, as recargas dos ultimos 40
+# dias de cada motorista para conferir a regra APTO / NAO APTO.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ler as carteiras
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+        run: |
+          API=https://fortaleza-mov-backend.onrender.com/api
+          post() { curl -s -m 90 -X POST "$API$1" -H 'Content-Type: application/json' -H "x-chave-teste: $OTP_CHAVE_TESTE" -d "$2"; }
+          P=$(post /auth/otp/request "{\"email\":\"$ADMIN_EMAIL\",\"purpose\":\"LOGIN\"}")
+          C=$(echo "$P" | jq -r '.data.debugCode // empty')
+          TA=$(post /auth/otp/verify "{\"email\":\"$ADMIN_EMAIL\",\"code\":\"${C:-000000}\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}" | jq -r '.data.accessToken // empty')
+          [ -n "$TA" ] || { echo "sem login"; exit 1; }
+          DESDE=$(date -u -d '40 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          N=0
+          curl -s -m 90 "$API/admin/wallets" -H "Authorization: Bearer $TA" | jq -c '.data.items[]' | while read -r m; do
+            N=$((N+1)); ID=$(echo "$m" | jq -r .driverId)
+            INI=$(echo "$m" | jq -r '.name // "?" | split(" ")[0][0:1]')
+            W=$(curl -s -m 90 "$API/admin/drivers/$ID/wallet" -H "Authorization: Bearer $TA")
+            echo "motorista $N ($INI.) cadastro=$(echo "$m" | jq -r .status) | entradas nos ultimos 40 dias:"
+            echo "$W" | jq -r --arg d "$DESDE" '.data.transactions[]? | select(.amountCents > 0 and .createdAt >= $d) | "   \(.type) \(.kind) R$ \(.amountCents/100) em \(.createdAt)"'
+          done
