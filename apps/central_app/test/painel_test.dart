@@ -1228,7 +1228,8 @@ void main() {
     expect(find.text('Benefício de teste'), findsOneWidget);
 
     // Volta para a lista (botao voltar do celular): o parceiro aparece ativo.
-    await tester.runAsync(() => Navigator.of(tester.element(find.byKey(const ValueKey('clube-nome')))).maybePop());
+    Navigator.of(tester.element(find.byType(AppBar).last)).pop();
+    await tester.pumpAndSettle();
     await _carregar(tester);
     expect(find.text('Parceiro de Teste'), findsOneWidget);
     expect(find.text('Ativos (1)'), findsOneWidget);

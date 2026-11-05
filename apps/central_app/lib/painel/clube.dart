@@ -212,8 +212,10 @@ class _ClubeTelaState extends State<ClubeTela> {
       });
 
   Future<void> _abrir(ParceiroDoClube? p) async {
-    final mudou = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _FormParceiro(api: _api, parceiro: p)));
-    if (mudou == true && mounted) _recarregar();
+    await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => _FormParceiro(api: _api, parceiro: p)));
+    // Volta sempre com a lista do servidor (cadastro, logotipo ou beneficio
+    // podem ter mudado mesmo saindo pelo voltar).
+    if (mounted) _recarregar();
   }
 
   Future<void> _ligar(ParceiroDoClube p, bool v) async {
@@ -433,9 +435,6 @@ class _FormParceiroState extends State<_FormParceiro> {
   bool _salvando = false;
   bool _enviandoLogo = false;
 
-  /// Algo foi gravado: a lista recarrega ao voltar.
-  bool _mudou = false;
-
   bool get _dono => Provider.of<PainelState>(context, listen: false).dono;
 
   @override
@@ -506,7 +505,6 @@ class _FormParceiroState extends State<_FormParceiro> {
       _salvando = false;
       if (ok && salvo != null) {
         _p = salvo;
-        _mudou = true;
       }
     });
     if (ok && !novo) Navigator.of(context).pop(true);
@@ -542,7 +540,6 @@ class _FormParceiroState extends State<_FormParceiro> {
       _enviandoLogo = false;
       if (ok && salvo != null) {
         _p = salvo;
-        _mudou = true;
       }
     });
   }
@@ -557,7 +554,6 @@ class _FormParceiroState extends State<_FormParceiro> {
     if (ok && salvo != null && mounted) {
       setState(() {
         _p = salvo;
-        _mudou = true;
       });
     }
   }
@@ -572,7 +568,6 @@ class _FormParceiroState extends State<_FormParceiro> {
     if (ok && salvo != null && mounted) {
       setState(() {
         _p = salvo;
-        _mudou = true;
       });
     }
   }
@@ -610,12 +605,7 @@ class _FormParceiroState extends State<_FormParceiro> {
     final p = _p;
     final dono = _dono;
     final opcoes = {..._categorias, if (_categoria.isNotEmpty) _categoria}.toList();
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) Navigator.of(context).pop(_mudou);
-      },
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: Text(p == null ? 'Novo parceiro' : p.nome),
@@ -722,7 +712,6 @@ class _FormParceiroState extends State<_FormParceiro> {
             ],
           ],
         ),
-      ),
     );
   }
 }
