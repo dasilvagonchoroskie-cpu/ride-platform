@@ -201,3 +201,14 @@ test('humano: equipe respondeu agora há pouco → IA continua quieta', async ()
   assert.equal(conv().atendimento, 'humano');
   assert.equal(daIA().length, antes);
 });
+
+test('devolvida pelo botão logo depois da resposta da equipe: a IA responde na hora (sem esperar 15 min)', async () => {
+  const { receber, daIA, waStore, conv } = montar();
+  const r = await receber('oi');
+  waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', externoId: 'CEL3', texto: 'Oi, aqui é o Evandro', tipo: 'text', quando: new Date(Date.now() - 60000).toISOString(), deMim: true });
+  assert.equal(conv().atendimento, 'humano');
+  waStore.mudarAtendimento(r.conversaId, 'ia', { detalhe: 'botão' });
+  const antes = daIA().length;
+  await receber('quero me cadastrar como motorista');
+  assert.equal(daIA().length, antes + 1);
+});

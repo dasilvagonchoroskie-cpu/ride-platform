@@ -350,8 +350,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const ultima = msgs[msgs.length - 1];
     if (!ultima || ultima.direcao !== 'in') return { motivo: 'ja_respondida' };
     if (a.mensagem_ate_id !== ultima.id) return { motivo: 'analise_desatualizada' };
-    const limite = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-    if (msgs.some((m) => m.direcao === 'out' && m.origem !== 'ia' && m.ocorrida_em >= limite)) return { motivo: 'humano_assumiu' };
+    // Trava antiga de 15 min: só vale para resposta da equipe DEPOIS da última mudança de estado. Se a conversa foi
+    // devolvida para a IA (botão ou volta automática), a IA responde na hora.
+    const limite = [new Date(Date.now() - 15 * 60 * 1000).toISOString(), conv.atendimento === 'ia' && conv.atend_em ? conv.atend_em : ''].sort().pop();
+    if (msgs.some((m) => m.direcao === 'out' && m.origem !== 'ia' && m.ocorrida_em > limite)) return { motivo: 'humano_assumiu' };
     const dia = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const naConversa = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND created_at >= ?").get(conversaId, dia).n;
     if (naConversa >= RESPOSTAS_CONVERSA_DIA) return { motivo: 'limite_conversa' };
