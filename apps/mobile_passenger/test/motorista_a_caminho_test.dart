@@ -113,8 +113,10 @@ Ride _corrida(String status) => Ride.fromServer({
       'vehicle': {'brand': 'Chevrolet', 'model': 'Prisma', 'color': 'Branco', 'plate': 'OBL3A45'},
     });
 
-Future<RideState> _abrir(WidgetTester tester, Widget tela, {Ride? corrida}) async {
-  tester.view.physicalSize = const Size(360, 780);
+/// pequena: celular pequeno (320 x 640) com a letra do sistema 30% maior
+/// (auditoria de 06/11/2026: nada pode estourar ou sumir).
+Future<RideState> _abrir(WidgetTester tester, Widget tela, {Ride? corrida, bool pequena = false}) async {
+  tester.view.physicalSize = pequena ? const Size(320, 640) : const Size(360, 780);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final estado = RideState(repository: RideRepository(client: ApiClient(client: _servidor())));
@@ -135,6 +137,9 @@ Future<RideState> _abrir(WidgetTester tester, Widget tela, {Ride? corrida}) asyn
           GlobalCupertinoLocalizations.delegate,
         ],
         home: tela,
+        builder: pequena
+            ? (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)), child: child!)
+            : null,
       ),
     ),
   );
@@ -305,4 +310,24 @@ void main() {
     expect(tester.getTopLeft(find.byTooltip('Minha localização')).dy, greaterThan(400));
     await tester.pumpWidget(const SizedBox());
   });
+
+  // Auditoria (06/11/2026): celular pequeno e letra grande nas telas da corrida.
+  for (final caso in <(String, Widget, String?)>[
+    ('procurando / motorista a caminho', const SearchingScreen(), 'DRIVER_ARRIVING'),
+    ('motorista no local', const SearchingScreen(), 'DRIVER_WAITING'),
+    ('em viagem', const RideScreen(), 'IN_PROGRESS'),
+    ('cupons', const CuponsScreen(), null),
+    ('motoristas salvos', const MotoristasSalvosScreen(), null),
+  ]) {
+    testWidgets('Tela pequena e letra grande: ${caso.$1} sem estourar', (tester) async {
+      // Guarda o erro inteiro (com o widget e a linha do codigo) para o relatorio.
+      final erros = <String>[];
+      final antes = FlutterError.onError;
+      FlutterError.onError = (d) => erros.add(d.toString());
+      await _abrir(tester, caso.$2, corrida: caso.$3 == null ? null : _corrida(caso.$3!), pequena: true);
+      FlutterError.onError = antes;
+      expect(erros, isEmpty, reason: erros.join('\n----\n'));
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 }

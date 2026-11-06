@@ -12,6 +12,7 @@ import 'package:mobile_driver/core/api/api_client.dart';
 import 'package:mobile_driver/core/pix.dart';
 import 'package:mobile_driver/core/utils/geo.dart';
 import 'package:mobile_driver/data/models/driver_models.dart';
+import 'package:mobile_driver/screens/menu_screen.dart';
 import 'package:mobile_driver/screens/perfil_screen.dart';
 import 'package:mobile_driver/screens/ride_screen.dart';
 import 'package:mobile_driver/screens/rides_history_screen.dart';
@@ -114,8 +115,10 @@ const _oferta = RideOffer(
   paymentMethod: 'Dinheiro',
 );
 
-Future<DriverState> _abrir(WidgetTester tester, Widget tela, {RidePhase? fase, Map<String, dynamic>? resumo}) async {
-  tester.view.physicalSize = const Size(1080, 2340);
+/// pequena: celular pequeno (320 x 640) com a letra do sistema 30% maior
+/// (auditoria de 06/11/2026: nada pode estourar ou sumir).
+Future<DriverState> _abrir(WidgetTester tester, Widget tela, {RidePhase? fase, Map<String, dynamic>? resumo, bool pequena = false}) async {
+  tester.view.physicalSize = pequena ? const Size(960, 1920) : const Size(1080, 2340);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -133,6 +136,9 @@ Future<DriverState> _abrir(WidgetTester tester, Widget tela, {RidePhase? fase, M
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: tela,
+        builder: pequena
+            ? (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)), child: child!)
+            : null,
       ),
     ),
   );
@@ -287,4 +293,27 @@ void main() {
     expect(p.contains('6008GOIATUBA'), isTrue);
     expect(RegExp(r'6304[0-9A-F]{4}$').hasMatch(p), isTrue);
   });
+
+  // Auditoria (06/11/2026): celular pequeno e letra grande nas telas principais.
+  for (final caso in <(String, Widget, RidePhase?)>[
+    ('a caminho do passageiro', const RideScreen(), RidePhase.toPickup),
+    ('esperando o passageiro', const RideScreen(), RidePhase.waitingPassenger),
+    ('em viagem', const RideScreen(), RidePhase.inProgress),
+    ('historico', const RidesHistoryScreen(), null),
+    ('perfil', const PerfilScreen(), null),
+    ('meus carros', const VehiclesScreen(), null),
+    ('SOS', const SosScreen(), null),
+    ('menu', const MenuScreen(), null),
+  ]) {
+    testWidgets('Tela pequena e letra grande: ${caso.$1} sem estourar', (tester) async {
+      // Guarda o erro inteiro (com o widget e a linha do codigo) para o relatorio.
+      final erros = <String>[];
+      final antes = FlutterError.onError;
+      FlutterError.onError = (d) => erros.add(d.toString());
+      await _abrir(tester, caso.$2, fase: caso.$3, pequena: true);
+      FlutterError.onError = antes;
+      expect(erros, isEmpty, reason: erros.join('\n----\n'));
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 }

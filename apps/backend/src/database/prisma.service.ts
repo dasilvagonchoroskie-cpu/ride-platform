@@ -32,6 +32,32 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     } catch (e) {
       this.logger.warn(`Ajuste de seguranca do banco nao aplicado: ${(e as Error).message}`);
     }
+    // Auditoria de 06/11/2026: o Supabase abre as tabelas do schema public
+    // pela API dele (PostgREST) para quem tiver a chave publica. O servidor
+    // nao usa essa API. Ligar a "seguranca por linha" (RLS) sem regras
+    // fecha essa porta; o usuario do servidor e o dono das tabelas e o dono
+    // nao e afetado pelo RLS, entao nada muda para o aplicativo.
+    try {
+      const tabelas = await this.$queryRaw<Array<{ nome: string }>>`
+        SELECT c.relname AS nome FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relrowsecurity
+          AND pg_get_userbyid(c.relowner) = current_user`;
+      for (const t of tabelas) {
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(t.nome)) continue;
+        await this.$executeRawUnsafe(`ALTER TABLE public."${t.nome}" ENABLE ROW LEVEL SECURITY`);
+      }
+      if (tabelas.length) this.logger.log(`RLS ligado em ${tabelas.length} tabela(s) do schema public.`);
+    } catch (e) {
+      this.logger.warn(`RLS nao ligado: ${(e as Error).message}`);
+    }
+  }
+
+  /** Para a Central e o teste de ponta a ponta: tabelas do public sem RLS. */
+  async tabelasSemRls(): Promise<{ total: number; semRls: string[] }> {
+    const linhas = await this.$queryRaw<Array<{ nome: string; rls: boolean }>>`
+      SELECT c.relname AS nome, c.relrowsecurity AS rls FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')`;
+    return { total: linhas.length, semRls: linhas.filter((l) => !l.rls).map((l) => l.nome).sort() };
   }
 
   async onModuleDestroy(): Promise<void> {
