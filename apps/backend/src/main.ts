@@ -20,9 +20,25 @@ async function bootstrap(): Promise<void> {
   const fotoGrande = express.json({ limit: '4mb' });
   const corpoNormal = express.json({ limit: '256kb' });
   // Formularios das paginas publicas (ex.: pedido de exclusao da conta).
-  app.use(express.urlencoded({ extended: false, limit: '64kb' }));
+  const formulario = express.urlencoded({ extended: false, limit: '64kb' });
+  // Corpo grande demais (413) ou JSON quebrado (400): responde na hora com a
+  // mensagem de sempre, sem virar "erro interno" (500).
+  const lerCorpo =
+    (leitor: express.RequestHandler) => (req: express.Request, res: express.Response, next: express.NextFunction) =>
+      leitor(req, res, (erro?: unknown) => {
+        const e = erro as { status?: number; type?: string } | undefined;
+        if (!e) return next();
+        if (e.status === 413 || e.type === 'entity.too.large') {
+          return res.status(413).json({ success: false, error: { code: 'PAYLOAD_TOO_LARGE', message: 'Envio grande demais.' } });
+        }
+        if (e.status === 400) {
+          return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Dados enviados em formato invalido.' } });
+        }
+        return next(erro);
+      });
+  app.use(lerCorpo(formulario));
   app.use((req: express.Request, res: express.Response, next: express.NextFunction) =>
-    (/\/(foto|logo)\/?$/.test(req.path) ? fotoGrande : corpoNormal)(req, res, next),
+    lerCorpo(/\/(foto|logo)\/?$/.test(req.path) ? fotoGrande : corpoNormal)(req, res, next),
   );
   const config = app.get(AppConfigService);
 
