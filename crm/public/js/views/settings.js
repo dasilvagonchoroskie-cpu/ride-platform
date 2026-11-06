@@ -470,11 +470,11 @@ function setupRecuperacao(view) {
       lista.hidden = false;
       lista.innerHTML = `<div class="notice warn">Guarde estes códigos agora (anote no papel ou baixe o arquivo). Eles <b>não aparecem de novo</b>. Os códigos antigos deixaram de valer.</div>
         <pre style="background:#0b2545;color:#dfe8f5;padding:12px;border-radius:10px;font-size:14px;letter-spacing:1px;margin-top:10px">${r.codigos.map(ui.esc).join('\n')}</pre>
-        <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-ghost" id="rec-copiar" type="button">Copiar</button><button class="btn btn-ghost" id="rec-baixar" type="button">Baixar arquivo</button></div>`;
+        <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-ghost" id="rec-copiar" type="button">Copiar</button>${/FortalezaMoveCRM-App/.test(navigator.userAgent) ? '' : '<button class="btn btn-ghost" id="rec-baixar" type="button">Baixar arquivo</button>'}</div>`;
       $('#rec-copiar').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(texto); ui.toast('Códigos copiados.', 'success'); } catch (e) { ui.toast('Não consegui copiar: anote os códigos.', 'error'); }
       });
-      $('#rec-baixar').addEventListener('click', () => {
+      if ($('#rec-baixar')) $('#rec-baixar').addEventListener('click', () => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([texto], { type: 'text/plain;charset=utf-8' }));
         a.download = 'codigos-recuperacao-crm.txt';
