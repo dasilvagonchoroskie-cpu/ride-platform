@@ -28,6 +28,11 @@ function urlBaseValida(url) {
     const u = new URL(url);
     const local = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname);
     if (u.username || u.password || u.search || u.hash) return false;
+    // Endereços internos/privados só em desenvolvimento local (impede o servidor de ser usado para acessar a rede interna).
+    const h = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    const interno = local || h === '0.0.0.0' || /\.(local|internal|localhost)$/.test(h) || /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.)/.test(h)
+      || /^(::|fc|fd|fe80)/.test(h) || /^\d+$/.test(h);
+    if (interno && process.env.NODE_ENV === 'production') return false;
     return u.protocol === 'https:' || (u.protocol === 'http:' && local);
   } catch (err) { return false; }
 }

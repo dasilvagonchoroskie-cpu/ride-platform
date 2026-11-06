@@ -54,6 +54,7 @@ export async function renderSettings(view, state) {
                     <button class="btn btn-sm btn-ghost" data-user-pass="${u.id}" title="Redefinir senha">${ui.icon('lock', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-toggle="${u.id}" data-ativo="${u.ativo}" title="${u.ativo ? 'Desativar' : 'Ativar'}">${ui.icon(u.ativo ? 'x' : 'check', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-del="${u.id}" title="Excluir">${ui.icon('trash', 14)}</button>
+                    ${u.totp_ativo && u.id !== state.user.id ? `<button class="btn btn-sm btn-ghost" data-user-2fa="${u.id}" title="Desligar verificação em duas etapas (celular perdido)">2 etapas ✕</button>` : ''}
                   </div>`
                 }
               ],
@@ -138,6 +139,11 @@ export async function renderSettings(view, state) {
           </div>
         </div>
 
+        <div class="card" id="mfa-card">
+          <div class="card-head"><div><h3>Verificação em duas etapas</h3><p class="sub">Além da senha, um código do aplicativo autenticador do celular</p></div></div>
+          <div class="card-body"><div id="mfa-corpo" class="muted">Carregando…</div><div class="form-errors" id="mfa-error" hidden></div></div>
+        </div>
+
         <div class="card" id="rec-card">
           <div class="card-head"><div><h3>Códigos de recuperação</h3><p class="sub">Para redefinir a senha sozinho, se esquecer</p></div></div>
           <div class="card-body">
@@ -218,6 +224,7 @@ export async function renderSettings(view, state) {
   });
 
   setupRecuperacao(view);
+  setupDuasEtapas(view);
 
   view.querySelectorAll('[data-session]').forEach((b) => b.addEventListener('click', async () => {
     try {
@@ -265,6 +272,12 @@ export async function renderSettings(view, state) {
         }
       });
     });
+
+    view.querySelectorAll('[data-user-2fa]').forEach((b) => b.addEventListener('click', async () => {
+      const ok = await ui.confirmDialog({ title: 'Desligar verificação em duas etapas', message: 'O usuário vai entrar só com a senha até ativar de novo. Use quando ele perder o celular.', confirmLabel: 'Desligar', danger: true });
+      if (!ok) return;
+      try { await api.patch(`/users/${b.dataset.user2fa}`, { desativar_2fa: true }); ui.toast('Verificação em duas etapas desligada para o usuário.', 'success'); renderSettings(view, state); } catch (err) { ui.toast(err.message, 'error'); }
+    }));
 
     view.querySelectorAll('[data-user-toggle]').forEach((b) => b.addEventListener('click', async () => {
       try {
@@ -492,4 +505,50 @@ function setupRecuperacao(view) {
     }
   });
   estado();
+}
+
+// Verificação em duas etapas (aplicativo autenticador: Google Authenticator, Microsoft Authenticator etc.).
+function setupDuasEtapas(view) {
+  const $ = (sel) => view.querySelector(sel);
+  const erro = (msg) => { const b = $('#mfa-error'); b.hidden = !msg; b.textContent = msg || ''; };
+  async function desenhar() {
+    erro('');
+    let st;
+    try { st = await api.get('/auth/2fa'); } catch (e) { return; }
+    if (st.ativo) {
+      $('#mfa-corpo').innerHTML = `${ui.badge('Ativada', 'success')}
+        <div class="stack" style="gap:10px;margin-top:10px">
+          <div class="field"><label for="mfa-senha-off">Senha atual</label><input id="mfa-senha-off" type="password" autocomplete="current-password"></div>
+          <div class="field"><label for="mfa-codigo-off">Código do aplicativo</label><input id="mfa-codigo-off" inputmode="numeric" maxlength="6"></div>
+          <button class="btn btn-danger" id="mfa-off" type="button">Desativar</button></div>`;
+      $('#mfa-off').addEventListener('click', async () => {
+        try { await api.post('/auth/2fa/desativar', { senha_atual: $('#mfa-senha-off').value, codigo: $('#mfa-codigo-off').value }); ui.toast('Verificação em duas etapas desativada.', 'success'); desenhar(); } catch (e) { erro(e.message); }
+      });
+      return;
+    }
+    $('#mfa-corpo').innerHTML = `${ui.badge('Desativada', 'warn')} <span class="muted">${st.obrigatoria_admin ? 'Recomendado para administradores.' : ''}</span>
+      <div class="stack" style="gap:10px;margin-top:10px">
+        <div class="field"><label for="mfa-senha">Senha atual</label><input id="mfa-senha" type="password" autocomplete="current-password"></div>
+        <button class="btn btn-primary" id="mfa-iniciar" type="button">${ui.icon('lock', 15)} Ativar</button></div>
+      <div id="mfa-passo2" hidden></div>`;
+    $('#mfa-iniciar').addEventListener('click', async () => {
+      erro('');
+      try {
+        const r = await api.post('/auth/2fa/iniciar', { senha_atual: $('#mfa-senha').value });
+        const p2 = $('#mfa-passo2');
+        p2.hidden = false;
+        p2.innerHTML = `<ol class="wa-steps" style="margin-top:12px">
+            <li>Instale o <b>Google Authenticator</b> (ou outro autenticador) no celular.</li>
+            <li>Toque em <b>+</b> e escolha <b>"Inserir chave de configuração"</b>. Nome: CRM Fortaleza Move. Chave:</li></ol>
+          <div class="wa-code-num" style="font-size:18px;letter-spacing:.06em">${ui.esc(r.chave)}</div>
+          <p class="muted small">No navegador do celular, você também pode <a href="${ui.esc(r.uri)}">tocar aqui para abrir no autenticador</a>.</p>
+          <div class="field"><label for="mfa-codigo">Digite o código de 6 números que aparece no aplicativo</label><input id="mfa-codigo" inputmode="numeric" maxlength="6"></div>
+          <button class="btn btn-primary" id="mfa-confirmar" type="button">Confirmar e ativar</button>`;
+        $('#mfa-confirmar').addEventListener('click', async () => {
+          try { await api.post('/auth/2fa/confirmar', { codigo: $('#mfa-codigo').value }); ui.toast('Verificação em duas etapas ativada. Guarde também seus códigos de recuperação.', 'success'); desenhar(); } catch (e) { erro(e.message); }
+        });
+      } catch (e) { erro(e.message); }
+    });
+  }
+  desenhar();
 }

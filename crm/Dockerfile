@@ -5,9 +5,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
-# Biblioteca do WhatsApp (Baileys) instalada no build, fora de data/ (não entra no retrato do cofre).
-RUN mkdir -p /opt/wa-lib && cd /opt/wa-lib && echo '{"name":"wa-lib","version":"1.0.0","private":true}' > package.json \
- && npm install --omit=dev --ignore-scripts --no-audit --no-fund @whiskeysockets/baileys
+# Biblioteca do WhatsApp (Baileys) com versão e dependências FIXAS (wa-lib/package-lock.json), instalada fora de data/.
+# Para atualizar: mudar a versão em wa-lib/package.json, gerar o lock de novo, revisar e testar.
+COPY wa-lib/package.json wa-lib/package-lock.json /opt/wa-lib/
+RUN cd /opt/wa-lib && npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 FROM node:22-slim
 ENV NODE_ENV=production WA_LIB_DIR=/opt/wa-lib FM_DATA_DIR=/app/data

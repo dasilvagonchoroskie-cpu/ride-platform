@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS motoristas (
   veiculo TEXT,
   placa TEXT,
   cnh_categoria TEXT,
+  documentos TEXT,
   proxima_acao TEXT,
   data_acompanhamento TEXT,
   observacoes TEXT,

@@ -8,6 +8,7 @@ const { COOKIE_NAME, parseCookies, setCookie, clearCookie, isSecure, clientIp } 
 const { createLimiter } = require('./limiter');
 
 const SESSION_HOURS = 12;
+const INATIVIDADE_MIN = Number(process.env.SESSAO_INATIVIDADE_MIN) || 60;
 const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64, maxmem: 64 * 1024 * 1024 };
 
 function hashPassword(password) {
@@ -69,16 +70,18 @@ function currentSession(req) {
   const token = cookies[COOKIE_NAME];
   if (!token) return null;
   const row = db.prepare(
-    `SELECT s.id AS sid, s.expires_at, u.id, u.nome, u.email, u.role, u.ativo
+    `SELECT s.id AS sid, s.expires_at, s.last_seen_at, u.id, u.nome, u.email, u.role, u.ativo
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ?`
   ).get(sha256(token));
   if (!row) return null;
-  if (new Date(row.expires_at) < new Date() || !row.ativo) {
+  // Expira no prazo máximo (12 h) e também por inatividade (padrão 60 min sem uso).
+  const parada = Date.now() - new Date(row.last_seen_at || 0).getTime();
+  if (new Date(row.expires_at) < new Date() || !row.ativo || parada > INATIVIDADE_MIN * 60000) {
     db.prepare('DELETE FROM sessions WHERE id = ?').run(row.sid);
     return null;
   }
-  db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').run(nowISO(), row.sid);
+  if (parada > 60000) db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').run(nowISO(), row.sid);
   return { sid: row.sid, id: row.id, nome: row.nome, email: row.email, role: row.role };
 }
 
@@ -152,6 +155,58 @@ function checkInstallationKey(provided) {
   const b = Buffer.from(installationKey());
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+/* ---------------------- verificação em duas etapas (TOTP) ---------------------- */
+// Padrão dos aplicativos autenticadores (Google Authenticator, Microsoft Authenticator...): RFC 6238, 30 s, 6 dígitos.
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+function base32(buf) {
+  let bits = 0; let valor = 0; let out = '';
+  for (const b of buf) { valor = (valor << 8) | b; bits += 8; while (bits >= 5) { out += B32[(valor >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits > 0) out += B32[(valor << (5 - bits)) & 31];
+  return out;
+}
+function deBase32(txt) {
+  const limpo = String(txt || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0; let valor = 0; const out = [];
+  for (const c of limpo) { valor = (valor << 5) | B32.indexOf(c); bits += 5; if (bits >= 8) { out.push((valor >>> (bits - 8)) & 255); bits -= 8; } }
+  return Buffer.from(out);
+}
+function codigoTotp(segredoB32, passo) {
+  const msg = Buffer.alloc(8); msg.writeBigUInt64BE(BigInt(passo));
+  const h = crypto.createHmac('sha1', deBase32(segredoB32)).update(msg).digest();
+  const o = h[h.length - 1] & 15;
+  return String(((h.readUInt32BE(o) & 0x7fffffff) % 1000000)).padStart(6, '0');
+}
+// Aceita o código do passo atual e de 1 passo antes/depois (relógio do celular adiantado/atrasado).
+// Devolve o passo usado (para impedir reutilizar o mesmo código), ou null.
+function verificarTotp(segredoB32, codigo, ultimoPasso = 0, agoraMs = Date.now()) {
+  const c = String(codigo || '').replace(/\D/g, '');
+  if (c.length !== 6 || !segredoB32) return null;
+  const atual = Math.floor(agoraMs / 30000);
+  for (const d of [0, -1, 1]) {
+    const passo = atual + d;
+    if (passo <= ultimoPasso) continue;
+    const esperado = Buffer.from(codigoTotp(segredoB32, passo));
+    if (crypto.timingSafeEqual(esperado, Buffer.from(c))) return passo;
+  }
+  return null;
+}
+const novoSegredoTotp = () => base32(crypto.randomBytes(20));
+
+// Desafio entre a senha certa e o código do autenticador (5 min, 5 tentativas). Só o hash fica guardado.
+const desafios = new Map();
+function criarDesafio(userId) {
+  const t = crypto.randomBytes(24).toString('base64url');
+  for (const [k, v] of desafios) if (v.expira < Date.now()) desafios.delete(k);
+  desafios.set(sha256(t), { userId, expira: Date.now() + 5 * 60000, tentativas: 0 });
+  return t;
+}
+function lerDesafio(t) {
+  const d = desafios.get(sha256(String(t || '')));
+  if (!d || d.expira < Date.now() || d.tentativas >= 5) return null;
+  return d;
+}
+const encerrarDesafio = (t) => desafios.delete(sha256(String(t || '')));
 
 /* ------------------------- códigos de recuperação -------------------------- */
 // 8 códigos de 12 caracteres (alfabeto de 32 símbolos = 60 bits cada). Guardados só como SHA-256 com pimenta por usuário.
@@ -228,6 +283,13 @@ module.exports = {
   checkInstallationKey,
   passwordProblem,
   generateRecoveryCodes,
+  verificarTotp,
+  codigoTotp,
+  novoSegredoTotp,
+  criarDesafio,
+  lerDesafio,
+  encerrarDesafio,
+  INATIVIDADE_MIN,
   recoveryStatus,
   consumeRecoveryCode,
   recoverBlocked,

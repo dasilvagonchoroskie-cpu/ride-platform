@@ -33,4 +33,16 @@ function extrairDadosDocumentos(mensagens) {
   return r;
 }
 
-module.exports = { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca };
+// Mascara números de documentos no texto lido (CPF, RG, registro da CNH, Renavam, chassi numérico...): o cadastro
+// não precisa deles, e assim não ficam guardados nem aparecem para toda a equipe. Mantém os 3 últimos dígitos.
+function mascararNumeros(texto) {
+  return String(texto || '')
+    .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, (m) => `***.***.***-${m.slice(-2)}`)
+    .replace(/\b\d(?:[\d.\- ]{6,}\d)\b/g, (m) => {
+      const digitos = m.replace(/\D/g, '');
+      if (digitos.length < 8) return m;
+      return `${'•'.repeat(digitos.length - 3)}${digitos.slice(-3)}`;
+    });
+}
+
+module.exports = { mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca };

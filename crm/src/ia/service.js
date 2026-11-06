@@ -17,7 +17,9 @@ const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca } = require
 const MOTIVOS = {
   sem_resposta: 'a IA não sugeriu resposta', ja_respondida: 'a última mensagem já tinha resposta',
   analise_desatualizada: 'chegou mensagem nova durante a análise', humano_assumiu: 'a equipe respondeu há menos de 15 min',
-  limite_conversa: 'limite de respostas da IA nesta conversa', limite_dia: 'limite diário de respostas da IA', repetida: 'seria repetida'
+  limite_conversa: 'limite de respostas da IA nesta conversa', limite_dia: 'limite diário de respostas da IA', repetida: 'seria repetida',
+  falha_redacao: 'a IA não conseguiu redigir', filtro_numero: 'bloqueada: continha número de documento', filtro_link_ou_email: 'bloqueada: continha link ou e-mail',
+  filtro_dado_interno: 'bloqueada: repetia anotação interna', filtro_longa: 'bloqueada: longa demais', filtro_vazia: 'a IA não sugeriu resposta'
 };
 
 function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, setSetting, cofre, provider, todayISO, nowISO, log = console }) {
@@ -224,6 +226,9 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
         if (errors[chave] || values[chave] === undefined) continue; // valor inválido para o campo: descarta
         corpo[chave] = values[chave];
       }
+      if (conv.vinculo_tipo === 'motoristas' && ['veiculo', 'placa', 'cnh_categoria'].some((k) => corpo[k]) && (!preenchido(linha.documentos) || linha.documentos === 'Não enviados')) {
+        corpo.documentos = 'Recebidos — conferir';
+      }
       if (Object.keys(corpo).length) {
         const r = entities.updateEntity(def, conv.vinculo_id, corpo, req);
         if (r.errors || r.error) return { erro: 'Não foi possível atualizar o cadastro.', status: 422 };
@@ -241,6 +246,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       const chaveNome = tipo === 'parceiros' ? 'nome_estabelecimento' : 'nome';
       if (!corpo[chaveNome] && conv.nome) corpo[chaveNome] = conv.nome;
       if (conv.telefone) corpo.telefone = displayPhone(conv.telefone);
+      if (tipo === 'motoristas') corpo.documentos = ['veiculo', 'placa', 'cnh_categoria'].some((k) => corpo[k]) ? 'Recebidos — conferir' : 'Não enviados';
       // Padrões seguros dos campos obrigatórios que não dependem de interpretar a conversa.
       for (const f of def.fields) {
         if (!f.required || corpo[f.key] !== undefined) continue;
@@ -272,11 +278,15 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     try {
       const cfg = config();
       if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return;
+      // Um contato sozinho não esgota a cota de todos: no máximo ANALISES_CONVERSA_DIA análises automáticas por conversa/dia.
+      const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const feitas = db.prepare("SELECT COUNT(*) n FROM ia_analises WHERE conversa_id = ? AND origem = 'automatica' AND criado_em >= ?").get(conversaId, desde).n;
+      if (feitas >= ANALISES_CONVERSA_DIA) { log.log(`[ia] conversa ${conversaId}: limite de análises automáticas do dia para este contato`); return; }
       const a = await analisar(conversaId, { origem: 'automatica', forcar });
       const ap = aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
       let resp = 'resposta automática desligada';
       if (cfg.responder) {
-        const r = responderAutomatico(conversaId);
+        const r = await responderAutomatico(conversaId);
         resp = r.enviada ? 'respondeu' : `não respondeu: ${MOTIVOS[r.motivo] || r.motivo}`;
         if (!r.enviada) {
           const atual = ultimaAnalise(conversaId);
@@ -299,10 +309,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   //  - não repete a mesma frase que acabou de mandar.
   const RESPOSTAS_CONVERSA_DIA = Number(process.env.IA_RESPOSTAS_CONVERSA_DIA) || 15;
   const RESPOSTAS_DIA = Number(process.env.IA_RESPOSTAS_DIA) || 300;
-  function responderAutomatico(conversaId) {
+  const ANALISES_CONVERSA_DIA = Number(process.env.IA_ANALISES_CONVERSA_DIA) || 25;
+  async function responderAutomatico(conversaId) {
     const a = ultimaAnalise(conversaId);
-    const texto = a && a.resultado && String(a.resultado.resposta_sugerida || '').trim();
-    if (!texto) return { motivo: 'sem_resposta' };
+    if (!a) return { motivo: 'sem_resposta' };
     const msgs = waStore.listarMensagens(conversaId, { limite: 30 });
     const ultima = msgs[msgs.length - 1];
     if (!ultima || ultima.direcao !== 'in') return { motivo: 'ja_respondida' };
@@ -314,6 +324,30 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (naConversa >= RESPOSTAS_CONVERSA_DIA) return { motivo: 'limite_conversa' };
     const total = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND created_at >= ?").get(dia).n;
     if (total >= RESPOSTAS_DIA) return { motivo: 'limite_dia' };
+
+    // Segunda chamada, só para redigir: a IA NÃO recebe dados do cadastro (nem observações internas).
+    const conv = waStore.obterConversa(conversaId);
+    let faltando = []; const internos = [];
+    if (conv && conv.vinculo_tipo) {
+      const { linha } = valoresAtuais(conv.vinculo_tipo, conv.vinculo_id);
+      const def = ENTITIES[conv.vinculo_tipo];
+      faltando = (P.CAMPOS_IA[conv.vinculo_tipo] || []).filter((k) => !preenchido(linha[k]) && !['observacoes', 'proxima_acao'].includes(k))
+        .map((k) => (def.fields.find((f) => f.key === k) || {}).label).filter(Boolean);
+      for (const k of ['observacoes', 'proxima_acao', 'condicoes']) if (preenchido(linha[k])) internos.push(String(linha[k]));
+    }
+    internos.push(...[a.resultado.resumo, a.resultado.proxima_acao].filter(Boolean));
+    const { system, user } = P.montarPromptResposta({ mensagens: msgs, perfil: a.resultado.perfil, faltando });
+    let texto = '';
+    try {
+      const resp = await provedor.completar({ system, user, maxTokens: 400 });
+      const bruto = P.extrairJson(resp.texto);
+      texto = P.limpar(bruto.resposta !== undefined ? bruto.resposta : bruto.resposta_sugerida, 600);
+    } catch (err) {
+      return { motivo: 'falha_redacao' };
+    }
+    if (!texto) return { motivo: 'sem_resposta' };
+    const filtro = P.respostaSegura(texto, { internos });
+    if (!filtro.ok) return { motivo: `filtro_${filtro.motivo}` };
     const ultimaIA = [...msgs].reverse().find((m) => m.origem === 'ia');
     if (ultimaIA && ultimaIA.texto === texto) return { motivo: 'repetida' };
     const r = waStore.enfileirar({ conversaId, texto, usuarioId: null, origem: 'ia' });

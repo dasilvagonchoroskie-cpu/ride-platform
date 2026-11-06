@@ -242,7 +242,18 @@ function criar({ authDir, libDir, log = console } = {}) {
         const evt = mensagemParaEvento(m, type);
         if (evt && evt.midia && lib && typeof lib.downloadMediaMessage === 'function') {
           const s = sock;
-          evt.midia.baixar = () => lib.downloadMediaMessage(m, 'buffer', {}, { logger: SEM_LOG, reuploadRequest: s && s.updateMediaMessage });
+          // Baixa em fluxo e para no limite: um arquivo enorme (até 2 GB no WhatsApp) não chega a encher a memória.
+          evt.midia.baixar = async (limite = 15 * 1024 * 1024) => {
+            const fluxo = await lib.downloadMediaMessage(m, 'stream', {}, { logger: SEM_LOG, reuploadRequest: s && s.updateMediaMessage });
+            if (Buffer.isBuffer(fluxo)) { if (fluxo.length > limite) throw new Error('Arquivo maior que o limite.'); return fluxo; }
+            const partes = []; let total = 0;
+            for await (const pedaco of fluxo) {
+              total += pedaco.length;
+              if (total > limite) { if (typeof fluxo.destroy === 'function') fluxo.destroy(); throw new Error('Arquivo maior que o limite.'); }
+              partes.push(pedaco);
+            }
+            return Buffer.concat(partes);
+          };
         }
         if (evt && handlers && handlers.onMessage) handlers.onMessage(evt);
       } catch (err) { log.error('[whatsapp] erro ao tratar mensagem:', err.message); }

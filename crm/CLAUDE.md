@@ -60,6 +60,23 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   na hora; ao acordar, o WhatsApp entrega o que ficou pendente.
 - Código no monorepo `dasilvagonchoroskie-cpu/ride-platform`, pasta `crm/` (fora do workspace pnpm). Docker: `crm/Dockerfile`.
 
+## Correções da auditoria de segurança (06/11/2026) — relatório: doc "Auditoria de Segurança — CRM Fortaleza Move"
+- Cofre: aceita mais de um token durante troca (`cofre.acesso` com vários hashes); `SNAPSHOT_KEY_ANTERIOR` abre retrato
+  antigo na troca de chave; histórico de versões em `cofre.historico` (1/hora por 48 h, 1/dia até 15 dias; sem função de
+  apagar exposta). Restaurar versão antiga: SQL no Supabase (copiar `dados` do histórico para `cofre.snapshot`).
+- Resposta automática: SEGUNDA chamada só para redigir (`SISTEMA_RESPOSTA`, sem nenhum dado do cadastro) + filtro
+  `respostaSegura` (bloqueia números de documento, links/e-mails e trechos de anotações internas). Motivo vai ao painel.
+- Verificação em duas etapas (TOTP, RFC 6238, sem dependência) para qualquer usuário: `/auth/2fa/*`, login em 2 passos
+  (`/auth/login/codigo`, desafio de uso único 5 min/5 tentativas, código não reutilizável, código de recuperação vale).
+  Admin desliga a de outro usuário (celular perdido). Sessão expira por inatividade (`SESSAO_INATIVIDADE_MIN`, 60).
+- Mídia: download em fluxo com corte em 15 MB; limite por contato (`IA_LEITURAS_CONTATO_DIA` 15, `IA_ANALISES_CONVERSA_DIA` 25);
+  números de documento mascarados no texto lido (`mascararNumeros`, mantém 3 últimos dígitos).
+- Motorista: campo `documentos` (Não enviados / Recebidos — conferir / Conferidos), marcado pelo SERVIDOR quando dados de
+  documento entram; aprovação continua humana.
+- Retenção (LGPD): conversas sem cadastro e sem movimento há `RETENCAO_DIAS` (180) apagadas; análises/registros antigos também.
+- Baileys com versão fixa (`wa-lib/package.json` + lock, 7.0.0-rc14). Endereço "personalizado" da IA recusa rede interna em produção.
+- `/api/diagnostico/ip` só existe com `DIAG_IP=1` (usar e desligar).
+
 ## Ajustes de 06/11/2026 (teste real do dono)
 - Sem cadastro vinculado, a IA recebe `campos_permitidos` por perfil (`camposPorPerfil`) e pode devolver qualquer chave de
   `CHAVES_SEM_CADASTRO`; o cadastro criado já nasce com veículo/placa/CNH (antes só nome/cidade).

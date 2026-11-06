@@ -117,3 +117,31 @@ test('processo antigo (deploy) não grava por cima do novo', async () => {
   assert.equal(cofre.estado.versao, versao, 'gravação do processo antigo recusada');
   dbA.close();
 });
+
+test('troca de chave do cofre: retrato antigo abre com a chave anterior e o próximo sai com a nova', async () => {
+  const Database = require('better-sqlite3');
+  const cofre = cofreFalso();
+  const dir1 = fs.mkdtempSync(path.join(os.tmpdir(), 'cofre-'));
+  ambiente(dir1);
+  let p = novoPersist();
+  await p.restaurar({ fetchImpl: cofre.f, log: silencioso });
+  const db1 = new Database(path.join(dir1, 'crm.db'));
+  db1.exec("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('dado')");
+  await p.iniciar({ db: db1, log: silencioso }).parar();
+  db1.close();
+  const NOVA = crypto.randomBytes(32).toString('hex');
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'cofre-'));
+  ambiente(dir2, { SNAPSHOT_KEY: NOVA, SNAPSHOT_KEY_ANTERIOR: KEY });
+  p = novoPersist();
+  await p.restaurar({ fetchImpl: cofre.f, log: silencioso });
+  const db2 = new Database(path.join(dir2, 'crm.db'));
+  assert.equal(db2.prepare('SELECT v FROM t').get().v, 'dado');
+  db2.exec("INSERT INTO t VALUES ('novo')");
+  await p.iniciar({ db: db2, log: silencioso }).parar();
+  db2.close();
+  // Agora só a chave nova abre.
+  const k = Buffer.from(NOVA, 'hex');
+  assert.ok(p.decifrar(cofre.estado.dados, k).length > 0);
+  assert.throws(() => p.decifrar(cofre.estado.dados, Buffer.from(KEY, 'hex')));
+  delete process.env.SNAPSHOT_KEY_ANTERIOR;
+});

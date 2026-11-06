@@ -121,6 +121,7 @@ function renderLogin(org) {
         email: document.getElementById('login-email').value,
         senha: document.getElementById('login-senha').value
       });
+      if (data.precisa_codigo) { renderCodigo(data.desafio); return; }
       state.user = data.user;
       await enterApp();
     } catch (err) {
@@ -134,6 +135,44 @@ function renderLogin(org) {
   document.getElementById('forgot-link').addEventListener('click', (e) => {
     e.preventDefault();
     renderRecover(document.getElementById('login-email').value);
+  });
+}
+
+// Segunda etapa do login: código do aplicativo autenticador (ou um código de recuperação).
+function renderCodigo(desafio) {
+  authShell({
+    title: 'Verificação em duas etapas',
+    subtitle: 'Digite o código de 6 números do seu aplicativo autenticador.',
+    sideTitle: 'Acesso protegido|verificação em duas etapas',
+    body: `<form id="codigo-form" novalidate>
+        <div class="form-errors" id="codigo-error" hidden></div>
+        <div class="field">
+          <label for="codigo-2fa">Código</label>
+          <input id="codigo-2fa" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="20" required>
+          <div class="form-hint">Sem o celular? Use um dos seus códigos de recuperação (XXXX-XXXX-XXXX).</div>
+        </div>
+        <button class="btn btn-primary" type="submit" id="codigo-submit">Confirmar</button>
+      </form>`,
+    foot: '<div class="auth-foot"><a href="/" id="codigo-voltar">Voltar para o login</a></div>'
+  });
+  document.getElementById('codigo-2fa').focus();
+  document.getElementById('codigo-voltar').addEventListener('click', (e) => { e.preventDefault(); renderLogin(); });
+  document.getElementById('codigo-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('codigo-error');
+    errorBox.hidden = true;
+    const button = document.getElementById('codigo-submit');
+    button.disabled = true;
+    try {
+      const data = await api.post('/auth/login/codigo', { desafio, codigo: document.getElementById('codigo-2fa').value });
+      state.user = data.user;
+      await enterApp();
+    } catch (err) {
+      errorBox.hidden = false;
+      errorBox.textContent = err.message;
+      button.disabled = false;
+      if (/acabou/.test(err.message)) setTimeout(renderLogin, 1500);
+    }
   });
 }
 
@@ -413,6 +452,11 @@ async function enterApp() {
   api.get('/auth/recovery-codes').then((st) => {
     if (!st.restantes) ui.toast('Gere seus códigos de recuperação em Configurações, para poder redefinir a senha se esquecer.', 'info');
   }).catch(() => {});
+  if (state.user && state.user.role === 'admin') {
+    api.get('/auth/2fa').then((st) => {
+      if (!st.ativo) ui.toast('Administrador: ative a verificação em duas etapas em Configurações > Segurança da conta.', 'info');
+    }).catch(() => {});
+  }
 }
 
 function initials(name) {

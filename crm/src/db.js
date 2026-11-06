@@ -18,6 +18,11 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
 // Migração simples e segura: campo novo em defs.js que ainda não existe na tabela vira coluna (TEXT, opcional).
 // Só ACRESCENTA colunas; nunca apaga nem altera dados. Nomes vêm só de defs.js (lista fechada, sem entrada de usuário).
 (function acrescentarColunas() {
+  // Colunas de sistema (fora de defs.js).
+  const usuarios = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
+  for (const [col, tipo] of [['totp_segredo', 'TEXT'], ['totp_pendente', 'TEXT'], ['totp_ativo', 'INTEGER NOT NULL DEFAULT 0'], ['totp_ultimo_passo', 'INTEGER NOT NULL DEFAULT 0']]) {
+    if (!usuarios.has(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${tipo}`);
+  }
   const { ENTITIES } = require('./defs');
   for (const def of Object.values(ENTITIES)) {
     if (!/^[a-z_]+$/.test(def.table)) continue;

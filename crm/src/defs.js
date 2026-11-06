@@ -67,6 +67,7 @@ const ENTITIES = {
       { key: 'veiculo', label: 'Veículo (modelo, cor, ano)', type: 'text', max: 120 },
       { key: 'placa', label: 'Placa', type: 'text', max: 10 },
       { key: 'cnh_categoria', label: 'Categoria da CNH', type: 'select', options: ['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE'] },
+      { key: 'documentos', label: 'Documentos', type: 'select', options: ['Não enviados', 'Recebidos — conferir', 'Conferidos'] },
       { key: 'proxima_acao', label: 'Próxima ação', type: 'text', max: 160 },
       { key: 'data_acompanhamento', label: 'Data do acompanhamento', type: 'date' },
       { key: 'observacoes', label: 'Observações', type: 'textarea', max: 2000, full: true }

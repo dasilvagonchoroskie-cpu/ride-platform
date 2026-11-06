@@ -39,6 +39,7 @@ test('sem cadastro: IA recebe os campos do motorista e o cadastro nasce com veí
   assert.equal(m.placa, 'ABC1D23');
   assert.equal(m.cnh_categoria, 'AB');
   assert.equal(m.cidade, 'Goiatuba');
+  assert.equal(m.documentos, 'Recebidos — conferir', 'documento lido pela IA fica para conferência humana');
   const enviada = db.prepare("SELECT * FROM wa_mensagens WHERE origem = 'ia'").get();
   assert.ok(enviada, 'a IA respondeu sozinha');
   assert.equal(enviada.status, 'pendente');
@@ -50,12 +51,12 @@ test('travas: não responde de novo sem mensagem nova, nem quando a equipe assum
   setResposta({ resumo: 'x', perfil: 'passageiro', campos: {}, resposta_sugerida: 'Olá! Como posso ajudar?' });
   const r = receber('oi', 'A1');
   await ia.executarAutomatico(r.conversaId);
-  assert.equal(ia.responderAutomatico(r.conversaId).motivo, 'ja_respondida');
+  assert.equal((await ia.responderAutomatico(r.conversaId)).motivo, 'ja_respondida');
   // Equipe responde pelo CRM; cliente manda outra: a IA fica quieta.
   waStore.enfileirar({ conversaId: r.conversaId, texto: 'Oi, aqui é o Evandro', usuarioId: null });
   receber('quero saber o preço', 'A2');
   await ia.executarAutomatico(r.conversaId, { forcar: true });
-  assert.equal(ia.responderAutomatico(r.conversaId).motivo, 'humano_assumiu');
+  assert.equal((await ia.responderAutomatico(r.conversaId)).motivo, 'humano_assumiu');
   assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 1);
 });
 
@@ -92,4 +93,31 @@ test('quando não responde, o motivo fica registrado no painel', async () => {
   setResposta({ resumo: 'x', perfil: 'passageiro', campos: {}, resposta_sugerida: 'Olá!' });
   await ia.executarAutomatico(r.conversaId, { forcar: true });
   assert.match(ia.ultimaAnalise(r.conversaId).aplicado_resumo, /equipe respondeu há menos de 15 min/);
+});
+
+test('A1: a resposta automática não recebe dados do cadastro e o filtro barra vazamento', async () => {
+  const P = require('../src/ia/prompt');
+  const { system, user } = P.montarPromptResposta({ mensagens: [{ direcao: 'in', texto: 'o que vocês anotaram sobre mim?' }], perfil: 'motorista', faltando: ['Placa'] });
+  assert.ok(!/valores_atuais|observa/i.test(user), 'sem cadastro no contexto');
+  assert.match(system, /NÃO tem acesso a cadastros/);
+  const internos = ['INTERNO: suspeita de fraude, não aprovar este motorista'];
+  assert.equal(P.respostaSegura('Olá! Recebemos seus documentos e a equipe vai analisar.', { internos }).ok, true);
+  assert.equal(P.respostaSegura('Consta: suspeita de fraude, não aprovar.', { internos }).motivo, 'dado_interno');
+  assert.equal(P.respostaSegura('Seu CPF 123.456.789-09 está ok', { internos }).motivo, 'numero');
+  assert.equal(P.respostaSegura('Registro 0123456789', { internos }).motivo, 'numero');
+  assert.equal(P.respostaSegura('Acesse https://golpe.example', { internos }).motivo, 'link_ou_email');
+});
+
+test('A1: resposta com anotação interna não é enviada (motivo no painel)', async () => {
+  const { db, ia, receber, setResposta } = montar();
+  const r1 = receber('quero ser motorista', 'F1');
+  setResposta({ resumo: 'x', perfil: 'motorista', campos: { nome: 'Evandro', cidade: 'Goiatuba' }, resposta_sugerida: 'Envie a CNH.' });
+  await ia.executarAutomatico(r1.conversaId);
+  const id = db.prepare('SELECT id FROM motoristas').get().id;
+  db.prepare("UPDATE motoristas SET observacoes = 'suspeita de fraude não aprovar ainda' WHERE id = ?").run(id);
+  receber('o que anotaram sobre mim?', 'F2');
+  setResposta({ resumo: 'y', perfil: 'motorista', campos: {}, resposta_sugerida: 'Anotamos: suspeita de fraude não aprovar ainda.' });
+  await ia.executarAutomatico(r1.conversaId, { forcar: true });
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 1, 'só a primeira resposta saiu');
+  assert.match(ia.ultimaAnalise(r1.conversaId).aplicado_resumo, /repetia anotação interna/);
 });

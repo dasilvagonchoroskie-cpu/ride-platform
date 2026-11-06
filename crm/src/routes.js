@@ -14,6 +14,7 @@ const { createIaService } = require('./ia/service');
 const { criarCofre } = require('./ia/secret');
 const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provider');
 const { criarTranscritor } = require('./ia/transcricao');
+const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 
 const router = express.Router();
@@ -34,6 +35,7 @@ wa.definirGancho((conversaId, opcoes) => ia.agendarAutomatico(conversaId, opcoes
 // Leitura das mídias do WhatsApp: áudio (Gemini; Groq como reserva), foto/PDF/vídeo (Gemini), Office/texto (no servidor).
 const LIMITE_TRANSCRICOES_DIA = Number(process.env.IA_LIMITE_TRANSCRICOES) || 300;
 const MAX_MIDIA_BYTES = 15 * 1024 * 1024;
+const LEITURAS_CONTATO_DIA = Number(process.env.IA_LEITURAS_CONTATO_DIA) || 15;
 const transcritor = criarTranscritor({
   cofre: cofreIA,
   obterModeloGemini: async () => {
@@ -50,15 +52,21 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
   if (!cfg.transcrever) return pular('leitura de mídias desligada');
   if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return pular('limite diário');
   if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) return pular('arquivo maior que 15 MB'); // nem baixa
+  // Um contato sozinho não esgota a cota de leitura de todos.
+  const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const doContato = db.prepare(`SELECT COUNT(*) n FROM ia_transcricoes t JOIN wa_mensagens m ON m.id = t.mensagem_id
+    WHERE m.conversa_id = (SELECT conversa_id FROM wa_mensagens WHERE id = ?) AND t.criado_em >= ?`).get(mensagemId, desde).n;
+  if (doContato >= LEITURAS_CONTATO_DIA) return pular('limite diário deste contato');
   const registrar = (ok, provedor, erro) => db.prepare(
     'INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(mensagemId, provedor ? `${provedor}:${midia.tipo}` : midia.tipo, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
   try {
-    const arquivo = Buffer.from(await midia.baixar());
+    const arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES));
     const r = await transcritor.lerMidia({ tipo: midia.tipo, arquivo, mime: midia.mime, nome: midia.nome, segundos: midia.segundos });
     const atual = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
     const rotulo = atual && atual.texto ? atual.texto : `[${midia.tipo}]`;
-    const novo = r.texto === '[sem fala]' ? `${rotulo} (sem fala)` : `${rotulo} ${r.simbolo || '📎'} ${r.texto}`;
+    const lido = r.simbolo === '🎤' ? r.texto : mascararNumeros(r.texto);
+    const novo = r.texto === '[sem fala]' ? `${rotulo} (sem fala)` : `${rotulo} ${r.simbolo || '📎'} ${lido}`;
     wa.store.definirTranscricao(mensagemId, novo);
     registrar(true, r.provedor);
     console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}, ${midia.mime}) lida por ${r.provedor}: ${r.texto.length} caracteres`);
@@ -69,6 +77,28 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
     return false;
   }
 });
+
+/* ------------------------- retenção de dados (LGPD) ------------------------ */
+// Conversas sem cadastro vinculado e sem movimento há RETENCAO_DIAS são apagadas (mensagens, análises e leituras juntas).
+// Análises da IA e registros de leitura mais velhos que o prazo também saem. Roda ao ligar e a cada 6 h.
+const RETENCAO_DIAS = Number(process.env.RETENCAO_DIAS) || 180;
+function aplicarRetencao() {
+  try {
+    const limite = new Date(Date.now() - RETENCAO_DIAS * 86400000).toISOString();
+    const velhas = db.prepare(`SELECT c.id FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id
+      WHERE (k.vinculo_tipo IS NULL OR k.vinculo_tipo = '') AND COALESCE(c.ultima_em, c.created_at) < ?`).all(limite);
+    for (const { id } of velhas) {
+      db.prepare('DELETE FROM ia_transcricoes WHERE mensagem_id IN (SELECT id FROM wa_mensagens WHERE conversa_id = ?)').run(id);
+      db.prepare('DELETE FROM ia_analises WHERE conversa_id = ?').run(id);
+      wa.store.excluirConversa(id);
+    }
+    const a = db.prepare('DELETE FROM ia_analises WHERE criado_em < ?').run(limite).changes;
+    const t = db.prepare('DELETE FROM ia_transcricoes WHERE criado_em < ?').run(limite).changes;
+    if (velhas.length || a || t) console.log(`[retenção] apagadas ${velhas.length} conversa(s) sem cadastro, ${a} análise(s) e ${t} registro(s) de leitura com mais de ${RETENCAO_DIAS} dias.`);
+  } catch (err) { console.error('[retenção]', err.message); }
+}
+setTimeout(aplicarRetencao, 60000).unref();
+setInterval(aplicarRetencao, 6 * 3600000).unref();
 
 /* --------------------------------- helpers -------------------------------- */
 function computeCenario(cenario, custos) {
@@ -119,6 +149,10 @@ function countBy(sql, params) {
 }
 
 /* ------------------------------ rotas públicas ----------------------------- */
+if (process.env.DIAG_IP === '1') {
+  router.get('/diagnostico/ip', (req, res) => res.json({ ip: req.ip, ips: req.ips, saltos_xff: String(req.get('x-forwarded-for') || '').split(',').filter(Boolean).length }));
+}
+
 router.get('/health', (req, res) => {
   res.json({ ok: true, app: 'CRM Fortaleza Move', db: 'sqlite', time: new Date().toISOString() });
 });
@@ -201,11 +235,44 @@ router.post('/auth/login', (req, res) => {
     return fail(res, 401, 'invalid_credentials', 'E-mail ou senha incorretos.');
   }
 
+  // Verificação em duas etapas: senha certa ainda não abre a sessão; pede o código do aplicativo autenticador.
+  if (user.totp_ativo) {
+    audit(req, 'login_senha_ok', 'users', user.id, 'Senha correta; aguardando código da verificação em duas etapas');
+    return res.json({ precisa_codigo: true, desafio: auth.criarDesafio(user.id) });
+  }
   db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?').run(nowISO(), user.id);
   auth.loginSucceeded(ip, email);
   auth.createSession(user.id, req, res);
   req.user = { id: user.id, nome: user.nome };
   audit(req, 'login', 'users', user.id, 'Acesso ao sistema');
+  res.json({ user: { id: user.id, nome: user.nome, email: user.email, role: user.role } });
+});
+
+// Segunda etapa do login: código do autenticador (ou um código de recuperação, que é gasto).
+router.post('/auth/login/codigo', (req, res) => {
+  const ip = req.ip || '';
+  if (auth.loginBlocked(ip, '')) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  const d = auth.lerDesafio(req.body.desafio);
+  if (!d) return fail(res, 401, 'challenge_expired', 'O tempo para digitar o código acabou. Entre de novo com a senha.');
+  const user = db.prepare('SELECT * FROM users WHERE id = ? AND ativo = 1').get(d.userId);
+  const codigo = String(req.body.codigo || '').trim().slice(0, 40);
+  let ok = false;
+  if (user && user.totp_ativo) {
+    const passo = auth.verificarTotp(user.totp_segredo, codigo, user.totp_ultimo_passo || 0);
+    if (passo) { db.prepare('UPDATE users SET totp_ultimo_passo = ? WHERE id = ?').run(passo, user.id); ok = true; }
+    else if (codigo.replace(/[^A-Za-z0-9]/g, '').length === 12) ok = auth.consumeRecoveryCode(user.id, codigo);
+  }
+  if (!ok) {
+    d.tentativas += 1;
+    auth.loginFailed(ip, '');
+    audit(req, 'login_codigo_falha', 'users', user ? user.id : null, 'Código da verificação em duas etapas inválido');
+    return fail(res, 401, 'invalid_code', 'Código inválido.');
+  }
+  auth.encerrarDesafio(req.body.desafio);
+  db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?').run(nowISO(), user.id);
+  auth.createSession(user.id, req, res);
+  req.user = { id: user.id, nome: user.nome };
+  audit(req, 'login', 'users', user.id, 'Acesso ao sistema (com verificação em duas etapas)');
   res.json({ user: { id: user.id, nome: user.nome, email: user.email, role: user.role } });
 });
 
@@ -316,6 +383,52 @@ router.post('/auth/recovery-codes', (req, res) => {
   const codigos = auth.generateRecoveryCodes(user.id);
   audit(req, 'codigos_recuperacao', 'users', user.id, 'Códigos de recuperação gerados (os anteriores deixaram de valer)');
   res.json({ codigos, ...auth.recoveryStatus(user.id) });
+});
+
+/* ------------------- verificação em duas etapas (configurar) ------------------- */
+router.get('/auth/2fa', (req, res) => {
+  const u = db.prepare('SELECT totp_ativo FROM users WHERE id = ?').get(req.user.id);
+  res.json({ ativo: !!(u && u.totp_ativo), obrigatoria_admin: req.user.role === 'admin' });
+});
+
+// 1º passo: gera a chave (exige a senha atual). A chave só passa a valer depois de confirmar um código.
+router.post('/auth/2fa/iniciar', (req, res) => {
+  if (auth.passwordBlocked(req.user.id)) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !auth.verifyPassword(String(req.body.senha_atual || ''), user.senha_hash)) {
+    auth.passwordFailed(req.user.id);
+    return fail(res, 422, 'invalid_password', 'A senha atual não confere.');
+  }
+  auth.passwordOk(req.user.id);
+  const segredo = auth.novoSegredoTotp();
+  db.prepare('UPDATE users SET totp_pendente = ? WHERE id = ?').run(segredo, user.id);
+  const emissor = encodeURIComponent('CRM Fortaleza Move');
+  res.json({ chave: segredo.replace(/(.{4})/g, '$1 ').trim(), uri: `otpauth://totp/${emissor}:${encodeURIComponent(user.email)}?secret=${segredo}&issuer=${emissor}&digits=6&period=30` });
+});
+
+router.post('/auth/2fa/confirmar', (req, res) => {
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !user.totp_pendente) return fail(res, 409, 'no_pending', 'Gere a chave primeiro.');
+  const passo = auth.verificarTotp(user.totp_pendente, req.body.codigo, 0);
+  if (!passo) return fail(res, 422, 'invalid_code', 'Código inválido. Confira a hora do celular e tente o código atual.');
+  db.prepare('UPDATE users SET totp_segredo = totp_pendente, totp_pendente = NULL, totp_ativo = 1, totp_ultimo_passo = ? WHERE id = ?').run(passo, user.id);
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(user.id, req.user.sid);
+  audit(req, '2fa_ativada', 'users', user.id, 'Verificação em duas etapas ativada');
+  res.json({ ok: true });
+});
+
+router.post('/auth/2fa/desativar', (req, res) => {
+  if (auth.passwordBlocked(req.user.id)) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  const senhaOk = user && auth.verifyPassword(String(req.body.senha_atual || ''), user.senha_hash);
+  const passo = senhaOk && user.totp_ativo ? auth.verificarTotp(user.totp_segredo, req.body.codigo, user.totp_ultimo_passo || 0) : null;
+  if (!senhaOk || !passo) {
+    auth.passwordFailed(req.user.id);
+    return fail(res, 422, 'invalid_password', 'Senha ou código inválido.');
+  }
+  db.prepare('UPDATE users SET totp_ativo = 0, totp_segredo = NULL, totp_pendente = NULL WHERE id = ?').run(user.id);
+  audit(req, '2fa_desativada', 'users', user.id, 'Verificação em duas etapas desativada');
+  res.json({ ok: true });
 });
 
 router.get('/auth/sessions', (req, res) => {
@@ -774,7 +887,7 @@ router.delete('/finance/simulacoes/:id', requireAdmin, (req, res) => {
 
 /* -------------------------------- configurações ---------------------------- */
 router.get('/settings', requireAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, nome, email, role, ativo, last_login_at, created_at FROM users ORDER BY id').all();
+  const users = db.prepare('SELECT id, nome, email, role, ativo, totp_ativo, last_login_at, created_at FROM users ORDER BY id').all();
   res.json({
     settings: {
       org_nome: getSetting('org_nome'),
@@ -861,6 +974,11 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
     if (req.body.senha !== undefined) {
       db.prepare('UPDATE users SET senha_hash = ?, updated_at = ? WHERE id = ?').run(auth.hashPassword(String(req.body.senha)), nowISO(), id);
       db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(id, req.user.sid);
+    }
+    // Celular perdido: o administrador desliga a verificação em duas etapas de OUTRO usuário (a própria só com o código).
+    if (req.body.desativar_2fa === true && id !== req.user.id) {
+      db.prepare('UPDATE users SET totp_ativo = 0, totp_segredo = NULL, totp_pendente = NULL, updated_at = ? WHERE id = ?').run(nowISO(), id);
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
     }
   })();
   audit(req, 'editar', 'users', id, 'Usuário atualizado');

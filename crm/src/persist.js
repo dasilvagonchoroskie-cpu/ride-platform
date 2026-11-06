@@ -121,7 +121,18 @@ async function restaurar({ log = console, fetchImpl } = {}) {
   }
   ativo = true;
   if (!r || !r.dados) { log.log('[cofre] nenhum retrato salvo ainda: instalação nova.'); return { usado: true, novo: true }; }
-  const pacote = JSON.parse(zlib.gunzipSync(decifrar(r.dados, chave)).toString('utf8'));
+  // Troca de chave: se o retrato ainda estiver cifrado com a chave antiga (SNAPSHOT_KEY_ANTERIOR), abre com ela;
+  // o próximo retrato já sai com a chave nova. Depois da troca, a variável antiga deve ser apagada.
+  let bruto;
+  try {
+    bruto = decifrar(r.dados, chave);
+  } catch (err) {
+    const anterior = Buffer.from(String(process.env.SNAPSHOT_KEY_ANTERIOR || ''), 'hex');
+    if (anterior.length !== 32) throw new Error('Não consegui decifrar o retrato do cofre com a chave atual.');
+    bruto = decifrar(r.dados, anterior);
+    log.log('[cofre] retrato aberto com a chave anterior; o próximo será gravado com a chave nova.');
+  }
+  const pacote = JSON.parse(zlib.gunzipSync(bruto).toString('utf8'));
   fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   for (const ext of ['', '-wal', '-shm', '-journal']) fs.rmSync(dbPath + ext, { force: true });
   if (pacote.db) fs.writeFileSync(dbPath, Buffer.from(pacote.db, 'base64'), { mode: 0o600 });
