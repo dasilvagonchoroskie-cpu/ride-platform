@@ -47,7 +47,8 @@ function normalizarBiblioteca(mod) {
     makeWASocket,
     useMultiFileAuthState: pegar('useMultiFileAuthState'),
     DisconnectReason: pegar('DisconnectReason') || { loggedOut: 401, restartRequired: 515, connectionReplaced: 440 },
-    Browsers: pegar('Browsers')
+    Browsers: pegar('Browsers'),
+    downloadMediaMessage: pegar('downloadMediaMessage')
   };
   if (typeof lib.makeWASocket !== 'function' || typeof lib.useMultiFileAuthState !== 'function') {
     throw new Error('A biblioteca do WhatsApp instalada tem um formato inesperado.');
@@ -122,6 +123,13 @@ function mensagemParaEvento(m, tipoUpsert, agoraSeg = Math.floor(Date.now() / 10
   }
 
   const deMim = !!m.key.fromMe;
+  // Áudio: dados para a transcrição (o arquivo em si é baixado depois, só se a transcrição estiver ligada).
+  const midia = tipo === 'audio' ? {
+    tipo: 'audio',
+    mime: String(msg.audioMessage.mimetype || 'audio/ogg').split(';')[0].trim().toLowerCase(),
+    segundos: Number(msg.audioMessage.seconds) || 0,
+    bytes: Number(msg.audioMessage.fileLength && (msg.audioMessage.fileLength.low !== undefined ? msg.audioMessage.fileLength.low : msg.audioMessage.fileLength)) || 0
+  } : null;
   const telefone = telefoneDoJid(jid) || telefoneDoJid(m.key.remoteJidAlt) || telefoneDoJid(m.key.senderPn)
     || telefoneDoJid(m.key.participantPn) || null;
   return {
@@ -132,7 +140,8 @@ function mensagemParaEvento(m, tipoUpsert, agoraSeg = Math.floor(Date.now() / 10
     texto,
     tipo,
     quando: new Date(ts * 1000).toISOString(),
-    deMim
+    deMim,
+    ...(midia ? { midia } : {})
   };
 }
 
@@ -207,6 +216,10 @@ function criar({ authDir, libDir, log = console } = {}) {
     for (const m of messages || []) {
       try {
         const evt = mensagemParaEvento(m, type);
+        if (evt && evt.midia && lib && typeof lib.downloadMediaMessage === 'function') {
+          const s = sock;
+          evt.midia.baixar = () => lib.downloadMediaMessage(m, 'buffer', {}, { logger: SEM_LOG, reuploadRequest: s && s.updateMediaMessage });
+        }
         if (evt && handlers && handlers.onMessage) handlers.onMessage(evt);
       } catch (err) { log.error('[whatsapp] erro ao tratar mensagem:', err.message); }
     }

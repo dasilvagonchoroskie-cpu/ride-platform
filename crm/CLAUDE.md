@@ -60,6 +60,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   na hora; ao acordar, o WhatsApp entrega o que ficou pendente.
 - Código no monorepo `dasilvagonchoroskie-cpu/ride-platform`, pasta `crm/` (fora do workspace pnpm). Docker: `crm/Dockerfile`.
 
+## Transcrição de áudio (05/11/2026)
+- Mensagem de voz que chega (do contato ou enviada pelo celular) é baixada (`downloadMediaMessage`), transcrita e o
+  texto da mensagem vira `[mensagem de voz] 🎤 <transcrição>`. `src/ia/transcricao.js`: Gemini (API nativa
+  generateContent, áudio embutido, chave no cabeçalho `x-goog-api-key`) e Groq Whisper como reserva grátis.
+- Liga com a IA ativada + opção "Transcrever mensagens de voz" (`ia_transcrever`, padrão ligado). Limite diário
+  `IA_LIMITE_TRANSCRICOES` (300). Registro em `ia_transcricoes`. Áudio até 15 MB/15 min.
+- A IA automática só é chamada DEPOIS da transcrição (com `forcar`), para ler o texto. Áudios recebidos antes desta
+  versão não têm como ser transcritos (o CRM não guardava a referência do arquivo).
+- NÃO validado com WhatsApp real ainda (primeiro áudio real é o teste).
+
 ## IA grátis (05/11/2026)
 - Provedores com plano grátis sem cartão: **Gemini** (padrão de instalação nova; modelo descoberto sozinho, preferindo
   `flash-lite` estável) e **Groq** (`openai/gpt-oss-120b`); OpenRouter tem modelos `:free`. `reasoning_effort: low` e piso

@@ -49,6 +49,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     return { analises: r.n, tokens: r.t };
   }
 
+  function transcricoesDoDia() {
+    try {
+      return db.prepare(`SELECT COUNT(*) n FROM ia_transcricoes WHERE ok = 1 AND date(criado_em, '-3 hours') = ?`).get(todayISO()).n;
+    } catch (err) { return 0; }
+  }
+
   function config() {
     const id = provedorAtual();
     return {
@@ -65,6 +71,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       modo: getSetting('ia_modo', 'sugerir') === 'automatico' ? 'automatico' : 'sugerir',
       criarCadastro: getSetting('ia_criar_cadastro', '0') === '1',
       limiteDia: Number(getSetting('ia_limite_dia', '150')) || 150,
+      transcrever: getSetting('ia_transcrever', '1') === '1',
+      transcricoesHoje: transcricoesDoDia(),
       modelo: obterModelo(id),
       chaveConfigurada: !!cofre.ler(id),
       chaveFinal4: cofre.final4(id),
@@ -92,6 +100,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (p.modo !== 'sugerir' && p.modo !== 'automatico') throw new ErroIA('invalido', 'Modo inválido.');
       setSetting('ia_modo', p.modo);
     }
+    if (p.transcrever !== undefined) setSetting('ia_transcrever', p.transcrever ? '1' : '0');
     if (p.criarCadastro !== undefined) setSetting('ia_criar_cadastro', p.criarCadastro ? '1' : '0');
     if (p.limiteDia !== undefined) {
       const n = Math.round(Number(p.limiteDia));
@@ -137,7 +146,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const ultimoId = mensagens[mensagens.length - 1].id;
 
     const anterior = ultimaAnalise(conversaId);
-    if (anterior && anterior.mensagem_ate_id === ultimoId && !forcar) return { ...anterior, reaproveitada: true };
+    // Reaproveita a última análise se nada mudou (nem mensagem nova, nem áudio transcrito depois dela).
+    const transcritoDepois = anterior ? db.prepare(
+      `SELECT 1 FROM ia_transcricoes t JOIN wa_mensagens m ON m.id = t.mensagem_id
+       WHERE m.conversa_id = ? AND t.ok = 1 AND t.criado_em > ? LIMIT 1`
+    ).get(conversaId, anterior.criado_em) : null;
+    if (anterior && anterior.mensagem_ate_id === ultimoId && !forcar && !transcritoDepois) return { ...anterior, reaproveitada: true };
     if (travas.has(conversaId)) throw new ErroIA('em_andamento', 'Já existe uma análise em andamento para esta conversa.');
     if (cfg.uso.analises >= cfg.limiteDia) throw new ErroIA('limite_diario', `Limite diário de análises de IA atingido (${cfg.limiteDia}). Um administrador pode aumentar em Configurações.`);
 
@@ -231,11 +245,11 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   /* ------------------------------------------ automático ------------------------------------------ */
   const reqIA = () => ({ app: { locals: { db } }, user: { id: null, nome: 'Assistente IA' }, headers: {}, ip: '', socket: {} });
 
-  async function executarAutomatico(conversaId) {
+  async function executarAutomatico(conversaId, { forcar = false } = {}) {
     try {
       const cfg = config();
       if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return;
-      await analisar(conversaId, { origem: 'automatica' });
+      await analisar(conversaId, { origem: 'automatica', forcar });
       aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
     } catch (err) {
       // Falha da IA nunca atrapalha o atendimento: só fica no log.
@@ -244,12 +258,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   }
 
   // Espera a pessoa terminar de escrever (várias mensagens seguidas) antes de gastar uma análise.
-  function agendarAutomatico(conversaId) {
+  function agendarAutomatico(conversaId, opcoes = {}) {
     const cfg = config();
     if (!cfg.ativo || cfg.modo !== 'automatico') return;
     clearTimeout(timers.get(conversaId));
     const atraso = process.env.IA_ATRASO_MS !== undefined ? Number(process.env.IA_ATRASO_MS) : 15000;
-    const t = setTimeout(() => { timers.delete(conversaId); executarAutomatico(conversaId); }, atraso);
+    const t = setTimeout(() => { timers.delete(conversaId); executarAutomatico(conversaId, opcoes); }, atraso);
     if (t.unref) t.unref();
     timers.set(conversaId, t);
   }
@@ -261,7 +275,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   const usarProvedor = (novo) => { provedor = novo; };
 
-  return { config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual };
+  return { obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual };
 }
 
 module.exports = { createIaService, MODELO_PADRAO, PROVEDOR_PADRAO };

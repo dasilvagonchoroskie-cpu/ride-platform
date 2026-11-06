@@ -120,6 +120,17 @@ function createStore(db, opts = {}) {
     }).immediate();
   }
 
+  // Troca o texto de uma mensagem de áudio pela transcrição (e o resumo da conversa, se for a última mensagem).
+  function definirTranscricao(mensagemId, texto) {
+    const m = db.prepare('SELECT * FROM wa_mensagens WHERE id = ?').get(mensagemId);
+    if (!m) return false;
+    const novo = String(texto || '').slice(0, 10000);
+    db.prepare('UPDATE wa_mensagens SET texto = ? WHERE id = ?').run(novo, mensagemId);
+    const c = db.prepare('SELECT * FROM wa_conversas WHERE id = ?').get(m.conversa_id);
+    if (c && c.ultima_em === m.ocorrida_em) db.prepare('UPDATE wa_conversas SET ultima_mensagem = ? WHERE id = ?').run(novo.slice(0, 200), c.id);
+    return true;
+  }
+
   /* --------------------------------- envio (saída) ------------------------------- */
   function enfileirar({ conversaId, texto, usuarioId }) {
     const limpo = String(texto || '').trim();
@@ -325,7 +336,7 @@ function createStore(db, opts = {}) {
     acharCadastroPorTelefone, existeCadastro, obterOuCriarContato, ingerir, enfileirar, recolocarEnviando,
     reservarPendentes, concluirEnvio, falharEnvio, reenviar, registrarStatus, listarConversas, obterConversa,
     listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, excluirConversa,
-    contarNaoLidas, resumoFila
+    contarNaoLidas, resumoFila, definirTranscricao
   };
 }
 

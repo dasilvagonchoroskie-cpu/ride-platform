@@ -32,7 +32,16 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
     onMessage(evt) {
       try {
         const r = store.ingerir(evt);
-        if (r && r.inserido && !evt.deMim && gancho) gancho(r.conversaId);
+        if (!r || !r.inserido) return;
+        const avisarIA = (opcoes) => { if (!evt.deMim && gancho) gancho(r.conversaId, opcoes); };
+        // Áudio: primeiro transcreve (segundo plano); só depois avisa a IA, para ela ler o texto e não o "[mensagem de voz]".
+        if (r.mensagemId && evt.midia && transcritor) {
+          Promise.resolve()
+            .then(() => transcritor({ mensagemId: r.mensagemId, conversaId: r.conversaId, midia: evt.midia, deMim: !!evt.deMim }))
+            .then((ok) => avisarIA(ok ? { forcar: true } : undefined), (err) => { log.error('[whatsapp] transcrição:', err.message); avisarIA(); });
+          return;
+        }
+        avisarIA();
       } catch (err) { log.error('[whatsapp] erro ao gravar mensagem:', err.message); }
     },
     onStatus({ externoId, status }) {
@@ -130,8 +139,10 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
   // Para testes: troca o canal por um falso.
   function usarCanal(novo) { canal = novo; }
   function definirGancho(fn) { gancho = fn; }
+  let transcritor = null;
+  function definirTranscritor(fn) { transcritor = fn; }
 
-  return { store, iniciar, definirAtivo, estado, parear, desconectar, conectado, processarFila, cutucar, usarCanal, definirGancho, desligar };
+  return { store, iniciar, definirAtivo, estado, parear, desconectar, conectado, processarFila, cutucar, usarCanal, definirGancho, definirTranscritor, desligar };
 }
 
 module.exports = { createService };

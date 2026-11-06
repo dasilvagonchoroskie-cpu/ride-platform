@@ -290,3 +290,14 @@ CREATE TABLE IF NOT EXISTS recovery_codes (
   used_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_recovery_codes_user ON recovery_codes(user_id);
+
+-- Transcrições de áudio do WhatsApp feitas pela IA (para contar o limite diário e saber o que falhou).
+CREATE TABLE IF NOT EXISTS ia_transcricoes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mensagem_id INTEGER,
+  provedor TEXT,
+  segundos INTEGER,
+  ok INTEGER NOT NULL DEFAULT 0,
+  erro TEXT,
+  criado_em TEXT NOT NULL
+);

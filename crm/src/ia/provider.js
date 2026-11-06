@@ -235,4 +235,4 @@ function criarProvedorFalso(respostas = []) {
   };
 }
 
-module.exports = { escolherModelo, criarProvedorAnthropic, criarProvedorOpenAI, criarProvedorMulti, criarProvedorFalso, ErroIA, erroDeStatus, URL_API, PROVEDORES, ehProvedor, urlBaseValida };
+module.exports = { descobrirModelo, escolherModelo, criarProvedorAnthropic, criarProvedorOpenAI, criarProvedorMulti, criarProvedorFalso, ErroIA, erroDeStatus, URL_API, PROVEDORES, ehProvedor, urlBaseValida };
