@@ -15,7 +15,7 @@ const ASSUNTO = { cadastro_motorista: 'Cadastro de motorista', duvida_corrida: '
 const URGENCIA = { baixa: ['Urgência baixa', 'neutral'], media: ['Urgência média', 'info'], alta: ['Urgência alta', 'danger'] };
 const SENTIMENTO = { positivo: ['Positivo', 'success'], neutro: ['Neutro', 'neutral'], negativo: ['Negativo', 'warn'] };
 const CAMPO = { nome: 'Nome', cidade: 'Cidade', proxima_acao: 'Próxima ação', observacoes: 'Observações', nome_estabelecimento: 'Estabelecimento',
-  categoria: 'Categoria', responsavel: 'Responsável', beneficio: 'Benefício' };
+  categoria: 'Categoria', responsavel: 'Responsável', beneficio: 'Benefício', veiculo: 'Veículo', placa: 'Placa', cnh_categoria: 'Categoria da CNH' };
 const PERFIL_TIPO = { motorista: 'motoristas', passageiro: 'passageiros', parceiro: 'parceiros' };
 
 const nomeDe = (c) => c.vinculo_nome || c.nome || c.telefone_exibicao || 'Contato';
@@ -36,6 +36,7 @@ export async function renderConversas(view, state) {
   let estadoWa = null;
   let iaSt = { ativo: false, pronta: false, modo: 'sugerir' };
   let analise = null;      // última análise da IA da conversa aberta
+  let iaAberta = false;    // painel da IA aberto ou recolhido (recolhido deixa mais espaço para a conversa)
   let ultimoMsgId = 0;     // id da última mensagem exibida (para saber se a análise ficou velha)
 
   view.innerHTML = `
@@ -127,11 +128,11 @@ export async function renderConversas(view, state) {
   function bolha(m) {
     const st = STATUS_MSG[m.status] || ['', ''];
     const saida = m.direcao === 'out';
-    const quem = saida ? (m.origem === 'celular' ? 'celular' : '') : '';
-    return `<div class="wa-msg ${saida ? 'out' : 'in'}" data-mid="${m.id}">
+    const quem = saida ? (m.origem === 'celular' ? 'pelo celular' : (m.origem === 'ia' ? 'resposta da IA' : '')) : '';
+    return `<div class="wa-msg ${saida ? 'out' : 'in'}${m.origem === 'ia' ? ' ia' : ''}" data-mid="${m.id}">
       <div class="wa-bubble">
         <div class="wa-text">${ui.esc(m.texto)}</div>
-        <div class="wa-meta">${quem ? `<span>pelo celular</span>` : ''}<span>${ui.esc(ui.fmtDateTime(m.ocorrida_em).slice(-5))}</span>
+        <div class="wa-meta">${quem ? `<span>${quem}</span>` : ''}<span>${ui.esc(ui.fmtDateTime(m.ocorrida_em).slice(-5))}</span>
           ${saida ? `<span class="wa-tick ${st[1]}">${ui.esc(st[0])}</span>` : ''}
           ${m.status === 'falhou' ? `<button type="button" class="wa-retry" data-retry="${m.id}">Tentar de novo</button>` : ''}</div>
         ${m.status === 'falhou' && m.erro ? `<div class="wa-err">${ui.esc(m.erro)}</div>` : ''}
@@ -221,13 +222,22 @@ export async function renderConversas(view, state) {
     const tipoPerfil = PERFIL_TIPO[r.perfil];
     const podeCriar = !atual.vinculo_tipo && tipoPerfil && campos.length;
     const podePreencher = !!atual.vinculo_tipo && campos.length;
+    if (!iaAberta) {
+      // Recolhido: uma linha só, para sobrar espaço para a conversa.
+      box.innerHTML = `<button type="button" class="wa-ia-mini" data-ia="abrir">
+        <strong>IA</strong>${ui.badge(ASSUNTO[r.assunto] || 'Outro', 'info')}
+        <span class="wa-ia-mini-txt">${ui.esc(analise.aplicado_resumo || r.resumo || r.proxima_acao || 'Ver análise')}</span>
+        <span class="wa-ia-mini-ver">${velha ? 'nova msg · ' : ''}ver ▾</span></button>`;
+      return;
+    }
     box.innerHTML = `<div class="wa-ia-card">
       <div class="wa-ia-top"><strong>Assistente de IA</strong>
+        <button class="btn btn-sm btn-ghost" data-ia="fechar" type="button">Recolher ▴</button>
         ${ui.badge(ASSUNTO[r.assunto] || 'Outro', 'info')} ${ui.badge(urgTxt, urgTom)} ${ui.badge(sentTxt, sentTom)}
         ${velha ? '<span class="wa-ia-old">há mensagens novas desde esta análise</span>' : ''}
         <button class="btn btn-sm btn-ghost wa-ia-refresh" data-ia="analisar" type="button">${velha ? 'Analisar de novo' : 'Refazer'}</button></div>
       ${r.resumo ? `<p class="wa-ia-resumo">${ui.esc(r.resumo)}</p>` : ''}
-      ${r.resposta_sugerida ? `<div class="wa-ia-box"><div class="wa-ia-label">Resposta sugerida (você revisa e envia)</div>
+      ${r.resposta_sugerida ? `<div class="wa-ia-box"><div class="wa-ia-label">Resposta sugerida${iaSt.responder ? ' (a IA envia sozinha no modo automático)' : ' (você revisa e envia)'}</div>
         <div class="wa-ia-sug">${ui.esc(r.resposta_sugerida)}</div>
         <button class="btn btn-sm btn-soft" data-ia="usar" type="button">Usar na resposta</button></div>` : ''}
       ${campos.length ? `<div class="wa-ia-box"><div class="wa-ia-label">Dados encontrados na conversa</div>
@@ -245,6 +255,7 @@ export async function renderConversas(view, state) {
     if (!atual) return;
     const id = atual.id;
     try {
+      if (nome === 'abrir' || nome === 'fechar') { iaAberta = nome === 'abrir'; desenharIA(); return; }
       if (nome === 'analisar') {
         const botoes = view.querySelectorAll('[data-ia="analisar"]');
         botoes.forEach((b) => { b.disabled = true; b.textContent = 'Analisando…'; });

@@ -108,6 +108,7 @@ export async function renderSettings(view, state) {
               <select id="ia-modo"><option value="sugerir">Sugerir: a IA só analisa quando o atendente pedir</option>
                 <option value="automatico">Automático: analisa cada conversa nova e preenche campos vazios do cadastro</option></select></div>
             <label class="check"><input type="checkbox" id="ia-criar"> No modo automático, criar cadastro novo quando a IA identificar motorista, passageiro ou parceiro e houver dados suficientes</label>
+            <label class="check"><input type="checkbox" id="ia-responder"> No modo automático, a IA <b>responde sozinha</b> ao cliente pelo WhatsApp. Ela para quando alguém da equipe responde (fica 30 min quieta), no máximo 15 respostas por conversa por dia. Mais mensagens automáticas aumentam o risco de bloqueio do número.</label>
             <label class="check"><input type="checkbox" id="ia-transcrever"> Ler as mídias que chegam: áudio vira texto; fotos, PDFs e vídeos são lidos pelo Gemini (inclusive documentos como CNH e CRLV); Word, Excel e PowerPoint são lidos aqui no servidor. Assim a IA consegue usar tudo para preencher o cadastro.</label>
             <div class="field"><label for="ia-limite">Limite de análises por dia</label><input id="ia-limite" type="number" min="1" max="2000" step="1"></div>
             <div class="field"><label for="ia-modelo">Modelo (opcional)</label><input id="ia-modelo" type="text" maxlength="100" autocomplete="off"></div>
@@ -402,6 +403,7 @@ function setupIA(view) {
     mostrarProvedor(st.provedor, { modelo: st.modelo });
     $('#ia-modo').value = st.modo;
     $('#ia-criar').checked = !!st.criar_cadastro;
+    $('#ia-responder').checked = !!st.responder;
     $('#ia-transcrever').checked = st.transcrever !== false;
     $('#ia-limite').value = st.limite_dia;
     $('#ia-ativo').checked = !!st.ativo;
@@ -411,7 +413,7 @@ function setupIA(view) {
 
   async function salvar(extra = {}) {
     const corpo = {
-      ativo: $('#ia-ativo').checked, modo: $('#ia-modo').value, criar_cadastro: $('#ia-criar').checked, transcrever: $('#ia-transcrever').checked,
+      ativo: $('#ia-ativo').checked, modo: $('#ia-modo').value, criar_cadastro: $('#ia-criar').checked, responder: $('#ia-responder').checked, transcrever: $('#ia-transcrever').checked,
       limite_dia: Number($('#ia-limite').value), provedor: $('#ia-provedor').value, reserva: $('#ia-reserva').value, ...extra
     };
     const modelo = $('#ia-modelo').value.trim();

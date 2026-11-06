@@ -1,0 +1,69 @@
+'use strict';
+// Resposta automática da IA (com travas) e cadastro criado já com os dados do veículo.
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+function montar() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-auto-'));
+  process.env.FM_DATA_DIR = dir;
+  process.env.IA_ATRASO_MS = '0';
+  for (const k of Object.keys(require.cache)) if (k.includes(`${path.sep}src${path.sep}`)) delete require.cache[k];
+  const { db, getSetting, setSetting, nowISO } = require('../src/db');
+  const { todayISO } = require('../src/http');
+  const entities = require('../src/entities');
+  const { ENTITIES } = require('../src/defs');
+  const { createStore } = require('../src/whatsapp/store');
+  const { createIaService } = require('../src/ia/service');
+  const waStore = createStore(db);
+  let resposta = {};
+  const provider = { completar: async () => ({ texto: JSON.stringify(resposta), modelo: 'falso', tokensEntrada: 1, tokensSaida: 1 }) };
+  const cofre = { ler: () => 'chave-falsa-0000000000000', final4: () => '0000', origem: () => 'arquivo', salvar() {}, apagar() {} };
+  const ia = createIaService({ db, waStore, entities, ENTITIES, audit: () => {}, getSetting, setSetting, cofre, provider, todayISO, nowISO, log: { log() {}, error() {} } });
+  setSetting('ia_ativo', '1'); setSetting('ia_modo', 'automatico'); setSetting('ia_criar_cadastro', '1'); setSetting('ia_responder', '1');
+  const receber = (texto, id, extra = {}) => waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Evandro', externoId: id, texto, tipo: 'text', quando: new Date().toISOString(), deMim: false, ...extra });
+  return { db, ia, waStore, receber, setResposta: (r) => { resposta = r; } };
+}
+
+test('sem cadastro: IA recebe os campos do motorista e o cadastro nasce com veículo, placa e CNH', async () => {
+  const { db, ia, receber, setResposta } = montar();
+  const r = receber('[imagem] 📎 Nome: Evandro\nCategoria da CNH: AB\n[documento] 📎 Placa: ABC1D23 Modelo: Gol prata 2015', 'M1');
+  setResposta({ resumo: 'Quer ser motorista', assunto: 'cadastro_motorista', urgencia: 'media', sentimento: 'positivo', perfil: 'motorista',
+    campos: { nome: 'Evandro da Silva', cidade: 'Goiatuba', veiculo: 'Gol prata 2015', placa: 'ABC1D23', cnh_categoria: 'AB' },
+    resposta_sugerida: 'Recebemos seus documentos! A equipe vai analisar e retorna em breve.', proxima_acao: 'Analisar documentos', tarefa: null });
+  await ia.executarAutomatico(r.conversaId);
+  const m = db.prepare('SELECT * FROM motoristas').get();
+  assert.equal(m.veiculo, 'Gol prata 2015');
+  assert.equal(m.placa, 'ABC1D23');
+  assert.equal(m.cnh_categoria, 'AB');
+  assert.equal(m.cidade, 'Goiatuba');
+  const enviada = db.prepare("SELECT * FROM wa_mensagens WHERE origem = 'ia'").get();
+  assert.ok(enviada, 'a IA respondeu sozinha');
+  assert.equal(enviada.status, 'pendente');
+  assert.match(enviada.texto, /Recebemos seus documentos/);
+});
+
+test('travas: não responde de novo sem mensagem nova, nem quando a equipe assumiu', async () => {
+  const { db, ia, waStore, receber, setResposta } = montar();
+  setResposta({ resumo: 'x', perfil: 'passageiro', campos: {}, resposta_sugerida: 'Olá! Como posso ajudar?' });
+  const r = receber('oi', 'A1');
+  await ia.executarAutomatico(r.conversaId);
+  assert.equal(ia.responderAutomatico(r.conversaId).motivo, 'ja_respondida');
+  // Equipe responde pelo CRM; cliente manda outra: a IA fica quieta.
+  waStore.enfileirar({ conversaId: r.conversaId, texto: 'Oi, aqui é o Evandro', usuarioId: null });
+  receber('quero saber o preço', 'A2');
+  await ia.executarAutomatico(r.conversaId, { forcar: true });
+  assert.equal(ia.responderAutomatico(r.conversaId).motivo, 'humano_assumiu');
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 1);
+});
+
+test('resposta automática desligada: só sugere', async () => {
+  const { db, ia, receber, setResposta } = montar();
+  require('../src/db').setSetting('ia_responder', '0');
+  setResposta({ resumo: 'x', perfil: 'passageiro', campos: {}, resposta_sugerida: 'Olá!' });
+  const r = receber('oi', 'B1');
+  await ia.executarAutomatico(r.conversaId);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 0);
+});

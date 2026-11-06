@@ -70,6 +70,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       ativo: getSetting('ia_ativo', '0') === '1',
       modo: getSetting('ia_modo', 'sugerir') === 'automatico' ? 'automatico' : 'sugerir',
       criarCadastro: getSetting('ia_criar_cadastro', '0') === '1',
+      responder: getSetting('ia_responder', '0') === '1',
       limiteDia: Number(getSetting('ia_limite_dia', '150')) || 150,
       transcrever: getSetting('ia_transcrever', '1') === '1',
       transcricoesHoje: transcricoesDoDia(),
@@ -101,6 +102,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       setSetting('ia_modo', p.modo);
     }
     if (p.transcrever !== undefined) setSetting('ia_transcrever', p.transcrever ? '1' : '0');
+    if (p.responder !== undefined) setSetting('ia_responder', p.responder ? '1' : '0');
     if (p.criarCadastro !== undefined) setSetting('ia_criar_cadastro', p.criarCadastro ? '1' : '0');
     if (p.limiteDia !== undefined) {
       const n = Math.round(Number(p.limiteDia));
@@ -167,7 +169,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       let bruto;
       try { bruto = P.extrairJson(resp.texto); } catch (err) { throw new ErroIA('resposta_invalida', 'A IA respondeu em formato inesperado. Tente de novo.'); }
 
-      const chavesPermitidas = tipoAlvo ? P.CAMPOS_IA[tipoAlvo] : ['nome', 'cidade', 'proxima_acao'];
+      const chavesPermitidas = tipoAlvo ? P.CAMPOS_IA[tipoAlvo] : P.CHAVES_SEM_CADASTRO;
       const resultado = P.validarResultado(bruto, { chavesPermitidas });
       if (tipoAlvo) resultado.perfil = tipoParaPerfil[tipoAlvo]; // com cadastro vinculado, o perfil é o do cadastro
 
@@ -251,10 +253,42 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return;
       await analisar(conversaId, { origem: 'automatica', forcar });
       aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
+      if (cfg.responder) responderAutomatico(conversaId);
     } catch (err) {
       // Falha da IA nunca atrapalha o atendimento: só fica no log.
       log.error(`[ia] análise automática da conversa ${conversaId}: ${err.message}`);
     }
+  }
+
+  // Resposta automática (só se o administrador ligar). Travas de segurança:
+  //  - só responde se a última mensagem da conversa é do cliente e a análise cobre essa mensagem;
+  //  - se uma pessoa da equipe respondeu nos últimos 30 min (CRM ou celular), a IA fica quieta (humano assumiu);
+  //  - no máximo RESPOSTAS_CONVERSA_DIA respostas da IA por conversa em 24 h e RESPOSTAS_DIA no total por dia;
+  //  - não repete a mesma frase que acabou de mandar.
+  const RESPOSTAS_CONVERSA_DIA = Number(process.env.IA_RESPOSTAS_CONVERSA_DIA) || 15;
+  const RESPOSTAS_DIA = Number(process.env.IA_RESPOSTAS_DIA) || 300;
+  function responderAutomatico(conversaId) {
+    const a = ultimaAnalise(conversaId);
+    const texto = a && a.resultado && String(a.resultado.resposta_sugerida || '').trim();
+    if (!texto) return { motivo: 'sem_resposta' };
+    const msgs = waStore.listarMensagens(conversaId, { limite: 30 });
+    const ultima = msgs[msgs.length - 1];
+    if (!ultima || ultima.direcao !== 'in') return { motivo: 'ja_respondida' };
+    if (a.mensagem_ate_id !== ultima.id) return { motivo: 'analise_desatualizada' };
+    const limite = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    if (msgs.some((m) => m.direcao === 'out' && m.origem !== 'ia' && m.ocorrida_em >= limite)) return { motivo: 'humano_assumiu' };
+    const dia = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const naConversa = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND created_at >= ?").get(conversaId, dia).n;
+    if (naConversa >= RESPOSTAS_CONVERSA_DIA) return { motivo: 'limite_conversa' };
+    const total = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND created_at >= ?").get(dia).n;
+    if (total >= RESPOSTAS_DIA) return { motivo: 'limite_dia' };
+    const ultimaIA = [...msgs].reverse().find((m) => m.origem === 'ia');
+    if (ultimaIA && ultimaIA.texto === texto) return { motivo: 'repetida' };
+    const r = waStore.enfileirar({ conversaId, texto, usuarioId: null, origem: 'ia' });
+    if (r.erro) return { motivo: r.erro };
+    db.prepare('UPDATE ia_analises SET aplicado_resumo = ? WHERE id = ?')
+      .run(`${a.aplicado_resumo ? `${a.aplicado_resumo}; ` : ''}respondeu automaticamente`.slice(0, 200), a.id);
+    return { enviada: true };
   }
 
   // Espera a pessoa terminar de escrever (várias mensagens seguidas) antes de gastar uma análise.
@@ -275,7 +309,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   const usarProvedor = (novo) => { provedor = novo; };
 
-  return { obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual };
+  return { obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual };
 }
 
 module.exports = { createIaService, MODELO_PADRAO, PROVEDOR_PADRAO };

@@ -132,7 +132,8 @@ function createStore(db, opts = {}) {
   }
 
   /* --------------------------------- envio (saída) ------------------------------- */
-  function enfileirar({ conversaId, texto, usuarioId }) {
+  function enfileirar({ conversaId, texto, usuarioId, origem = 'crm' }) {
+    if (!['crm', 'ia'].includes(origem)) origem = 'crm';
     const limpo = String(texto || '').trim();
     if (!limpo) return { erro: 'Digite a mensagem.' };
     if (limpo.length > MAX_TEXTO) return { erro: `Mensagem muito longa (máximo ${MAX_TEXTO} caracteres).` };
@@ -141,8 +142,8 @@ function createStore(db, opts = {}) {
     const t = agora();
     const info = db.prepare(
       `INSERT INTO wa_mensagens (conversa_id, direcao, tipo, texto, status, proxima_tentativa_em, enviada_por, origem, ocorrida_em, created_at)
-       VALUES (?, 'out', 'text', ?, 'pendente', ?, ?, 'crm', ?, ?)`
-    ).run(conversaId, limpo, t, usuarioId || null, t, t);
+       VALUES (?, 'out', 'text', ?, 'pendente', ?, ?, ?, ?, ?)`
+    ).run(conversaId, limpo, t, usuarioId || null, origem, t, t);
     atualizarResumo(conversa, { texto: limpo, quando: t, direcao: 'out' });
     db.prepare(`UPDATE wa_conversas SET nao_lidas = 0, updated_at = ? WHERE id = ?`).run(t, conversaId);
     return { mensagem: db.prepare('SELECT * FROM wa_mensagens WHERE id = ?').get(info.lastInsertRowid) };

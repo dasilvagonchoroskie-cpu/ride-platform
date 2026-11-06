@@ -18,10 +18,10 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
 
   router.get('/ia/status', (req, res) => {
     const c = ia.config();
-    const base = { ativo: c.ativo, modo: c.modo, pronta: c.ativo && c.chaveConfigurada };
+    const base = { ativo: c.ativo, modo: c.modo, pronta: c.ativo && c.chaveConfigurada, responder: c.ativo && c.modo === 'automatico' && c.responder };
     if (req.user.role !== 'admin') return res.json(base);
     res.json({ ...base, provedor: c.provedor, reserva: c.reserva, provedor_nome: c.provedorNome, url_base: c.urlBase, provedores: c.provedores,
-      criar_cadastro: c.criarCadastro, limite_dia: c.limiteDia, transcrever: c.transcrever, transcricoes_hoje: c.transcricoesHoje, modelo: c.modelo, chave_configurada: c.chaveConfigurada,
+      criar_cadastro: c.criarCadastro, responder: c.responder, limite_dia: c.limiteDia, transcrever: c.transcrever, transcricoes_hoje: c.transcricoesHoje, modelo: c.modelo, chave_configurada: c.chaveConfigurada,
       chave_final4: c.chaveFinal4, chave_origem: c.chaveOrigem, uso: c.uso });
   });
 
@@ -42,6 +42,7 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
         modo: b.modo,
         criarCadastro: b.criar_cadastro === undefined ? undefined : b.criar_cadastro === true,
         transcrever: b.transcrever === undefined ? undefined : b.transcrever === true,
+        responder: b.responder === undefined ? undefined : b.responder === true,
         limiteDia: b.limite_dia,
         modelo: b.modelo
       });
@@ -51,7 +52,7 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
     // A chave nunca entra no texto da auditoria.
     audit(req, 'ia_config', 'ia', null, `Configuração da IA alterada (${ia.config().provedorNome})${req.body && req.body.chave ? ' (chave atualizada)' : ''}${req.body && req.body.remover_chave ? ' (chave removida)' : ''}`);
     const c = ia.config();
-    res.json({ ok: true, ativo: c.ativo, modo: c.modo, provedor: c.provedor, criar_cadastro: c.criarCadastro, limite_dia: c.limiteDia, transcrever: c.transcrever, transcricoes_hoje: c.transcricoesHoje, modelo: c.modelo,
+    res.json({ ok: true, ativo: c.ativo, modo: c.modo, provedor: c.provedor, criar_cadastro: c.criarCadastro, responder: c.responder, limite_dia: c.limiteDia, transcrever: c.transcrever, transcricoes_hoje: c.transcricoesHoje, modelo: c.modelo,
       chave_configurada: c.chaveConfigurada, chave_final4: c.chaveFinal4, chave_origem: c.chaveOrigem });
   });
 
