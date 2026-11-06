@@ -5,12 +5,14 @@
 const { isValidWaPhone, toWaPhone, displayPhone } = require('./phone');
 const { VINCULOS, MAX_TEXTO } = require('./store');
 
-function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entities, db }) {
+const { ESTADOS } = require('../ia/central');
+
+function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entities, db, central }) {
   const store = service.store;
   const idDe = (req) => Number(req.params.id);
   const ID_INVALIDO = (res) => fail(res, 400, 'invalid_id', 'Identificador inválido.');
 
-  const publica = (c) => ({ ...c, telefone_exibicao: displayPhone(c.telefone) });
+  const publica = (c) => ({ ...c, telefone_exibicao: displayPhone(c.telefone), atendimento_nome: ESTADOS[c.atendimento] || ESTADOS.ia });
 
   /* ------------------------------- conexão ------------------------------- */
   router.get('/wa/status', (req, res) => {
@@ -48,10 +50,10 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
   /* ------------------------------- conversas ------------------------------ */
   router.get('/wa/conversas', (req, res) => {
     const r = store.listarConversas({
-      situacao: req.query.situacao, naoLidas: req.query.nao_lidas === '1', q: req.query.q,
+      situacao: req.query.situacao, atendimento: req.query.atendimento, naoLidas: req.query.nao_lidas === '1', q: req.query.q,
       responsavelId: req.query.responsavel_id, page: req.query.page, size: req.query.size
     });
-    res.json({ ...r, items: r.items.map(publica) });
+    res.json({ ...r, items: r.items.map(publica), contagem: store.contarPorAtendimento() });
   });
 
   router.get('/wa/conversas/:id', (req, res) => {
@@ -59,7 +61,7 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
     if (!Number.isInteger(id)) return ID_INVALIDO(res);
     const c = store.obterConversa(id);
     if (!c) return fail(res, 404, 'not_found', 'Conversa não encontrada.');
-    res.json({ item: publica(c) });
+    res.json({ item: publica(c), eventos: store.listarEventos(id) });
   });
 
   router.get('/wa/conversas/:id/mensagens', (req, res) => {
@@ -78,6 +80,10 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
     if (!service.conectado()) return fail(res, 409, 'wa_offline', 'O WhatsApp está desconectado. Peça a um administrador para reconectar.');
     const r = store.enfileirar({ conversaId: id, texto: req.body.texto, usuarioId: req.user.id });
     if (r.erro) return fail(res, r.status || 422, 'invalid', r.erro);
+    // Quem responde pelo CRM assume a conversa: a IA para de responder até alguém devolver.
+    if (c.atendimento !== 'humano' && c.atendimento !== 'concluido') {
+      store.mudarAtendimento(id, 'humano', { usuarioId: req.user.id, detalhe: 'Respondeu pelo CRM' });
+    }
     service.cutucar();
     res.status(201).json({ item: r.mensagem });
   });
@@ -109,6 +115,39 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
     });
     if (r.erro) return fail(res, r.status || 422, 'invalid', r.erro);
     res.json({ item: publica(store.obterConversa(id)) });
+  });
+
+  // Ações do atendimento: assumir (humano), devolver para a IA, concluir (com mensagem de encerramento opcional).
+  router.post('/wa/conversas/:id/atendimento', (req, res) => {
+    const id = idDe(req);
+    if (!Number.isInteger(id)) return ID_INVALIDO(res);
+    const c = store.obterConversa(id);
+    if (!c) return fail(res, 404, 'not_found', 'Conversa não encontrada.');
+    const acao = String(req.body.acao || '');
+    if (acao === 'assumir') {
+      store.mudarAtendimento(id, 'humano', { usuarioId: req.user.id, detalhe: c.atend_motivo ? `Motivo: ${c.atend_motivo}` : '' });
+      audit(req, 'wa_assumir', 'wa_conversas', id, 'Atendimento assumido');
+    } else if (acao === 'devolver') {
+      store.mudarAtendimento(id, 'ia', { usuarioId: req.user.id, detalhe: 'Devolvida para o atendimento automático' });
+      audit(req, 'wa_devolver_ia', 'wa_conversas', id, 'Conversa devolvida para a IA');
+    } else if (acao === 'concluir') {
+      let enviou = false;
+      if (req.body.enviar_encerramento === true) {
+        const texto = central ? central.texto('encerramento') : '';
+        if (!texto) return fail(res, 409, 'sem_modelo', 'A mensagem de encerramento está desativada em Modelos de Comunicação da IA.');
+        if (c.ignorado) return fail(res, 409, 'ignored', 'Este contato está ignorado.');
+        if (!service.conectado()) return fail(res, 409, 'wa_offline', 'O WhatsApp está desconectado. Conclua sem a mensagem ou reconecte.');
+        const r = store.enfileirar({ conversaId: id, texto, usuarioId: req.user.id });
+        if (r.erro) return fail(res, r.status || 422, 'invalid', r.erro);
+        enviou = true;
+        service.cutucar();
+      }
+      store.mudarAtendimento(id, 'concluido', { usuarioId: req.user.id, detalhe: enviou ? 'Concluído com mensagem de encerramento' : 'Concluído' });
+      audit(req, 'wa_concluir', 'wa_conversas', id, enviou ? 'Atendimento concluído (encerramento enviado)' : 'Atendimento concluído');
+    } else {
+      return fail(res, 422, 'invalid', 'Ação inválida.');
+    }
+    res.json({ item: publica(store.obterConversa(id)), eventos: store.listarEventos(id) });
   });
 
   router.post('/wa/conversas/:id/vincular', (req, res) => {

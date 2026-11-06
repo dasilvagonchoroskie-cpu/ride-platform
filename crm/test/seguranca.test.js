@@ -163,3 +163,35 @@ test('verificação por e-mail: só aparelho novo pede código; aparelho lembrad
   assert.equal((await anon('POST', '/auth/reset', { token: link[1], senha: 'outrasenha890' })).s, 400, 'link de uso único');
   assert.equal((await adm('GET', '/auth/me')).s, 401, 'trocar a senha derruba as sessões');
 });
+
+test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do atendimento validadas', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-modelos-'));
+  const porta = await portaLivre();
+  const proc = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
+    env: { ...process.env, FM_DATA_DIR: dir, PORT: String(porta), HOST: '127.0.0.1', FM_INSTALL_KEY: 'FM-TEST-CHAV-E123', TRUST_PROXY: 'false' }, stdio: 'ignore'
+  });
+  t.after(() => proc.kill());
+  const B = `http://127.0.0.1:${porta}/api`;
+  for (let i = 0; i < 50; i++) { try { await fetch(`${B}/health`); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
+  const cliente = () => { let ck = ''; return async (m, u, b) => { const r = await fetch(B + u, { method: m, headers: { 'content-type': 'application/json', cookie: ck }, body: b ? JSON.stringify(b) : undefined }); for (const sc of r.headers.getSetCookie()) { const [kv] = sc.split(';'); const nome = kv.split('=')[0]; const resto = ck.split('; ').filter((x) => x && !x.startsWith(nome + '=')); if (!/Max-Age=0/.test(sc)) resto.push(kv); ck = resto.join('; '); } let j = null; try { j = await r.json(); } catch (e) { /* */ } return { s: r.status, j }; }; };
+  const adm = cliente();
+  assert.equal((await adm('POST', '/auth/setup', { chave: 'FM-TEST-CHAV-E123', nome: 'Adm', email: 'adm@x.com', senha: 'senhaforte123' })).s, 201);
+  assert.equal((await adm('POST', '/users', { nome: 'Gestor', email: 'g@x.com', senha: 'senhaforte123', role: 'gestor' })).s, 201);
+  const g = cliente();
+  assert.equal((await g('POST', '/auth/login', { email: 'g@x.com', senha: 'senhaforte123' })).s, 200);
+
+  const lidos = await g('GET', '/ia/modelos');
+  assert.equal(lidos.s, 200);
+  assert.equal(lidos.j.modelos.length, 8);
+  assert.equal((await g('PUT', '/ia/modelos', { modelos: [{ id: 'saudacao', texto: 'oi', ativo: true }] })).s, 403, 'gestor não edita');
+  const salvo = await adm('PUT', '/ia/modelos', { modelos: [{ id: 'saudacao', texto: 'Olá, Fortaleza Move!', ativo: true }], site_url: 'https://fortalezamove.com.br', informacoes: { clube: 'Desconto em lavagem.' } });
+  assert.equal(salvo.s, 200);
+  assert.equal(salvo.j.modelos.find((m) => m.id === 'saudacao').texto, 'Olá, Fortaleza Move!');
+  assert.equal(salvo.j.informacoes.clube, 'Desconto em lavagem.');
+  assert.equal((await adm('PUT', '/ia/modelos', { modelos: [{ id: '__proto__', texto: 'x' }] })).s, 422);
+  assert.equal((await adm('PUT', '/ia/modelos', { site_url: 'javascript:alert(1)' })).s, 422);
+  assert.equal((await g('POST', '/wa/conversas/999/atendimento', { acao: 'assumir' })).s, 404, 'gestor atende (não é 403), conversa inexistente → 404');
+  const lista = await g('GET', '/wa/conversas?atendimento=aguardando');
+  assert.equal(lista.s, 200);
+  assert.deepEqual(Object.keys(lista.j.contagem).sort(), ['aguardando', 'concluido', 'humano', 'ia']);
+});

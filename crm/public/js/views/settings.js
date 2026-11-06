@@ -98,7 +98,7 @@ export async function renderSettings(view, state) {
           <div class="card-head"><div><h3>Inteligência (IA)</h3><p class="sub">Resumo, classificação e preenchimento de cadastro a partir das conversas</p></div></div>
           <div class="card-body">
             <div class="wa-state" id="ia-state">Carregando…</div>
-            <div class="wa-risk">As mensagens analisadas são enviadas à API do provedor escolhido (<b id="ia-prov-nome">…</b>), que pode processar os dados fora do Brasil (informe isso no aviso de privacidade). A IA <b>nunca envia mensagens sozinha</b>: ela sugere a resposta e você revisa. As chaves ficam só neste servidor, uma para cada provedor.</div>
+            <div class="wa-risk">As mensagens analisadas são enviadas à API do provedor escolhido (<b id="ia-prov-nome">…</b>), que pode processar os dados fora do Brasil (informe isso no aviso de privacidade). A IA só envia mensagens sozinha se você ligar "responde sozinha" abaixo; fora isso, ela sugere a resposta e você revisa. As chaves ficam só neste servidor, uma para cada provedor.</div>
             <div class="field"><label for="ia-provedor">Provedor de IA</label><select id="ia-provedor"></select>
               <div class="form-hint" id="ia-prov-info"></div></div>
             <div class="field hidden" id="ia-url-box"><label for="ia-url">Endereço da API (formato OpenAI)</label>
@@ -109,7 +109,7 @@ export async function renderSettings(view, state) {
               <select id="ia-modo"><option value="sugerir">Sugerir: a IA só analisa quando o atendente pedir</option>
                 <option value="automatico">Automático: analisa cada conversa nova e preenche campos vazios do cadastro</option></select></div>
             <label class="check"><input type="checkbox" id="ia-criar"> No modo automático, criar cadastro novo quando a IA identificar motorista, passageiro ou parceiro e houver dados suficientes</label>
-            <label class="check"><input type="checkbox" id="ia-responder"> No modo automático, a IA <b>responde sozinha</b> ao cliente pelo WhatsApp. Ela para quando alguém da equipe responde (fica 15 min quieta), no máximo 15 respostas por conversa por dia. Mais mensagens automáticas aumentam o risco de bloqueio do número.</label>
+            <label class="check"><input type="checkbox" id="ia-responder"> No modo automático, a IA <b>responde sozinha</b> ao cliente pelo WhatsApp como Central de Atendimento (saudação, menu, fluxos por assunto e transferência para a equipe, com os textos de "Modelos de Comunicação da IA"). Ela para quando alguém da equipe assume ou responde, até a conversa ser devolvida. No máximo 15 respostas por conversa por dia. Mais mensagens automáticas aumentam o risco de bloqueio do número.</label>
             <label class="check"><input type="checkbox" id="ia-transcrever"> Ler as mídias que chegam: áudio vira texto; fotos, PDFs e vídeos são lidos pelo Gemini (inclusive documentos como CNH e CRLV); Word, Excel e PowerPoint são lidos aqui no servidor. Assim a IA consegue usar tudo para preencher o cadastro.</label>
             <div class="field"><label for="ia-limite">Limite de análises por dia</label><input id="ia-limite" type="number" min="1" max="2000" step="1"></div>
             <div class="field"><label for="ia-modelo">Modelo (opcional)</label><input id="ia-modelo" type="text" maxlength="100" autocomplete="off"></div>
@@ -122,6 +122,10 @@ export async function renderSettings(view, state) {
               <button class="btn btn-danger" id="ia-remover" type="button">Remover chave</button>
             </div>
           </div>
+        </div>
+        <div class="card" id="modelos-card">
+          <div class="card-head"><div><h3>Modelos de Comunicação da IA</h3><p class="sub">Textos fixos da Central de Atendimento e informações oficiais que a IA pode usar</p></div></div>
+          <div class="card-body" id="modelos-corpo">Carregando…</div>
         </div>
       </div>` : ''}
 
@@ -189,6 +193,7 @@ export async function renderSettings(view, state) {
 
   if (isAdmin) setupWhatsapp(view);
   if (isAdmin) setupIA(view);
+  if (isAdmin) setupModelos(view);
   if (isAdmin) view.querySelector('#cfg-save').addEventListener('click', async () => {
     try {
       await api.patch('/settings', {
@@ -464,6 +469,56 @@ function setupIA(view) {
 }
 
 // Códigos de recuperação: mostrados UMA vez, na hora de gerar. Gerar de novo invalida os anteriores.
+// Modelos de Comunicação da IA: textos editáveis (ativar/desativar), site oficial e base de conhecimento por assunto.
+const INFO_ASSUNTOS = [
+  ['geral', 'Informações gerais da Fortaleza Move', 'Ex.: cidades atendidas, horário de atendimento, como baixar o aplicativo.'],
+  ['cadastro', '1. Cadastro de motorista e veículo', 'Ex.: requisitos (idade, categoria da CNH, ano do veículo), documentos aceitos, etapas da análise.'],
+  ['passageiro', '2. Atendimento ao passageiro', 'Ex.: como pedir corrida, formas de pagamento, o que fazer se esquecer um objeto.'],
+  ['encomendas', '3. Coleta e entrega de encomendas', 'Ex.: o que pode ser enviado, regiões atendidas, como pedir orçamento.'],
+  ['clube', '4. Clube de Vantagens para motoristas', 'Ex.: benefícios, parceiros, carteirinha digital, quem pode participar.'],
+  ['outros', '5. Outros assuntos', 'Ex.: parcerias com comércios, imprensa, trabalhe conosco.']
+];
+function setupModelos(view) {
+  const corpo = view.querySelector('#modelos-corpo');
+  async function desenhar() {
+    let d;
+    try { d = await api.get('/ia/modelos'); } catch (e) { corpo.textContent = e.message; return; }
+    corpo.innerHTML = `
+      <div class="form-errors" id="mod-error" hidden></div>
+      <p class="muted small">Estes textos são enviados exatamente como estão (a IA não muda). Desativado = não é enviado. Use <b>{site}</b> para o endereço do site e, no encerramento, <b>{site_oficial}</b> para o bloco "Divulgação do site oficial" (só aparece quando o site estiver configurado).</p>
+      <div class="field"><label for="mod-site">Endereço do site oficial</label><input id="mod-site" type="url" maxlength="200" placeholder="https://… (deixe vazio enquanto o site não estiver no ar)" value="${ui.esc(d.site_url)}"></div>
+      ${d.modelos.map((m) => `<div class="field mod-item" data-mod="${ui.esc(m.id)}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+            <label for="mod-t-${ui.esc(m.id)}" style="margin:0">${ui.esc(m.nome)}</label>
+            <span style="display:flex;gap:10px;align-items:center"><label class="check" style="margin:0"><input type="checkbox" class="mod-ativo" ${m.ativo ? 'checked' : ''}> Ativo</label>
+            <button class="btn btn-sm btn-ghost mod-padrao" type="button">Restaurar padrão</button></span>
+          </div>
+          <textarea id="mod-t-${ui.esc(m.id)}" class="mod-texto" rows="${Math.min(9, Math.max(3, m.texto.split('\n').length + 1))}" maxlength="1500">${ui.esc(m.texto)}</textarea>
+        </div>`).join('')}
+      <h4 style="margin:18px 0 4px">Informações oficiais por assunto</h4>
+      <p class="muted small">A IA só afirma o que estiver aqui. Sem informação, ela encaminha o cliente para a equipe em vez de inventar. Não coloque dados pessoais.</p>
+      ${INFO_ASSUNTOS.map(([id, nome, dica]) => `<div class="field"><label for="mod-i-${id}">${ui.esc(nome)}</label>
+        <textarea id="mod-i-${id}" class="mod-info" data-info="${id}" rows="3" maxlength="4000" placeholder="${ui.esc(dica)}">${ui.esc(d.informacoes[id] || '')}</textarea></div>`).join('')}
+      <div class="wa-actions-row"><button class="btn btn-primary" id="mod-salvar" type="button">Salvar modelos</button></div>`;
+    const padroes = Object.fromEntries(d.modelos.map((m) => [m.id, m.padrao]));
+    corpo.querySelectorAll('.mod-padrao').forEach((b) => b.addEventListener('click', () => {
+      const item = b.closest('[data-mod]');
+      item.querySelector('.mod-texto').value = padroes[item.dataset.mod];
+    }));
+    corpo.querySelector('#mod-salvar').addEventListener('click', async () => {
+      const erro = corpo.querySelector('#mod-error');
+      erro.hidden = true;
+      const modelos = [...corpo.querySelectorAll('[data-mod]')].map((el) => ({ id: el.dataset.mod, texto: el.querySelector('.mod-texto').value, ativo: el.querySelector('.mod-ativo').checked }));
+      const informacoes = Object.fromEntries([...corpo.querySelectorAll('.mod-info')].map((el) => [el.dataset.info, el.value]));
+      try {
+        await api.put('/ia/modelos', { modelos, site_url: corpo.querySelector('#mod-site').value.trim(), informacoes });
+        ui.toast('Modelos salvos.', 'success');
+      } catch (e) { erro.hidden = false; erro.textContent = e.message; }
+    });
+  }
+  desenhar();
+}
+
 function setupRecuperacao(view) {
   const $ = (sel) => view.querySelector(sel);
   let emailConta = '';

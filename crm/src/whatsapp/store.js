@@ -111,10 +111,22 @@ function createStore(db, opts = {}) {
       if (deMim) {
         // Respondeu pelo celular: considera a conversa lida.
         db.prepare('UPDATE wa_conversas SET nao_lidas = 0 WHERE id = ?').run(conversa.id);
+        // A equipe respondeu pelo celular: a conversa passa para atendimento humano (a IA para de responder).
+        // Eco de mensagem que o próprio CRM/IA acabou de enviar não conta.
+        const eco = db.prepare(`SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND origem IN ('crm', 'ia') AND id <> ? AND texto = ?
+            AND (status IN ('pendente', 'enviando') OR created_at >= ?)`).get(conversa.id, Number(info.lastInsertRowid), texto, new Date(Date.now() - 120000).toISOString());
+        if (!eco && (conversa.atendimento === 'ia' || conversa.atendimento === 'aguardando')) {
+          mudarAtendimento(conversa.id, 'humano', { detalhe: 'Respondida pelo celular' });
+        }
       } else {
         db.prepare(
           `UPDATE wa_conversas SET nao_lidas = nao_lidas + 1, situacao = 'Aberta', updated_at = ? WHERE id = ?`
         ).run(agora(), conversa.id);
+        if (conversa.atendimento === 'concluido') {
+          // Novo contato depois de concluído: volta para a IA. Saudação de novo só se o atendimento acabou há mais de 12 h.
+          const antigo = !conversa.atend_em || conversa.atend_em < new Date(Date.now() - 12 * 3600000).toISOString();
+          mudarAtendimento(conversa.id, 'ia', { detalhe: 'Cliente voltou a escrever', novoAtendimento: antigo });
+        }
       }
       return { inserido: true, conversaId: conversa.id, contatoId: contato.id, mensagemId: Number(info.lastInsertRowid) };
     }).immediate();
@@ -130,6 +142,48 @@ function createStore(db, opts = {}) {
     if (c && c.ultima_em === m.ocorrida_em) db.prepare('UPDATE wa_conversas SET ultima_mensagem = ? WHERE id = ?').run(novo.slice(0, 200), c.id);
     return true;
   }
+
+  /* ------------------------------ estado do atendimento -------------------------- */
+  const ESTADOS_VALIDOS = ['ia', 'aguardando', 'humano', 'concluido'];
+  const TIPO_EVENTO = { ia: 'devolvida', aguardando: 'transferida', humano: 'assumida', concluido: 'concluida' };
+
+  // Muda o estado da conversa e registra no histórico. Retorna false se o estado já era esse (sem evento repetido).
+  function mudarAtendimento(conversaId, estado, { motivo, assunto, usuarioId, detalhe, novoAtendimento } = {}) {
+    if (!ESTADOS_VALIDOS.includes(estado)) return false;
+    const c = db.prepare('SELECT * FROM wa_conversas WHERE id = ?').get(conversaId);
+    if (!c) return false;
+    const t = agora();
+    const sets = ['atendimento = ?', 'atend_em = ?', 'updated_at = ?'];
+    const params = [estado, t, t];
+    if (estado === 'aguardando') { sets.push('atend_motivo = ?', 'espera_em = NULL'); params.push(motivo || null); }
+    if (estado === 'ia') { sets.push('atend_motivo = NULL', 'atend_por = NULL', 'espera_em = NULL'); }
+    if (estado === 'humano') { sets.push('atend_por = ?'); params.push(usuarioId || null); if (usuarioId) { sets.push('responsavel_id = ?'); params.push(usuarioId); } }
+    if (estado === 'concluido') sets.push("situacao = 'Resolvida'");
+    else sets.push("situacao = 'Aberta'");
+    if (novoAtendimento) sets.push('saudado_em = NULL', 'atend_assunto = NULL');
+    if (assunto !== undefined) { sets.push('atend_assunto = ?'); params.push(assunto); }
+    if (c.atendimento === estado && !assunto && !motivo) return false;
+    db.prepare(`UPDATE wa_conversas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conversaId);
+    if (c.atendimento !== estado) {
+      db.prepare('INSERT INTO wa_eventos (conversa_id, tipo, detalhe, usuario_id, criado_em) VALUES (?, ?, ?, ?, ?)')
+        .run(conversaId, c.atendimento === 'concluido' && estado === 'ia' ? 'reaberta' : TIPO_EVENTO[estado], String(detalhe || motivo || '').slice(0, 200) || null, usuarioId || null, t);
+    }
+    return true;
+  }
+
+  // Marca a saudação como enviada. Só um chamador consegue (evita saudação duplicada).
+  const marcarSaudado = (conversaId) => db.prepare('UPDATE wa_conversas SET saudado_em = ? WHERE id = ? AND saudado_em IS NULL').run(agora(), conversaId).changes === 1;
+  // Aviso de espera: no máximo um por período de espera.
+  const marcarEspera = (conversaId) => db.prepare("UPDATE wa_conversas SET espera_em = ? WHERE id = ? AND espera_em IS NULL AND atendimento = 'aguardando'").run(agora(), conversaId).changes === 1;
+  const definirAssunto = (conversaId, assunto) => db.prepare('UPDATE wa_conversas SET atend_assunto = ? WHERE id = ?').run(assunto, conversaId);
+  const listarEventos = (conversaId) => db.prepare(
+    `SELECT e.id, e.tipo, e.detalhe, e.criado_em, u.nome AS usuario_nome FROM wa_eventos e LEFT JOIN users u ON u.id = e.usuario_id
+      WHERE e.conversa_id = ? ORDER BY e.id DESC LIMIT 30`).all(conversaId);
+  const contarPorAtendimento = () => {
+    const r = { ia: 0, aguardando: 0, humano: 0, concluido: 0 };
+    for (const l of db.prepare('SELECT atendimento, COUNT(*) n FROM wa_conversas GROUP BY atendimento').all()) if (r[l.atendimento] !== undefined) r[l.atendimento] = l.n;
+    return r;
+  };
 
   /* --------------------------------- envio (saída) ------------------------------- */
   function enfileirar({ conversaId, texto, usuarioId, origem = 'crm' }) {
@@ -181,7 +235,7 @@ function createStore(db, opts = {}) {
         ? db.prepare('SELECT id, status FROM wa_mensagens WHERE conversa_id = ? AND externo_id = ? AND id <> ?').get(msg.conversa_id, externoId, mensagemId)
         : null;
       if (eco) {
-        db.prepare(`UPDATE wa_mensagens SET enviada_por = ?, origem = 'crm' WHERE id = ?`).run(msg.enviada_por, eco.id);
+        db.prepare('UPDATE wa_mensagens SET enviada_por = ?, origem = ? WHERE id = ?').run(msg.enviada_por, msg.origem === 'ia' ? 'ia' : 'crm', eco.id);
         db.prepare('DELETE FROM wa_mensagens WHERE id = ?').run(mensagemId);
         return;
       }
@@ -228,6 +282,7 @@ function createStore(db, opts = {}) {
   /* ---------------------------------- consultas ---------------------------------- */
   const SELECT_CONVERSA = `
     SELECT c.id, c.situacao, c.responsavel_id, c.nao_lidas, c.ultima_mensagem, c.ultima_em, c.ultima_direcao,
+           c.atendimento, c.atend_assunto, c.atend_motivo, c.atend_em, c.saudado_em, c.espera_em,
            k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado,
            CASE k.vinculo_tipo WHEN 'motoristas' THEN m.nome WHEN 'passageiros' THEN p.nome
                                WHEN 'parceiros' THEN r.nome_estabelecimento END AS vinculo_nome,
@@ -239,10 +294,11 @@ function createStore(db, opts = {}) {
       LEFT JOIN parceiros r ON k.vinculo_tipo = 'parceiros' AND r.id = k.vinculo_id
       LEFT JOIN users u ON u.id = c.responsavel_id`;
 
-  function listarConversas({ situacao, naoLidas, q, responsavelId, page = 1, size = 30 } = {}) {
+  function listarConversas({ situacao, atendimento, naoLidas, q, responsavelId, page = 1, size = 30 } = {}) {
     const where = [];
     const params = [];
     if (situacao === 'Aberta' || situacao === 'Resolvida') { where.push('c.situacao = ?'); params.push(situacao); }
+    if (ESTADOS_VALIDOS.includes(atendimento)) { where.push('c.atendimento = ?'); params.push(atendimento); }
     if (naoLidas) where.push('c.nao_lidas > 0');
     if (responsavelId) { where.push('c.responsavel_id = ?'); params.push(Number(responsavelId)); }
     const busca = String(q || '').trim().slice(0, 80);
@@ -257,7 +313,7 @@ function createStore(db, opts = {}) {
     const tam = Math.min(100, Math.max(1, Number(size) || 30));
     const pages = Math.max(1, Math.ceil(total / tam));
     const pag = Math.min(pages, Math.max(1, Number(page) || 1));
-    const items = db.prepare(`${SELECT_CONVERSA}${clausula} ORDER BY c.ultima_em DESC, c.id DESC LIMIT ? OFFSET ?`)
+    const items = db.prepare(`${SELECT_CONVERSA}${clausula} ORDER BY (c.atendimento = 'aguardando') DESC, c.ultima_em DESC, c.id DESC LIMIT ? OFFSET ?`)
       .all(...params, tam, (pag - 1) * tam);
     return { items, total, page: pag, pages };
   }
@@ -286,6 +342,7 @@ function createStore(db, opts = {}) {
     if (situacao !== undefined) {
       if (situacao !== 'Aberta' && situacao !== 'Resolvida') return { erro: 'Situação inválida.' };
       sets.push('situacao = ?'); params.push(situacao);
+      if (situacao === 'Resolvida') mudarAtendimento(conversaId, 'concluido', {});
     }
     if (responsavelId !== undefined) {
       if (responsavelId !== null && !db.prepare('SELECT 1 FROM users WHERE id = ? AND ativo = 1').get(Number(responsavelId))) {
@@ -337,7 +394,8 @@ function createStore(db, opts = {}) {
     acharCadastroPorTelefone, existeCadastro, obterOuCriarContato, ingerir, enfileirar, recolocarEnviando,
     reservarPendentes, concluirEnvio, falharEnvio, reenviar, registrarStatus, listarConversas, obterConversa,
     listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, excluirConversa,
-    contarNaoLidas, resumoFila, definirTranscricao
+    contarNaoLidas, resumoFila, definirTranscricao,
+    mudarAtendimento, marcarSaudado, marcarEspera, definirAssunto, listarEventos, contarPorAtendimento
   };
 }
 

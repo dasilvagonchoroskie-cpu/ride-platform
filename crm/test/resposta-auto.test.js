@@ -43,7 +43,9 @@ test('sem cadastro: IA recebe os campos do motorista e o cadastro nasce com veí
   const enviada = db.prepare("SELECT * FROM wa_mensagens WHERE origem = 'ia'").get();
   assert.ok(enviada, 'a IA respondeu sozinha');
   assert.equal(enviada.status, 'pendente');
-  assert.match(enviada.texto, /Recebemos seus documentos/);
+  assert.match(enviada.texto, /Recebemos o seu documento/, 'confirmação padrão (modelo), não texto livre da IA');
+  assert.match(enviada.texto, /aguardando análise/);
+  assert.equal(db.prepare('SELECT atendimento, atend_motivo FROM wa_conversas').get().atendimento, 'aguardando', 'CNH + CRLV: vai para a equipe analisar');
 });
 
 test('travas: não responde de novo sem mensagem nova, nem quando a equipe assumiu', async () => {

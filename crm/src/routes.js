@@ -1144,7 +1144,7 @@ router.post('/parceiros/:id/confirmar', (req, res) => {
 
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".
-whatsappRoutes.registrar(router, { service: wa, fail, audit, requireAdmin, ENTITIES, entities, db });
+whatsappRoutes.registrar(router, { service: wa, fail, audit, requireAdmin, ENTITIES, entities, db, central: ia.central });
 iaRoutes.registrar(router, { ia, cofre: cofreIA, fail, audit, requireAdmin });
 
 /* ------------------------------ CRUD genérico ----------------------------- */

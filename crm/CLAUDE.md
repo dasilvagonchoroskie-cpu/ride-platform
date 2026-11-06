@@ -79,6 +79,25 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Limpeza feita em 06/11 10h20: token antigo apagado de `cofre.acesso` (só o novo vale), versões anteriores à troca de chave
   apagadas, `pg_net` reinstalado no esquema `extensions` (job `crm-manter-acordado` conferido: 200).
 
+## Central de Atendimento Inteligente (06/11/2026, pedido do dono)
+- Estados da conversa em `wa_conversas.atendimento`: `ia` | `aguardando` (transferida, motivo em `atend_motivo`) | `humano` |
+  `concluido` (= situacao 'Resolvida'). Assunto do menu em `atend_assunto` (cadastro|passageiro|encomendas|clube|outros).
+  `saudado_em` garante uma saudação por atendimento; `espera_em`, um aviso de espera por período. Histórico em `wa_eventos`
+  (sem texto do cliente). Colunas acrescentadas por `db.js` (conversas antigas com resposta já contam como saudadas).
+- Orquestrador: `responderCentral` em `src/ia/service.js` (com trava por conversa). Ordem: humano/concluído → quieta;
+  aguardando → 1 aviso de espera; saudação (1ª vez); transferência (pedido de atendente por regex OU análise
+  `atendimento.transferir` OU redação `transferir`); documento 📎 → confirmação do modelo + pede o que falta (CNH/CRLV) ou,
+  completo, transfere com motivo "documentos"; menu (1º contato sem assunto ou "menu"); senão, redação com o fluxo do
+  assunto (`FLUXOS`) e as informações oficiais. Textos fixos dos modelos NÃO passam por `respostaSegura` (são do admin);
+  a redação da IA continua passando.
+- Quem responde pelo CRM ou pelo celular assume (`humano`); eco do envio da IA/CRM não conta. Cliente que escreve depois
+  de concluído reabre com a IA (saúda de novo só se concluiu há mais de 12 h). Rotas: `POST /wa/conversas/:id/atendimento`
+  (assumir|devolver|concluir, admin e gestor), `GET /ia/modelos` (todos), `PUT /ia/modelos` (só admin).
+- Modelos (`src/ia/central.js`, setting `central_modelos`): saudacao, menu, confirmacao_documentos, confirmacao_informacoes,
+  transferencia, espera, encerramento ({site_oficial}), site ({site}); site em `central_site_url` (só https);
+  base de conhecimento `central_info_<assunto|geral>`. Tela: card "Modelos de Comunicação da IA" em Configurações.
+- Testado: `test/central.test.js` + permissões em `seguranca.test.js` + navegador (Chrome, tela de celular) com canal e IA falsos.
+
 ## Verificação por e-mail (06/11/2026, pedido do dono)
 - O dono não quer guardar códigos/token: o padrão agora é **código por e-mail só em aparelho novo** (`email_2fa`, tabela
   `dispositivos`, cookie `fm_disp` 180 dias) e **"Esqueci minha senha" por link no e-mail** (`/auth/recover/email`).

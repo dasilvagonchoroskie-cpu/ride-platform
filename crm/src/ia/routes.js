@@ -60,6 +60,25 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
     try { res.json(await ia.testar()); } catch (err) { erroIA(res, err); }
   });
 
+  /* ---------------------- Modelos de Comunicação da IA (Central) ---------------------- */
+  // Todos que atendem podem ver; só o administrador edita.
+  router.get('/ia/modelos', (req, res) => {
+    res.json({ modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes() });
+  });
+
+  router.put('/ia/modelos', requireAdmin, (req, res) => {
+    const b = req.body || {};
+    try {
+      if (b.modelos !== undefined) ia.central.salvarModelos(b.modelos);
+      if (b.site_url !== undefined) ia.central.salvarSite(b.site_url);
+      if (b.informacoes !== undefined) ia.central.salvarInformacoes(b.informacoes);
+    } catch (err) {
+      return fail(res, 422, 'invalid', err.message);
+    }
+    audit(req, 'ia_modelos', 'ia', null, 'Modelos de Comunicação da IA alterados');
+    res.json({ ok: true, modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes() });
+  });
+
   router.post('/wa/conversas/:id/analisar', async (req, res) => {
     const id = idDe(req);
     if (!Number.isInteger(id)) return ID_INVALIDO(res);

@@ -263,6 +263,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_wa_msg_externo ON wa_mensagens (conversa_id
 CREATE INDEX IF NOT EXISTS ix_wa_msg_conversa ON wa_mensagens (conversa_id, id);
 CREATE INDEX IF NOT EXISTS ix_wa_msg_fila ON wa_mensagens (status, proxima_tentativa_em);
 CREATE INDEX IF NOT EXISTS ix_wa_conv_ultima ON wa_conversas (ultima_em);
+
+-- Histórico do atendimento (transferências, quem assumiu, encerramentos). Sem texto do cliente: só o evento e o motivo.
+CREATE TABLE IF NOT EXISTS wa_eventos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversa_id INTEGER NOT NULL REFERENCES wa_conversas(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL,                         -- transferida | assumida | devolvida | concluida | reaberta
+  detalhe TEXT,
+  usuario_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  criado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_wa_eventos_conv ON wa_eventos (conversa_id, id);
 CREATE INDEX IF NOT EXISTS ix_wa_contato_tel ON wa_contatos (telefone);
 
 /* ------------------------------ Inteligência (IA) ------------------------------ */

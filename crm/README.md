@@ -178,6 +178,17 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Variáveis: `WA_CANAL=fake` (demonstração sem WhatsApp), `WA_DIGITANDO=0` (sem o "digitando…" antes de enviar),
   `WA_PAUSA_MS` (pausa entre envios seguidos).
 
+## Central de Atendimento Inteligente
+Com a IA no modo automático e "responde sozinha" ligado, o WhatsApp vira uma central: saudação e menu no primeiro contato
+(1 Cadastro de motorista e veículo, 2 Passageiro, 3 Encomendas, 4 Clube de Vantagens, 5 Outros), atendimento por assunto
+(o cliente pode digitar o número ou só explicar), confirmação de documentos, e **transferência para a equipe** quando o
+cliente pede um atendente, há reclamação, aprovação, valores ou falta informação oficial. Estados: IA atendendo,
+Aguardando atendimento humano (com motivo), Atendimento humano e Concluído — filtro na tela Conversas e botões
+Assumir / Devolver à IA / Concluir (com mensagem de encerramento). Quem responde pelo CRM ou celular assume a conversa
+e a IA para. Os textos fixos e as informações oficiais por assunto ficam em Configurações > Modelos de Comunicação da IA
+(só administrador edita). API: `POST /api/wa/conversas/:id/atendimento` (`acao`: assumir | devolver | concluir,
+`enviar_encerramento`), `GET|PUT /api/ia/modelos`.
+
 ## Inteligência (IA) nas conversas
 O assistente lê a conversa e devolve: **resumo, assunto, urgência, sentimento, dados do contato, resposta sugerida,
 próxima ação e tarefa sugerida**. Aparece no topo de cada conversa (botão **Analisar com IA**).

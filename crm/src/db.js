@@ -23,6 +23,20 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
   for (const [col, tipo] of [['totp_segredo', 'TEXT'], ['totp_pendente', 'TEXT'], ['totp_ativo', 'INTEGER NOT NULL DEFAULT 0'], ['totp_ultimo_passo', 'INTEGER NOT NULL DEFAULT 0'], ['email_2fa', 'INTEGER NOT NULL DEFAULT 0']]) {
     if (!usuarios.has(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${tipo}`);
   }
+  // Central de atendimento: estado da conversa (ia | aguardando | humano | concluido), assunto do menu e motivo.
+  const conversas = new Set(db.prepare('PRAGMA table_info(wa_conversas)').all().map((c) => c.name));
+  if (conversas.size) {
+    const novaCentral = !conversas.has('atendimento');
+    for (const [col, tipo] of [['atendimento', "TEXT NOT NULL DEFAULT 'ia'"], ['atend_assunto', 'TEXT'], ['atend_motivo', 'TEXT'], ['atend_em', 'TEXT'],
+      ['atend_por', 'INTEGER'], ['saudado_em', 'TEXT'], ['espera_em', 'TEXT']]) {
+      if (!conversas.has(col)) db.exec(`ALTER TABLE wa_conversas ADD COLUMN ${col} ${tipo}`);
+    }
+    if (novaCentral) {
+      // Conversas que já existiam: quem já recebeu resposta não ganha saudação de novo; resolvidas viram "concluído".
+      db.exec(`UPDATE wa_conversas SET saudado_em = created_at WHERE EXISTS (SELECT 1 FROM wa_mensagens m WHERE m.conversa_id = wa_conversas.id AND m.direcao = 'out')`);
+      db.exec(`UPDATE wa_conversas SET atendimento = 'concluido' WHERE situacao = 'Resolvida'`);
+    }
+  }
   const { ENTITIES } = require('./defs');
   for (const def of Object.values(ENTITIES)) {
     if (!/^[a-z_]+$/.test(def.table)) continue;

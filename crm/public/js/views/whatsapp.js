@@ -17,6 +17,11 @@ const SENTIMENTO = { positivo: ['Positivo', 'success'], neutro: ['Neutro', 'neut
 const CAMPO = { nome: 'Nome', cidade: 'Cidade', proxima_acao: 'Próxima ação', observacoes: 'Observações', nome_estabelecimento: 'Estabelecimento',
   categoria: 'Categoria', responsavel: 'Responsável', beneficio: 'Benefício', veiculo: 'Veículo', placa: 'Placa', cnh_categoria: 'Categoria da CNH' };
 const PERFIL_TIPO = { motorista: 'motoristas', passageiro: 'passageiros', parceiro: 'parceiros' };
+// Central de Atendimento: estados da conversa e assuntos do menu.
+const ESTADO = { ia: ['IA atendendo', 'info'], aguardando: ['Aguardando atendimento humano', 'danger'], humano: ['Atendimento humano', 'success'], concluido: ['Concluído', 'neutral'] };
+const ESTADO_CURTO = { ia: 'IA', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' };
+const ASSUNTO_MENU = { cadastro: 'Cadastro de motorista', passageiro: 'Passageiro', encomendas: 'Encomendas', clube: 'Clube de Vantagens', outros: 'Outros assuntos' };
+const EVENTO = { transferida: 'Transferida para a equipe', assumida: 'Assumida', devolvida: 'Devolvida para a IA', concluida: 'Concluída', reaberta: 'Reaberta' };
 
 const nomeDe = (c) => c.vinculo_nome || c.nome || c.telefone_exibicao || 'Contato';
 const iniciais = (nome) => String(nome).replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?';
@@ -30,6 +35,8 @@ function quando(iso) {
 export async function renderConversas(view, state) {
   const isAdmin = state.user.role === 'admin';
   const filtro = { modo: 'Aberta', q: '' };
+  let eventos = [];
+  let assinaturaAtual = '';
   let atual = null;      // conversa aberta
   let assinatura = '';   // identifica o estado das mensagens exibidas (evita redesenhar à toa)
   let seqLista = 0;
@@ -47,8 +54,12 @@ export async function renderConversas(view, state) {
           <div class="wa-list-head">
             <div class="search">${ui.icon('search', 16)}<input type="search" id="wa-q" placeholder="Buscar nome, telefone ou mensagem" maxlength="80"></div>
             <select id="wa-f" aria-label="Filtrar conversas">
-              <option value="Aberta">Abertas</option><option value="naolidas">Não lidas</option>
-              <option value="Resolvida">Resolvidas</option><option value="todas">Todas</option>
+              <option value="Aberta">Abertas</option>
+              <option value="at:aguardando">Aguardando humano</option>
+              <option value="at:humano">Em atendimento humano</option>
+              <option value="at:ia">IA atendendo</option>
+              <option value="naolidas">Não lidas</option>
+              <option value="at:concluido">Concluídas</option><option value="todas">Todas</option>
             </select>
           </div>
           <div class="wa-items" id="wa-items"></div>
@@ -65,6 +76,7 @@ export async function renderConversas(view, state) {
               <div class="wa-who" id="wa-who"></div>
               <div class="wa-actions" id="wa-actions"></div>
             </div>
+            <div class="wa-atend" id="wa-atend"></div>
             <div class="wa-ia" id="wa-ia"></div>
             <div class="wa-msgs" id="wa-msgs"></div>
             <div class="wa-composer">
@@ -97,6 +109,7 @@ export async function renderConversas(view, state) {
     const p = new URLSearchParams({ size: '50' });
     if (filtro.modo === 'Aberta' || filtro.modo === 'Resolvida') p.set('situacao', filtro.modo);
     if (filtro.modo === 'naolidas') p.set('nao_lidas', '1');
+    if (filtro.modo.startsWith('at:')) p.set('atendimento', filtro.modo.slice(3));
     if (filtro.q) p.set('q', filtro.q);
     return p.toString();
   }
@@ -109,7 +122,7 @@ export async function renderConversas(view, state) {
       <div class="wa-item-main">
         <div class="wa-item-top"><strong>${ui.esc(nome)}</strong><span class="wa-time">${ui.esc(quando(c.ultima_em))}</span></div>
         <div class="wa-item-sub"><span class="wa-preview">${ui.esc(prefixo + (c.ultima_mensagem || ''))}</span>${c.nao_lidas ? `<span class="wa-unread">${c.nao_lidas}</span>` : ''}</div>
-        ${c.vinculo_tipo ? `<div class="wa-tag">${ui.esc(TIPOS[c.vinculo_tipo] || '')}</div>` : ''}
+        <div class="wa-tags">${c.atendimento && c.atendimento !== 'ia' ? `<span class="wa-tag est-${ui.esc(c.atendimento)}">${ui.esc(ESTADO_CURTO[c.atendimento] || '')}</span>` : ''}${c.vinculo_tipo ? `<span class="wa-tag">${ui.esc(TIPOS[c.vinculo_tipo] || '')}</span>` : ''}${c.atend_assunto ? `<span class="wa-tag sub">${ui.esc(ASSUNTO_MENU[c.atend_assunto] || '')}</span>` : ''}</div>
       </div>
     </button>`;
   }
@@ -119,6 +132,16 @@ export async function renderConversas(view, state) {
     const data = await api.get(`/wa/conversas?${consulta()}`);
     if (seq !== seqLista || !view.isConnected) return;
     const box = $('#wa-items');
+    // Contagem por estado no filtro (a fila "Aguardando" chama atenção).
+    if (data.contagem) {
+      const sel = $('#wa-f');
+      for (const opt of sel.options) {
+        if (!opt.value.startsWith('at:')) continue;
+        const n = data.contagem[opt.value.slice(3)] || 0;
+        const base = opt.textContent.replace(/ \(\d+\)$/, '');
+        opt.textContent = opt.value === 'at:concluido' ? base : `${base} (${n})`;
+      }
+    }
     box.innerHTML = data.items.length
       ? data.items.map(itemHtml).join('') + (data.total > data.items.length ? `<p class="wa-more">Mostrando ${data.items.length} de ${data.total}. Use a busca para achar as demais.</p>` : '')
       : `<div class="wa-none">${ui.esc(filtro.q ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa aqui.')}</div>`;
@@ -147,9 +170,61 @@ export async function renderConversas(view, state) {
     $('#wa-actions').innerHTML = `
       <button class="btn btn-sm btn-soft" data-act="vincular" type="button">${c.vinculo_tipo ? 'Trocar cadastro' : 'Vincular cadastro'}</button>
       <button class="btn btn-sm btn-soft" data-act="tarefa" type="button">Criar tarefa</button>
-      <button class="btn btn-sm btn-ghost" data-act="situacao" type="button">${c.situacao === 'Aberta' ? 'Marcar resolvida' : 'Reabrir'}</button>
       ${isAdmin ? `<button class="btn btn-sm btn-danger" data-act="ignorar" type="button">Ignorar contato</button>
       <button class="btn btn-sm btn-danger" data-act="excluir" type="button">Excluir</button>` : ''}`;
+  }
+
+  // Faixa do atendimento: estado, assunto, motivo da transferência, ações e histórico.
+  function desenharAtendimento() {
+    const c = atual;
+    const est = ESTADO[c.atendimento] || ESTADO.ia;
+    const botoes = [];
+    if (c.atendimento === 'ia' || c.atendimento === 'aguardando') botoes.push('<button class="btn btn-sm btn-primary" data-at="assumir" type="button">Assumir</button>');
+    if (c.atendimento === 'humano' || c.atendimento === 'aguardando') botoes.push('<button class="btn btn-sm btn-soft" data-at="devolver" type="button">Devolver à IA</button>');
+    if (c.atendimento !== 'concluido') botoes.push('<button class="btn btn-sm btn-ghost" data-at="concluir" type="button">Concluir</button>');
+    else botoes.push('<button class="btn btn-sm btn-soft" data-at="assumir" type="button">Reabrir e assumir</button>');
+    const hist = eventos.map((e) => `<li>${ui.esc(ui.fmtDateTime(e.criado_em))} — ${ui.esc(EVENTO[e.tipo] || e.tipo)}${e.usuario_nome ? ` por ${ui.esc(e.usuario_nome)}` : (e.tipo === 'transferida' ? ' pela IA' : '')}${e.detalhe ? `: ${ui.esc(e.detalhe)}` : ''}</li>`).join('');
+    $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}">
+        <div class="wa-atend-info">${ui.badge(est[0], est[1])}
+          ${c.atend_assunto ? `<span class="muted small">${ui.esc(ASSUNTO_MENU[c.atend_assunto] || '')}</span>` : ''}
+          ${c.atendimento === 'aguardando' && c.atend_motivo ? `<span class="wa-motivo">Motivo: ${ui.esc(c.atend_motivo)}</span>` : ''}
+          ${c.atendimento === 'humano' && iaSt.responder ? '<span class="muted small">A IA não responde enquanto a equipe atende.</span>' : ''}</div>
+        <div class="wa-atend-acoes">${botoes.join('')}</div>
+      </div>
+      ${hist ? `<details class="wa-hist"><summary>Histórico do atendimento</summary><ul>${hist}</ul></details>` : ''}`;
+  }
+
+  async function acaoAtendimento(nome) {
+    if (!atual) return;
+    const id = atual.id;
+    let corpo = { acao: nome };
+    if (nome === 'concluir') {
+      const escolha = await new Promise((resolve) => {
+        const m = ui.modal({
+          title: 'Concluir atendimento', size: 'small',
+          body: `<p style="font-size:14px;color:#33455e">A conversa sai da fila. Se o cliente escrever de novo, a IA volta a atender.</p>
+            <label class="check" style="margin-top:12px"><input type="checkbox" id="cc-msg" checked><span>Enviar a mensagem de encerramento ao cliente</span></label>`,
+          footer: '<button class="btn btn-ghost" data-cancel type="button">Cancelar</button><button class="btn btn-primary" data-ok type="button">Concluir</button>'
+        });
+        m.dialog.querySelector('[data-ok]').addEventListener('click', () => { const v = m.dialog.querySelector('#cc-msg').checked; m.close(); resolve({ enviar: v }); });
+        m.dialog.querySelector('[data-cancel]').addEventListener('click', () => { m.close(); resolve(null); });
+        m.dialog.addEventListener('close', () => resolve(null), { once: true });
+      });
+      if (!escolha) return;
+      corpo = { acao: 'concluir', enviar_encerramento: escolha.enviar };
+    }
+    try {
+      const r = await api.post(`/wa/conversas/${id}/atendimento`, corpo);
+      if (!atual || atual.id !== id) return;
+      atual = r.item;
+      eventos = r.eventos || [];
+      assinaturaAtual = '';
+      desenharCabecalho();
+      desenharAtendimento();
+      ui.toast({ assumir: 'Você assumiu o atendimento. A IA não responde enquanto isso.', devolver: 'Conversa devolvida para a IA.', concluir: 'Atendimento concluído.' }[nome], 'success');
+      carregarMensagens(true).catch(() => {});
+      carregarLista().catch(() => {});
+    } catch (err) { ui.toast(err.message, 'error'); }
   }
 
   async function carregarMensagens(forcarRolagem = false) {
@@ -173,11 +248,14 @@ export async function renderConversas(view, state) {
   async function abrir(id) {
     const data = await api.get(`/wa/conversas/${id}`);
     atual = data.item;
+    eventos = data.eventos || [];
     assinatura = '';
+    assinaturaAtual = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}`;
     $('#wa-empty').classList.add('hidden');
     $('#wa-inner').classList.remove('hidden');
     wa.classList.add('open-thread');
     desenharCabecalho();
+    desenharAtendimento();
     analise = null;
     await carregarMensagens(true);
     carregarAnalise().catch(() => {});
@@ -281,9 +359,17 @@ export async function renderConversas(view, state) {
 
   async function atualizarAtual() {
     if (!atual) return;
-    const data = await api.get(`/wa/conversas/${atual.id}`);
+    const id = atual.id;
+    const data = await api.get(`/wa/conversas/${id}`);
+    if (!atual || atual.id !== id) return;
     atual = data.item;
+    eventos = data.eventos || [];
+    // Só redesenha quando o atendimento mudou (não fecha o histórico aberto à toa).
+    const assin = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}`;
+    if (assin === assinaturaAtual) return;
+    assinaturaAtual = assin;
     desenharCabecalho();
+    desenharAtendimento();
     desenharIA();
   }
 
@@ -298,6 +384,7 @@ export async function renderConversas(view, state) {
       await api.post(`/wa/conversas/${atual.id}/mensagens`, { texto });
       campo.value = '';
       await carregarMensagens(true);
+      atualizarAtual().catch(() => {});
       carregarLista().catch(() => {});
     } catch (err) {
       ui.toast(err.message, 'error');
@@ -444,6 +531,7 @@ export async function renderConversas(view, state) {
   $('#wa-back').addEventListener('click', fecharConversa);
   $('#wa-ia').addEventListener('click', (e) => { const b = e.target.closest('[data-ia]'); if (b) acaoIA(b.dataset.ia); });
   $('#wa-actions').addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (b) acao(b.dataset.act); });
+  $('#wa-atend').addEventListener('click', (e) => { const b = e.target.closest('[data-at]'); if (b) acaoAtendimento(b.dataset.at); });
   $('#wa-msgs').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-retry]');
     if (!b) return;
@@ -456,6 +544,7 @@ export async function renderConversas(view, state) {
     if (document.hidden) return;
     carregarLista().catch(() => {});
     carregarMensagens().catch(() => {});
+    if (atual) atualizarAtual().catch(() => {});
     if (atual && iaSt.pronta && iaSt.modo === 'automatico') carregarAnalise().catch(() => {});
     carregarStatus();
   }, 4000);

@@ -491,13 +491,10 @@ async function enterApp() {
   window.removeEventListener('hashchange', route);
   window.addEventListener('hashchange', route);
   await route();
-  // Lembrete: sem códigos de recuperação, a pessoa não consegue redefinir a senha sozinha.
-  api.get('/auth/recovery-codes').then((st) => {
-    if (!st.restantes) ui.toast('Gere seus códigos de recuperação em Configurações, para poder redefinir a senha se esquecer.', 'info');
-  }).catch(() => {});
+  // Lembrete só quando dá para ativar a verificação por e-mail (envio configurado) e ela ainda está desligada.
   if (state.user && state.user.role === 'admin') {
     api.get('/auth/2fa').then((st) => {
-      if (!st.ativo) ui.toast('Administrador: ative a verificação em duas etapas em Configurações > Segurança da conta.', 'info');
+      if (st.email_configurado && !st.email_ativo && !st.ativo) ui.toast('Dica: ative a verificação por e-mail em Configurações (código só em aparelho novo).', 'info');
     }).catch(() => {});
   }
 }
