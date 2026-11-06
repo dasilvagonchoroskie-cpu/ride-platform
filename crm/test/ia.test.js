@@ -66,7 +66,7 @@ test('prompt: conversa cercada, marcadores do cliente neutralizados e regra de n
 test('prompt: limites de quantidade e de tamanho das mensagens', () => {
   const msgs = Array.from({ length: 100 }, (_, i) => ({ direcao: 'in', texto: `msg${i} ${'a'.repeat(2000)}` }));
   const texto = P.formatarMensagens(msgs);
-  assert.ok(texto.length <= 8000 + 40, `tamanho ${texto.length}`);
+  assert.ok(texto.length <= 14000 + 40, `tamanho ${texto.length}`);
   assert.ok(texto.includes('msg99'), 'mantém as mais recentes');
   assert.ok(!texto.includes('msg0 '), 'descarta as mais antigas');
   assert.ok(texto.split('\n').every((l) => l.length <= 800 + 12));

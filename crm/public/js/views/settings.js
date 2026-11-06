@@ -108,7 +108,7 @@ export async function renderSettings(view, state) {
               <select id="ia-modo"><option value="sugerir">Sugerir: a IA só analisa quando o atendente pedir</option>
                 <option value="automatico">Automático: analisa cada conversa nova e preenche campos vazios do cadastro</option></select></div>
             <label class="check"><input type="checkbox" id="ia-criar"> No modo automático, criar cadastro novo quando a IA identificar motorista, passageiro ou parceiro e houver dados suficientes</label>
-            <label class="check"><input type="checkbox" id="ia-transcrever"> Transcrever mensagens de voz (o áudio vira texto na conversa e a IA consegue ler). Usa a chave do Gemini; se tiver chave do Groq, ele entra como reserva.</label>
+            <label class="check"><input type="checkbox" id="ia-transcrever"> Ler as mídias que chegam: áudio vira texto; fotos, PDFs e vídeos são lidos pelo Gemini (inclusive documentos como CNH e CRLV); Word, Excel e PowerPoint são lidos aqui no servidor. Assim a IA consegue usar tudo para preencher o cadastro.</label>
             <div class="field"><label for="ia-limite">Limite de análises por dia</label><input id="ia-limite" type="number" min="1" max="2000" step="1"></div>
             <div class="field"><label for="ia-modelo">Modelo (opcional)</label><input id="ia-modelo" type="text" maxlength="100" autocomplete="off"></div>
             <div class="field"><label for="ia-reserva">Provedor reserva (opcional)</label><select id="ia-reserva"></select>
@@ -393,7 +393,7 @@ function setupIA(view) {
     provedores = st.provedores || [];
     $('#ia-state').innerHTML = `${ui.badge(st.pronta ? 'Pronta' : (st.ativo ? 'Sem chave' : 'Desativada'), st.pronta ? 'success' : (st.ativo ? 'warn' : 'neutral'))}
       <span class="muted">${ui.esc(st.provedor_nome)}${st.chave_configurada ? ` · chave terminada em ${ui.esc(st.chave_final4)} (${st.chave_origem === 'ambiente' ? 'variável de ambiente' : 'arquivo no servidor'})` : ' · nenhuma chave configurada'}</span>
-      <div class="muted" style="margin-top:6px">Hoje: ${ui.fmtInt(st.uso.analises)} análise(s), ${ui.fmtInt(st.uso.tokens)} tokens, ${ui.fmtInt(st.transcricoes_hoje || 0)} áudio(s) transcrito(s).</div>`;
+      <div class="muted" style="margin-top:6px">Hoje: ${ui.fmtInt(st.uso.analises)} análise(s), ${ui.fmtInt(st.uso.tokens)} tokens, ${ui.fmtInt(st.transcricoes_hoje || 0)} mídia(s) lida(s).</div>`;
     $('#ia-provedor').innerHTML = provedores.map((p) => `<option value="${ui.esc(p.id)}">${ui.esc(p.nome)}</option>`).join('');
     $('#ia-provedor').value = st.provedor;
     $('#ia-reserva').innerHTML = '<option value="">Nenhum</option>' + provedores.map((p) => `<option value="${ui.esc(p.id)}">${ui.esc(p.nome)}${p.chave_configurada ? '' : ' (sem chave)'}</option>`).join('');

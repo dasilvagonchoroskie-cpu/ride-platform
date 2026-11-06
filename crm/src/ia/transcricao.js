@@ -5,8 +5,9 @@
 // O texto transcrito é dado NÃO confiável (vem da fala do cliente): fica na mensagem e passa pelas mesmas proteções
 // de qualquer texto de conversa. A IA nunca executa o que está nele.
 const { ErroIA, erroDeStatus, PROVEDORES } = require('./provider');
+const { extrairTextoOffice } = require('./office');
 
-const MAX_BYTES = 15 * 1024 * 1024;       // áudios de WhatsApp costumam ter poucos KB
+const MAX_BYTES = 15 * 1024 * 1024;       // limite do envio embutido ao Gemini (com folga)
 const MAX_SEGUNDOS = 15 * 60;
 const MIME_ACEITOS = /^audio\/(ogg|opus|mpeg|mp3|mp4|m4a|aac|wav|x-wav|webm|amr|3gpp)$/;
 const INSTRUCAO = 'Transcreva fielmente este áudio, em português do Brasil. Responda SOMENTE com a transcrição, sem comentários, '
@@ -30,13 +31,13 @@ async function chamar(fetchImpl, url, init, timeoutMs) {
 }
 
 // Gemini: modelo = o mesmo da IA (ou descoberto). Chave no cabeçalho x-goog-api-key (nunca na URL).
-async function transcreverGemini({ audio, mime, chave, modelo, fetchImpl, timeoutMs }) {
+async function transcreverGemini({ audio, mime, chave, modelo, fetchImpl, timeoutMs, instrucao = INSTRUCAO }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`;
   const resposta = await chamar(fetchImpl, url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': chave },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: INSTRUCAO }, { inline_data: { mime_type: mime === 'audio/opus' ? 'audio/ogg' : mime, data: audio.toString('base64') } }] }],
+      contents: [{ role: 'user', parts: [{ text: instrucao }, { inline_data: { mime_type: mime === 'audio/opus' ? 'audio/ogg' : mime, data: audio.toString('base64') } }] }],
       generationConfig: { temperature: 0, maxOutputTokens: 8192 }
     })
   }, timeoutMs);
@@ -94,7 +95,48 @@ function criarTranscritor({ cofre, obterModeloGemini, fetchImpl = globalThis.fet
     throw ultimoErro;
   }
 
-  return { transcrever, disponiveis };
+  // Lê qualquer mídia: áudio (transcrição), foto, PDF e vídeo (Gemini), Office e texto (no próprio servidor, sem IA).
+  async function lerMidia({ tipo, arquivo, mime = '', nome = '', segundos = 0 }) {
+    if (!Buffer.isBuffer(arquivo) || !arquivo.length) throw new ErroIA('invalido', 'Arquivo vazio.');
+    if (arquivo.length > MAX_BYTES) throw new ErroIA('invalido', 'Arquivo grande demais para ler (máximo 15 MB).');
+    const m = String(mime || '').toLowerCase();
+    const ext = (String(nome || '').toLowerCase().match(/\.([a-z0-9]{1,5})$/) || [])[1] || '';
+    if (tipo === 'audio' || m.startsWith('audio/')) {
+      const r = await transcrever({ audio: arquivo, mime: m || 'audio/ogg', segundos });
+      return { ...r, simbolo: '🎤' };
+    }
+    // Office e texto: lidos aqui mesmo (não gastam cota da IA nem saem do servidor).
+    if (/^(docx|xlsx|pptx)$/.test(ext) || /officedocument/.test(m)) {
+      let texto;
+      try { texto = extrairTextoOffice(arquivo, nome || `arquivo.${ext}`); } catch (err) { throw new ErroIA('invalido', err.message); }
+      return { texto: limparTranscricao(texto) || '[documento sem texto]', provedor: 'local', simbolo: '📎' };
+    }
+    if (/^(txt|csv|json|xml|md)$/.test(ext) || /^text\//.test(m)) {
+      return { texto: limparTranscricao(arquivo.toString('utf8')), provedor: 'local', simbolo: '📎' };
+    }
+    if (!cofre.ler('gemini')) throw new ErroIA('sem_chave', 'Cadastre a chave do Gemini para ler fotos, PDFs e vídeos.');
+    let instrucao; let tipoMime = m;
+    if (tipo === 'image' || m.startsWith('image/')) {
+      if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(m)) tipoMime = 'image/jpeg';
+      instrucao = 'Descreva objetivamente esta imagem, em português do Brasil, e transcreva TODO texto visível. '
+        + 'Se for documento (CNH, RG, CPF, CRLV, comprovante, nota, boleto, cardápio, contrato, placa de veículo), liste os dados lidos '
+        + 'em linhas "Campo: valor" (ex.: Nome, Categoria da CNH, Validade, Placa, Modelo do veículo, Valor, Data). '
+        + 'Sem comentários, sem opinião, sem inventar o que não dá para ler.';
+    } else if (m === 'application/pdf' || ext === 'pdf') {
+      tipoMime = 'application/pdf';
+      instrucao = 'Leia este documento PDF e responda em português do Brasil: um resumo de até 15 linhas e, depois, os dados importantes '
+        + 'em linhas "Campo: valor" (nomes, documentos, valores, datas, placas, endereços, prazos). Sem comentários e sem inventar.';
+    } else if (tipo === 'video' || m.startsWith('video/')) {
+      if (!/^video\/(mp4|mpeg|mov|quicktime|webm|3gpp|x-flv|wmv)$/.test(m)) tipoMime = 'video/mp4';
+      instrucao = 'Descreva este vídeo em português do Brasil em até 10 linhas e transcreva a fala, se houver. Sem comentários.';
+    } else {
+      throw new ErroIA('invalido', `Formato não suportado para leitura (${m || ext || 'desconhecido'}).`);
+    }
+    const texto = await transcreverGemini({ audio: arquivo, mime: tipoMime, chave: cofre.ler('gemini'), modelo: await obterModeloGemini(), fetchImpl, timeoutMs, instrucao });
+    return { texto: limparTranscricao(texto), provedor: 'gemini', simbolo: '📎' };
+  }
+
+  return { transcrever, lerMidia, disponiveis };
 }
 
 module.exports = { criarTranscritor, transcreverGemini, transcreverGroq, limparTranscricao, MAX_BYTES, MAX_SEGUNDOS };

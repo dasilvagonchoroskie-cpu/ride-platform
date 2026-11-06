@@ -15,6 +15,21 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
 
+// Migração simples e segura: campo novo em defs.js que ainda não existe na tabela vira coluna (TEXT, opcional).
+// Só ACRESCENTA colunas; nunca apaga nem altera dados. Nomes vêm só de defs.js (lista fechada, sem entrada de usuário).
+(function acrescentarColunas() {
+  const { ENTITIES } = require('./defs');
+  for (const def of Object.values(ENTITIES)) {
+    if (!/^[a-z_]+$/.test(def.table)) continue;
+    const existentes = new Set(db.prepare(`PRAGMA table_info(${def.table})`).all().map((c) => c.name));
+    if (!existentes.size) continue;
+    for (const f of def.fields) {
+      if (existentes.has(f.key) || f.required || !/^[a-z_]+$/.test(f.key)) continue;
+      db.exec(`ALTER TABLE ${def.table} ADD COLUMN ${f.key} TEXT`);
+    }
+  }
+})();
+
 const nowISO = () => new Date().toISOString();
 
 /* ----------------------------- configurações ----------------------------- */

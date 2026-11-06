@@ -31,8 +31,9 @@ const ia = createIaService({
 ia.usarProvedor(criarProvedorMulti({ resolver: ia.resolverProvedor }));
 wa.definirGancho((conversaId, opcoes) => ia.agendarAutomatico(conversaId, opcoes));
 
-// Transcrição das mensagens de voz (Gemini com a chave da IA; Groq como alternativa grátis). Liga junto com a IA.
+// Leitura das mídias do WhatsApp: áudio (Gemini; Groq como reserva), foto/PDF/vídeo (Gemini), Office/texto (no servidor).
 const LIMITE_TRANSCRICOES_DIA = Number(process.env.IA_LIMITE_TRANSCRICOES) || 300;
+const MAX_MIDIA_BYTES = 15 * 1024 * 1024;
 const transcritor = criarTranscritor({
   cofre: cofreIA,
   obterModeloGemini: async () => {
@@ -45,22 +46,22 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
   const cfg = ia.config();
   if (!cfg.ativo || !cfg.transcrever || !midia || typeof midia.baixar !== 'function') return false;
   if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return false;
-  if (!transcritor.disponiveis().length) return false;
+  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) return false; // nem baixa arquivo grande demais
   const registrar = (ok, provedor, erro) => db.prepare(
     'INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(mensagemId, provedor || null, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
+  ).run(mensagemId, provedor ? `${provedor}:${midia.tipo}` : midia.tipo, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
   try {
-    const audio = await midia.baixar();
-    const r = await transcritor.transcrever({ audio: Buffer.from(audio), mime: midia.mime, segundos: midia.segundos });
+    const arquivo = Buffer.from(await midia.baixar());
+    const r = await transcritor.lerMidia({ tipo: midia.tipo, arquivo, mime: midia.mime, nome: midia.nome, segundos: midia.segundos });
     const atual = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
-    const rotulo = atual && atual.texto ? atual.texto : '[mensagem de voz]';
-    const novo = r.texto === '[sem fala]' ? `${rotulo} (sem fala)` : `${rotulo} 🎤 ${r.texto}`;
+    const rotulo = atual && atual.texto ? atual.texto : `[${midia.tipo}]`;
+    const novo = r.texto === '[sem fala]' ? `${rotulo} (sem fala)` : `${rotulo} ${r.simbolo || '📎'} ${r.texto}`;
     wa.store.definirTranscricao(mensagemId, novo);
     registrar(true, r.provedor);
     return true;
   } catch (err) {
     registrar(false, null, err.message);
-    console.error(`[ia] transcrição da mensagem ${mensagemId}: ${err.message}`);
+    console.error(`[ia] leitura de ${midia.tipo} da mensagem ${mensagemId}: ${err.message}`);
     return false;
   }
 });

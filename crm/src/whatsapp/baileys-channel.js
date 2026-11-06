@@ -93,6 +93,25 @@ function desembrulhar(message) {
   return m || {};
 }
 
+// Localização e contato já vêm com os dados na própria mensagem (não precisam de IA).
+function textoLocalizacao(l) {
+  if (!l) return '[localização]';
+  const lat = Number(l.degreesLatitude); const lng = Number(l.degreesLongitude);
+  const partes = [l.name, l.address].filter(Boolean).map((x) => String(x).slice(0, 150));
+  const mapa = Number.isFinite(lat) && Number.isFinite(lng) && (lat || lng) ? ` https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}` : '';
+  return `[localização] ${partes.join(' — ')}${mapa}`.replace(/\s+/g, ' ').trim();
+}
+
+function textoContatos(lista) {
+  const itens = (lista || []).slice(0, 5).map((c) => {
+    const v = String((c && c.vcard) || '');
+    const nome = (c && c.displayName) || ((v.match(/^FN:(.*)$/m) || [])[1] || '').trim();
+    const tels = [...v.matchAll(/^TEL[^:]*:(.*)$/gm)].map((m) => m[1].trim()).slice(0, 3);
+    return [nome, tels.join(', ')].filter(Boolean).join(': ');
+  }).filter(Boolean);
+  return itens.length ? `[contato] ${itens.join(' | ')}`.slice(0, 600) : '[contato]';
+}
+
 // Converte uma mensagem da biblioteca no formato do CRM. Devolve null quando deve ser ignorada.
 // tipoUpsert: 'notify' = mensagem nova em tempo real (inclui as que ficaram na fila enquanto o servidor estava fora);
 // 'append' = costuma ser histórico: só entra se for recente (evita importar conversas antigas).
@@ -116,19 +135,24 @@ function mensagemParaEvento(m, tipoUpsert, agoraSeg = Math.floor(Date.now() / 10
     else if (msg.audioMessage) { tipo = 'audio'; texto = msg.audioMessage.ptt ? '[mensagem de voz]' : '[áudio]'; }
     else if (msg.documentMessage) { tipo = 'document'; texto = comLegenda('[documento]', msg.documentMessage.fileName || msg.documentMessage.caption); }
     else if (msg.stickerMessage) { tipo = 'sticker'; texto = '[figurinha]'; }
-    else if (msg.locationMessage || msg.liveLocationMessage) { tipo = 'location'; texto = '[localização]'; }
-    else if (msg.contactMessage || msg.contactsArrayMessage) { tipo = 'contact'; texto = '[contato]'; }
+    else if (msg.locationMessage || msg.liveLocationMessage) { tipo = 'location'; texto = textoLocalizacao(msg.locationMessage || msg.liveLocationMessage); }
+    else if (msg.contactMessage || msg.contactsArrayMessage) { tipo = 'contact'; texto = textoContatos(msg.contactMessage ? [msg.contactMessage] : (msg.contactsArrayMessage.contacts || [])); }
     else if (msg.pollCreationMessage || msg.pollCreationMessageV3) { tipo = 'poll'; texto = '[enquete]'; }
     else { tipo = 'outro'; texto = '[mensagem não suportada]'; }
   }
 
   const deMim = !!m.key.fromMe;
-  // Áudio: dados para a transcrição (o arquivo em si é baixado depois, só se a transcrição estiver ligada).
-  const midia = tipo === 'audio' ? {
-    tipo: 'audio',
-    mime: String(msg.audioMessage.mimetype || 'audio/ogg').split(';')[0].trim().toLowerCase(),
-    segundos: Number(msg.audioMessage.seconds) || 0,
-    bytes: Number(msg.audioMessage.fileLength && (msg.audioMessage.fileLength.low !== undefined ? msg.audioMessage.fileLength.low : msg.audioMessage.fileLength)) || 0
+  // Mídia (áudio, foto, vídeo, documento): dados para a leitura pela IA. O arquivo só é baixado depois, se a leitura estiver ligada.
+  const FONTE = { audio: msg.audioMessage, image: msg.imageMessage, video: msg.videoMessage, document: msg.documentMessage };
+  const fonte = FONTE[tipo];
+  const numero = (v) => Number(v && v.low !== undefined ? v.low : v) || 0;
+  const PADRAO = { audio: 'audio/ogg', image: 'image/jpeg', video: 'video/mp4', document: 'application/octet-stream' };
+  const midia = fonte ? {
+    tipo,
+    mime: String(fonte.mimetype || PADRAO[tipo]).split(';')[0].trim().toLowerCase(),
+    segundos: numero(fonte.seconds),
+    bytes: numero(fonte.fileLength),
+    nome: fonte.fileName ? String(fonte.fileName).slice(0, 150) : null
   } : null;
   const telefone = telefoneDoJid(jid) || telefoneDoJid(m.key.remoteJidAlt) || telefoneDoJid(m.key.senderPn)
     || telefoneDoJid(m.key.participantPn) || null;
@@ -322,4 +346,4 @@ function criar({ authDir, libDir, log = console } = {}) {
   };
 }
 
-module.exports = { criar, mensagemParaEvento, normalizarBiblioteca, resolverEntrada, carregarBiblioteca, STATUS_BAILEYS };
+module.exports = { textoLocalizacao, textoContatos, criar, mensagemParaEvento, normalizarBiblioteca, resolverEntrada, carregarBiblioteca, STATUS_BAILEYS };

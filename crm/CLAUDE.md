@@ -60,6 +60,15 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   na hora; ao acordar, o WhatsApp entrega o que ficou pendente.
 - Código no monorepo `dasilvagonchoroskie-cpu/ride-platform`, pasta `crm/` (fora do workspace pnpm). Docker: `crm/Dockerfile`.
 
+## Leitura de mídias (06/11/2026)
+- Além do áudio: foto, PDF e vídeo são lidos pelo Gemini (descrição + texto visível; documentos como CNH/CRLV viram
+  linhas "Campo: valor"); Word/Excel/PowerPoint (.docx/.xlsx/.pptx) e texto/CSV são lidos NO SERVIDOR (`src/ia/office.js`,
+  leitor de ZIP sem dependência, com limite contra zip bomb) e não gastam cota. Localização vira texto com link do mapa;
+  contato compartilhado vira nome + telefone. Formatos antigos (.doc/.xls) e executáveis não são lidos.
+- Texto lido entra na mensagem com 📎 (áudio com 🎤); o prompt trata os dois como dados da pessoa e nunca como instrução.
+- Motorista ganhou `veiculo`, `placa`, `cnh_categoria` (a IA pode preencher). `db.js` acrescenta sozinho colunas novas
+  (opcionais) de `defs.js` em bancos antigos — só ADD COLUMN, nunca altera/apaga.
+
 ## Transcrição de áudio (05/11/2026)
 - Mensagem de voz que chega (do contato ou enviada pelo celular) é baixada (`downloadMediaMessage`), transcrita e o
   texto da mensagem vira `[mensagem de voz] 🎤 <transcrição>`. `src/ia/transcricao.js`: Gemini (API nativa

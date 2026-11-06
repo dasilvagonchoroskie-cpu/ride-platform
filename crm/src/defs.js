@@ -52,7 +52,7 @@ const ENTITIES = {
     dateFieldLabel: 'primeiro contato',
     orderField: 'data_acompanhamento',
     orderDir: 'asc', // follow-up: o mais urgente primeiro (sem data vai para o fim)
-    searchFields: ['nome', 'telefone', 'cidade', 'origem', 'proxima_acao', 'observacoes'],
+    searchFields: ['nome', 'telefone', 'cidade', 'origem', 'placa', 'veiculo', 'proxima_acao', 'observacoes'],
     statusField: 'situacao',
     statuses: STATUS_MOTORISTA,
     interactions: true,
@@ -64,6 +64,9 @@ const ENTITIES = {
       { key: 'data_primeiro_contato', label: 'Data do primeiro contato', type: 'date', required: true },
       { key: 'origem', label: 'Origem do contato', type: 'select', required: true, options: ORIGENS },
       { key: 'situacao', label: 'Situação', type: 'select', required: true, options: STATUS_MOTORISTA },
+      { key: 'veiculo', label: 'Veículo (modelo, cor, ano)', type: 'text', max: 120 },
+      { key: 'placa', label: 'Placa', type: 'text', max: 10 },
+      { key: 'cnh_categoria', label: 'Categoria da CNH', type: 'select', options: ['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE'] },
       { key: 'proxima_acao', label: 'Próxima ação', type: 'text', max: 160 },
       { key: 'data_acompanhamento', label: 'Data do acompanhamento', type: 'date' },
       { key: 'observacoes', label: 'Observações', type: 'textarea', max: 2000, full: true }

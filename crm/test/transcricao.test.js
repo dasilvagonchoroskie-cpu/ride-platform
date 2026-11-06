@@ -26,7 +26,7 @@ test('mensagem de voz traz os dados do áudio (para transcrever depois)', () => 
     message: { audioMessage: { ptt: true, mimetype: 'audio/ogg; codecs=opus', seconds: 12, fileLength: 20480 } } }, 'notify', agora);
   assert.equal(evt.tipo, 'audio');
   assert.equal(evt.texto, '[mensagem de voz]');
-  assert.deepEqual(evt.midia, { tipo: 'audio', mime: 'audio/ogg', segundos: 12, bytes: 20480 });
+  assert.deepEqual(evt.midia, { tipo: 'audio', mime: 'audio/ogg', segundos: 12, bytes: 20480, nome: null });
   const texto = mensagemParaEvento({ key: { remoteJid: '5564999990000@s.whatsapp.net', id: 'A2' }, messageTimestamp: agora, message: { conversation: 'oi' } }, 'notify', agora);
   assert.equal(texto.midia, undefined);
 });
