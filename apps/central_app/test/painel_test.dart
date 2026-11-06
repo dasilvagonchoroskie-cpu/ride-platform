@@ -1315,8 +1315,13 @@ void main() {
     testWidgets('Tela pequena e letra grande: ${caso.$1} sem estourar', (tester) async {
       _clube.clear();
       _clubeFora = false;
+      // Guarda o erro inteiro (com o widget e a linha do codigo) para o relatorio.
+      final erros = <String>[];
+      final antes = FlutterError.onError;
+      FlutterError.onError = (d) => erros.add(d.toString());
       await _abrir(tester, caso.$2, pequena: true);
-      expect(tester.takeException(), isNull);
+      FlutterError.onError = antes;
+      expect(erros, isEmpty, reason: erros.join('\n----\n'));
       await tester.pumpWidget(const SizedBox());
     });
   }
