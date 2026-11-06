@@ -54,7 +54,7 @@ export async function renderSettings(view, state) {
                     <button class="btn btn-sm btn-ghost" data-user-pass="${u.id}" title="Redefinir senha">${ui.icon('lock', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-toggle="${u.id}" data-ativo="${u.ativo}" title="${u.ativo ? 'Desativar' : 'Ativar'}">${ui.icon(u.ativo ? 'x' : 'check', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-del="${u.id}" title="Excluir">${ui.icon('trash', 14)}</button>
-                    ${u.totp_ativo && u.id !== state.user.id ? `<button class="btn btn-sm btn-ghost" data-user-2fa="${u.id}" title="Desligar verificação em duas etapas (celular perdido)">2 etapas ✕</button>` : ''}
+                    ${(u.totp_ativo || u.email_2fa) && u.id !== state.user.id ? `<button class="btn btn-sm btn-ghost" data-user-2fa="${u.id}" title="Desligar verificação em duas etapas (perdeu o acesso ao e-mail ou ao celular)">2 etapas ✕</button>` : ''}
                   </div>`
                 }
               ],
@@ -140,7 +140,7 @@ export async function renderSettings(view, state) {
         </div>
 
         <div class="card" id="mfa-card">
-          <div class="card-head"><div><h3>Verificação em duas etapas</h3><p class="sub">Além da senha, um código do aplicativo autenticador do celular</p></div></div>
+          <div class="card-head"><div><h3>Verificação em duas etapas</h3><p class="sub">Código no seu e-mail só quando entrar por um aparelho novo</p></div></div>
           <div class="card-body"><div id="mfa-corpo" class="muted">Carregando…</div><div class="form-errors" id="mfa-error" hidden></div></div>
         </div>
 
@@ -507,7 +507,7 @@ function setupRecuperacao(view) {
   estado();
 }
 
-// Verificação em duas etapas (aplicativo autenticador: Google Authenticator, Microsoft Authenticator etc.).
+// Verificação em duas etapas: código por e-mail só em aparelho novo (padrão) + autenticador opcional.
 function setupDuasEtapas(view) {
   const $ = (sel) => view.querySelector(sel);
   const erro = (msg) => { const b = $('#mfa-error'); b.hidden = !msg; b.textContent = msg || ''; };
@@ -515,8 +515,59 @@ function setupDuasEtapas(view) {
     erro('');
     let st;
     try { st = await api.get('/auth/2fa'); } catch (e) { return; }
+    const aparelhos = (st.aparelhos || []).map((a) => `<li>${ui.esc(a.nome || 'Aparelho')} <span class="muted small">— último uso ${ui.esc(ui.fmtDateTime(a.last_used_at))}</span></li>`).join('');
+    let emailHtml;
+    if (!st.email_configurado) {
+      emailHtml = `${ui.badge('Indisponível', 'warn')} <span class="muted">O envio de e-mail ainda não está ligado no servidor.</span>`;
+    } else if (st.email_ativo) {
+      emailHtml = `${ui.badge('Ativada', 'success')} <span class="muted">Aparelho novo pede um código enviado para ${ui.esc(st.email)}.</span>
+        <div class="stack" style="gap:10px;margin-top:10px">
+          <div class="field"><label for="mfe-senha-off">Senha atual (para desativar)</label><input id="mfe-senha-off" type="password" autocomplete="current-password"></div>
+          <button class="btn btn-ghost" id="mfe-off" type="button">Desativar</button></div>`;
+    } else {
+      emailHtml = `${ui.badge('Desativada', 'warn')} <span class="muted">Ao ativar, entrar por um aparelho novo pede um código enviado para ${ui.esc(st.email)}. Neste aparelho não pede.</span>
+        <div class="stack" style="gap:10px;margin-top:10px">
+          <div class="field"><label for="mfe-senha">Senha atual</label><input id="mfe-senha" type="password" autocomplete="current-password"></div>
+          <button class="btn btn-primary" id="mfe-iniciar" type="button">${ui.icon('lock', 15)} Ativar (envia um código para testar)</button></div>
+        <div id="mfe-passo2" hidden></div>`;
+    }
+    $('#mfa-corpo').innerHTML = `<div id="mfa-email">${emailHtml}</div>
+      <div style="margin-top:14px"><b>Aparelhos confirmados</b>
+        ${aparelhos ? `<ul style="margin:6px 0 8px 18px">${aparelhos}</ul><button class="btn btn-sm btn-ghost" id="mfa-esquecer" type="button">Esquecer os outros aparelhos</button>` : '<p class="muted small">Nenhum ainda.</p>'}</div>
+      <details style="margin-top:14px"><summary class="muted">Aplicativo autenticador (opcional)</summary><div id="mfa-totp" style="margin-top:10px"></div></details>`;
+    $('#mfe-iniciar')?.addEventListener('click', async () => {
+      erro('');
+      try {
+        const r = await api.post('/auth/2fa/email/iniciar', { senha_atual: $('#mfe-senha').value });
+        const p2 = $('#mfe-passo2');
+        p2.hidden = false;
+        p2.innerHTML = `<div class="field" style="margin-top:12px"><label for="mfe-codigo">Código de 6 números enviado para ${ui.esc(r.email)}</label><input id="mfe-codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code"><div class="form-hint">Não chegou? Confira o spam.</div></div>
+          <button class="btn btn-primary" id="mfe-confirmar" type="button">Confirmar e ativar</button>`;
+        $('#mfe-confirmar').addEventListener('click', async () => {
+          try { await api.post('/auth/2fa/email/confirmar', { codigo: $('#mfe-codigo').value }); ui.toast('Verificação por e-mail ativada. Este aparelho ficou confirmado.', 'success'); desenhar(); } catch (e) { erro(e.message); }
+        });
+      } catch (e) { erro(e.message); }
+    });
+    $('#mfe-off')?.addEventListener('click', async () => {
+      try { await api.post('/auth/2fa/email/desativar', { senha_atual: $('#mfe-senha-off').value }); ui.toast('Verificação por e-mail desativada.', 'success'); desenhar(); } catch (e) { erro(e.message); }
+    });
+    $('#mfa-esquecer')?.addEventListener('click', async () => {
+      const ok = await ui.confirmDialog({ title: 'Esquecer os outros aparelhos', message: 'Os outros aparelhos saem do CRM e vão pedir o código de novo no próximo acesso. Este aparelho continua.', confirmLabel: 'Esquecer' });
+      if (!ok) return;
+      try { const r = await api.post('/auth/aparelhos/esquecer', {}); ui.toast(`${r.removidos} aparelho(s) esquecido(s).`, 'success'); desenhar(); } catch (e) { erro(e.message); }
+    });
+    setupAutenticador(view, st, erro, desenhar);
+  }
+  desenhar();
+}
+
+// Aplicativo autenticador (opcional): Google Authenticator, Microsoft Authenticator etc.
+function setupAutenticador(view, st, erro, redesenhar) {
+  const $ = (sel) => view.querySelector(sel);
+  const desenhar = redesenhar;
+  {
     if (st.ativo) {
-      $('#mfa-corpo').innerHTML = `${ui.badge('Ativada', 'success')}
+      $('#mfa-totp').innerHTML = `${ui.badge('Ativada', 'success')}
         <div class="stack" style="gap:10px;margin-top:10px">
           <div class="field"><label for="mfa-senha-off">Senha atual</label><input id="mfa-senha-off" type="password" autocomplete="current-password"></div>
           <div class="field"><label for="mfa-codigo-off">Código do aplicativo</label><input id="mfa-codigo-off" inputmode="numeric" maxlength="6"></div>
@@ -526,7 +577,7 @@ function setupDuasEtapas(view) {
       });
       return;
     }
-    $('#mfa-corpo').innerHTML = `${ui.badge('Desativada', 'warn')} <span class="muted">${st.obrigatoria_admin ? 'Recomendado para administradores.' : ''}</span>
+    $('#mfa-totp').innerHTML = `${ui.badge('Desativada', 'warn')} <span class="muted">Opcional: pede o código do aplicativo em aparelho novo (no lugar do e-mail).</span>
       <div class="stack" style="gap:10px;margin-top:10px">
         <div class="field"><label for="mfa-senha">Senha atual</label><input id="mfa-senha" type="password" autocomplete="current-password"></div>
         <button class="btn btn-primary" id="mfa-iniciar" type="button">${ui.icon('lock', 15)} Ativar</button></div>
@@ -550,5 +601,4 @@ function setupDuasEtapas(view) {
       } catch (e) { erro(e.message); }
     });
   }
-  desenhar();
 }

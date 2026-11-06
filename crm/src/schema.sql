@@ -295,6 +295,19 @@ CREATE TABLE IF NOT EXISTS recovery_codes (
 );
 CREATE INDEX IF NOT EXISTS idx_recovery_codes_user ON recovery_codes(user_id);
 
+-- Aparelhos confiáveis: depois da verificação por e-mail (ou autenticador), o aparelho não pede código de novo
+-- até expirar (180 dias) ou ser esquecido. Só o hash do token fica guardado; o token vive num cookie HttpOnly.
+CREATE TABLE IF NOT EXISTS dispositivos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  nome TEXT,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dispositivos_user ON dispositivos(user_id);
+
 -- Transcrições de áudio do WhatsApp feitas pela IA (para contar o limite diário e saber o que falhou).
 CREATE TABLE IF NOT EXISTS ia_transcricoes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -121,7 +121,7 @@ function renderLogin(org) {
         email: document.getElementById('login-email').value,
         senha: document.getElementById('login-senha').value
       });
-      if (data.precisa_codigo) { renderCodigo(data.desafio); return; }
+      if (data.precisa_codigo) { renderCodigo(data.desafio, data); return; }
       state.user = data.user;
       await enterApp();
     } catch (err) {
@@ -134,23 +134,66 @@ function renderLogin(org) {
 
   document.getElementById('forgot-link').addEventListener('click', (e) => {
     e.preventDefault();
-    renderRecover(document.getElementById('login-email').value);
+    renderEsqueci(document.getElementById('login-email').value);
   });
 }
 
-// Segunda etapa do login: código do aplicativo autenticador (ou um código de recuperação).
-function renderCodigo(desafio) {
+// "Esqueci minha senha": link de senha nova enviado para o e-mail cadastrado.
+function renderEsqueci(emailInicial) {
   authShell({
-    title: 'Verificação em duas etapas',
-    subtitle: 'Digite o código de 6 números do seu aplicativo autenticador.',
+    title: 'Esqueci minha senha',
+    subtitle: 'Enviamos um link para o seu e-mail para você criar uma senha nova.',
+    sideTitle: 'Recuperação de acesso|pelo seu e-mail',
+    body: `<form id="esq-form" novalidate>
+        <div class="form-errors" id="esq-error" hidden></div>
+        <div class="field">
+          <label for="esq-email">E-mail cadastrado no CRM</label>
+          <input id="esq-email" type="email" autocomplete="username" required>
+        </div>
+        <button class="btn btn-primary" type="submit" id="esq-submit">Enviar link</button>
+        <div class="auth-note" id="esq-ok" hidden></div>
+      </form>`,
+    foot: `<div class="auth-foot"><a href="#" id="esq-codigo">Tenho um código de recuperação</a></div>
+           <div class="auth-foot"><a href="/" id="esq-voltar">Voltar para o login</a></div>`
+  });
+  document.getElementById('esq-email').value = emailInicial || '';
+  document.getElementById('esq-voltar').addEventListener('click', (e) => { e.preventDefault(); renderLogin(); });
+  document.getElementById('esq-codigo').addEventListener('click', (e) => { e.preventDefault(); renderRecover(document.getElementById('esq-email').value); });
+  document.getElementById('esq-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('esq-error');
+    const okBox = document.getElementById('esq-ok');
+    errorBox.hidden = true;
+    const button = document.getElementById('esq-submit');
+    button.disabled = true;
+    try {
+      const r = await api.post('/auth/recover/email', { email: document.getElementById('esq-email').value });
+      okBox.hidden = false;
+      okBox.textContent = r.mensagem;
+      button.textContent = 'Enviado';
+    } catch (err) {
+      errorBox.hidden = false;
+      errorBox.textContent = err.message;
+      button.disabled = false;
+    }
+  });
+}
+
+// Segunda etapa do login (só em aparelho novo): código do e-mail, do autenticador ou um código de recuperação.
+function renderCodigo(desafio, info = {}) {
+  const porEmail = info.via === 'email';
+  authShell({
+    title: porEmail ? 'Confirme que é você' : 'Verificação em duas etapas',
+    subtitle: porEmail ? `Este aparelho é novo. Enviamos um código de 6 números para ${info.email || 'o seu e-mail'}.` : 'Digite o código de 6 números do seu aplicativo autenticador.',
     sideTitle: 'Acesso protegido|verificação em duas etapas',
     body: `<form id="codigo-form" novalidate>
         <div class="form-errors" id="codigo-error" hidden></div>
         <div class="field">
           <label for="codigo-2fa">Código</label>
           <input id="codigo-2fa" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="20" required>
-          <div class="form-hint">Sem o celular? Use um dos seus códigos de recuperação (XXXX-XXXX-XXXX).</div>
+          <div class="form-hint">${porEmail ? 'Não chegou? Confira o spam. O código vale 10 minutos.' : 'Sem o celular? Use um dos seus códigos de recuperação (XXXX-XXXX-XXXX).'}</div>
         </div>
+        <label class="check-line" style="display:flex;gap:8px;align-items:center;margin:4px 0 12px"><input type="checkbox" id="codigo-lembrar" checked> Lembrar este aparelho (não pedir código de novo nele)</label>
         <button class="btn btn-primary" type="submit" id="codigo-submit">Confirmar</button>
       </form>`,
     foot: '<div class="auth-foot"><a href="/" id="codigo-voltar">Voltar para o login</a></div>'
@@ -164,7 +207,7 @@ function renderCodigo(desafio) {
     const button = document.getElementById('codigo-submit');
     button.disabled = true;
     try {
-      const data = await api.post('/auth/login/codigo', { desafio, codigo: document.getElementById('codigo-2fa').value });
+      const data = await api.post('/auth/login/codigo', { desafio, codigo: document.getElementById('codigo-2fa').value, lembrar: document.getElementById('codigo-lembrar').checked });
       state.user = data.user;
       await enterApp();
     } catch (err) {
@@ -314,7 +357,7 @@ function renderReset(initialToken) {
   if (token) history.replaceState(null, '', '/reset');
   authShell({
     title: 'Definir nova senha',
-    subtitle: 'Código de recuperação de uso único.',
+    subtitle: token ? 'Crie sua senha nova.' : 'Código de recuperação de uso único.',
     sideTitle: 'Recuperação de acesso|defina uma nova senha',
     body: `<form id="reset-form" novalidate>
         <div class="form-errors" id="reset-error" hidden></div>

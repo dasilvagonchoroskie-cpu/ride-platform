@@ -24,12 +24,24 @@ Não existe senha padrão nem credencial embutida no código.
 
 Para recriar um administrador em uma instalação nova, remova `data/crm.db` (perde os dados) ou crie usuários pela tela **Configurações**.
 
-## Recuperação de senha
-Não há envio de e-mail. Gere um código de uso único (validade 30 minutos) no servidor:
+## Recuperação de senha e verificação por e-mail
+Com o envio de e-mail configurado (`RESEND_API_KEY` ou `BREVO_API_KEY`; o Render grátis bloqueia SMTP, por isso o envio
+é por API HTTPS):
+- **Esqueci minha senha** (tela de login) manda um link de uso único (30 min) para o e-mail cadastrado. A resposta é a
+  mesma para e-mail inexistente; limite por IP e por e-mail. Usar o link derruba as sessões e esquece os aparelhos.
+- **Verificação por e-mail em aparelho novo** (Configurações > Verificação em duas etapas): ativar exige a senha e um
+  código que chega no e-mail (prova que o e-mail recebe). Depois, só aparelho não confirmado pede um código de 6 números
+  (10 min, 5 tentativas, até 5 envios a cada 30 min). Confirmado, o aparelho fica lembrado por 180 dias
+  (`APARELHO_CONFIAVEL_DIAS`; cookie HttpOnly `fm_disp`, só o hash no banco). "Esquecer os outros aparelhos" desfaz.
+  O aplicativo autenticador (TOTP) continua opcional e, se ligado, tem prioridade sobre o e-mail.
+- Sem acesso ao e-mail: um administrador desliga a verificação de outro usuário; para o próprio administrador,
+  `FM_RESET_EMAIL` ao ligar gera o código de senha nova no log **e desliga a verificação em duas etapas da conta**.
+
+Sem e-mail, gere um código de uso único (validade 30 minutos) no servidor:
 ```bash
 npm run reset -- usuario@exemplo.com
 ```
-O comando imprime um **link** e um **código** de uso único (30 minutos). Abra o link, ou, na tela de login, use "Esqueci minha senha" > "Já tenho o código" e cole o código; depois escolha a nova senha. Para o link sair com o endereço público correto, defina `PUBLIC_URL` (ex.: `https://crm.seudominio.com.br`). O código não é enviado por e-mail e não deve ser compartilhado.
+O comando imprime um **link** e um **código** de uso único (30 minutos). Para o link sair com o endereço público correto, defina `PUBLIC_URL` (ex.: `https://crm.seudominio.com.br`).
 
 ## Variáveis de ambiente
 | Variável | Padrão | Descrição |
@@ -39,7 +51,10 @@ O comando imprime um **link** e um **código** de uso único (30 minutos). Abra 
 | `FM_DATA_DIR` | `./data` | Diretório do banco e da chave de instalação |
 | `FM_DB_PATH` | `./data/crm.db` | Caminho do banco SQLite |
 | `TRUST_PROXY` | `loopback` | Em quais proxies confiar para `X-Forwarded-For/Proto`. `loopback` = proxy na mesma máquina; `1` = um proxy à frente (ex.: Docker, balanceador); `false` = sem proxy (acesso direto). Valor errado faz o login registrar o IP do proxy ou o app bloquear gravações (Origin). |
-| `PUBLIC_URL` | `http://localhost:PORT` | Usado só pelo comando `npm run reset` para montar o link de recuperação |
+| `PUBLIC_URL` | `http://localhost:PORT` | Endereço público usado nos links de recuperação (e-mail, `npm run reset`, `FM_RESET_EMAIL`) |
+| `RESEND_API_KEY` / `BREVO_API_KEY` | — | Chave do serviço de e-mail (grátis). Resend sem domínio próprio só entrega no e-mail da conta Resend |
+| `EMAIL_FROM` | `CRM Fortaleza Move <onboarding@resend.dev>` | Remetente (no Brevo, precisa ser um remetente verificado) |
+| `APARELHO_CONFIAVEL_DIAS` | `180` | Por quantos dias um aparelho confirmado não pede código |
 | `COOKIE_SECURE` | — | `true` força o atributo `Secure` no cookie de sessão (use em produção com HTTPS) |
 
 ## Comandos administrativos

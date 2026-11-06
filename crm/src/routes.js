@@ -16,6 +16,10 @@ const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provid
 const { criarTranscritor } = require('./ia/transcricao');
 const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
+const correio = require('./email');
+const { gerarCodigoRecuperacao } = require('./reset');
+// Rota assíncrona: erro vira resposta 500 do Express (sem rejeição solta que derrubaria o processo).
+const seguro = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 const router = express.Router();
 
@@ -212,7 +216,7 @@ router.post('/auth/setup', (req, res) => {
   res.status(201).json({ user });
 });
 
-router.post('/auth/login', (req, res) => {
+router.post('/auth/login', seguro(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const senha = String(req.body.senha || '');
   const ip = req.ip || '';
@@ -235,10 +239,23 @@ router.post('/auth/login', (req, res) => {
     return fail(res, 401, 'invalid_credentials', 'E-mail ou senha incorretos.');
   }
 
-  // Verificação em duas etapas: senha certa ainda não abre a sessão; pede o código do aplicativo autenticador.
-  if (user.totp_ativo) {
-    audit(req, 'login_senha_ok', 'users', user.id, 'Senha correta; aguardando código da verificação em duas etapas');
-    return res.json({ precisa_codigo: true, desafio: auth.criarDesafio(user.id) });
+  // Verificação em duas etapas: só em aparelho que ainda não foi confirmado (aparelho confiável não pede código).
+  if ((user.totp_ativo || user.email_2fa) && !auth.aparelhoConfiavel(req, user.id)) {
+    if (user.totp_ativo) {
+      audit(req, 'login_senha_ok', 'users', user.id, 'Senha correta; aguardando código do autenticador');
+      return res.json({ precisa_codigo: true, via: 'totp', desafio: auth.criarDesafio(user.id) });
+    }
+    if (auth.envioEmailBloqueado(user.id)) return fail(res, 429, 'too_many_attempts', 'Muitos códigos enviados. Aguarde 30 minutos e tente de novo.');
+    const codigo = auth.novoCodigoEmail();
+    try {
+      auth.envioEmailContar(user.id);
+      await correio.enviarEmail({ para: user.email, assunto: `Código de acesso ao CRM: ${codigo}`, texto: textoCodigoEmail(codigo, req, 'entrar no CRM por um aparelho novo') });
+    } catch (err) {
+      console.error(`[e-mail] código de acesso não enviado: ${err.message}`);
+      return fail(res, 503, 'email_failed', 'Não foi possível enviar o código para o seu e-mail agora. Tente de novo em alguns minutos ou entre por um aparelho já confirmado.');
+    }
+    audit(req, 'login_senha_ok', 'users', user.id, 'Senha correta em aparelho novo; código enviado por e-mail');
+    return res.json({ precisa_codigo: true, via: 'email', email: mascararEmail(user.email), desafio: auth.criarDesafio(user.id, { via: 'email', minutos: 10, codigoHash: auth.hashCodigoEmail(user.id, codigo) }) });
   }
   db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?').run(nowISO(), user.id);
   auth.loginSucceeded(ip, email);
@@ -246,7 +263,7 @@ router.post('/auth/login', (req, res) => {
   req.user = { id: user.id, nome: user.nome };
   audit(req, 'login', 'users', user.id, 'Acesso ao sistema');
   res.json({ user: { id: user.id, nome: user.nome, email: user.email, role: user.role } });
-});
+}));
 
 // Segunda etapa do login: código do autenticador (ou um código de recuperação, que é gasto).
 router.post('/auth/login/codigo', (req, res) => {
@@ -257,7 +274,9 @@ router.post('/auth/login/codigo', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ? AND ativo = 1').get(d.userId);
   const codigo = String(req.body.codigo || '').trim().slice(0, 40);
   let ok = false;
-  if (user && user.totp_ativo) {
+  if (user && d.via === 'email' && user.email_2fa) {
+    ok = auth.codigoEmailConfere(user.id, codigo, d.codigoHash);
+  } else if (user && d.via === 'totp' && user.totp_ativo) {
     const passo = auth.verificarTotp(user.totp_segredo, codigo, user.totp_ultimo_passo || 0);
     if (passo) { db.prepare('UPDATE users SET totp_ultimo_passo = ? WHERE id = ?').run(passo, user.id); ok = true; }
     else if (codigo.replace(/[^A-Za-z0-9]/g, '').length === 12) ok = auth.consumeRecoveryCode(user.id, codigo);
@@ -270,6 +289,7 @@ router.post('/auth/login/codigo', (req, res) => {
   }
   auth.encerrarDesafio(req.body.desafio);
   db.prepare('UPDATE users SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?').run(nowISO(), user.id);
+  if (req.body.lembrar !== false) auth.lembrarAparelho(user.id, req, res);
   auth.createSession(user.id, req, res);
   req.user = { id: user.id, nome: user.nome };
   audit(req, 'login', 'users', user.id, 'Acesso ao sistema (com verificação em duas etapas)');
@@ -297,6 +317,7 @@ router.post('/auth/reset', (req, res) => {
     .run(auth.hashPassword(senha), nowISO(), row.user_id);
   db.prepare('UPDATE password_resets SET used_at = ? WHERE id = ?').run(nowISO(), row.id);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(row.user_id);
+  auth.esquecerAparelhos(row.user_id);
   audit(req, 'senha_redefinida', 'users', row.user_id, 'Senha redefinida por código de recuperação');
   res.json({ ok: true });
 });
@@ -321,10 +342,47 @@ router.post('/auth/recover', (req, res) => {
   db.prepare('UPDATE users SET senha_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
     .run(auth.hashPassword(senha), nowISO(), user.id);
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
+  auth.esquecerAparelhos(user.id);
   const st = auth.recoveryStatus(user.id);
   audit(req, 'senha_recuperada', 'users', user.id, `Senha redefinida com código de recuperação (restam ${st.restantes})`);
   res.json({ ok: true, restantes: st.restantes });
 });
+
+// "Esqueci minha senha": manda um link de uso único (30 min) para o e-mail cadastrado.
+// Sempre a mesma resposta, exista o e-mail ou não (sem enumeração). Cada pedido conta no limite por IP e por e-mail.
+router.post('/auth/recover/email', seguro(async (req, res) => {
+  const ip = req.ip || '';
+  const alvo = String(req.body.email || '').trim().toLowerCase().slice(0, 254);
+  if (!correio.configurado()) return fail(res, 503, 'email_off', 'O envio de e-mail não está configurado neste servidor. Use um código de recuperação.');
+  if (auth.recoverBlocked(ip, alvo)) return fail(res, 429, 'too_many_attempts', 'Muitos pedidos. Aguarde e tente novamente mais tarde.');
+  auth.recoverFailed(ip, alvo);
+  const resposta = { ok: true, mensagem: 'Se o e-mail estiver cadastrado, o link para criar uma senha nova chega em alguns minutos. Confira também o spam.' };
+  const user = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(alvo) ? db.prepare('SELECT id, email FROM users WHERE lower(email) = ? AND ativo = 1').get(alvo) : null;
+  if (!user) return res.json(resposta);
+  const r = gerarCodigoRecuperacao(db, user.email);
+  if (r.erro) return res.json(resposta);
+  try {
+    await correio.enviarEmail({
+      para: user.email,
+      assunto: 'Criar senha nova — CRM Fortaleza Move',
+      texto: `Alguém pediu para criar uma senha nova no CRM Fortaleza Move.\n\nPara criar a senha nova, abra este link (vale 30 minutos e uma vez só):\n${r.link}\n\nSe não foi você, ignore este e-mail: sua senha continua a mesma.\n\nPedido feito de ${auth.nomeAparelhoPublico(req)} em ${horaLocal()}.`
+    });
+    audit(req, 'recuperacao_email', 'users', user.id, 'Link de nova senha enviado por e-mail');
+  } catch (err) {
+    console.error(`[e-mail] link de recuperação não enviado: ${err.message}`);
+  }
+  res.json(resposta);
+}));
+
+function mascararEmail(e) {
+  const [nome, dominio] = String(e || '').split('@');
+  if (!dominio) return '';
+  return `${nome.slice(0, 2)}${'*'.repeat(Math.max(1, nome.length - 2))}@${dominio}`;
+}
+const horaLocal = () => new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+function textoCodigoEmail(codigo, req, motivo) {
+  return `Seu código para ${motivo}: ${codigo}\n\nVale 10 minutos. Não passe este código para ninguém: a equipe do CRM nunca pede.\n\nPedido feito de ${auth.nomeAparelhoPublico(req)} em ${horaLocal()}.\nSe não foi você, troque sua senha do CRM.`;
+}
 
 /* ------------------------------- autenticado ------------------------------- */
 router.use(auth.requireAuth);
@@ -387,8 +445,72 @@ router.post('/auth/recovery-codes', (req, res) => {
 
 /* ------------------- verificação em duas etapas (configurar) ------------------- */
 router.get('/auth/2fa', (req, res) => {
-  const u = db.prepare('SELECT totp_ativo FROM users WHERE id = ?').get(req.user.id);
-  res.json({ ativo: !!(u && u.totp_ativo), obrigatoria_admin: req.user.role === 'admin' });
+  const u = db.prepare('SELECT totp_ativo, email_2fa, email FROM users WHERE id = ?').get(req.user.id);
+  res.json({
+    ativo: !!(u && u.totp_ativo),
+    email_ativo: !!(u && u.email_2fa),
+    email_configurado: correio.configurado(),
+    email: u ? mascararEmail(u.email) : '',
+    aparelhos: auth.listarAparelhos(req.user.id),
+    obrigatoria_admin: req.user.role === 'admin'
+  });
+});
+
+// Verificação por e-mail em aparelho novo. Ativar exige a senha e um código que chega no e-mail (prova que o e-mail
+// recebe; sem isso a pessoa poderia se trancar para fora). O aparelho atual já fica confirmado.
+const ativacoesEmail = new Map();
+router.post('/auth/2fa/email/iniciar', seguro(async (req, res) => {
+  if (auth.passwordBlocked(req.user.id)) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  if (!correio.configurado()) return fail(res, 503, 'email_off', 'O envio de e-mail ainda não está configurado no servidor.');
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !auth.verifyPassword(String(req.body.senha_atual || ''), user.senha_hash)) {
+    auth.passwordFailed(req.user.id);
+    return fail(res, 422, 'invalid_password', 'A senha atual não confere.');
+  }
+  auth.passwordOk(req.user.id);
+  if (auth.envioEmailBloqueado(user.id)) return fail(res, 429, 'too_many_attempts', 'Muitos códigos enviados. Aguarde 30 minutos e tente de novo.');
+  const codigo = auth.novoCodigoEmail();
+  try {
+    auth.envioEmailContar(user.id);
+    await correio.enviarEmail({ para: user.email, assunto: `Código para ativar a verificação: ${codigo}`, texto: textoCodigoEmail(codigo, req, 'ativar a verificação por e-mail no CRM') });
+  } catch (err) {
+    console.error(`[e-mail] código de ativação não enviado: ${err.message}`);
+    return fail(res, 503, 'email_failed', 'Não foi possível enviar o e-mail agora. Nada foi alterado; tente de novo mais tarde.');
+  }
+  ativacoesEmail.set(user.id, { hash: auth.hashCodigoEmail(user.id, codigo), expira: Date.now() + 10 * 60000, tentativas: 0 });
+  res.json({ ok: true, email: mascararEmail(user.email) });
+}));
+
+router.post('/auth/2fa/email/confirmar', (req, res) => {
+  const p = ativacoesEmail.get(req.user.id);
+  if (!p || p.expira < Date.now() || p.tentativas >= 5) { ativacoesEmail.delete(req.user.id); return fail(res, 409, 'no_pending', 'Peça um código novo.'); }
+  if (!auth.codigoEmailConfere(req.user.id, req.body.codigo, p.hash)) { p.tentativas += 1; return fail(res, 422, 'invalid_code', 'Código inválido.'); }
+  ativacoesEmail.delete(req.user.id);
+  db.prepare('UPDATE users SET email_2fa = 1, updated_at = ? WHERE id = ?').run(nowISO(), req.user.id);
+  if (!auth.aparelhoConfiavel(req, req.user.id)) auth.lembrarAparelho(req.user.id, req, res);
+  audit(req, '2fa_email_ativada', 'users', req.user.id, 'Verificação por e-mail em aparelho novo ativada');
+  res.json({ ok: true });
+});
+
+router.post('/auth/2fa/email/desativar', (req, res) => {
+  if (auth.passwordBlocked(req.user.id)) return fail(res, 429, 'too_many_attempts', 'Muitas tentativas. Aguarde alguns minutos e tente novamente.');
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !auth.verifyPassword(String(req.body.senha_atual || ''), user.senha_hash)) {
+    auth.passwordFailed(req.user.id);
+    return fail(res, 422, 'invalid_password', 'A senha atual não confere.');
+  }
+  auth.passwordOk(req.user.id);
+  db.prepare('UPDATE users SET email_2fa = 0, updated_at = ? WHERE id = ?').run(nowISO(), user.id);
+  audit(req, '2fa_email_desativada', 'users', user.id, 'Verificação por e-mail desativada');
+  res.json({ ok: true });
+});
+
+// Esquecer os outros aparelhos confirmados (celular perdido, computador emprestado). O atual continua confirmado.
+router.post('/auth/aparelhos/esquecer', (req, res) => {
+  const n = auth.esquecerAparelhos(req.user.id, req);
+  db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(req.user.id, req.user.sid);
+  audit(req, 'aparelhos_esquecidos', 'users', req.user.id, `${n} aparelho(s) esquecido(s)`);
+  res.json({ ok: true, removidos: n });
 });
 
 // 1º passo: gera a chave (exige a senha atual). A chave só passa a valer depois de confirmar um código.
@@ -887,7 +1009,7 @@ router.delete('/finance/simulacoes/:id', requireAdmin, (req, res) => {
 
 /* -------------------------------- configurações ---------------------------- */
 router.get('/settings', requireAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, nome, email, role, ativo, totp_ativo, last_login_at, created_at FROM users ORDER BY id').all();
+  const users = db.prepare('SELECT id, nome, email, role, ativo, totp_ativo, email_2fa, last_login_at, created_at FROM users ORDER BY id').all();
   res.json({
     settings: {
       org_nome: getSetting('org_nome'),
@@ -977,8 +1099,9 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
     }
     // Celular perdido: o administrador desliga a verificação em duas etapas de OUTRO usuário (a própria só com o código).
     if (req.body.desativar_2fa === true && id !== req.user.id) {
-      db.prepare('UPDATE users SET totp_ativo = 0, totp_segredo = NULL, totp_pendente = NULL, updated_at = ? WHERE id = ?').run(nowISO(), id);
+      db.prepare('UPDATE users SET totp_ativo = 0, totp_segredo = NULL, totp_pendente = NULL, email_2fa = 0, updated_at = ? WHERE id = ?').run(nowISO(), id);
       db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+      auth.esquecerAparelhos(id);
     }
   })();
   audit(req, 'editar', 'users', id, 'Usuário atualizado');

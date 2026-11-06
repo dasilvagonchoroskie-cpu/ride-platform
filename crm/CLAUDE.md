@@ -79,6 +79,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Limpeza feita em 06/11 10h20: token antigo apagado de `cofre.acesso` (só o novo vale), versões anteriores à troca de chave
   apagadas, `pg_net` reinstalado no esquema `extensions` (job `crm-manter-acordado` conferido: 200).
 
+## Verificação por e-mail (06/11/2026, pedido do dono)
+- O dono não quer guardar códigos/token: o padrão agora é **código por e-mail só em aparelho novo** (`email_2fa`, tabela
+  `dispositivos`, cookie `fm_disp` 180 dias) e **"Esqueci minha senha" por link no e-mail** (`/auth/recover/email`).
+  TOTP e códigos de recuperação continuam opcionais. Aparelho confiável também pula o TOTP.
+- Envio: `src/email.js`, por API HTTPS (Render grátis bloqueia SMTP 25/465/587 desde 26/09/2025): Resend
+  (`RESEND_API_KEY`; sem domínio só entrega no e-mail da conta Resend) ou Brevo (`BREVO_API_KEY` + `EMAIL_FROM`).
+  Testes usam `EMAIL_TESTE_ARQUIVO` (ignorado em produção).
+- Anti-tranca: ativar exige receber um código; e-mail fora do ar → aparelhos já confirmados continuam entrando;
+  `FM_RESET_EMAIL` desliga a verificação da conta além de gerar o código de senha nova.
+
 ## Ajustes de 06/11/2026 (teste real do dono)
 - Sem cadastro vinculado, a IA recebe `campos_permitidos` por perfil (`camposPorPerfil`) e pode devolver qualquer chave de
   `CHAVES_SEM_CADASTRO`; o cadastro criado já nasce com veículo/placa/CNH (antes só nome/cidade).

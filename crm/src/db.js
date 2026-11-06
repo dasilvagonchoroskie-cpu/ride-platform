@@ -20,7 +20,7 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
 (function acrescentarColunas() {
   // Colunas de sistema (fora de defs.js).
   const usuarios = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
-  for (const [col, tipo] of [['totp_segredo', 'TEXT'], ['totp_pendente', 'TEXT'], ['totp_ativo', 'INTEGER NOT NULL DEFAULT 0'], ['totp_ultimo_passo', 'INTEGER NOT NULL DEFAULT 0']]) {
+  for (const [col, tipo] of [['totp_segredo', 'TEXT'], ['totp_pendente', 'TEXT'], ['totp_ativo', 'INTEGER NOT NULL DEFAULT 0'], ['totp_ultimo_passo', 'INTEGER NOT NULL DEFAULT 0'], ['email_2fa', 'INTEGER NOT NULL DEFAULT 0']]) {
     if (!usuarios.has(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${tipo}`);
   }
   const { ENTITIES } = require('./defs');

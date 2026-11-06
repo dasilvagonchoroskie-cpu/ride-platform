@@ -19,6 +19,11 @@ const persist = require('./src/persist');
   if (process.env.FM_RESET_EMAIL) {
     const r = require('./src/reset').gerarCodigoRecuperacao(db, process.env.FM_RESET_EMAIL);
     if (r.erro) console.error(`[recuperação] ${r.erro}`);
-    else console.log(`[recuperação] código de uso único (30 min) para ${process.env.FM_RESET_EMAIL}: ${r.token}\n[recuperação] link: ${r.link}\n[recuperação] apague a variável FM_RESET_EMAIL depois de usar.`);
+    else {
+      // Emergência (sem acesso ao e-mail nem ao autenticador): desliga também a verificação em duas etapas da conta.
+      db.prepare('UPDATE users SET totp_ativo = 0, totp_segredo = NULL, totp_pendente = NULL, email_2fa = 0 WHERE lower(email) = ?').run(String(process.env.FM_RESET_EMAIL).trim().toLowerCase());
+      console.log('[recuperação] verificação em duas etapas desligada para essa conta (ligue de novo em Configurações).');
+    }
+    if (!r.erro) console.log(`[recuperação] código de uso único (30 min) para ${process.env.FM_RESET_EMAIL}: ${r.token}\n[recuperação] link: ${r.link}\n[recuperação] apague a variável FM_RESET_EMAIL depois de usar.`);
   }
 })();

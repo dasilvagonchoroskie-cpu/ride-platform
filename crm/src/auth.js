@@ -195,10 +195,10 @@ const novoSegredoTotp = () => base32(crypto.randomBytes(20));
 
 // Desafio entre a senha certa e o código do autenticador (5 min, 5 tentativas). Só o hash fica guardado.
 const desafios = new Map();
-function criarDesafio(userId) {
+function criarDesafio(userId, extra = {}) {
   const t = crypto.randomBytes(24).toString('base64url');
   for (const [k, v] of desafios) if (v.expira < Date.now()) desafios.delete(k);
-  desafios.set(sha256(t), { userId, expira: Date.now() + 5 * 60000, tentativas: 0 });
+  desafios.set(sha256(t), { userId, expira: Date.now() + (extra.minutos || 5) * 60000, tentativas: 0, via: extra.via || 'totp', codigoHash: extra.codigoHash || null });
   return t;
 }
 function lerDesafio(t) {
@@ -207,6 +207,60 @@ function lerDesafio(t) {
   return d;
 }
 const encerrarDesafio = (t) => desafios.delete(sha256(String(t || '')));
+
+/* ------------------------- código por e-mail ------------------------------- */
+// Código de 6 números enviado ao e-mail do usuário (login em aparelho novo e ativação). Só o hash fica na memória.
+const novoCodigoEmail = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+const hashCodigoEmail = (userId, codigo) => sha256(`fm-email|${userId}|${String(codigo || '').replace(/\D/g, '')}`);
+function codigoEmailConfere(userId, codigo, hashGuardado) {
+  if (!hashGuardado || String(codigo || '').replace(/\D/g, '').length !== 6) return false;
+  const a = Buffer.from(hashCodigoEmail(userId, codigo));
+  const b = Buffer.from(hashGuardado);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+// No máximo 5 códigos por e-mail a cada 30 min por usuário (evita encher a caixa e gastar a cota grátis).
+const limiteEnvioEmail = createLimiter({ max: 5, windowMs: 30 * 60 * 1000 });
+const envioEmailBloqueado = (userId) => limiteEnvioEmail.isBlocked(String(userId));
+const envioEmailContar = (userId) => limiteEnvioEmail.fail(String(userId));
+
+/* ------------------------- aparelhos confiáveis ---------------------------- */
+const DISP_COOKIE = 'fm_disp';
+const DISP_DIAS = Number(process.env.APARELHO_CONFIAVEL_DIAS) || 180;
+
+function nomeAparelho(req) {
+  const ua = String(req.headers['user-agent'] || '');
+  const so = /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iPhone/iPad' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'Mac' : /Linux/i.test(ua) ? 'Linux' : 'Aparelho';
+  const app = /FortalezaMoveCRM-App/.test(ua) ? 'app do CRM' : /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'navegador';
+  return `${so} · ${app}`;
+}
+
+function aparelhoConfiavel(req, userId) {
+  const token = parseCookies(req.headers.cookie || '')[DISP_COOKIE];
+  if (!token) return false;
+  const row = db.prepare('SELECT id, user_id, expires_at FROM dispositivos WHERE token_hash = ?').get(sha256(token));
+  if (!row || row.user_id !== userId || new Date(row.expires_at) < new Date()) return false;
+  db.prepare('UPDATE dispositivos SET last_used_at = ? WHERE id = ?').run(nowISO(), row.id);
+  return true;
+}
+
+function lembrarAparelho(userId, req, res) {
+  const token = crypto.randomBytes(32).toString('base64url');
+  const agora = new Date();
+  const expira = new Date(agora.getTime() + DISP_DIAS * 86400000);
+  db.prepare('DELETE FROM dispositivos WHERE expires_at < ?').run(agora.toISOString());
+  db.prepare('INSERT INTO dispositivos (user_id, token_hash, nome, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(userId, sha256(token), nomeAparelho(req), agora.toISOString(), agora.toISOString(), expira.toISOString());
+  setCookie(res, DISP_COOKIE, token, { maxAge: DISP_DIAS * 86400, secure: isSecure(req) });
+}
+
+// Esquece os aparelhos do usuário; com req, mantém o aparelho atual (quem pediu).
+function esquecerAparelhos(userId, req) {
+  const token = req ? parseCookies(req.headers.cookie || '')[DISP_COOKIE] : null;
+  if (token) return db.prepare('DELETE FROM dispositivos WHERE user_id = ? AND token_hash <> ?').run(userId, sha256(token)).changes;
+  return db.prepare('DELETE FROM dispositivos WHERE user_id = ?').run(userId).changes;
+}
+
+const listarAparelhos = (userId) => db.prepare('SELECT id, nome, created_at, last_used_at FROM dispositivos WHERE user_id = ? AND expires_at > ? ORDER BY last_used_at DESC').all(userId, nowISO());
 
 /* ------------------------- códigos de recuperação -------------------------- */
 // 8 códigos de 12 caracteres (alfabeto de 32 símbolos = 60 bits cada). Guardados só como SHA-256 com pimenta por usuário.
@@ -289,6 +343,17 @@ module.exports = {
   criarDesafio,
   lerDesafio,
   encerrarDesafio,
+  novoCodigoEmail,
+  hashCodigoEmail,
+  codigoEmailConfere,
+  envioEmailBloqueado,
+  envioEmailContar,
+  aparelhoConfiavel,
+  lembrarAparelho,
+  esquecerAparelhos,
+  listarAparelhos,
+  nomeAparelhoPublico: nomeAparelho,
+  DISP_COOKIE,
   INATIVIDADE_MIN,
   recoveryStatus,
   consumeRecoveryCode,
