@@ -89,6 +89,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       criarCadastro: getSetting('ia_criar_cadastro', '0') === '1',
       responder: getSetting('ia_responder', '0') === '1',
       limiteDia: Number(getSetting('ia_limite_dia', '150')) || 150,
+      // Minutos sem resposta da equipe para a conversa voltar sozinha para a IA (0 = só pelo botão).
+      humanoPausa: Math.max(0, Number(getSetting('ia_humano_pausa_min', '30')) || 0),
       transcrever: getSetting('ia_transcrever', '1') === '1',
       transcricoesHoje: transcricoesDoDia(),
       modelo: obterModelo(id),
@@ -121,6 +123,11 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (p.transcrever !== undefined) setSetting('ia_transcrever', p.transcrever ? '1' : '0');
     if (p.responder !== undefined) setSetting('ia_responder', p.responder ? '1' : '0');
     if (p.criarCadastro !== undefined) setSetting('ia_criar_cadastro', p.criarCadastro ? '1' : '0');
+    if (p.humanoPausa !== undefined) {
+      const n = Math.round(Number(p.humanoPausa));
+      if (!Number.isFinite(n) || n < 0 || n > 1440) throw new ErroIA('invalido', 'O tempo para voltar para a IA deve ficar entre 0 e 1440 minutos.');
+      setSetting('ia_humano_pausa_min', String(n));
+    }
     if (p.limiteDia !== undefined) {
       const n = Math.round(Number(p.limiteDia));
       if (!Number.isFinite(n) || n < 1 || n > 2000) throw new ErroIA('invalido', 'O limite diário deve estar entre 1 e 2000.');
@@ -325,9 +332,17 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   // Central de Atendimento: decide entre saudação + menu, confirmação de documento, transferência para a equipe,
   // aviso de espera e a resposta redigida pela IA. Os textos fixos vêm dos "Modelos de Comunicação da IA".
   async function responderCentral(conversaId, { aplicacao } = {}) {
-    const conv = waStore.obterConversa(conversaId);
+    let conv = waStore.obterConversa(conversaId);
     if (!conv) return { motivo: 'sem_resposta' };
-    if (conv.atendimento === 'humano') return { motivo: 'atendimento_humano' };
+    if (conv.atendimento === 'humano') {
+      // Volta sozinha para a IA quando a equipe ficou um tempo sem responder (ex.: respondeu uma vez pelo celular e saiu).
+      const pausa = config().humanoPausa;
+      const ultimaEquipe = db.prepare("SELECT MAX(ocorrida_em) t FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND origem IN ('crm', 'celular')").get(conversaId).t;
+      const referencia = [ultimaEquipe, conv.atend_em].filter(Boolean).sort().pop() || '';
+      if (!pausa || referencia > new Date(Date.now() - pausa * 60000).toISOString()) return { motivo: 'atendimento_humano' };
+      waStore.mudarAtendimento(conversaId, 'ia', { detalhe: `Voltou para a IA após ${pausa} min sem resposta da equipe` });
+      conv = waStore.obterConversa(conversaId);
+    }
     if (conv.atendimento === 'concluido') return { motivo: 'concluida' };
     const a = ultimaAnalise(conversaId);
     if (!a) return { motivo: 'sem_resposta' };

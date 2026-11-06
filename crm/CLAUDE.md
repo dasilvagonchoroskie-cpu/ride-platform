@@ -90,7 +90,8 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   completo, transfere com motivo "documentos"; menu (1º contato sem assunto ou "menu"); senão, redação com o fluxo do
   assunto (`FLUXOS`) e as informações oficiais. Textos fixos dos modelos NÃO passam por `respostaSegura` (são do admin);
   a redação da IA continua passando.
-- Quem responde pelo CRM ou pelo celular assume (`humano`); eco do envio da IA/CRM não conta. Cliente que escreve depois
+- Quem responde pelo CRM ou pelo celular assume (`humano`); eco do envio da IA/CRM não conta. Volta sozinha para `ia` depois de
+  `ia_humano_pausa_min` (padrão 30; 0 = só pelo botão) sem mensagem da equipe — pedido do dono (ele responde pelo celular). Cliente que escreve depois
   de concluído reabre com a IA (saúda de novo só se concluiu há mais de 12 h). Rotas: `POST /wa/conversas/:id/atendimento`
   (assumir|devolver|concluir, admin e gestor), `GET /ia/modelos` (todos), `PUT /ia/modelos` (só admin).
 - Modelos (`src/ia/central.js`, setting `central_modelos`): saudacao, menu, confirmacao_documentos, confirmacao_informacoes,

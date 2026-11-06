@@ -164,3 +164,40 @@ test('documento: confirma o recebimento uma vez e pede o que falta (sem dizer qu
   assert.doesNotMatch(m, /aprovad|analisad/i);
   assert.equal(conv().atendimento, 'ia');
 });
+
+test('humano: volta sozinha para a IA depois do tempo sem resposta da equipe (0 = só pelo botão)', async () => {
+  const { receber, daIA, waStore, conv, db, setSetting } = montar();
+  const r = await receber('oi');
+  // Equipe respondeu pelo celular há 40 min.
+  const antiga = new Date(Date.now() - 40 * 60000).toISOString();
+  waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', externoId: 'CEL1', texto: 'Oi, já te respondo', tipo: 'text', quando: antiga, deMim: true });
+  assert.equal(conv().atendimento, 'humano');
+  db.prepare('UPDATE wa_conversas SET atend_em = ? WHERE id = ?').run(antiga, r.conversaId);
+
+  setSetting('ia_humano_pausa_min', '0');
+  let antes = daIA().length;
+  await receber('e aí?');
+  assert.equal(daIA().length, antes, 'com 0, fica com a equipe');
+  assert.equal(conv().atendimento, 'humano');
+
+  setSetting('ia_humano_pausa_min', '60');
+  await receber('alguém?');
+  assert.equal(daIA().length, antes, '40 min < 60: ainda com a equipe');
+
+  setSetting('ia_humano_pausa_min', '30');
+  antes = daIA().length;
+  await receber('preciso de ajuda com o cadastro');
+  assert.equal(conv().atendimento, 'ia', '40 min > 30: voltou para a IA');
+  assert.equal(daIA().length, antes + 1, 'e respondeu');
+  assert.match(db.prepare("SELECT detalhe FROM wa_eventos WHERE tipo = 'devolvida' ORDER BY id DESC").get().detalhe, /após 30 min/);
+});
+
+test('humano: equipe respondeu agora há pouco → IA continua quieta', async () => {
+  const { receber, daIA, waStore, conv } = montar();
+  await receber('oi');
+  waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', externoId: 'CEL2', texto: 'Oi! Sou o Evandro', tipo: 'text', quando: new Date().toISOString(), deMim: true });
+  const antes = daIA().length;
+  await receber('beleza');
+  assert.equal(conv().atendimento, 'humano');
+  assert.equal(daIA().length, antes);
+});
