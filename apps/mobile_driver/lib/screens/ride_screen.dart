@@ -232,7 +232,8 @@ class _ValorDaCorridaState extends State<_ValorDaCorrida> {
               children: [
                 Icon(correndo ? Icons.speed : Icons.payments_outlined, size: 16, color: AppColors.textMuted),
                 const SizedBox(width: 4),
-                Text(rotulo, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                // Flexible: celular pequeno com letra grande (auditoria 06/11/2026).
+                Flexible(child: Text(rotulo, style: AppText.caption.copyWith(color: AppColors.textMuted))),
               ],
             ),
             Text(

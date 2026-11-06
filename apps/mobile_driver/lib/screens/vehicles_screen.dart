@@ -267,14 +267,24 @@ class _Veiculo extends StatelessWidget {
                     Text(
                       '${dados['brand'] ?? ''} ${dados['model'] ?? ''}'.trim(),
                       style: AppText.heading.copyWith(fontSize: 17),
-                      // 2 linhas: com a placa ao lado, "Chevrolet Onix Plus"
-                      // virava "Chevrolet ..." no celular de 360.
+                      // 2 linhas: nome comprido ("Chevrolet Onix Plus") nao corta.
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '${dados['year'] ?? ''}  •  ${dados['color'] ?? ''}',
                       style: AppText.body.copyWith(color: AppColors.textMuted),
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    // Placa embaixo do nome (auditoria 06/11/2026): ao lado, no
+                    // celular pequeno com letra grande, apertava o resto.
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: Spacing.xs),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.text, width: 1.4),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(placaFmt, style: AppText.bodyStrong.copyWith(letterSpacing: 1.1)),
                     ),
                     const SizedBox(height: Spacing.xs),
                     Text(rotulo, style: AppText.caption.copyWith(color: cor, fontWeight: FontWeight.w600)),
@@ -293,14 +303,6 @@ class _Veiculo extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: Spacing.sm, vertical: Spacing.xs),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.text, width: 1.4),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(placaFmt, style: AppText.bodyStrong.copyWith(letterSpacing: 1.1)),
               ),
             ],
           ),
