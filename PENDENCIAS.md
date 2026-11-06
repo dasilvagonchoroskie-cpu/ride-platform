@@ -7,6 +7,19 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 00. Auditoria de segurança e qualidade (06/11/2026, PRs #29 e #30)
+Corrigido e testado:
+- Banco: RLS ligado em todas as tabelas do Supabase (a API pública do Supabase não lê mais nada). Conferido pelo ponta a ponta (rota da Central /admin/seguranca/banco).
+- Servidor: Swagger (mapa da API) fora da produção; corpo de até 256 KB fora dos envios de foto (4 MB só em /foto e /logo), 413 para envio grande e 400 para JSON quebrado; limite de pedidos por cliente (antes todos dividiam o mesmo limite atrás do Render); CORS sem "credentials" quando aberto.
+- Apps (3): sem backup na nuvem e sem passar dados para outro celular (token e login ficam só no aparelho); código Dart embaralhado na versão final.
+- Visual: testes com celular pequeno (320 dp) e letra 30% maior nas telas principais dos 3 apps; 2 estouros corrigidos no motorista (valor da corrida e cartão do carro). Fotos das telas revisadas.
+- Já estava certo (conferido): permissões por papel e por cidade, corrida só para quem participa, aceitar só corrida oferecida (com trava), OTP com limite e tentativas, refresh de uso único, 2FA da Central, senha com bcrypt, HTTPS obrigatório e cabeçalhos de proteção, chave do mapa só com login, sem chave no APK, R8 ligado, sem tráfego sem HTTPS.
+Pendências da auditoria:
+- [OK do Evandro] Zod 4 e Nest 11: fecham 1 alerta alto (Zod, já reduzido pelo limite de 256 KB) e 3 moderados que não se aplicam (file-type e SSE não são usados).
+- [Recomendado] Guardar o login no cofre do Android (flutter_secure_storage) em vez do armazenamento comum.
+- [Play Console] Declarar: localização em primeiro plano (motorista), serviço de dados (passageiro), tela cheia para chamada (USE_FULL_SCREEN_INTENT) e sobreposição (SYSTEM_ALERT_WINDOW) do motorista.
+- [Antes da loja] Endereço próprio do servidor (api.<domínio>) e AAB definitivo; depois a mudança para a Hostinger KVM 2.
+
 ## 0. Clube de Vantagens (05/11/2026, PRs #20, #21 e #23)
 - Carteirinha sem QR Code e sem página de consulta (pedido do Evandro 05/11 16:10): verde APTO / vermelha NÃO APTO.
 - [AUTO] Servidor: regra da recarga (SOMA de R$ 100 em 30 dias, só recarga confirmada, sai da soma depois de 30 dias). Jest 127.
