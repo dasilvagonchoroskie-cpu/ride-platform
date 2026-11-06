@@ -13,6 +13,17 @@ const MIME_ACEITOS = /^audio\/(ogg|opus|mpeg|mp3|mp4|m4a|aac|wav|x-wav|webm|amr|
 const INSTRUCAO = 'Transcreva fielmente este áudio, em português do Brasil. Responda SOMENTE com a transcrição, sem comentários, '
   + 'sem aspas e sem resumo. Se não houver fala compreensível, responda exatamente: [sem fala]';
 
+// Foto ou PDF: extrair dados (não descrever). Documentos de motorista têm lista fixa de campos.
+const INSTRUCAO_DOCUMENTO = 'Você extrai dados de arquivos enviados por WhatsApp para um cadastro. Responda em português do Brasil, '
+  + 'SOMENTE com linhas no formato "Campo: valor", sem frases, sem descrição do documento e sem comentários.\n'
+  + 'Primeira linha: "Tipo: <tipo do documento ou da imagem>".\n'
+  + 'Se for CNH (carteira de motorista, física ou digital): Nome, CPF, Data de nascimento, Categoria da CNH (só as letras, ex.: B ou AB), '
+  + 'Validade, Primeira habilitação, Número do registro, Cidade/UF.\n'
+  + 'Se for CRLV / documento do veículo: Placa, Marca/Modelo, Ano fabricação, Ano modelo, Cor, Renavam, Proprietário, Cidade/UF.\n'
+  + 'Se for RG, CPF, comprovante de endereço, boleto, nota, contrato ou outro: os campos principais (nome, números, valores, datas, endereço).\n'
+  + 'Se não for documento: "Descrição: <uma frase>" e o texto visível, se houver.\n'
+  + 'Copie os valores exatamente como estão. Se não der para ler um campo, não escreva esse campo. Não invente.';
+
 function limparTranscricao(t) {
   return String(t || '').replace(/\u0000/g, '').replace(/\s+\n/g, '\n').trim().slice(0, 6000);
 }
@@ -118,14 +129,10 @@ function criarTranscritor({ cofre, obterModeloGemini, fetchImpl = globalThis.fet
     let instrucao; let tipoMime = m;
     if (tipo === 'image' || m.startsWith('image/')) {
       if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(m)) tipoMime = 'image/jpeg';
-      instrucao = 'Descreva objetivamente esta imagem, em português do Brasil, e transcreva TODO texto visível. '
-        + 'Se for documento (CNH, RG, CPF, CRLV, comprovante, nota, boleto, cardápio, contrato, placa de veículo), liste os dados lidos '
-        + 'em linhas "Campo: valor" (ex.: Nome, Categoria da CNH, Validade, Placa, Modelo do veículo, Valor, Data). '
-        + 'Sem comentários, sem opinião, sem inventar o que não dá para ler.';
+      instrucao = INSTRUCAO_DOCUMENTO;
     } else if (m === 'application/pdf' || ext === 'pdf') {
       tipoMime = 'application/pdf';
-      instrucao = 'Leia este documento PDF e responda em português do Brasil: um resumo de até 15 linhas e, depois, os dados importantes '
-        + 'em linhas "Campo: valor" (nomes, documentos, valores, datas, placas, endereços, prazos). Sem comentários e sem inventar.';
+      instrucao = INSTRUCAO_DOCUMENTO;
     } else if (tipo === 'video' || m.startsWith('video/')) {
       if (!/^video\/(mp4|mpeg|mov|quicktime|webm|3gpp|x-flv|wmv)$/.test(m)) tipoMime = 'video/mp4';
       instrucao = 'Descreva este vídeo em português do Brasil em até 10 linhas e transcreva a fala, se houver. Sem comentários.';

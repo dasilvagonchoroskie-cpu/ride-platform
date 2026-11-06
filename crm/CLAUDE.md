@@ -63,6 +63,11 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 ## Ajustes de 06/11/2026 (teste real do dono)
 - Sem cadastro vinculado, a IA recebe `campos_permitidos` por perfil (`camposPorPerfil`) e pode devolver qualquer chave de
   `CHAVES_SEM_CADASTRO`; o cadastro criado já nasce com veículo/placa/CNH (antes só nome/cidade).
+- Foto/PDF de documento: prompt de EXTRAÇÃO (`INSTRUCAO_DOCUMENTO`, campos fixos de CNH e CRLV), não de descrição.
+  Reforço sem IA (`src/ia/documentos.js`): categoria da CNH, placa e veículo tirados das linhas 📎 quando a IA não devolve;
+  categoria/placa normalizadas para o formato do cadastro.
+- Cada execução automática registra no log (só nomes de campos e decisões) e, quando não responde, o motivo vai para
+  `aplicado_resumo` (aparece no painel). Trava "equipe respondeu": 15 min.
 - Resposta automática (ver regras da IA). Tela de conversa: painel da IA recolhido em uma linha por padrão; no celular,
   área de mensagens com pelo menos 45% da tela e botões de ação numa linha só.
 
@@ -147,7 +152,7 @@ ficou como migração futura: por isso o canal é um **adaptador** (`src/whatsap
   http em localhost). Para acrescentar provedor: entrada em `PROVEDORES` (`provider.js`) + variável em `secret.js`.
 - **Regras da IA (não quebrar):** a IA só envia mensagem sozinha se o admin ligar "responde sozinha" (`ia_responder`, desligado
   por padrão, só no modo automático; mensagem com `origem='ia'`), com as travas de `responderAutomatico` (só se a última
-  mensagem é do cliente e a análise a cobre; quieta 30 min depois que a equipe responde; 15/conversa/24 h e 300/dia; não
+  mensagem é do cliente e a análise a cobre; quieta 15 min depois que a equipe responde; 15/conversa/24 h e 300/dia; não
   repete). Fora isso, a resposta sugerida vai para a caixa de texto;
   nunca sobrescreve campo preenchido; só os campos de `CAMPOS_IA` (`src/ia/prompt.js`); texto do cliente é dado não
   confiável (cercado e neutralizado, resposta validada); falha da IA nunca atrapalha o recebimento; limite diário e

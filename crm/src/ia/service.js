@@ -11,6 +11,15 @@ const PROVEDOR_PADRAO = 'gemini';
 const tipoParaPerfil = { motoristas: 'motorista', passageiros: 'passageiro', parceiros: 'parceiro' };
 const preenchido = (v) => v !== null && v !== undefined && String(v).trim() !== '';
 
+const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca } = require('./documentos');
+
+// Motivos de a IA não responder, em português (aparecem no painel da conversa e no registro do servidor).
+const MOTIVOS = {
+  sem_resposta: 'a IA não sugeriu resposta', ja_respondida: 'a última mensagem já tinha resposta',
+  analise_desatualizada: 'chegou mensagem nova durante a análise', humano_assumiu: 'a equipe respondeu há menos de 15 min',
+  limite_conversa: 'limite de respostas da IA nesta conversa', limite_dia: 'limite diário de respostas da IA', repetida: 'seria repetida'
+};
+
 function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, setSetting, cofre, provider, todayISO, nowISO, log = console }) {
   let provedor = provider;
   const travas = new Set();
@@ -171,6 +180,18 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
       const chavesPermitidas = tipoAlvo ? P.CAMPOS_IA[tipoAlvo] : P.CHAVES_SEM_CADASTRO;
       const resultado = P.validarResultado(bruto, { chavesPermitidas });
+      // Reforço sem IA: dados de CNH/CRLV lidos (📎) que a IA não devolveu entram aqui; e valores no formato do cadastro.
+      const perfilFinal = tipoAlvo ? tipoParaPerfil[tipoAlvo] : resultado.perfil;
+      if (perfilFinal === 'motorista' || (!tipoAlvo && resultado.perfil === 'desconhecido')) {
+        const doc = extrairDadosDocumentos(mensagens);
+        for (const [k, v] of Object.entries(doc)) if (chavesPermitidas.includes(k) && !resultado.campos[k]) resultado.campos[k] = v;
+        if (Object.keys(doc).length && resultado.perfil === 'desconhecido' && !tipoAlvo) resultado.perfil = 'motorista';
+      }
+      if (resultado.campos.cnh_categoria) {
+        const c = normalizarCategoria(resultado.campos.cnh_categoria);
+        if (c) resultado.campos.cnh_categoria = c; else delete resultado.campos.cnh_categoria;
+      }
+      if (resultado.campos.placa) resultado.campos.placa = normalizarPlaca(resultado.campos.placa) || resultado.campos.placa;
       if (tipoAlvo) resultado.perfil = tipoParaPerfil[tipoAlvo]; // com cadastro vinculado, o perfil é o do cadastro
 
       const info = db.prepare(
@@ -251,9 +272,20 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     try {
       const cfg = config();
       if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return;
-      await analisar(conversaId, { origem: 'automatica', forcar });
-      aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
-      if (cfg.responder) responderAutomatico(conversaId);
+      const a = await analisar(conversaId, { origem: 'automatica', forcar });
+      const ap = aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
+      let resp = 'resposta automática desligada';
+      if (cfg.responder) {
+        const r = responderAutomatico(conversaId);
+        resp = r.enviada ? 'respondeu' : `não respondeu: ${MOTIVOS[r.motivo] || r.motivo}`;
+        if (!r.enviada) {
+          const atual = ultimaAnalise(conversaId);
+          if (atual) db.prepare('UPDATE ia_analises SET aplicado_resumo = ? WHERE id = ?').run(`${atual.aplicado_resumo || ''}; ${resp}`.replace(/^; /, '').slice(0, 200), atual.id);
+        }
+      }
+      // Registro sem dados pessoais: só nomes de campos e decisões.
+      log.log(`[ia] conversa ${conversaId}: perfil=${a.resultado.perfil} campos=[${Object.keys(a.resultado.campos || {}).join(',')}] `
+        + `${ap.erro ? `cadastro: ${ap.erro}` : (ap.criado ? `criou ${ap.criado.tipo}` : `preencheu=[${(ap.preenchidos || []).join(',')}]`)}; ${resp}`);
     } catch (err) {
       // Falha da IA nunca atrapalha o atendimento: só fica no log.
       log.error(`[ia] análise automática da conversa ${conversaId}: ${err.message}`);
@@ -262,7 +294,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   // Resposta automática (só se o administrador ligar). Travas de segurança:
   //  - só responde se a última mensagem da conversa é do cliente e a análise cobre essa mensagem;
-  //  - se uma pessoa da equipe respondeu nos últimos 30 min (CRM ou celular), a IA fica quieta (humano assumiu);
+  //  - se uma pessoa da equipe respondeu nos últimos 15 min (CRM ou celular), a IA fica quieta (humano assumiu);
   //  - no máximo RESPOSTAS_CONVERSA_DIA respostas da IA por conversa em 24 h e RESPOSTAS_DIA no total por dia;
   //  - não repete a mesma frase que acabou de mandar.
   const RESPOSTAS_CONVERSA_DIA = Number(process.env.IA_RESPOSTAS_CONVERSA_DIA) || 15;
@@ -275,7 +307,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const ultima = msgs[msgs.length - 1];
     if (!ultima || ultima.direcao !== 'in') return { motivo: 'ja_respondida' };
     if (a.mensagem_ate_id !== ultima.id) return { motivo: 'analise_desatualizada' };
-    const limite = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const limite = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     if (msgs.some((m) => m.direcao === 'out' && m.origem !== 'ia' && m.ocorrida_em >= limite)) return { motivo: 'humano_assumiu' };
     const dia = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const naConversa = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND created_at >= ?").get(conversaId, dia).n;

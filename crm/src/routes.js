@@ -44,9 +44,12 @@ const transcritor = criarTranscritor({
 });
 wa.definirTranscritor(async ({ mensagemId, midia }) => {
   const cfg = ia.config();
-  if (!cfg.ativo || !cfg.transcrever || !midia || typeof midia.baixar !== 'function') return false;
-  if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return false;
-  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) return false; // nem baixa arquivo grande demais
+  const pular = (motivo) => { console.log(`[ia] mídia da mensagem ${mensagemId} (${midia && midia.tipo}) não lida: ${motivo}`); return false; };
+  if (!midia || typeof midia.baixar !== 'function') return pular('sem arquivo para baixar');
+  if (!cfg.ativo) return pular('IA desativada');
+  if (!cfg.transcrever) return pular('leitura de mídias desligada');
+  if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return pular('limite diário');
+  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) return pular('arquivo maior que 15 MB'); // nem baixa
   const registrar = (ok, provedor, erro) => db.prepare(
     'INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(mensagemId, provedor ? `${provedor}:${midia.tipo}` : midia.tipo, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
@@ -58,6 +61,7 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
     const novo = r.texto === '[sem fala]' ? `${rotulo} (sem fala)` : `${rotulo} ${r.simbolo || '📎'} ${r.texto}`;
     wa.store.definirTranscricao(mensagemId, novo);
     registrar(true, r.provedor);
+    console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}, ${midia.mime}) lida por ${r.provedor}: ${r.texto.length} caracteres`);
     return true;
   } catch (err) {
     registrar(false, null, err.message);

@@ -67,3 +67,29 @@ test('resposta automática desligada: só sugere', async () => {
   await ia.executarAutomatico(r.conversaId);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 0);
 });
+
+test('cadastro já existe: CNH em PDF lida preenche a categoria mesmo se a IA não devolver o campo', async () => {
+  const { db, ia, waStore, receber, setResposta } = montar();
+  const r1 = receber('quero ser motorista', 'C1');
+  setResposta({ resumo: 'x', perfil: 'motorista', campos: { nome: 'Evandro', cidade: 'Goiatuba' }, resposta_sugerida: 'Envie a CNH, por favor.' });
+  await ia.executarAutomatico(r1.conversaId);
+  const id = db.prepare('SELECT id FROM motoristas').get().id;
+  receber('[documento] cnh.pdf 📎 Tipo: CNH\nNome: EVANDRO\nCategoria da CNH: B', 'C2');
+  setResposta({ resumo: 'mandou a CNH', perfil: 'motorista', campos: { nome: 'EVANDRO' }, resposta_sugerida: 'Recebemos sua CNH!' });
+  await ia.executarAutomatico(r1.conversaId, { forcar: true });
+  assert.equal(db.prepare('SELECT cnh_categoria FROM motoristas WHERE id = ?').get(id).cnh_categoria, 'B');
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 2, 'respondeu as duas vezes');
+  const a = ia.ultimaAnalise(r1.conversaId);
+  assert.match(a.aplicado_resumo, /cnh_categoria/);
+  void waStore;
+});
+
+test('quando não responde, o motivo fica registrado no painel', async () => {
+  const { ia, waStore, receber, setResposta } = montar();
+  const r = receber('oi', 'E1');
+  waStore.enfileirar({ conversaId: r.conversaId, texto: 'Bom dia, aqui é o Evandro', usuarioId: null });
+  receber('tudo bem?', 'E2');
+  setResposta({ resumo: 'x', perfil: 'passageiro', campos: {}, resposta_sugerida: 'Olá!' });
+  await ia.executarAutomatico(r.conversaId, { forcar: true });
+  assert.match(ia.ultimaAnalise(r.conversaId).aplicado_resumo, /equipe respondeu há menos de 15 min/);
+});

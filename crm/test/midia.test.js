@@ -101,3 +101,17 @@ test('banco antigo ganha as colunas novas do motorista sem perder dados', () => 
   for (const col of ['veiculo', 'placa', 'cnh_categoria']) assert.ok(r.c.includes(col), col);
   assert.equal(r.nome, 'Ana');
 });
+
+test('reforço sem IA: categoria da CNH, placa e veículo saem do texto lido de CNH/CRLV', () => {
+  const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca } = require('../src/ia/documentos');
+  const msgs = [
+    { direcao: 'in', texto: '[documento] cnh.pdf 📎 Tipo: CNH digital\nNome: EVANDRO DA SILVA\nCategoria da CNH: AB\nValidade: 10/05/2030' },
+    { direcao: 'in', texto: '[imagem] 📎 Tipo: CRLV\nPlaca: QWE-1A23\nMarca/Modelo: VW/GOL 1.0\nAno modelo: 2015\nCor: PRATA' },
+    { direcao: 'out', texto: 'Categoria: E' }
+  ];
+  assert.deepEqual(extrairDadosDocumentos(msgs), { cnh_categoria: 'AB', placa: 'QWE1A23', veiculo: 'VW/GOL 1.0, PRATA, 2015' });
+  assert.equal(normalizarCategoria('Categoria B'), 'B');
+  assert.equal(normalizarCategoria('xyz'), null);
+  assert.equal(normalizarPlaca('abc-1234'), 'ABC1234');
+  assert.deepEqual(extrairDadosDocumentos([{ direcao: 'in', texto: 'categoria: B (sem documento lido)' }]), {});
+});
