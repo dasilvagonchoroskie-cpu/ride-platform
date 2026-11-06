@@ -545,18 +545,30 @@ dialog.modal::backdrop { background: rgba(6, 26, 51, .55); backdrop-filter: blur
 .wa-tag.est-humano { color: #166534; background: #dcfce7; }
 .wa-tag.est-concluido { color: #475569; background: #e2e8f0; }
 .wa-atend { border-bottom: 1px solid var(--line); }
-.wa-atend-linha { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 14px; }
+.wa-atend-linha { display: flex; align-items: center; gap: 8px; padding: 6px 14px; min-width: 0; }
 .wa-atend-linha.est-aguardando { background: #fef2f2; }
-.wa-atend-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.wa-atend-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+.wa-atend-est { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; color: var(--royal-600); }
+.wa-dot { width: 8px; height: 8px; border-radius: 50%; background: #2563eb; display: inline-block; }
+.est-aguardando .wa-dot { background: #dc2626; } .est-aguardando .wa-atend-est { color: #991b1b; }
+.est-humano .wa-dot { background: #16a34a; } .est-humano .wa-atend-est { color: #166534; }
+.est-concluido .wa-dot { background: #94a3b8; } .est-concluido .wa-atend-est { color: #475569; }
+.wa-atend-det { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--muted); }
+.est-aguardando .wa-atend-det { color: #991b1b; }
+.wa-atend-acoes { flex: none; display: flex; gap: 6px; }
+.wa-atend-acoes .btn { padding: 4px 10px; font-size: 12.5px; }
+.wa-hist-lista { margin: 0 0 0 18px; padding: 0; font-size: 13px; color: #33455e; display: grid; gap: 4px; }
+.wa-mais { display: none; font-size: 18px; line-height: 1; padding: 4px 12px; }
+.wa-mais-lista { display: grid; gap: 8px; }
+.wa-mais-lista .btn { justify-content: center; }
 .wa-motivo { font-size: 12.5px; color: #991b1b; font-weight: 600; }
 .wa-hist { padding: 0 14px 8px; font-size: 12.5px; color: #475569; }
 .wa-hist summary { cursor: pointer; }
 .wa-hist ul { margin: 6px 0 0 18px; padding: 0; }
 @media (max-width: 760px) {
-  .wa-atend-linha { padding: 6px 10px; }
-  .wa-atend-acoes { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
-  .wa-atend-acoes .btn { flex: none; padding: 5px 10px; font-size: 13px; }
+  .wa-atend-linha { padding: 5px 10px; gap: 6px; }
+  .wa-atend-acoes .btn { padding: 4px 8px; font-size: 12px; }
+  .wa-atend-acoes { gap: 4px; }
+  .so-desk { display: none; }
 }
 .wa-none, .wa-more { padding: 18px; text-align: center; color: var(--muted-2); font-size: 13px; }
 .wa-placeholder { margin: auto; text-align: center; color: var(--muted-2); padding: 24px; max-width: 360px; }
@@ -633,10 +645,20 @@ dialog.modal::backdrop { background: rgba(6, 26, 51, .55); backdrop-filter: blur
 .wa-msg.ia .wa-bubble { background: #e6efff; }
 @media (max-width: 900px) {
   .wa-grid { height: calc(100dvh - 190px); min-height: 360px; }
-  .wa-thread-head { padding: 8px 10px; gap: 6px; }
-  .wa-actions { flex-wrap: nowrap; overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .wa-actions .btn { flex: none; padding: 5px 10px; font-size: 13px; }
-  .wa-ia-card { max-height: 38dvh; }
-  .wa-msgs { min-height: 45dvh; padding: 10px; }
-  .wa-composer { padding: 8px; }
+  /* Conversa aberta no celular: cabeçalho numa linha, ações no menu "⋯", mensagens ocupam o resto e a caixa de
+     resposta fica sempre visível (antes um mínimo de altura empurrava a caixa e o fim da conversa para fora da tela). */
+  .wa-thread-head { padding: 6px 8px; gap: 6px; flex-wrap: nowrap; }
+  .wa-back { padding: 4px 8px; }
+  .wa-who { flex: 1 1 auto; }
+  .wa-who strong { font-size: 14.5px; }
+  .wa-who .muted { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wa-actions { flex: none; flex-wrap: nowrap; }
+  .wa-actions .btn:not(.wa-mais) { display: none; }
+  .wa-mais { display: inline-flex; }
+  .wa-ia-mini { padding: 5px 10px; }
+  .wa-ia-card { max-height: 34dvh; }
+  .wa-thread-head, .wa-atend, .wa-ia, .wa-composer, #wa-banner { flex: none; }
+  .wa-msgs { flex: 1 1 0; min-height: 0; padding: 8px; }
+  .wa-composer { padding: 6px 8px; gap: 6px; }
+  .wa-composer textarea { min-height: 40px; }
 }

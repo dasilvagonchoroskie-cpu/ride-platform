@@ -167,9 +167,12 @@ export async function renderConversas(view, state) {
     const c = atual;
     $('#wa-who').innerHTML = `<strong>${ui.esc(nomeDe(c))}</strong>
       <span class="muted">${ui.esc(c.telefone_exibicao || 'sem telefone')}${c.vinculo_tipo ? ` · ${ui.esc(TIPOS[c.vinculo_tipo])}` : ' · sem cadastro'}${c.responsavel_nome ? ` · ${ui.esc(c.responsavel_nome)}` : ''}</span>`;
+    // No celular, estas ações ficam no menu "⋯" (mais espaço para a conversa).
     $('#wa-actions').innerHTML = `
+      <button class="btn btn-sm btn-ghost wa-mais" data-act="mais" type="button" aria-label="Mais ações">⋯</button>
       <button class="btn btn-sm btn-soft" data-act="vincular" type="button">${c.vinculo_tipo ? 'Trocar cadastro' : 'Vincular cadastro'}</button>
       <button class="btn btn-sm btn-soft" data-act="tarefa" type="button">Criar tarefa</button>
+      <button class="btn btn-sm btn-ghost" data-act="historico" type="button">Histórico</button>
       ${isAdmin ? `<button class="btn btn-sm btn-danger" data-act="ignorar" type="button">Ignorar contato</button>
       <button class="btn btn-sm btn-danger" data-act="excluir" type="button">Excluir</button>` : ''}`;
   }
@@ -180,22 +183,53 @@ export async function renderConversas(view, state) {
     const est = ESTADO[c.atendimento] || ESTADO.ia;
     const botoes = [];
     if (c.atendimento === 'ia' || c.atendimento === 'aguardando') botoes.push('<button class="btn btn-sm btn-primary" data-at="assumir" type="button">Assumir</button>');
-    if (c.atendimento === 'humano' || c.atendimento === 'aguardando') botoes.push('<button class="btn btn-sm btn-soft" data-at="devolver" type="button">Devolver à IA</button>');
+    if (c.atendimento === 'humano' || c.atendimento === 'aguardando') botoes.push('<button class="btn btn-sm btn-soft" data-at="devolver" type="button" title="Devolver para a IA">Devolver<span class="so-desk">à IA</span></button>');
     if (c.atendimento !== 'concluido') botoes.push('<button class="btn btn-sm btn-ghost" data-at="concluir" type="button">Concluir</button>');
-    else botoes.push('<button class="btn btn-sm btn-soft" data-at="assumir" type="button">Reabrir e assumir</button>');
+    else botoes.push('<button class="btn btn-sm btn-soft" data-at="assumir" type="button">Reabrir</button>');
+    const curto = { ia: 'IA atendendo', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' }[c.atendimento] || 'IA atendendo';
+    const detalhe = c.atendimento === 'aguardando' && c.atend_motivo ? c.atend_motivo : (c.atend_assunto ? ASSUNTO_MENU[c.atend_assunto] || '' : '');
+    const dica = c.atendimento === 'humano' ? 'A IA não responde enquanto a equipe atende.' : est[0];
+    $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}" title="${ui.esc(dica)}">
+        <button class="wa-atend-est" data-at="historico" type="button" title="Ver histórico e motivo"><i class="wa-dot"></i>${ui.esc(curto)}</button>
+        ${detalhe ? `<span class="wa-atend-det">${ui.esc(detalhe)}</span>` : '<span class="wa-atend-det"></span>'}
+        <span class="wa-atend-acoes">${botoes.join('')}</span>
+      </div>`;
+  }
+
+  function modalHistorico() {
     const hist = eventos.map((e) => `<li>${ui.esc(ui.fmtDateTime(e.criado_em))} — ${ui.esc(EVENTO[e.tipo] || e.tipo)}${e.usuario_nome ? ` por ${ui.esc(e.usuario_nome)}` : (e.tipo === 'transferida' ? ' pela IA' : '')}${e.detalhe ? `: ${ui.esc(e.detalhe)}` : ''}</li>`).join('');
-    $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}">
-        <div class="wa-atend-info">${ui.badge(est[0], est[1])}
-          ${c.atend_assunto ? `<span class="muted small">${ui.esc(ASSUNTO_MENU[c.atend_assunto] || '')}</span>` : ''}
-          ${c.atendimento === 'aguardando' && c.atend_motivo ? `<span class="wa-motivo">Motivo: ${ui.esc(c.atend_motivo)}</span>` : ''}
-          ${c.atendimento === 'humano' && iaSt.responder ? '<span class="muted small">A IA não responde enquanto a equipe atende.</span>' : ''}</div>
-        <div class="wa-atend-acoes">${botoes.join('')}</div>
-      </div>
-      ${hist ? `<details class="wa-hist"><summary>Histórico do atendimento</summary><ul>${hist}</ul></details>` : ''}`;
+    const est = ESTADO[atual.atendimento] || ESTADO.ia;
+    ui.modal({
+      title: 'Histórico do atendimento', subtitle: nomeDe(atual), size: 'small',
+      body: `<p style="margin:0 0 8px">${ui.badge(est[0], est[1])}${atual.atend_motivo && atual.atendimento === 'aguardando' ? ` <span class="wa-motivo">Motivo: ${ui.esc(atual.atend_motivo)}</span>` : ''}</p>
+        ${hist ? `<ul class="wa-hist-lista">${hist}</ul>` : '<p class="muted">Nenhuma mudança registrada ainda.</p>'}`
+    });
+  }
+
+  // Menu "⋯" do celular: as ações que não cabem na tela.
+  function modalMais() {
+    const c = atual;
+    const itens = [
+      ['vincular', c.vinculo_tipo ? 'Trocar cadastro vinculado' : 'Vincular a um cadastro', 'btn-soft'],
+      ['tarefa', 'Criar tarefa', 'btn-soft'],
+      ['historico', 'Histórico do atendimento', 'btn-soft'],
+      ...(isAdmin ? [['ignorar', 'Ignorar contato', 'btn-danger'], ['excluir', 'Excluir conversa', 'btn-danger']] : [])
+    ];
+    const m = ui.modal({
+      title: nomeDe(c), subtitle: c.telefone_exibicao || '', size: 'small',
+      body: `<div class="wa-mais-lista">${itens.map(([k, t, cls]) => `<button class="btn ${cls}" data-mais="${k}" type="button">${ui.esc(t)}</button>`).join('')}</div>`
+    });
+    m.body.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mais]');
+      if (!b) return;
+      m.close();
+      acao(b.dataset.mais);
+    });
   }
 
   async function acaoAtendimento(nome) {
     if (!atual) return;
+    if (nome === 'historico') { modalHistorico(); return; }
     const id = atual.id;
     let corpo = { acao: nome };
     if (nome === 'concluir') {
@@ -481,7 +515,9 @@ export async function renderConversas(view, state) {
     if (!atual) return;
     const c = atual;
     try {
-      if (nome === 'vincular') modalVincular();
+      if (nome === 'mais') modalMais();
+      else if (nome === 'historico') modalHistorico();
+      else if (nome === 'vincular') modalVincular();
       else if (nome === 'tarefa') modalTarefa();
       else if (nome === 'situacao') {
         await api.patch(`/wa/conversas/${c.id}`, { situacao: c.situacao === 'Aberta' ? 'Resolvida' : 'Aberta' });
