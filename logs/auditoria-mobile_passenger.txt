@@ -8,9 +8,10 @@ geolocator                            *13.0.4   *13.0.4     14.1.2      14.1.2
 shared_preferences                    *2.5.5    2.5.6       2.5.6       2.5.6    
 
 transitive dependencies:             
-archive                               *4.3.0    4.5.2       4.5.2       4.5.2    
-code_assets                           *1.2.1    2.1.0       2.1.0       2.1.0    
+archive                               *4.3.0    4.6.0       4.6.0       4.6.0    
+code_assets                           *1.2.1    2.2.0       2.2.0       2.2.0    
 cross_file                            *0.3.5+5  *0.3.5+5    *0.3.5+5    0.4.0    
+crypto                                *3.0.7    3.0.8       3.0.8       3.0.8    
 dbus                                  -         -           *0.7.15     0.8.0    
 ffi_leak_tracker                      -         -           0.1.2       0.1.2    
 geoclue                               -         -           0.1.1       0.1.1    
@@ -20,23 +21,24 @@ geolocator_linux                      -         -           0.2.6       0.2.6
 geolocator_platform_interface         *4.3.0    4.4.1       4.4.1       4.4.1    
 gsettings                             -         -           *0.2.8      0.2.9    
 hooks                                 *2.0.2    2.2.0       2.2.0       2.2.0    
-jni                                   *1.0.3    1.1.0       1.1.0       1.1.0    
+jni                                   *1.0.3    1.1.2       1.1.2       1.1.2    
 jni_flutter                           *1.0.3    1.0.4+1     1.0.4+1     1.0.4+1  
 material_color_utilities              *0.13.0   *0.13.0     *0.13.0     0.13.1   
 meta                                  *1.18.3   1.19.0      1.19.0      1.19.0   
-objective_c                           *9.5.0    9.6.2       9.6.2       9.6.2    
+objective_c                           *9.5.0    9.6.3       9.6.3       9.6.3    
 package_info_plus                     -         -           10.2.2      10.2.2   
 package_info_plus_platform_interface  -         -           4.1.0       4.1.0    
 petitparser                           -         -           7.1.0       7.1.0    
+posix                                 *6.5.2    6.5.4       6.5.4       6.5.4    
 record_use                            *0.6.0    1.1.1       1.1.1       1.1.1    
-shared_preferences_android            *2.4.28   2.5.3       2.5.3       2.5.3    
-shared_preferences_foundation         *2.5.7    2.6.0       2.6.0       2.6.0    
-vector_math                           *2.4.0    2.4.3       2.4.3       2.4.3    
+shared_preferences_android            *2.4.28   2.5.4       2.5.4       2.5.4    
+shared_preferences_foundation         *2.5.7    2.6.1       2.6.1       2.6.1    
+vector_math                           *2.4.0    2.4.4       2.4.4       2.4.4    
 web                                   *1.1.1    1.1.2       1.1.2       1.1.2    
 win32                                 -         -           6.4.0       6.4.0    
 xml                                   -         -           7.1.0       7.1.0    
 
-15 upgradable dependencies are locked (in pubspec.lock) to older versions.
+17 upgradable dependencies are locked (in pubspec.lock) to older versions.
 To update these dependencies, use `flutter pub upgrade`.
 
 2  dependencies are constrained to versions that are older than a resolvable version.
