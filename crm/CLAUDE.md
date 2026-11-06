@@ -76,6 +76,8 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Retenção (LGPD): conversas sem cadastro e sem movimento há `RETENCAO_DIAS` (180) apagadas; análises/registros antigos também.
 - Baileys com versão fixa (`wa-lib/package.json` + lock, 7.0.0-rc14). Endereço "personalizado" da IA recusa rede interna em produção.
 - `/api/diagnostico/ip` só existe com `DIAG_IP=1` (usar e desligar).
+- Limpeza feita em 06/11 10h20: token antigo apagado de `cofre.acesso` (só o novo vale), versões anteriores à troca de chave
+  apagadas, `pg_net` reinstalado no esquema `extensions` (job `crm-manter-acordado` conferido: 200).
 
 ## Ajustes de 06/11/2026 (teste real do dono)
 - Sem cadastro vinculado, a IA recebe `campos_permitidos` por perfil (`camposPorPerfil`) e pode devolver qualquer chave de
