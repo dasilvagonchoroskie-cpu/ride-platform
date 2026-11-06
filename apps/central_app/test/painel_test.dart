@@ -754,8 +754,10 @@ MockClient _servidor() => MockClient((http.Request r) async {
       );
     });
 
-Future<PainelState> _abrir(WidgetTester tester, Widget tela) async {
-  tester.view.physicalSize = const Size(1080, 2340);
+/// pequena: celular pequeno (360 x 640) com a letra do sistema 30% maior
+/// (auditoria de 06/11/2026: nada pode estourar ou sumir).
+Future<PainelState> _abrir(WidgetTester tester, Widget tela, {bool pequena = false}) async {
+  tester.view.physicalSize = pequena ? const Size(1080, 1920) : const Size(1080, 2340);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -770,6 +772,9 @@ Future<PainelState> _abrir(WidgetTester tester, Widget tela) async {
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: Scaffold(body: tela),
+        builder: pequena
+            ? (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)), child: child!)
+            : null,
       ),
     ),
   );
@@ -1291,6 +1296,30 @@ void main() {
     expect(find.byKey(const ValueKey('clube-salvar'), skipOffstage: false), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  // Auditoria (06/11/2026): celular pequeno e letra grande nas telas da Central.
+  for (final caso in <(String, Widget)>[
+    ('despacho', const Despacho()),
+    ('motoristas', const Motoristas()),
+    ('passageiros', const Passageiros()),
+    ('categorias', const CategoriasTela()),
+    ('tarifas', const TarifasTela()),
+    ('financeiro', const Financeiro()),
+    ('alertas', const Alertas()),
+    ('cupons', const CuponsTela()),
+    ('clube', const ClubeTela()),
+    ('carteiras', const CarteirasTela()),
+    ('entregas', const EntregasTela()),
+    ('cidades e equipe', const CidadesEquipeTela()),
+  ]) {
+    testWidgets('Tela pequena e letra grande: ${caso.$1} sem estourar', (tester) async {
+      _clube.clear();
+      _clubeFora = false;
+      await _abrir(tester, caso.$2, pequena: true);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 
   testWidgets('Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas', (tester) async {
     _pedidosDeTarifa.clear();

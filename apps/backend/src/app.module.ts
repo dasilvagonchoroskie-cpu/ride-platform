@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { SenhaProvisoriaGuard } from './common/guards/senha-provisoria.guard';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { LimitePorClienteGuard } from './common/guards/limite-por-cliente.guard';
 
 import { AppConfigModule } from './config/config.module';
 import { PrismaModule } from './database/prisma.module';
@@ -71,7 +72,7 @@ import { ClubeModule } from './modules/clube/clube.module';
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: LimitePorClienteGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     // Operador com senha provisoria so troca a senha (etapa 7).

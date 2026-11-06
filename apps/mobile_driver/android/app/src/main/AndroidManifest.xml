@@ -22,6 +22,9 @@
          motorista tira a restricao de bateria nos ajustes do app (11/10/2026). -->
 
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="${NOME_DO_APP}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"

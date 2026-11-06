@@ -51,6 +51,12 @@ export class AdminCentralController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Get('seguranca/banco')
+  @ApiOperation({ summary: 'Auditoria: tabelas do banco sem RLS (devem ser so as de extensoes, como spatial_ref_sys)' })
+  segurancaDoBanco() {
+    return this.prisma.tabelasSemRls();
+  }
+
   @Get('overview')
   @ApiOperation({ summary: 'Indicadores do mapa: corridas ativas, concluidas hoje, motoristas, faturamento (por cidade)' })
   async overview(@CurrentUser() user: AuthenticatedUser, @Query('praca') praca?: string) {

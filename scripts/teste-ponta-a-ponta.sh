@@ -56,6 +56,10 @@ TA=$(echo "$L" | jq -r '.data.accessToken // empty')
 for rota in "/admin/drivers?status=PENDING" /admin/rides/active /admin/reports/summary /admin/tariffs; do
   X=$(get "$rota" "$TA"); sucesso "$X" && ok "Central carrega $rota" || falha "Central carrega $rota" "$X"
 done
+# Auditoria 06/11/2026: tabelas do banco fechadas para a API publica do Supabase (RLS).
+X=$(get /admin/seguranca/banco "$TA"); SEM=$(echo "$X" | jq -r '[.data.semRls[] | select(. != "spatial_ref_sys")] | join(",")')
+sucesso "$X" && [ -z "$SEM" ] && ok "Seguranca: as $(echo "$X" | jq -r '.data.total') tabelas do banco com RLS ligado (fechadas para a API publica do Supabase)" || falha "Seguranca: tabelas sem RLS" "$X"
+C=$(curl -s -o /dev/null -w "%{http_code}" "$API/admin/seguranca/banco"); [ "$C" = "401" ] && ok "Seguranca: a auditoria do banco pede login da Central" || falha "Seguranca: auditoria do banco sem login" "$C"
 # Painel ao vivo da Central (11/10/2026): formato que o app le.
 X=$(get /admin/ao-vivo "$TA")
 [ "$(echo "$X" | jq -r '(.data.counts.livres|type)+"/"+(.data.drivers|type)+"/"+(.data.ridesToday|type)')" = "number/array/array" ] && ok "Central: painel ao vivo (livres $(echo "$X" | jq -r '.data.counts.livres'), em viagem $(echo "$X" | jq -r '.data.counts.emViagem'), corridas hoje $(echo "$X" | jq -r '.data.ridesToday|length'))" || falha "Central: painel ao vivo" "$X"
@@ -199,6 +203,13 @@ if [ -n "$T" ]; then
   unset U T
 fi
 C=$(curl -s -o /dev/null -w "%{http_code}" "$API/geo/mapa"); [ "$C" = "401" ] && ok "Seguranca: a chave do mapa nao sai sem login" || falha "Seguranca: chave do mapa sem login" "$C"
+# ---- Auditoria de 06/11/2026 ----
+RAIZ="${API%/api}"
+C=$(curl -s -o /dev/null -w "%{http_code}" "$RAIZ/docs"); [ "$C" = "404" ] && ok "Seguranca: o mapa completo da API (Swagger) nao fica aberto na producao" || falha "Seguranca: Swagger aberto na producao" "$C"
+H=$(curl -s -m 60 -D - -o /dev/null "$API/health"); echo "$H" | grep -qi '^x-content-type-options: nosniff' && echo "$H" | grep -qi '^strict-transport-security:' && ok "Seguranca: cabecalhos de protecao (nosniff e HTTPS obrigatorio)" || falha "Seguranca: cabecalhos de protecao" "$(echo "$H" | head -c 300)"
+C=$(curl -s -o /dev/null -w "%{http_code}" "http://${RAIZ#https://}/api/health"); { [ "$C" = "301" ] || [ "$C" = "308" ] || [ "$C" = "302" ]; } && ok "Seguranca: endereco sem HTTPS e mandado para o HTTPS ($C)" || falha "Seguranca: HTTP sem redirecionar" "$C"
+GRANDE=$(head -c 400000 /dev/zero | tr '\0' 'a'); C=$(printf '{"email":"%s@x.com","purpose":"LOGIN"}' "$GRANDE" | curl -s -o /dev/null -w "%{http_code}" -X POST "$API/auth/otp/request" -H 'Content-Type: application/json' --data-binary @-)
+[ "$C" = "413" ] && ok "Seguranca: pedido gigante (400 KB) fora do envio de foto e recusado" || falha "Seguranca: pedido gigante aceito" "$C"
 X=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
 [ -n "$(echo "$X" | jq -r '.data.address // empty' | grep -v '^Ponto no mapa')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
 
