@@ -210,6 +210,7 @@ H=$(curl -s -m 60 -D - -o /dev/null "$API/health"); echo "$H" | grep -qi '^x-con
 C=$(curl -s -o /dev/null -w "%{http_code}" "http://${RAIZ#https://}/api/health"); { [ "$C" = "301" ] || [ "$C" = "308" ] || [ "$C" = "302" ]; } && ok "Seguranca: endereco sem HTTPS e mandado para o HTTPS ($C)" || falha "Seguranca: HTTP sem redirecionar" "$C"
 GRANDE=$(head -c 400000 /dev/zero | tr '\0' 'a'); C=$(printf '{"email":"%s@x.com","purpose":"LOGIN"}' "$GRANDE" | curl -s -o /dev/null -w "%{http_code}" -X POST "$API/auth/otp/request" -H 'Content-Type: application/json' --data-binary @-)
 [ "$C" = "413" ] && ok "Seguranca: pedido gigante (400 KB) fora do envio de foto e recusado" || falha "Seguranca: pedido gigante aceito" "$C"
+C=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API/auth/otp/request" -H 'Content-Type: application/json' --data-binary '{"email": quebrado'); [ "$C" = "400" ] && ok "Seguranca: JSON quebrado responde 400 (nao erro interno)" || falha "Seguranca: JSON quebrado" "$C"
 X=$(get "/geo/reverse?lat=-18.0125&lng=-49.3547" "$TP")
 [ -n "$(echo "$X" | jq -r '.data.address // empty' | grep -v '^Ponto no mapa')" ] && ok "Passageiro: endereco do embarque pelo GPS ($(echo "$X" | jq -r '.data.address'))" || falha "Passageiro: endereco do embarque" "$X"
 
