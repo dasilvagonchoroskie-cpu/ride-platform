@@ -216,7 +216,7 @@ class MainActivity : FlutterActivity() {
             // A Google Play nao deixa pedir a isencao direto
             // (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS): abre os ajustes do app,
             // onde o motorista toca em Bateria > Sem restricoes.
-            "bateria" -> abrirAjustesDoApp()
+            "bateria" -> abrirBateria()
             "telaCheia" -> if (Build.VERSION.SDK_INT >= 34) {
                 startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pacote))
             }
@@ -255,6 +255,32 @@ class MainActivity : FlutterActivity() {
             }
         }
         abrirAjustesDoApp()
+    }
+
+    /**
+     * Xiaomi/Redmi/Poco (MIUI e HyperOS): o "Nenhuma restricao" da tela de
+     * bateria do app e da Xiaomi e nao tira o app da otimizacao do Android
+     * (Evandro, Redmi 12, 09/11/2026). Abre a lista "Otimizacao de bateria" do
+     * Android, onde o motorista marca "Nao otimizar". Nos outros aparelhos,
+     * Bateria > Sem restricoes nos ajustes do app ja resolve.
+     */
+    private fun abrirBateria() {
+        if (ehXiaomi() && Build.VERSION.SDK_INT >= 23) {
+            try {
+                startActivity(
+                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+                return
+            } catch (e: Exception) {
+                // Sem a lista neste aparelho: os ajustes do app.
+            }
+        }
+        abrirAjustesDoApp()
+    }
+
+    private fun ehXiaomi(): Boolean {
+        val m = (Build.MANUFACTURER ?: "").lowercase()
+        return m.contains("xiaomi") || m.contains("redmi") || m.contains("poco")
     }
 
     /** Para quando o motorista negou de vez: so pelos ajustes do Android. */
