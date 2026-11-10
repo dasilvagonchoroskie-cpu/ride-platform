@@ -134,15 +134,22 @@ export class AdminCentralController {
   @Get('usuarios/:id/aparelhos')
   @UseGuards(SoDonoGuard)
   @ApiOperation({ summary: 'Aparelhos que entraram na conta e as sessoes abertas em cada um — so o dono' })
-  aparelhos(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.sessoes.aparelhos(id);
+  async aparelhos(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.sessoes.aparelhos(await this.contaDe(id));
+  }
+
+  /** Aceita o id da conta ou o id do motorista (a tela do motorista so tem este). */
+  private async contaDe(id: string): Promise<string> {
+    const d = await this.prisma.driver.findUnique({ where: { id }, select: { userId: true } });
+    return d?.userId ?? id;
   }
 
   @Post('usuarios/:id/desconectar')
   @HttpCode(HttpStatus.OK)
   @UseGuards(SoDonoGuard)
   @ApiOperation({ summary: 'Desconecta a conta de todos os aparelhos na hora (celular perdido ou vendido) — so o dono' })
-  async desconectar(@CurrentUser('id') adminId: string, @Param('id', new ParseUUIDPipe()) id: string) {
+  async desconectar(@CurrentUser('id') adminId: string, @Param('id', new ParseUUIDPipe()) idInformado: string) {
+    const id = await this.contaDe(idInformado);
     const r = await this.sessoes.cortar(id);
     await this.prisma.auditLog.create({
       data: { actorId: adminId, actorRole: UserRole.ADMIN, action: 'DESCONECTAR_APARELHOS', entity: 'user', entityId: id, after: r as never },

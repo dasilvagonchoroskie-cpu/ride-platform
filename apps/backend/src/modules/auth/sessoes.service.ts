@@ -46,8 +46,11 @@ export class SessoesService {
       ativa: !!u && u.status !== 'BLOCKED' && u.status !== 'DELETED',
       lidoEm: agora,
     };
-    if (this.cache.size > 5000) this.cache.clear();
-    this.cache.set(userId, estado);
+    // Conta bloqueada nao fica no cache: ao desbloquear, volta na hora.
+    if (estado.ativa) {
+      if (this.cache.size > 5000) this.cache.clear();
+      this.cache.set(userId, estado);
+    }
     return estado;
   }
 

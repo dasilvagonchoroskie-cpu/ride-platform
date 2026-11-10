@@ -8,6 +8,7 @@ import '../widgets/ui.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
 import 'dados_pessoais.dart';
+import 'desconectar.dart';
 import 'foto.dart';
 import 'painel_state.dart';
 
@@ -326,6 +327,7 @@ class _DetalhePassageiroState extends State<_DetalhePassageiro> {
                 },
               ),
             ),
+            if (widget.dono) BotaoDesconectar(api: widget.api, id: widget.p.id, nome: p.nome),
             const SizedBox(height: Spacing.md),
             const Text('Histórico de bloqueios', style: AppText.heading),
             SizedBox(

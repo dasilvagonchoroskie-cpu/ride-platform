@@ -1531,6 +1531,13 @@ class PainelApi {
     return [for (final h in (r['history'] as List? ?? const []).whereType<Map<String, dynamic>>()) RegistroBloqueio.fromJson(h)];
   }
 
+  /// Celular perdido ou vendido: derruba a conta de todos os aparelhos na
+  /// hora. [id] = conta ou motorista. Devolve quantas sessoes foram fechadas.
+  Future<int> desconectarAparelhos(String id) async {
+    final r = await _c.request('POST', '/admin/usuarios/$id/desconectar') as Map<String, dynamic>;
+    return (r['sessoesEncerradas'] as num?)?.toInt() ?? 0;
+  }
+
   Future<void> bloquearPassageiro(String id, bool bloquear, String motivo) =>
       _c.request('PATCH', '/admin/passengers/$id/block', body: {'blocked': bloquear, 'reason': motivo});
 
