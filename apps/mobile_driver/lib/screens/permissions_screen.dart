@@ -40,7 +40,8 @@ const _itens = [
   _Item('sobrepor', 'Aparecer sobre outros apps',
       'Para a chamada abrir em tela cheia por cima do que estiver aberto — GPS, WhatsApp, qualquer coisa.'),
   _Item('bateria', 'Sem restrição de bateria',
-      'Para o Android não desligar o aplicativo com o celular no bolso. Na tela que abrir, toque em Bateria e escolha "Sem restrições".'),
+      'Para o Android não desligar o aplicativo com o celular no bolso. Na tela que abrir, toque em Bateria e escolha "Sem restrições". '
+      'Xiaomi, Redmi e Poco: abre a lista "Otimização de bateria"; mude o filtro para "Todos os apps", toque em Fortaleza Move Motorista e escolha "Não otimizar".'),
   _Item('telaCheia', 'Tela cheia com o celular bloqueado',
       'Para a chamada acender a tela e abrir em tela cheia, com o botão de deslizar para aceitar, mesmo com o celular bloqueado.'),
 ];
