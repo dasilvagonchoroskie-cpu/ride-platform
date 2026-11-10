@@ -1,3 +1,4 @@
+import { SessoesModule } from './modules/auth/sessoes.service';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { SenhaProvisoriaGuard } from './common/guards/senha-provisoria.guard';
@@ -48,6 +49,7 @@ import { ClubeModule } from './modules/clube/clube.module';
     RedisModule,
     StorageModule,
     NotificationModule,
+    SessoesModule,
     AuthModule,
     UsersModule,
     DriversModule,

@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserRole } from '@ride/shared';
 import { AppConfigService } from '../../../config/app-config.service';
 import { AuthenticatedUser } from '../../../common/decorators/current-user.decorator';
+import { SessoesService } from '../sessoes.service';
 
 export interface JwtPayload {
   sub: string;
@@ -20,7 +21,10 @@ export interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(config: AppConfigService) {
+  constructor(
+    config: AppConfigService,
+    private readonly sessoes: SessoesService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -28,7 +32,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  validate(payload: JwtPayload): AuthenticatedUser {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    // Sessao cortada (aparelho perdido/vendido) ou conta bloqueada: cai na hora.
+    if (!(await this.sessoes.acessoValido(payload.sub, payload.iat))) {
+      throw new UnauthorizedException('Sessao encerrada. Entre de novo.');
+    }
     return {
       id: payload.sub,
       role: payload.role,

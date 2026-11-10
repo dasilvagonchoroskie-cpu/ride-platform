@@ -986,6 +986,15 @@ PIDP=$(get /auth/me "$TP" | jq -r '.data.id')
 X=$(get "/admin/passengers?search=$(echo "$FONE_P" | tr -dc 0-9 | tail -c 8)" "$TA"); [ "$(echo "$X" | jq -r --arg p "$PIDP" '[.data.items[] | select(.id==$p)] | length')" = "1" ] && ok "Central: busca de passageiro pelo telefone" || falha "Central: busca de passageiro" "$X"
 X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":true,"reason":"Teste automatico de bloqueio"}' "$TA"); [ "$(echo "$X" | jq -r '.data.status')" = "BLOCKED" ] && ok "Central: passageiro bloqueado com motivo" || falha "Central: bloquear passageiro" "$X"
 X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":false,"reason":"Fim do teste"}' "$TA"); [ "$(echo "$X" | jq -r '.data.history | length')" -ge 2 ] 2>/dev/null && ok "Central: desbloqueado, historico com $(echo "$X" | jq -r '.data.history | length') registros" || falha "Central: historico de bloqueio" "$X"
+# Celular vendido (09/11/2026): a Central derruba a conta de todos os aparelhos na hora.
+X=$(get /auth/me "$TP"); sucesso "$X" && ok "Passageiro: desbloqueado volta a usar na hora" || falha "Passageiro: acesso depois de desbloquear" "$X"
+X=$(get "/admin/usuarios/$PIDP/aparelhos" "$TA"); [ "$(echo "$X" | jq -r '[.data[] | select(.sessoesAbertas > 0)] | length')" -ge 1 ] 2>/dev/null && ok "Central: lista os aparelhos com sessao aberta" || falha "Central: aparelhos da conta" "$X"
+X=$(post "/admin/usuarios/$PIDP/desconectar" '{}' "$TA"); [ "$(echo "$X" | jq -r '.data.sessoesEncerradas')" -ge 1 ] 2>/dev/null && ok "Central: desconectou o passageiro de todos os aparelhos ($(echo "$X" | jq -r '.data.sessoesEncerradas') sessoes)" || falha "Central: desconectar aparelhos" "$X"
+X=$(get /auth/me "$TP"); sucesso "$X" && falha "Acesso antigo deveria cair na hora" "$X" || ok "Seguranca: acesso do aparelho desconectado cai na hora"
+X=$(get "/admin/usuarios/$PIDP/aparelhos" "$TA"); [ "$(echo "$X" | jq -r '[.data[] | select(.sessoesAbertas > 0)] | length')" = "0" ] && ok "Seguranca: nenhuma sessao aberta depois de desconectar" || falha "Desconectar: sessao continuou aberta" "$X"
+X=$(post "/admin/usuarios/$PIDP/desconectar" '{}' "$TP"); sucesso "$X" && falha "Passageiro nao pode usar o desconectar da Central" "$X" || ok "Seguranca: so a Central desconecta aparelhos"
+sleep 2; TP=$(entrar "$FONE_P" PASSENGER)
+X=$(get /auth/me "$TP"); sucesso "$X" && ok "Passageiro: entra de novo com o codigo depois de desconectado" || falha "Passageiro: entrar de novo depois de desconectado" "$X"
 
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 # Mapa da Central: motorista offline continua no mapa (cinza), na ultima posicao.

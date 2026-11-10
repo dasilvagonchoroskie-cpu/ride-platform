@@ -9,6 +9,7 @@ import 'carros.dart';
 import 'carteiras.dart';
 import 'comuns.dart';
 import 'dados_pessoais.dart';
+import 'desconectar.dart';
 import 'foto.dart';
 import 'painel_state.dart';
 import 'relatorio_pdf.dart';
@@ -491,6 +492,7 @@ class _DetalheMotoristaState extends State<DetalheMotorista> {
                       },
                     ),
                   ),
+                  if (context.watch<PainelState>().dono) BotaoDesconectar(api: _api, id: m.id, nome: m.nome),
                   if (context.watch<PainelState>().dono && (context.watch<PainelState>().eu?.pracas.length ?? 0) > 1)
                     Align(
                       alignment: Alignment.centerLeft,
