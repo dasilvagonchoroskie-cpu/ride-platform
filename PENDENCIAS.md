@@ -7,6 +7,10 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 000. Celular vendido (09/11/2026, PRs #32 a #35)
+- Feito: corte de sessões na hora, botão Desconectar aparelhos na Central, esteira Desconectar aparelhos. Todas as contas reais derrubadas em 10/11 01:00 UTC.
+- Pendente: os apps mandarem o aparelho no login, para a lista de aparelhos da Central mostrar cada celular.
+
 ## 00. Auditoria de segurança e qualidade (06/11/2026, PRs #29 e #30)
 Corrigido e testado:
 - Banco: RLS ligado em todas as tabelas do Supabase (a API pública do Supabase não lê mais nada). Conferido pelo ponta a ponta (rota da Central /admin/seguranca/banco).
