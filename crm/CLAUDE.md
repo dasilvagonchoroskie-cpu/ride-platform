@@ -45,10 +45,21 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Mudança de conta (09/11/2026)
+- O dono perdeu o acesso às contas da Fortaleza Move (vendeu o celular). O CRM foi montado de novo, do zero, nas contas
+  pessoais dele: Render "Evandro's workspace" (serviço `crm-fortaleza-move`, srv-dbp6u4utlv9c73en3b0g, Oregon,
+  https://crm-fortaleza-move-ilv9.onrender.com, auto-deploy DESLIGADO: publicar com deploy manual) e Supabase org
+  dasilvagonchoroskie-cpu, projeto `crm-fortaleza-move` (ref jjrcfoxhzpaguskeywkf, us-west-1). Dados antigos ficaram no
+  cofre da conta antiga (cifrados): não há como trazer sem a SNAPSHOT_KEY antiga. Instalação nova: admin, WhatsApp e
+  chave do Gemini cadastrados de novo.
+- SQL do cofre agora versionado em `supabase/cofre.sql` (antes só existia no Supabase antigo).
+- Mesma conta Render tem o `fortaleza-mov-backend` mantido acordado 24 h: o plano grátis dá 750 h/mês POR CONTA.
+  Dois serviços acordados 24 h estouram (~1440 h) e o Render suspende os dois até o mês seguinte.
+
 ## Hospedagem no Render grátis + cofre (05/11/2026)
 - Render grátis tem disco temporário (apaga tudo a cada reinício/deploy/hibernação) e hiberna após 15 min sem acesso.
 - Solução: `start.js` + `src/persist.js`. Ao ligar, restaura `data/` (banco, `wa-auth`, chaves da IA) de um retrato
-  **cifrado (AES-256-GCM)** guardado no Supabase (projeto Supabase da conta Fortaleza Move, ref `xefeimjmvofeujcqlnuv`,
+  **cifrado (AES-256-GCM)** guardado no Supabase (projeto Supabase `crm-fortaleza-move`, ref `jjrcfoxhzpaguskeywkf` desde 09/11; antes `xefeimjmvofeujcqlnuv`,
   esquema `cofre`, funções `crm_snapshot_assumir/gravar` protegidas por token). Envia retrato novo a cada 30 s quando
   algo muda e no SIGTERM. **Fail-closed:** se o cofre não responder, o CRM não sobe (nunca sobe vazio por cima).
   Processo antigo de um deploy não grava por cima do novo ("dono").
