@@ -18,6 +18,9 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
+/** Preferencias das autorizacoes (confirmacao da bateria no Xiaomi). */
+private const val PREFS_PERMISSOES = "fortaleza_permissoes"
+
 /**
  * Tela do aplicativo + ponte com o servico de corridas.
  *
@@ -286,10 +289,6 @@ class MainActivity : FlutterActivity() {
             }
         }
         abrirAjustesDoApp()
-    }
-
-    private companion object {
-        const val PREFS_PERMISSOES = "fortaleza_permissoes"
     }
 
     private fun ehXiaomi(): Boolean {
