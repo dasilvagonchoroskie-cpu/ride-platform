@@ -1,0 +1,35 @@
+name: Desconectar aparelhos
+
+# Celular perdido ou vendido: derruba as contas de todos os aparelhos (o mesmo
+# botao "Desconectar aparelhos" da Central). Sem nada preenchido, so lista.
+on:
+  workflow_dispatch:
+    inputs:
+      nome:
+        description: 'Texto no nome das contas a desconectar (ex.: Evandro); vazio = nenhuma'
+        required: false
+        default: ''
+      central:
+        description: 'Desconectar tambem a conta da Central? (sim/nao)'
+        required: false
+        default: 'nao'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servidor-real
+  cancel-in-progress: false
+
+jobs:
+  desconectar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Desconectar
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+          NOME: ${{ inputs.nome }}
+          CENTRAL: ${{ inputs.central }}
+        run: bash scripts/desconectar-aparelhos.sh
