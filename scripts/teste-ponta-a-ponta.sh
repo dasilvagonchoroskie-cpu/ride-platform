@@ -988,6 +988,8 @@ X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":true,"reason":"Teste autom
 X=$(patch "/admin/passengers/$PIDP/block" '{"blocked":false,"reason":"Fim do teste"}' "$TA"); [ "$(echo "$X" | jq -r '.data.history | length')" -ge 2 ] 2>/dev/null && ok "Central: desbloqueado, historico com $(echo "$X" | jq -r '.data.history | length') registros" || falha "Central: historico de bloqueio" "$X"
 # Celular vendido (09/11/2026): a Central derruba a conta de todos os aparelhos na hora.
 X=$(get /auth/me "$TP"); sucesso "$X" && ok "Passageiro: desbloqueado volta a usar na hora" || falha "Passageiro: acesso depois de desbloquear" "$X"
+# O bloqueio acima ja fechou as sessoes: entra de novo para ter uma aberta.
+TP=$(entrar "$FONE_P" PASSENGER)
 X=$(get "/admin/usuarios/$PIDP/aparelhos" "$TA"); [ "$(echo "$X" | jq -r '[.data[] | select(.sessoesAbertas > 0)] | length')" -ge 1 ] 2>/dev/null && ok "Central: lista os aparelhos com sessao aberta" || falha "Central: aparelhos da conta" "$X"
 X=$(post "/admin/usuarios/$PIDP/desconectar" '{}' "$TA"); [ "$(echo "$X" | jq -r '.data.sessoesEncerradas')" -ge 1 ] 2>/dev/null && ok "Central: desconectou o passageiro de todos os aparelhos ($(echo "$X" | jq -r '.data.sessoesEncerradas') sessoes)" || falha "Central: desconectar aparelhos" "$X"
 X=$(get /auth/me "$TP"); sucesso "$X" && falha "Acesso antigo deveria cair na hora" "$X" || ok "Seguranca: acesso do aparelho desconectado cai na hora"
