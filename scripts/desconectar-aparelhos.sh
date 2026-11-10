@@ -44,6 +44,7 @@ listar() {
     diz "- $(echo "$u" | jq -r '.role + " · " + (.name | split(" ")[0])')$( [ "$id" = "$EU" ] && echo ' (esta Central)') · $s sessao(oes) · $(echo "$A" | jq -r '[.data[] | select(.sessoesAbertas > 0) | ((.model // "aparelho sem nome") + " (visto " + (.lastSeenAt[0:16] | sub("T";" ")) + " UTC)")] | join("; ")')"
   done < <(contas)
   [ "$n" -gt 0 ] || diz "- nenhuma conta com sessao aberta"
+  diz "  (contas conferidas: $(contas | wc -l); resposta da lista: $(get "/admin/users?page=1&limit=1" "$TA" | jq -c '{ok: .success, total: .data.meta.total, erro: .error.code}'))"
 }
 
 listar "Contas com sessao aberta (antes):"
