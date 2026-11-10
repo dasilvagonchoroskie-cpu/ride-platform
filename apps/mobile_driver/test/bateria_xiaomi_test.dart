@@ -25,6 +25,9 @@ Future<DriverState> _abrir(WidgetTester tester, {required bool xiaomi}) async {
     child: const MaterialApp(home: PermissionsScreen()),
   ));
   await tester.pump();
+  await tester.scrollUntilVisible(find.text('Sem restrição de bateria'), 200, scrollable: find.byType(Scrollable).first);
+  await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+  await tester.pump();
   return d;
 }
 
