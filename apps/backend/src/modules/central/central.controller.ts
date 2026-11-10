@@ -11,6 +11,7 @@ import { SoDonoGuard } from '../pracas/so-dono.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CentralService } from './central.service';
+import { SessoesService } from '../auth/sessoes.service';
 import type { CorridaManual } from './central.service';
 
 export const ponto = z.object({
@@ -49,6 +50,7 @@ export class AdminCentralController {
     private readonly central: CentralService,
     private readonly pracas: PracasService,
     private readonly prisma: PrismaService,
+    private readonly sessoes: SessoesService,
   ) {}
 
   @Get('seguranca/banco')
@@ -127,6 +129,25 @@ export class AdminCentralController {
   ) {
     await this.pracas.exigirAcesso(user, await this.pracas.pracaDoMotorista(id));
     return this.central.categoriaDoVeiculo(id, body.category, user.id);
+  }
+
+  @Get('usuarios/:id/aparelhos')
+  @UseGuards(SoDonoGuard)
+  @ApiOperation({ summary: 'Aparelhos que entraram na conta e as sessoes abertas em cada um — so o dono' })
+  aparelhos(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.sessoes.aparelhos(id);
+  }
+
+  @Post('usuarios/:id/desconectar')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(SoDonoGuard)
+  @ApiOperation({ summary: 'Desconecta a conta de todos os aparelhos na hora (celular perdido ou vendido) — so o dono' })
+  async desconectar(@CurrentUser('id') adminId: string, @Param('id', new ParseUUIDPipe()) id: string) {
+    const r = await this.sessoes.cortar(id);
+    await this.prisma.auditLog.create({
+      data: { actorId: adminId, actorRole: UserRole.ADMIN, action: 'DESCONECTAR_APARELHOS', entity: 'user', entityId: id, after: r as never },
+    });
+    return r;
   }
 
   @Get('passengers')

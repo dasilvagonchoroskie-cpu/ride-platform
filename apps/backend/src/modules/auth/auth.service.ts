@@ -1,3 +1,4 @@
+import { SessoesService } from './sessoes.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { ERROR_CODES, OtpPurpose, UserRole, UserStatus } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
@@ -103,6 +104,7 @@ export class AuthService {
     private readonly otp: OtpService,
     private readonly doisFatores: DoisFatoresService,
     private readonly pracas: PracasService,
+    private readonly sessoes: SessoesService,
   ) {}
 
   /** Central com as duas etapas ligadas: devolve o desafio no lugar dos tokens. */
@@ -406,7 +408,7 @@ export class AuthService {
 
   async logout(userId: string, refreshToken?: string, fcmToken?: string, allDevices = false): Promise<void> {
     if (allDevices) {
-      await this.tokens.revokeAllUserTokens(userId);
+      await this.sessoes.cortar(userId);
     } else if (refreshToken) {
       await this.tokens.revokeRefreshToken(refreshToken);
     }
