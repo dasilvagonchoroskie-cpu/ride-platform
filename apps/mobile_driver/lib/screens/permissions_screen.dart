@@ -41,7 +41,8 @@ const _itens = [
       'Para a chamada abrir em tela cheia por cima do que estiver aberto — GPS, WhatsApp, qualquer coisa.'),
   _Item('bateria', 'Sem restrição de bateria',
       'Para o Android não desligar o aplicativo com o celular no bolso. Na tela que abrir, toque em Bateria e escolha "Sem restrições". '
-      'Xiaomi, Redmi e Poco: abre a lista "Otimização de bateria"; mude o filtro para "Todos os apps", toque em Fortaleza Move Motorista e escolha "Não otimizar".'),
+      'Xiaomi, Redmi e Poco: na tela "Economia de bateria de apps", o Fortaleza Move Motorista tem que estar em "Apps ativos" (não em "Apps suspensos"). '
+      'Também nos ajustes do app, em Bateria, deixe "Nenhuma restrição". Depois volte e toque em "Já deixei em Apps ativos".'),
   _Item('telaCheia', 'Tela cheia com o celular bloqueado',
       'Para a chamada acender a tela e abrir em tela cheia, com o botão de deslizar para aceitar, mesmo com o celular bloqueado.'),
 ];
@@ -88,7 +89,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
           ),
           const SizedBox(height: Spacing.lg),
           for (final item in _itens) ...[
-            _Linha(item: item, liberada: p[item.chave] == true),
+            _Linha(item: item, liberada: p[item.chave] == true, xiaomi: p['xiaomi'] == true),
             const SizedBox(height: Spacing.md),
           ],
           const SizedBox(height: Spacing.sm),
@@ -163,10 +164,13 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
 }
 
 class _Linha extends StatelessWidget {
-  const _Linha({required this.item, required this.liberada});
+  const _Linha({required this.item, required this.liberada, this.xiaomi = false});
 
   final _Item item;
   final bool liberada;
+
+  /// Xiaomi/Redmi/Poco: a bateria tem a confirmacao do motorista.
+  final bool xiaomi;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +208,19 @@ class _Linha extends StatelessWidget {
               variant: AppButtonVariant.primary,
               onPressed: () => CorridasNativo.pedir(item.chave),
             ),
+            if (item.chave == 'bateria' && xiaomi) ...[
+              const SizedBox(height: Spacing.sm),
+              AppButton(
+                key: const ValueKey('confirmar-bateria-xiaomi'),
+                label: 'Já deixei em Apps ativos',
+                variant: AppButtonVariant.secondary,
+                onPressed: () async {
+                  final driver = context.read<DriverState>();
+                  await CorridasNativo.confirmarBateria(true);
+                  await driver.checarPermissoes();
+                },
+              ),
+            ],
           ],
         ],
       ),
