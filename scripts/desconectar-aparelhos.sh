@@ -2,6 +2,7 @@
 # Celular perdido ou vendido (Evandro, 09/11/2026): derruba contas de todos os
 # aparelhos pelas rotas da Central (o mesmo botao "Desconectar aparelhos").
 #   NOME=texto        -> desconecta as contas (fora as de teste) com esse texto no nome
+#   NOME=todas        -> desconecta todas as contas (fora as de teste)
 #   CENTRAL=sim       -> desconecta tambem a conta da Central (por ultimo)
 # Sem NOME nem CENTRAL so lista quem tem sessao aberta. O relatorio mostra so
 # o primeiro nome, o tipo de conta e o modelo do aparelho (repositorio publico).
@@ -56,7 +57,7 @@ if [ -n "${NOME:-}" ]; then
     X=$(post "/admin/usuarios/$id/desconectar" '{}' "$TA")
     diz "- $(echo "$u" | jq -r '.role + " · " + (.name | split(" ")[0])'): $(echo "$X" | jq -r 'if .success then "\(.data.sessoesEncerradas) sessao(oes) encerrada(s)" else "FALHA \(.error.message // .)" end')"
     CORTAR=1
-  done < <(contas | jq -c --arg n "$NOME" 'select(.name | ascii_downcase | contains($n | ascii_downcase))')
+  done < <(contas | jq -c --arg n "$NOME" 'select($n == "todas" or (.name | ascii_downcase | contains($n | ascii_downcase)))')
 fi
 [ "${CENTRAL:-}" = "sim" ] && listar "Depois (antes de desconectar a Central):" || { [ "$CORTAR" = 1 ] && listar "Contas com sessao aberta (depois):"; }
 if [ "${CENTRAL:-}" = "sim" ]; then
