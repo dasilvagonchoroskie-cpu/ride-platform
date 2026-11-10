@@ -76,6 +76,10 @@ class CorridasNativo {
 
   static Future<void> pedir(String qual) => _chamar('pedir', {'qual': qual});
 
+  /// Xiaomi/HyperOS: o Android nao informa a "Economia de bateria de apps" da
+  /// Xiaomi; o motorista confirma que deixou o app em "Apps ativos".
+  static Future<void> confirmarBateria(bool sim) => _chamar('confirmarBateria', {'sim': sim});
+
   /// O que ja esta liberado. Fora do Android (onde nao ha o servico),
   /// considera tudo liberado para nao travar o aplicativo.
   static Future<Map<String, bool>> permissoes() async {

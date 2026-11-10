@@ -161,6 +161,13 @@ class MainActivity : FlutterActivity() {
                     // Endereco de push (Firebase) deste celular; null sem Firebase.
                     "tokenPush" -> Push.token(this) { t -> result.success(t) }
                     "permissoes" -> result.success(estado())
+                    // Xiaomi/HyperOS: o motorista confirma que deixou o app
+                    // em "Apps ativos" (o Android nao informa esse ajuste).
+                    "confirmarBateria" -> {
+                        getSharedPreferences(PREFS_PERMISSOES, MODE_PRIVATE).edit()
+                            .putBoolean("bateriaXiaomi", call.argument<Boolean>("sim") == true).apply()
+                        result.success(true)
+                    }
                     "pedir" -> {
                         pedir(call.argument<String>("qual") ?: "")
                         result.success(true)
@@ -190,7 +197,10 @@ class MainActivity : FlutterActivity() {
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 == PackageManager.PERMISSION_GRANTED),
             "sobrepor" to (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this)),
-            "bateria" to (Build.VERSION.SDK_INT < 23 || pm.isIgnoringBatteryOptimizations(packageName)),
+            "bateria" to (Build.VERSION.SDK_INT < 23 || pm.isIgnoringBatteryOptimizations(packageName) ||
+                (ehXiaomi() && getSharedPreferences(PREFS_PERMISSOES, MODE_PRIVATE).getBoolean("bateriaXiaomi", false))),
+            // Xiaomi/Redmi/Poco: a tela mostra o botao de confirmar a bateria.
+            "xiaomi" to ehXiaomi(),
             "telaCheia" to (Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent()),
             "gps" to gpsLigado()
         )
@@ -276,6 +286,10 @@ class MainActivity : FlutterActivity() {
             }
         }
         abrirAjustesDoApp()
+    }
+
+    private companion object {
+        const val PREFS_PERMISSOES = "fortaleza_permissoes"
     }
 
     private fun ehXiaomi(): Boolean {
