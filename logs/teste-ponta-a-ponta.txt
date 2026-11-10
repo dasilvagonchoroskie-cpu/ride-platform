@@ -1,7 +1,7 @@
-Ultima mudanca do servidor no GitHub: 17a5976 (Servidor: corpo grande demais responde 413 e JSON quebrado 400 (#30))
-No ar agora: 17a5976
+Ultima mudanca do servidor no GitHub: d6031f4 (Desconectar aparelhos (celular vendido) (#32))
+No ar agora: d6031f4
 OK: servidor em dia.
-Teste de ponta a ponta - 06/11/2026 17:28 UTC
+Teste de ponta a ponta - 10/11/2026 01:08 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -12,7 +12,7 @@ OK     Central carrega /admin/reports/summary
 OK     Central carrega /admin/tariffs
 OK     Seguranca: as 32 tabelas do banco com RLS ligado (fechadas para a API publica do Supabase)
 OK     Seguranca: a auditoria do banco pede login da Central
-OK     Central: painel ao vivo (livres 1, em viagem 0, corridas hoje 0)
+OK     Central: painel ao vivo (livres 0, em viagem 0, corridas hoje 0)
 OK     Central: conta do dono ve todas as cidades (Goiatuba, Teutônia, Bom Jesus de Goiás, Buriti Alegre, Joviânia, Itumbiara)
 OK     Central: conta de operador da cidade goiatuba criada (equipe)
 OK     Operador: primeiro acesso pede para trocar a senha provisoria
@@ -25,7 +25,7 @@ OK     Operador: nao muda tarifas, cupons e comissao (so o dono)
 OK     Operador: nao acessa a limpeza de dados
 OK     Operador: nao muda a aparencia do app (so o dono)
 OK     Operador: relatorio da frota sai so com a cidade dele
-OK     Central: limpeza de dados (0 contas de teste, 38 corridas)
+OK     Central: limpeza de dados (0 contas de teste, 39 corridas)
 OK     Passageiro: login pelo codigo de teste
 OK     Passageiro: aceite dos termos gravado
 OK     App: entrada por codigo no e-mail disponivel (telefone: true)
@@ -48,9 +48,9 @@ OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
 OK     Passageiro: preco por categoria (Carro, Conforto, Premium)
-OK     Passageiro: preco sem destino (estimado, pelo taximetro: a partir de 1000 centavos)
+OK     Passageiro: preco sem destino (estimado, pelo taximetro: a partir de 2000 centavos)
 OK     Passageiro: sem destino so com a opcao marcada
-OK     Passageiro: parada extra entra no caminho (1384 m -> 2884 m)
+OK     Passageiro: parada extra entra no caminho (1375 m -> 2884 m)
 OK     Passageiro: busca com token de sessao
 OK     Passageiro: carros perto dizem se sao moto (0 perto)
 OK     Passageiro: busca de destino real (5 resultado(s), 1o: Avenida Brasília - Goiatuba - GO)
@@ -58,7 +58,7 @@ OK     Mapa: imagens da TomTom com login (512 px, economia: false)
 OK     Mapa: cabecalhos de cache de uma imagem da TomTom (para o advogado):
          HTTP/2 200 
          cache-control: max-age=86400
-         etag: W/"327b8a1751d435ab74b27170631291b9"
+         etag: W/"e18ea5b7e569dc01583e60c0ae3127ad"
 OK     Seguranca: a chave do mapa nao sai sem login
 OK     Seguranca: o mapa completo da API (Swagger) nao fica aberto na producao
 OK     Seguranca: cabecalhos de protecao (nosniff e HTTPS obrigatorio)
@@ -78,7 +78,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST1891)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST0777)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -156,20 +156,20 @@ OK     Passageiro: busca fica na regiao de operacao ('Porto Alegre' -> Rua Porto
 OK     Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, 1295.9 km)
 OK     Seguranca: busca no Brasil todo so na Central
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
-OK     Mapa: rota pelas ruas (23 pontos, 1384 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 121 min, antes dava 479)
+OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 115 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (FECHADO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE17282545 criado (R$ 3,00)
+OK     Central: cupom TESTE01085846 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1078 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1061 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1088 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1089 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 0192 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 4563 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Passageiro: o carro da corrida vem com o rumo (180 graus: andando para o sul)
 OK     Chat: passageiro manda mensagem ao motorista
@@ -185,17 +185,17 @@ OK     Motorista: start
 OK     Taximetro: app do motorista recebe a tabela da corrida (FECHADO)
 OK     Taximetro: motorista manda a medicao ao vivo (1 km)
 OK     Passageiro: corrida com preco fechado (sem taximetro ao vivo)
-OK     Motorista: corrida finalizada, valor 1000 centavos
+OK     Motorista: corrida finalizada, valor 2000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
-OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (14h, diurna: 1000 centavos)
+OK     Motorista: sabe quanto cobrar com o cupom (1700 centavos)
+OK     Bandeira certa pela hora de Brasilia (22h, noturna: 2000 centavos)
 OK     Central: resumo de hoje com 1 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 24s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 1800 centavos, online 23s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 30 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
-OK     Motorista: carteira pre-paga so descontou a comissao (saldo 5200 centavos)
-OK     Central: recarga lancada, saldo agora 6200 centavos
+OK     Motorista: carteira pre-paga so descontou a comissao (saldo 5100 centavos)
+OK     Central: recarga lancada, saldo agora 6100 centavos
 OK     Central: contato de recarga carregado
 OK     Passageiro: avaliou o motorista com 5 estrelas
 OK     Passageiro: recibo da corrida concluida com a nota
@@ -205,7 +205,7 @@ OK     Passageiro: destino apagado nao volta
 OK     Passageiro: Apagar tudo limpou os destinos
 OK     Chat: fecha quando a corrida termina
 OK     Motorista: avaliou o passageiro com 4 estrelas
-OK     Motorista: historico de hoje com totais e desempenho (aceitacao 100%, taxa 100)
+OK     Motorista: historico de hoje com totais e desempenho (aceitacao 100%, taxa 200)
 OK     Motorista: relatorio de faturamento em PDF
 OK     Central: relatorio da frota toda em PDF
 OK     Central: relatorio de um motorista em PDF
@@ -242,9 +242,12 @@ OK     Seguranca: outra conta nao ve a corrida (nem nome e telefone)
 OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
-OK     Carteira: saldo zerado avisa mas nao corta o turno
-OK     Carteira: motorista ja online e sem saldo continua recebendo chamado
-OK     Motorista: chamado mostra valor liquido (900), taxa 10% (tabela diurna: 10%) e nota do passageiro (4)
+FALHA  Carteira: saldo zerado
+       resposta: {"success":true,"data":{"balanceCents":0,"minimumCents":2000,"blockEnabled":true,"blocking":true,"status":"insufficient","warningCents":6000,"last":{"id":"23e97955-a671-4220-aec0-379a918a4cce","kind":"DEBIT","amountCents":-6000,"description":"Zerar para teste","createdAt":"2026-11-10T01:12:56.874Z"}},"timestamp":"2026-11-10T01:12:57.506Z"}
+FALHA  Carteira: chamado sem saldo
+       resposta: {"success":true,"data":[],"timestamp":"2026-11-10T01:12:59.021Z"}
+FALHA  Motorista: dados do chamado
+       resposta: {"driverNetCents":null,"commissionPercent":null,"passengerRating":null,"tabela":"noturna 10"}
 OK     Carteira: sem saldo nao consegue ficar online de novo
 OK     Carteira: o aplicativo fica sabendo da recarga (+R$ 50,00)
 OK     Carteira: com a recarga, ficou online de novo
@@ -254,7 +257,7 @@ OK     Motorista: 'Saldo se esgotando' pelo limite da cidade (saldo 5000 abaixo 
 OK     Operador: nao muda o aviso de saldo (so o dono)
 OK     Motorista: acima do limite da cidade o aviso some (status ok)
 OK     Central: aviso de saldo da cidade voltou como estava (padrao)
-OK     TomTom: o pedido usou a medida assinada do orcamento (1384 m; caminho com 23 pontos ja veio no orcamento)
+OK     TomTom: o pedido usou a medida assinada do orcamento (1375 m; caminho com 24 pontos ja veio no orcamento)
 OK     TomTom: 7 chamadas numa corrida completa simulada (por servico: {"geocode": 1, "reverse": 1, "routing": 4, "search": 1}) — sem guardado no servidor
 OK     TomTom: 4 rotas por corrida (eram 8: orcamento 1, chamado no servidor 1, apps 5, fim 1)
 OK     Operador: nao liga nem desliga a entrega (so o dono)
@@ -262,19 +265,19 @@ OK     Central: ligou a entrega so nesta cidade (carro e moto)
 OK     Cliente: botao Entrega aparece na cidade ligada (Goiatuba)
 OK     Motorista: 'Entrega' nao aparece como categoria de carro
 OK     Passageiro: 'Entrega' nao aparece como opcao de corrida
-OK     Entrega: preco pela tarifa propria da cidade (1000 centavos)
+OK     Entrega: preco pela tarifa propria da cidade (2000 centavos)
 OK     Cliente: pediu a entrega e recebeu o codigo de 4 numeros para quem recebe
 OK     Motorista: chamado marcado ENTREGA, com o item e quem recebe (sem o codigo)
 OK     Motorista: confirmou a coleta e continua sem ver o codigo
 OK     Motorista: codigo errado nao encerra a entrega (Código errado. Confira com quem recebe (restam 4 tentativa(s)).)
-OK     Motorista: com o codigo certo a entrega termina (1000 centavos)
-OK     Central: ve a entrega na cidade, entregue (comissao 100 centavos pela carteira)
+OK     Motorista: com o codigo certo a entrega termina (2000 centavos)
+OK     Central: ve a entrega na cidade, entregue (comissao 200 centavos pela carteira)
 OK     Carteira: a taxa da entrega saiu da carteira pre-paga, como nas corridas
 OK     TomTom: entrega com 4 chamadas, 4 rotas (corrida: 4 rotas) — igual ou menor que a corrida
 OK     Central: entrega da cidade voltou como estava ({"ligada":true,"veiculos":"CARRO"})
-OK     Central: visao geral (ativas 0, concluidas hoje 3, online 2, faturamento 3000)
-OK     Central: ganho da Central hoje = comissao (300) + mensalidades (0) = 300 (total das corridas: 3000)
-OK     Central: relatorio financeiro com o ganho da Central (300)
+OK     Central: visao geral (ativas 0, concluidas hoje 3, online 1, faturamento 6000)
+OK     Central: ganho da Central hoje = comissao (600) + mensalidades (0) = 600 (total das corridas: 6000)
+OK     Central: relatorio financeiro com o ganho da Central (600)
 OK     Central: tarifas por categoria (Popular, Conforto, Premium, Entrega)
 OK     Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')
 OK     Central: tela velha nao grava por cima das tarifas (pede para abrir de novo)
@@ -285,10 +288,10 @@ OK     Central: categoria do veiculo do motorista
 OK     Central: categorias padrao criadas (Popular (CARRO, ligada), Conforto (CONFORTO, desligada), Premium (PREMIUM, desligada), Entrega (ENTREGA, desligada))
 OK     Central: ligou o Conforto so na cidade goiatuba (x1,1)
 OK     Central: o padrao das outras cidades nao mudou
-OK     Passageiro: ve as categorias com preco e chegada (Popular 1000 centavos, chega em 2 min; Conforto 1375 centavos, chega em - min; Premium 1600 centavos, chega em - min)
-OK     Passageiro: trocar para Conforto nao pede a rota de novo (mesma medida, 1375 centavos)
-OK     Passageiro: sem destino (taximetro) tambem pela tarifa do Conforto (1375 x Popular 1000)
-OK     Passageiro: Conforto com parada extra (2884 m, 1802 centavos)
+OK     Passageiro: ve as categorias com preco e chegada (Popular 2000 centavos, chega em 2 min; Conforto 2750 centavos, chega em - min; Premium 3200 centavos, chega em - min)
+OK     Passageiro: trocar para Conforto nao pede a rota de novo (mesma medida, 2750 centavos)
+OK     Passageiro: sem destino (taximetro) tambem pela tarifa do Conforto (2750 x Popular 2000)
+OK     Passageiro: Conforto com parada extra (2884 m, 3298 centavos)
 OK     Motorista: ve as categorias para escolher, ja no primeiro cadastro (sem login) (Popular, Conforto, Premium)
 OK     Motorista: pediu Conforto (continua no Popular ate a Central aprovar)
 OK     Motorista: categoria que nao existe e recusada
@@ -304,7 +307,7 @@ OK     Seguranca: o passageiro nao apaga notificacao do motorista
 OK     Sino: o motorista apagou uma
 OK     Sino: a apagada nao volta na lista
 OK     Sino: apagar todas (12 apagadas, so da conta dele)
-OK     Passageiro: pediu Conforto (1375 centavos)
+OK     Passageiro: pediu Conforto (2750 centavos)
 OK     Motorista do Conforto recebeu o chamado do Conforto
 OK     Central: muda a categoria direto (o carro de teste volta ao Popular)
 OK     Central: Conforto da cidade voltou como estava (ajuste da cidade: true)
@@ -316,7 +319,7 @@ OK     Central: cancelou a corrida
 OK     Motorista: pediu saque PIX de R$ 1,00
 OK     Central: ve o pedido de saque com a chave PIX
 OK     Central: confirmou o PIX (descontado da carteira)
-OK     Central: relatorio de receitas (dinheiro 2700, PIX/app 0, comissao 300)
+OK     Central: relatorio de receitas (dinheiro 5700, PIX/app 0, comissao 600)
 OK     Passageiro: contato de emergencia gravado
 OK     Passageiro: contato com telefone invalido recusado
 OK     Passageiro: ve os contatos de emergencia
@@ -327,6 +330,15 @@ OK     Central: SOS encerrado
 OK     Central: busca de passageiro pelo telefone
 OK     Central: passageiro bloqueado com motivo
 OK     Central: desbloqueado, historico com 2 registros
+OK     Passageiro: desbloqueado volta a usar na hora
+FALHA  Central: aparelhos da conta
+       resposta: {"success":true,"data":[{"id":"38c88b4b-673f-4d84-baa6-9db941afaad7","platform":"ANDROID","model":null,"osVersion":null,"appVersion":null,"lastSeenAt":"2026-11-10T01:08:59.175Z","createdAt":"2026-11-10T01:08:59.175Z","sessoesAbertas":0}],"timestamp":"2026-11-10T01:13:56.547Z"}
+FALHA  Central: desconectar aparelhos
+       resposta: {"success":true,"data":{"sessoesEncerradas":0,"aparelhos":1},"timestamp":"2026-11-10T01:13:56.906Z"}
+OK     Seguranca: acesso do aparelho desconectado cai na hora
+OK     Seguranca: nenhuma sessao aberta depois de desconectar
+OK     Seguranca: so a Central desconecta aparelhos
+OK     Passageiro: entra de novo com o codigo depois de desconectado
 OK     Central: motorista offline continua no mapa (cinza, ultima posicao)
 OK     Despacho: so motoristas online
 OK     Passageiro: mudou o endereco em Meus dados
@@ -359,12 +371,12 @@ OK     Motorista: parceiro desativado some da lista
 OK     Motorista: detalhe de parceiro desativado avisa que saiu do clube
 OK     Central: o inativo continua na lista da Central
 OK     Central: excluiu o parceiro de teste (com os beneficios)
-OK     Motorista: carteirinha da conta logada (FM-2ADC8B40, APTO)
+OK     Motorista: carteirinha da conta logada (FM-F7E0295B, APTO)
 OK     Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo
 OK     Clube: pagina do QR removida
 OK     Clube: motorista sem recarga esta NAO APTO (Nenhuma recarga confirmada nos últimos 30 dias.)
 OK     Clube: recarga de R$ 50,00 nao deixa APTO
-OK     Clube: R$ 50 + R$ 60 em recargas (total R$ 110) deixam APTO (vale ate 2026-12-06T17:33:25.204Z)
+OK     Clube: R$ 50 + R$ 60 em recargas (total R$ 110) deixam APTO (vale ate 2026-12-10T01:14:13.662Z)
 OK     Clube: a situacao do clube nao mexe no acesso ao aplicativo
 OK     Seguranca: motorista nao altera a propria situacao
 OK     Clube: motorista suspenso fica NAO APTO mesmo com recarga
@@ -373,7 +385,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 12/666, reverse 4/666, routing 56/666, search 2/83, tiles 0/6666)
+OK     Central: uso da TomTom hoje (geocode 6/666, reverse 2/666, routing 28/666, search 1/83, tiles 0/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
@@ -387,4 +399,4 @@ OK     Operador: desligou as duas etapas com um codigo valido
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 7 contas deste teste e 12 corridas delas
 
-Resultado: 0 falha(s).
+Resultado: 5 falha(s).
