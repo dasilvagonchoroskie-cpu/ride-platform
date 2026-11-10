@@ -42,6 +42,9 @@ void main() {
     await tester.pump();
     expect(d.permissoes['bateria'], isTrue);
     expect(find.text('obrigatória'), findsNothing);
+    // Busca da posicao inicial (com prazo) disparada ao conferir de novo.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(minutes: 1));
   });
 
   testWidgets('Outros aparelhos: sem o botao de confirmar', (tester) async {
