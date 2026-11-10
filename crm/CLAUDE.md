@@ -55,6 +55,9 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - SQL do cofre agora versionado em `supabase/cofre.sql` (antes só existia no Supabase antigo).
 - Mesma conta Render tem o `fortaleza-mov-backend` mantido acordado 24 h: o plano grátis dá 750 h/mês POR CONTA.
   Dois serviços acordados 24 h estouram (~1440 h) e o Render suspende os dois até o mês seguinte.
+  Decisão do dono (09/11, temporária até contratar Hostinger): CRM acordado 24 h (pg_cron `crm-manter-acordado` no
+  projeto do CRM, a cada 10 min) e o cron `manter-servidor-acordado` do backend (projeto fortaleza-mov-eua) DESATIVADO
+  (cron.alter_job active=false; reativar com active := true). O backend dorme quando ninguém usa e acorda no 1º acesso.
 
 ## Hospedagem no Render grátis + cofre (05/11/2026)
 - Render grátis tem disco temporário (apaga tudo a cada reinício/deploy/hibernação) e hiberna após 15 min sem acesso.

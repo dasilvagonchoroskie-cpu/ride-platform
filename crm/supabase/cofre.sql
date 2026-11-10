@@ -83,3 +83,14 @@ revoke all on function public.crm_snapshot_assumir(text, text) from public, auth
 revoke all on function public.crm_snapshot_gravar(text, text, text) from public, authenticated;
 grant execute on function public.crm_snapshot_assumir(text, text) to anon;
 grant execute on function public.crm_snapshot_gravar(text, text, text) to anon;
+
+-- "Ping" sem dados, chamado pelo GitHub Actions (crm-cofre-ativo) para o projeto grátis não pausar se o CRM ficar parado.
+create or replace function public.crm_cofre_ping() returns boolean
+language sql security definer set search_path = '' as $$ select true $$;
+revoke all on function public.crm_cofre_ping() from public, authenticated;
+grant execute on function public.crm_cofre_ping() to anon;
+
+-- Manter o CRM acordado (o Render grátis dorme após 15 min sem acesso; dormindo, o WhatsApp e a IA param).
+-- create extension if not exists pg_net with schema extensions; create extension if not exists pg_cron;
+-- select cron.schedule('crm-manter-acordado', '*/10 * * * *',
+--   $$ select net.http_get(url := 'https://crm-fortaleza-move-ilv9.onrender.com/api/health', timeout_milliseconds := 60000) $$);
