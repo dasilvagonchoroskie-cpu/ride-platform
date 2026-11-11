@@ -4,6 +4,8 @@ CRM web (PWA) para a plataforma de transporte Fortaleza Move: motoristas, passag
 marketing (campanhas), tarefas e planejamento financeiro (cenários e simulações). Interface e mensagens em
 **português do Brasil**. Fuso de referência: `America/Sao_Paulo` (Fortaleza, UTC-3, sem horário de verão).
 
+**Pendências:** lista única do que falta em `PENDENCIAS.md` (atualizar a cada entrega: marcar [x] com a data, acrescentar o que surgir).
+
 ## Stack e comandos
 - Node.js >= 18.17 (testado em 22), Express 4, SQLite via `better-sqlite3` (arquivo em `data/crm.db`, WAL).
 - Front-end: SPA em JS puro (ES modules), **sem build**, em `public/`. PWA com service worker.
