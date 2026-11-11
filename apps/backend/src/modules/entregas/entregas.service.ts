@@ -8,6 +8,7 @@ import { PracasService } from '../pracas/pracas.service';
 import { pracaDoPonto } from '../pracas/pracas.store';
 import {
   CODIGO_ENTREGA,
+  CODIGO_ENTREGA_MOTO,
   conferirCodigo,
   entregaNaCidade,
   gravarEntregaNaCidade,
@@ -62,39 +63,47 @@ export class EntregasService implements OnModuleInit {
   }
 
   /**
-   * Categoria ENTREGA (tarifa propria), uma vez: desligada, com os valores
-   * do Popular para o Evandro ajustar em Tarifas.
+   * Tarifas proprias, uma vez cada: ENTREGA (carro, valores do Popular) e
+   * ENTREGA_MOTO (10/11/2026, 75% da entrega de carro). Desligadas; o
+   * Evandro ajusta em Tarifas e liga em Entregas.
    */
   async sementeDaTarifa(): Promise<boolean> {
     let mudou = false;
     const lista = await lerCategorias(this.prisma);
-    if (!lista.some((c) => c.codigo === CODIGO_ENTREGA)) {
-      lista.push({
-        codigo: CODIGO_ENTREGA,
-        nome: 'Entrega',
-        ativa: false,
-        icone: 'entrega',
-        descricao: 'Entrega de encomendas (liga em Entregas)',
-        capacidade: 1,
-        multiplicador: 1,
-      });
-      await gravarCategorias(this.prisma, lista);
-      mudou = true;
-    }
-    const tem = await this.prisma.fareConfig.count({ where: { category: CODIGO_ENTREGA } });
-    if (tem === 0) {
-      const carro = await this.prisma.fareConfig.findMany({ where: { category: 'CARRO' } });
-      for (const t of carro) {
+    const novas = [
+      { codigo: CODIGO_ENTREGA, nome: 'Entrega', descricao: 'Entrega de encomendas de carro (liga em Entregas)', base: 'CARRO', fator: 1 },
+      { codigo: CODIGO_ENTREGA_MOTO, nome: 'Entrega de moto', descricao: 'Entrega de encomendas de moto (liga em Entregas)', base: CODIGO_ENTREGA, fator: 0.75 },
+    ];
+    for (const n of novas) {
+      if (!lista.some((c) => c.codigo === n.codigo)) {
+        lista.push({ codigo: n.codigo, nome: n.nome, ativa: false, icone: 'entrega', descricao: n.descricao, capacidade: 1, multiplicador: 1 });
+        await gravarCategorias(this.prisma, lista);
+        mudou = true;
+      }
+      const tem = await this.prisma.fareConfig.count({ where: { category: n.codigo } });
+      if (tem > 0) continue;
+      const base = await this.prisma.fareConfig.findMany({ where: { category: n.base } });
+      const dez = (v: number) => Math.round((v * n.fator) / 10) * 10;
+      for (const t of base) {
         const { id: _id, createdAt: _c, updatedAt: _u, ...valores } = t;
         await this.prisma.fareConfig.upsert({
-          where: { category_flag: { category: CODIGO_ENTREGA, flag: t.flag as FareFlag } },
-          create: { ...valores, category: CODIGO_ENTREGA },
+          where: { category_flag: { category: n.codigo, flag: t.flag as FareFlag } },
+          create: {
+            ...valores,
+            category: n.codigo,
+            baseFareCents: dez(t.baseFareCents),
+            perKmCents: dez(t.perKmCents),
+            perMinuteCents: dez(t.perMinuteCents),
+            minFareCents: dez(t.minFareCents),
+          },
           update: {},
         });
       }
-      mudou = carro.length > 0 || mudou;
+      if (base.length > 0) {
+        mudou = true;
+        this.logger.log(`Entregas: tarifa propria "${n.nome}" criada (desligada em todas as cidades).`);
+      }
     }
-    if (mudou) this.logger.log('Entregas: tarifa propria "Entrega" criada (desligada em todas as cidades).');
     return mudou;
   }
 
@@ -239,7 +248,7 @@ export class EntregasService implements OnModuleInit {
   async listarParaCentral(praca: string | null, status?: string) {
     const lista = await this.prisma.ride.findMany({
       where: {
-        category: CODIGO_ENTREGA,
+        category: { in: [CODIGO_ENTREGA, CODIGO_ENTREGA_MOTO] },
         ...(status === 'abertas'
           ? { status: { in: [RideStatus.REQUESTED, RideStatus.SEARCHING, RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVING, RideStatus.DRIVER_WAITING, RideStatus.IN_PROGRESS] } }
           : {}),

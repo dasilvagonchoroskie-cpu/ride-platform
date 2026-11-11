@@ -20,7 +20,7 @@ function banco() {
   });
   tabelas.push(linha('CARRO', FareFlag.DIURNA), linha('CARRO', FareFlag.NOTURNA));
   settings.set(CHAVE_CATEGORIAS, { value: [{ codigo: 'CARRO', nome: 'Popular', ativa: true }], updatedAt: agora() });
-  settings.set(CHAVE_VERSAO, { value: 3, updatedAt: agora() });
+  settings.set(CHAVE_VERSAO, { value: 4, updatedAt: agora() });
   const setting = {
     findUnique: async ({ where }: { where: { key: string } }) => {
       const s = settings.get(where.key);

@@ -7,7 +7,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { CreateVehicleInput, UpdateVehicleInput } from '@ride/shared';
 import { decodificarFoto, soArquivosDoBanco } from '../arquivos/arquivos.service';
-import { lerCategorias } from '../rides/categorias';
+import { ehMoto, lerCategorias } from '../rides/categorias';
 import { ehEntrega } from '../entregas/entregas.regras';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import {
@@ -323,6 +323,12 @@ export class VehiclesService {
     const atual = await this.prisma.vehicle.findFirst({ where: { driverId, isActive: true, NOT: { id: carro.id } } });
     if (atual && atual.category !== carro.category) {
       carro = await this.prisma.vehicle.update({ where: { id: carro.id }, data: { category: atual.category } });
+    }
+    // Moto e carro nunca se misturam (10/11/2026, cadastro de moto): a moto
+    // ja entra na categoria de moto pedida (nunca recebe chamado de carro),
+    // e o carro numa de carro. A Central confere o veiculo ao aprovar.
+    if (categoria && !categoriaDaCentral && ehMoto(categoria) !== ehMoto(carro.category)) {
+      carro = await this.prisma.vehicle.update({ where: { id: carro.id }, data: { category: categoria } });
     }
     if (categoria && categoriaDaCentral && categoria !== carro.category) {
       carro = await this.prisma.vehicle.update({ where: { id: carro.id }, data: { category: categoria } });

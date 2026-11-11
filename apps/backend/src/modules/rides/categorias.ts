@@ -129,7 +129,7 @@ export function categoriasQueAtendem(pedida: string, categorias: Pick<Categoria,
   const lista = categorias
     .filter(
       (c) =>
-        c.codigo.toUpperCase() !== 'ENTREGA' &&
+        !c.codigo.toUpperCase().startsWith('ENTREGA') &&
         ehMoto(c.codigo) === moto &&
         nivelDe(c.codigo) >= nivelDe(alvo) &&
         c.capacidade >= (base?.capacidade ?? 0),

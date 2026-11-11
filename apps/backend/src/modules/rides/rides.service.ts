@@ -19,7 +19,7 @@ import { PushService } from '../../integrations/notifications/push.service';
 import { AppConfigService } from '../../config/app-config.service';
 import { assinarCotacao, lerCotacao } from './cotacao';
 import { EntregasService } from '../entregas/entregas.service';
-import { CODIGO_ENTREGA, ehEntrega } from '../entregas/entregas.regras';
+import { CODIGO_ENTREGA, codigoDaEntrega, ehEntrega, veiculosDaCidade } from '../entregas/entregas.regras';
 import { diaDeBrasilia, idAnonimo, posicaoAproximada, rumoArredondado } from './carros-perto';
 import type {
   CancelRideInput,
@@ -203,8 +203,9 @@ export class RidesService {
   async estimar(input: EstimateRideInput, passengerId?: string) {
     // Entrega (Etapa 5): so na cidade com entrega ligada; nunca sem destino.
     const entrega = ehEntrega(input.category);
+    let veiculosDaEntrega: Array<'CARRO' | 'MOTO'> = [];
     if (entrega) {
-      await this.entregas.exigirLigada(input.pickup);
+      veiculosDaEntrega = veiculosDaCidade((await this.entregas.exigirLigada(input.pickup)).veiculos);
       if (!input.dropoff || input.semDestino) throw BusinessException.validation('Informe o endereço de entrega.');
     }
     const destino = this.destinoDe(input);
@@ -252,6 +253,8 @@ export class RidesService {
       // Mototaxi (Evandro, 10/10/2026): o passageiro escolhe Carro ou Moto,
       // vendo o preco de cada categoria ativa.
       opcoes: entrega ? [] : await this.opcoesDeCategoria(input, rota, passengerId),
+      /** Entrega (10/11/2026): moto e/ou carro que a cidade aceita, com o preco de cada. */
+      opcoesEntrega: entrega ? await this.opcoesDeEntrega(input, rota, veiculosDaEntrega) : [],
       /** Entrega de encomenda (tarifa propria da cidade). */
       entrega,
       /** Medida assinada: o app manda de volta no pedido (a rota nao e pedida de novo). */
@@ -264,6 +267,30 @@ export class RidesService {
        */
       pontos: rota.caminho,
     };
+  }
+
+  /** Preco da entrega de moto e de carro (a mesma rota, medida uma vez). */
+  private async opcoesDeEntrega(
+    input: EstimateRideInput,
+    rota: { distanceMeters: number; durationSeconds: number },
+    veiculos: Array<'CARRO' | 'MOTO'>,
+  ) {
+    const opcoes: Array<{ veiculo: 'CARRO' | 'MOTO'; category: string; nome: string; moto: boolean; estimatedFareCents: number }> = [];
+    for (const veiculo of veiculos) {
+      const category = codigoDaEntrega(veiculo);
+      try {
+        const o = await this.fare.calcular({
+          distanceMeters: rota.distanceMeters,
+          durationSeconds: rota.durationSeconds,
+          category,
+          pickup: input.pickup,
+        });
+        opcoes.push({ veiculo, category, nome: veiculo === 'MOTO' ? 'Moto' : 'Carro', moto: veiculo === 'MOTO', estimatedFareCents: o.totalCents });
+      } catch {
+        // Sem tarifa deste veiculo ainda: nao oferece.
+      }
+    }
+    return opcoes;
   }
 
   /**
@@ -360,9 +387,14 @@ export class RidesService {
       if (!input.dropoff || input.semDestino) throw BusinessException.validation('Informe o endereço de entrega.');
       if (input.scheduledFor) throw BusinessException.validation('Entrega agendada ainda não está disponível.');
       if ((input.paradas ?? []).length > 0) throw BusinessException.validation('Entrega com paradas ainda não está disponível.');
-      input = { ...input, category: CODIGO_ENTREGA };
+      input = { ...input, category: entrega.veiculo ? codigoDaEntrega(entrega.veiculo) : CODIGO_ENTREGA };
     }
-    const daEntrega = entrega ? await this.entregas.exigirLigada(input.pickup) : null;
+    const naCidade = entrega ? await this.entregas.exigirLigada(input.pickup) : null;
+    // 10/11/2026: o cliente escolheu moto ou carro; tem que ser um que a cidade aceita.
+    if (entrega?.veiculo && naCidade && !veiculosDaCidade(naCidade.veiculos).includes(entrega.veiculo)) {
+      throw BusinessException.validation(entrega.veiculo === 'MOTO' ? 'Entrega de moto não está disponível nesta cidade.' : 'Entrega de carro não está disponível nesta cidade.');
+    }
+    const daEntrega = naCidade ? { ...naCidade, veiculos: entrega?.veiculo ?? naCidade.veiculos } : null;
     if (input.category && !entrega) {
       const categorias = await this.fare.categoriasNoPonto(input.pickup);
       if (!categorias.some((c) => c.codigo === input.category && c.ativa && !ehEntrega(c.codigo))) {

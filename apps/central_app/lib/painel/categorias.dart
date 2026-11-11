@@ -73,7 +73,7 @@ class _CategoriasTelaState extends State<CategoriasTela> {
         if (s.hasError) return Aviso(texto: 'Não foi possível carregar as categorias: ${mensagemDe(s.error!)}', tentarDeNovo: _recarregar);
         if (!s.hasData) return const Center(child: CircularProgressIndicator());
         final t = s.data!;
-        final lista = t.categorias.where((c) => c.codigo.toUpperCase() != 'ENTREGA').toList();
+        final lista = t.categorias.where((c) => !c.codigo.toUpperCase().startsWith('ENTREGA')).toList();
         return RefreshIndicator(
           onRefresh: () async => _recarregar(),
           child: ListView(

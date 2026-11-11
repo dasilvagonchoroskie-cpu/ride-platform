@@ -45,6 +45,10 @@ class _Servidor {
             'durationSeconds': 300,
             'cobranca': 'FECHADO',
             'entrega': true,
+            'opcoesEntrega': [
+              {'veiculo': 'MOTO', 'category': 'ENTREGA_MOTO', 'nome': 'Moto', 'moto': true, 'estimatedFareCents': 900},
+              {'veiculo': 'CARRO', 'category': 'ENTREGA', 'nome': 'Carro', 'moto': false, 'estimatedFareCents': 1200},
+            ],
             'pontos': [
               [-18.0125, -49.3547],
               [-18.0080, -49.3580],
@@ -178,6 +182,24 @@ void main() {
     expect(s.corpoDoPedido?['entrega'], {'descricao': 'Envelope', 'destinatarioNome': 'Ana', 'destinatarioTelefone': '64999991234'});
     expect(ride.ehEntrega, isTrue);
     expect(ride.entrega?.codigo, '4821');
+    await r.limpar();
+  });
+
+  test('10/11/2026: entrega de moto ou de carro, com o preco de cada; a escolha vai no pedido', () async {
+    final s = _Servidor();
+    final r = RideState(repository: RideRepository(client: ApiClient(client: s.cliente()), demo: false));
+    final q = await r.estimarEntrega(_aqui, const Coords(-18.0050, -49.3610), coletaEndereco: 'Rua Javari, 1234', entregaEndereco: 'Rodoviária');
+    expect(q?.opcoesEntrega.map((o) => '${o.nome} ${o.precoCents}').toList(), ['Moto 900', 'Carro 1200']);
+    expect(q?.opcoesEntrega.first.moto, isTrue);
+    await r.requestRide(
+      origin: _aqui,
+      destination: const Coords(-18.0050, -49.3610),
+      pickupAddress: 'Rua Javari, 1234',
+      dropoffAddress: 'Rodoviária',
+      paymentMethod: 'Dinheiro',
+      entrega: {'descricao': 'Envelope', 'destinatarioNome': 'Ana', 'destinatarioTelefone': '64999991234', 'veiculo': 'MOTO'},
+    );
+    expect((s.corpoDoPedido?['entrega'] as Map)['veiculo'], 'MOTO');
     await r.limpar();
   });
 }

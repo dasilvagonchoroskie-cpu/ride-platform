@@ -46,6 +46,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// Categoria pedida para o carro (a Central aprova).
   String _categoria = 'CARRO';
 
+  /// Trabalha de moto (10/11/2026): muda a categoria, os exemplos e confere a CNH A.
+  bool _ehMoto = false;
+
   String? _error;
 
   /// Entrou pelo e-mail: ainda falta o telefone.
@@ -71,6 +74,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     driver.carregarPracas();
     driver.carregarCategorias();
     _categoria = driver.categoriaDoCadastro ?? 'CARRO';
+    _ehMoto = _categoria.toUpperCase().contains('MOTO');
   }
 
   @override
@@ -141,6 +145,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _error = 'Placa inválida. Use ABC1234 ou ABC1D23.');
       return;
     }
+    if (_ehMoto && !_cnhCategory.contains('A')) {
+      setState(() => _error = 'Para trabalhar de moto, a CNH precisa ter a categoria A. Volte e corrija a categoria da CNH.');
+      return;
+    }
 
     await context.read<DriverState>().registerVehicle(
           VehicleInfo(
@@ -150,7 +158,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: _color.text.trim(),
             plate: plate,
           ),
-          categoria: _categoria == 'CARRO' ? null : _categoria,
+          categoria: _categoria == 'CARRO' && !_ehMoto ? null : _categoria,
         );
 
     setState(() {
@@ -470,6 +478,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// Carro ou Moto: troca a categoria para a primeira do tipo.
+  Widget _tipoDeVeiculo({required bool moto}) {
+    final escolhido = _ehMoto == moto;
+    return Material(
+      key: ValueKey(moto ? 'tipo-moto' : 'tipo-carro'),
+      color: escolhido ? AppColors.primarySoft : AppColors.surfaceElevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: escolhido ? AppColors.primary : AppColors.border, width: escolhido ? 2 : 1),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          final lista = context.read<DriverState>().categorias.where((c) => ehCategoriaDeMoto(c) == moto).toList();
+          setState(() {
+            _ehMoto = moto;
+            _categoria = lista.isNotEmpty ? '${lista.first['codigo']}' : (moto ? 'MOTO' : 'CARRO');
+            _error = null;
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+          child: Column(
+            children: [
+              Icon(moto ? Icons.two_wheeler : Icons.directions_car, size: 32, color: escolhido ? AppColors.primary : AppColors.textMuted),
+              const SizedBox(height: Spacing.xs),
+              Text(moto ? 'Moto' : 'Carro', style: AppText.heading.copyWith(color: escolhido ? AppColors.primary : AppColors.text)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _vehicleStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -478,10 +520,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: Spacing.xs),
         Text('Seu veículo', style: AppText.title),
         const SizedBox(height: Spacing.lg),
+        Text('VOCÊ VAI TRABALHAR DE', style: AppText.label.copyWith(color: AppColors.textMuted)),
         const SizedBox(height: Spacing.sm),
-        AppField(label: 'Marca', hint: 'Ex.: Chevrolet', controller: _brand, onChanged: (_) => setState(() {})),
+        Row(
+          children: [
+            Expanded(child: _tipoDeVeiculo(moto: false)),
+            const SizedBox(width: Spacing.sm),
+            Expanded(child: _tipoDeVeiculo(moto: true)),
+          ],
+        ),
+        const SizedBox(height: Spacing.lg),
+        AppField(label: 'Marca', hint: _ehMoto ? 'Ex.: Honda' : 'Ex.: Chevrolet', controller: _brand, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
-        AppField(label: 'Modelo', hint: 'Ex.: Onix', controller: _model, onChanged: (_) => setState(() {})),
+        AppField(label: 'Modelo', hint: _ehMoto ? 'Ex.: CG 160' : 'Ex.: Onix', controller: _model, onChanged: (_) => setState(() {})),
         const SizedBox(height: Spacing.md),
         Row(
           children: [
@@ -518,6 +569,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           categorias: context.watch<DriverState>().categorias,
           escolhida: _categoria,
           aoEscolher: (c) => setState(() => _categoria = c),
+          moto: _ehMoto,
         ),
         if (_error != null) ...[
           const SizedBox(height: Spacing.sm),
