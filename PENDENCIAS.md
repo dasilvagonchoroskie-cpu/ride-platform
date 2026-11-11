@@ -7,6 +7,16 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 0000000. Requisição 1 — aparelhos, cofre, segurança da Central (11/11/2026, PR #54, APKs 391)
+- [REAL] Servidor no ar com: código único por instalação, desconectar UM aparelho (só o dono, com auditoria), renovação presa ao mesmo aparelho, aviso (push) ligado ao aparelho da sessão. Teste de ponta a ponta (execução 84): dois celulares na mesma conta, desconecta um, o outro continua; motorista desconectado cai na hora; pedido Popular não toca no carro Conforto.
+- [REAL] Correção de segurança: operador da cidade só vê/muda dados pessoais dos motoristas da cidade dele; passageiros só o dono (4 testes automáticos).
+- [AUTO] Passageiro e motorista: login e código do aparelho no cofre do celular (flutter_secure_storage 10.0.0 travado); sessão antiga migra sem deslogar; serviços nativos leem o mesmo cofre (CofreNativo.java). Testes automáticos passam (motorista 119, passageiro 106, Central 66). **Falta prova no celular**: instalar o APK 391 por cima do antigo e continuar logado (roteiro A em docs/TESTE-DE-RUA.md).
+- Teste de ponta a ponta agora NÃO grava configuração de produção (MUDAR_CONFIG=nao): aparência, aviso de saldo, tarifas e Conforto na cidade aparecem como "PULADO".
+- Documentos: docs/SEGURANCA-CENTRAL.md, docs/RECUPERACAO-DE-CONTAS.md (decisões R1–R5), docs/DUAS-ETAPAS-DONO.md (não ligado), docs/TESTE-DE-RUA.md (roteiro A–K), docs/MIGRACAO-HOSTINGER.md (só plano; decisão M1/M2), docs/GOOGLE-PLAY.md + docs/loja/TEXTOS-DA-LOJA.md + recurso gráfico 1024×500.
+- Risco de prazo: conta pessoal da Google Play exige 12 testadores por 14 dias + até 7 dias de análise (≈ 3 a 4 semanas).
+- Risco operacional: todo envio ao `main` (inclusive relatórios da esteira e o CRM) republica o servidor no Render (~30 s fora). Proposta: filtro de pastas no Render (só `apps/backend` e `packages/shared`). Decisão do Evandro.
+- Pendentes do Evandro: R1–R5 (recuperação), M1/M2 (Hostinger), ligar duas etapas, roteiro no celular, rodar o teste de ponta a ponta fora do horário de operação (A7).
+
 ## Prazo: Play Store em menos de um mês (dito em 11/11/2026)
 - Meta do Evandro: plataforma blindada e 100% funcional, publicada na Play Store, até o começo de dezembro/2026.
 
@@ -29,7 +39,7 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ## 000. Celular vendido (09/11/2026, PRs #32 a #35)
 - Feito: corte de sessões na hora, botão Desconectar aparelhos na Central, esteira Desconectar aparelhos. Todas as contas reais derrubadas em 10/11 01:00 UTC.
-- Pendente: os apps mandarem o aparelho no login, para a lista de aparelhos da Central mostrar cada celular.
+- [x] 11/11: os apps mandam o aparelho no login (PR #54).
 
 ## 00. Auditoria de segurança e qualidade (06/11/2026, PRs #29 e #30)
 Corrigido e testado:
