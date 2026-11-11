@@ -2,7 +2,14 @@ name: Teste de ponta a ponta
 
 # Percorre no servidor REAL o caminho completo: Central, passageiro,
 # motorista, aprovacao e uma corrida inteira. Grava o relatorio em logs/.
+#
+# Requisicao de continuidade (11/11/2026): roda FORA do horario de operacao
+# (todo dia as 04:37 de Brasilia) e quando alguem dispara a mao. Nunca muda
+# configuracao de producao (MUDAR_CONFIG=nao) e as corridas de teste so vao
+# para motoristas de teste (despacho automatico e manual).
 on:
+  schedule:
+    - cron: '37 7 * * *'   # 04:37 em Brasilia
   workflow_dispatch: {}
 
 permissions:
@@ -39,6 +46,7 @@ jobs:
           ADMIN_EMAIL: fortalezamovegtba@gmail.com # e-mail publico da Central (11/11/2026); a protecao e o OTP_CHAVE_TESTE
           OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
           REL: /tmp/relatorio.txt
+          MUDAR_CONFIG: nao
         run: bash scripts/teste-ponta-a-ponta.sh
       - name: Guardar o relatorio
         if: always()

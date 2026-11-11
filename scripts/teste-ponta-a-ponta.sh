@@ -168,6 +168,38 @@ NT=$(echo "$X" | jq -r '.data.accessToken // empty')
 if [ -n "$NT" ] && sucesso "$(post /auth/password/login "{\"email\":\"$EMAILP\",\"password\":\"Nova12345\"}")"; then
   ok "Passageiro: esqueci a senha (codigo do telefone + senha nova)"; TP="$NT"
 else falha "Passageiro: esqueci a senha" "$X"; fi
+# ---- Requisicao de continuidade (11/11/2026), R1: trocar ou recuperar a
+# senha derruba NA HORA os outros aparelhos (inclusive o acesso de 15 min
+# que ja estava aberto); so o aparelho que trocou continua. ----
+FONE_R1="+55649${SUF}71"
+TA1=$(entrar "$FONE_R1" PASSENGER "and-r1-aparelho-a")
+LB=$(post /auth/password/login "{\"email\":\"$EMAILP\",\"password\":\"Nova12345\",\"device\":{\"deviceId\":\"and-r1-aparelho-b\",\"platform\":\"ANDROID\"}}")
+TB1=$(echo "$LB" | jq -r '.data.accessToken // empty'); RB1=$(echo "$LB" | jq -r '.data.refreshToken // empty')
+if [ -n "$TA1" ] && [ -n "$TB1" ] && sucesso "$(get /auth/me "$TA1")" && sucesso "$(get /auth/me "$TB1")"; then
+  ok "R1: passageiro conectado em dois celulares (A e B)"
+  X=$(curl -s -m 90 -o /dev/null -w '%{http_code}' -X PATCH "$API/auth/password" -H 'Content-Type: application/json' -H "Authorization: Bearer $TA1" -d '{"currentPassword":"Nova12345","newPassword":"Nova23456"}')
+  [ "$X" = "204" ] && ok "R1: trocou a senha no celular A" || falha "R1: trocar a senha no celular A" "HTTP $X"
+  sucesso "$(get /auth/me "$TA1")" && ok "R1: o celular que trocou a senha continua conectado" || falha "R1: celular A caiu depois de trocar a senha" "$(get /auth/me "$TA1")"
+  X=$(get /auth/me "$TB1"); sucesso "$X" && falha "R1: o acesso ja aberto no celular B continuou valendo" "$X" || ok "R1: o acesso ja aberto no celular B caiu na hora (sem esperar 15 min)"
+  X=$(post /auth/refresh "{\"refreshToken\":\"$RB1\"}"); [ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "R1: o celular B tambem nao renova o login" || falha "R1: celular B renovou o login" "$(echo "$X" | jq -c '.success')"
+  X=$(post /auth/password/login "{\"email\":\"$EMAILP\",\"password\":\"Nova12345\"}"); sucesso "$X" && falha "R1: a senha antiga ainda entra" "$X" || ok "R1: a senha antiga nao entra mais"
+  # Esqueci a senha pelo celular C: so o C fica.
+  P=$(pedir_codigo "{\"phone\":\"$FONE_R1\",\"purpose\":\"PASSWORD_RESET\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+  X=$(post /auth/password/reset "{\"phone\":\"$FONE_R1\",\"code\":\"$C\",\"newPassword\":\"Nova34567\",\"device\":{\"deviceId\":\"and-r1-aparelho-c\",\"platform\":\"ANDROID\"}}")
+  TC1=$(echo "$X" | jq -r '.data.accessToken // empty')
+  [ -n "$TC1" ] && sucesso "$(get /auth/me "$TC1")" && ok "R1: recuperou a senha no celular C e ficou conectado" || falha "R1: recuperar a senha no celular C" "$X"
+  X=$(get /auth/me "$TA1"); sucesso "$X" && falha "R1: celular A continuou depois da recuperacao no C" "$X" || ok "R1: recuperar a senha derrubou o celular A na hora"
+  X=$(post /auth/password/reset "{\"phone\":\"$FONE_R1\",\"code\":\"$C\",\"newPassword\":\"Nova45678\"}")
+  [ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "Seguranca: o mesmo codigo de recuperacao nao vale duas vezes" || falha "Seguranca: codigo de recuperacao repetido entrou" "$(echo "$X" | jq -c '.success')"
+  [ -n "$TC1" ] && TP="$TC1"
+  # Tentativas demais: depois de 5 codigos errados, nem o certo entra.
+  P=$(pedir_codigo "{\"phone\":\"$FONE_R1\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+  for i in 1 2 3 4 5; do post /auth/otp/verify "{\"phone\":\"$FONE_R1\",\"code\":\"000000\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}" >/dev/null; done
+  X=$(post /auth/otp/verify "{\"phone\":\"$FONE_R1\",\"code\":\"$C\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}")
+  [ -z "$(echo "$X" | jq -r '.data.accessToken // empty')" ] && ok "Seguranca: 5 codigos errados bloqueiam o codigo (nem o certo entra)" || falha "Seguranca: codigo certo entrou depois de 5 erros" "$(echo "$X" | jq -c '.success')"
+else
+  falha "R1: conectar o passageiro em dois celulares" "$TA1 / $LB"
+fi
 X=$(patch /auth/perfil '{"gender":"FEMININO"}' "$TP")
 [ "$(echo "$X" | jq -r '.data.genero' 2>/dev/null)" = "FEMININO" ] && ok "Passageiro: Meus dados atualizados" || falha "Passageiro: Meus dados" "$X"
 P=$(post /auth/otp/request '{"phone":"+5511999990000","purpose":"LOGIN"}')
@@ -1078,6 +1110,18 @@ echo "$X" | jq -r '.error.message // empty' | grep -qi "codigo" && ok "Passageir
 P=$(pedir_codigo "{\"phone\":\"+55649${SUF}71\",\"purpose\":\"PHONE_VERIFICATION\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
 X=$(patch /auth/perfil "{\"phone\":\"$FONE_P2\",\"codigo\":\"${C:-000000}\"}" "$TP")
 [ "$(echo "$X" | jq -r '.data.phone')" = "$FONE_P2" ] && ok "Passageiro: trocou o proprio telefone com o codigo do e-mail" || falha "Passageiro: trocar telefone" "$X $P"
+# R2 (11/11/2026): e-mail novo so com o codigo que chega nele; depois de
+# trocar o e-mail, o telefone so muda 48 h depois.
+EMAILP2="passageiro.novo.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
+X=$(patch /auth/perfil "{\"email\":\"$EMAILP2\"}" "$TP")
+[ "$(echo "$X" | jq -r '.data.email // empty')" != "$EMAILP2" ] && echo "$X" | jq -r '.error.message // empty' | grep -qi "codigo" && ok "R2: trocar o e-mail sem o codigo do e-mail novo nao passa" || falha "R2: e-mail trocado sem codigo" "$X"
+X=$(patch /auth/perfil "{\"email\":\"$EMAILP2\",\"codigoEmail\":\"000000\"}" "$TP")
+sucesso "$X" && falha "R2: e-mail trocado com codigo errado" "$X" || ok "R2: codigo errado nao troca o e-mail"
+P=$(pedir_codigo "{\"email\":\"$EMAILP2\",\"purpose\":\"EMAIL_VERIFICATION\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+X=$(patch /auth/perfil "{\"email\":\"$EMAILP2\",\"codigoEmail\":\"${C:-000000}\"}" "$TP")
+[ "$(echo "$X" | jq -r '.data.email')" = "$EMAILP2" ] && ok "R2: trocou o e-mail com o codigo que chegou no e-mail novo" || falha "R2: trocar o e-mail com codigo" "$X $P"
+X=$(patch /auth/perfil "{\"phone\":\"+55649${SUF}57\",\"codigo\":\"000000\"}" "$TP")
+echo "$X" | jq -r '.error.message // empty' | grep -qi "48 horas" && ok "R2: logo depois de trocar o e-mail, o telefone espera 48 h" || falha "R2: telefone trocado logo depois do e-mail" "$X"
 X=$(patch /auth/perfil '{"name":"Nome Trocado Por Fora"}' "$TM")
 echo "$X" | jq -r '.error.message // empty' | grep -qi "motorista" && ok "Motorista: nao muda o nome pelo caminho do passageiro (vai para a Central aprovar)" || falha "Motorista: mudar nome sem aprovacao" "$X"
 X=$(get /driver/meus-dados "$TM")
@@ -1106,6 +1150,15 @@ echo "$X" | jq -r '.error.message // empty' | grep -qi "outro cadastro" && ok "C
 FONE_VAZIO="+55649${SUF}58"; TVAZIO=$(entrar "$FONE_VAZIO" DRIVER)
 X=$(post /driver/meus-dados/alteracao "{\"phone\":\"$FONE_VAZIO\"}" "$TM")
 [ "$(echo "$X" | jq -r '[.data.pendente.mudancas[] | select(.campo=="phone")] | length')" = "1" ] && ok "Motorista: telefone preso numa conta vazia (cadastro nao terminado) fica livre" || falha "Motorista: liberar telefone de conta vazia" "$X"
+# R2/R3: telefone e e-mail sao a porta da conta: operador de cidade nao
+# aprova nem muda (so o dono).
+if [ -n "${TO:-}" ]; then
+  X=$(post "/admin/dados/alteracoes/$UM/aprovar" '{}' "$TO")
+  Y=$(get /driver/meus-dados "$TM")
+  ! sucesso "$X" && [ "$(echo "$Y" | jq -r '.data.dados.phone')" != "$FONE_VAZIO" ] && ok "R2/R3: operador nao aprova troca de telefone ($(echo "$X" | jq -r '.error.message // empty' | cut -c1-60))" || falha "R2/R3: operador aprovou troca de telefone" "$X"
+  X=$(patch "/admin/dados/pessoas/$UM" "{\"email\":\"op.mudou.${SUF}@teste.fortalezamov.com.br\"}" "$TO")
+  sucesso "$X" && falha "R2/R3: operador trocou o e-mail de um motorista" "$X" || ok "R2/R3: operador nao troca o e-mail de ninguem ($(echo "$X" | jq -r '.error.message // empty' | cut -c1-60))"
+fi
 post /driver/meus-dados/alteracao '{}' "$TM" >/dev/null; curl -s -m 30 -X DELETE "$API/driver/meus-dados/alteracao" -H "Authorization: Bearer $TM" >/dev/null
 
 # ---- Clube de Vantagens (05/11/2026): a Central cadastra, o motorista ve
@@ -1166,6 +1219,32 @@ X=$(get /auth/me "$TPV"); [ "$(echo "$X" | jq -r '.data.role')" = "PASSENGER" ] 
 CID_=$(get /admin/coupons "$TA" | jq -r --arg c "$CUP" '.data.items[] | select(.code==$c) | .id'); [ -n "$CID_" ] && patch "/admin/coupons/$CID_" '{"isActive":false}' "$TA" >/dev/null
 X=$(get /geo/uso "$TA"); [ "$(echo "$X" | jq -r '.data.ligado')" = "true" ] && ok "Central: uso da TomTom hoje ($(echo "$X" | jq -r '[.data.servicos[] | "\(.servico) \(.hoje)/\(.parteDoDia)"] | join(", ")'))" || falha "Central: uso da TomTom" "$(echo "$X" | jq -c '{ligado: .data.ligado, erro: .error.code}')"
 X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso da TomTom" "$X" || ok "Seguranca: so a Central ve o uso da TomTom"
+# ---- R3 (11/11/2026): perdeu o telefone E o e-mail. So o dono libera, com
+# documento conferido (nada do documento vai ao servidor); fica na auditoria.
+FONE_R3="+55649${SUF}77"; TR3=$(entrar "$FONE_R3" PASSENGER "and-r3-antigo")
+EMAILR3="recuperar.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"; CPFR3=$(gerar_cpf)
+post /auth/cadastro "{\"name\":\"Pessoa Recuperada Teste\",\"email\":\"$EMAILR3\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFR3\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TR3" >/dev/null
+UR3=$(get /auth/me "$TR3" | jq -r '.data.id // empty')
+if [ -n "$UR3" ]; then
+  NOVO_R3="recuperado.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
+  CONF='{"fotoConfere":true,"nomeConfere":true,"cpfConfere":true}'
+  if [ -n "${TO:-}" ]; then
+    X=$(post "/admin/usuarios/$UR3/recuperar-acesso" "{\"motivo\":\"Teste: perdeu celular e e-mail\",\"documento\":\"RG\",\"conferencias\":$CONF,\"novoEmail\":\"$NOVO_R3\"}" "$TO")
+    sucesso "$X" && falha "R3: operador de cidade liberou uma conta" "$X" || ok "R3: operador de cidade nao libera conta"
+  fi
+  X=$(post "/admin/usuarios/$UR3/recuperar-acesso" "{\"motivo\":\"Teste: perdeu celular e e-mail\",\"documento\":\"RG\",\"conferencias\":{\"fotoConfere\":false,\"nomeConfere\":true,\"cpfConfere\":true},\"novoEmail\":\"$NOVO_R3\"}" "$TA")
+  [ "$(echo "$X" | jq -r '.data.liberada')" = "false" ] && sucesso "$(get /auth/me "$TR3")" && ok "R3: sem conferir a foto nao libera (e ninguem e derrubado)" || falha "R3: liberou sem conferir a foto" "$X"
+  X=$(post "/admin/usuarios/$UR3/recuperar-acesso" "{\"motivo\":\"Teste: perdeu celular e e-mail\",\"documento\":\"RG\",\"conferencias\":$CONF,\"novoEmail\":\"$NOVO_R3\"}" "$TA")
+  [ "$(echo "$X" | jq -r '.data.liberada')" = "true" ] && ok "R3: dono conferiu o documento e liberou o acesso" || falha "R3: dono liberar acesso" "$X"
+  X=$(get /auth/me "$TR3"); sucesso "$X" && falha "R3: o aparelho antigo continuou conectado" "$X" || ok "R3: o aparelho antigo caiu na hora"
+  X=$(post /auth/password/login "{\"email\":\"$NOVO_R3\",\"password\":\"Teste1234\"}"); sucesso "$X" && falha "R3: a senha antiga continuou valendo" "$X" || ok "R3: a senha antiga nao vale mais"
+  P=$(pedir_codigo "{\"email\":\"$NOVO_R3\",\"purpose\":\"LOGIN\"}"); C=$(echo "$P" | jq -r '.data.debugCode // empty')
+  X=$(post /auth/otp/verify "{\"email\":\"$NOVO_R3\",\"code\":\"${C:-000000}\",\"purpose\":\"LOGIN\",\"role\":\"PASSENGER\"}")
+  [ "$(echo "$X" | jq -r '.data.user.id // empty')" = "$UR3" ] && ok "R3: a pessoa volta a entrar pelo codigo do e-mail novo (mesma conta)" || falha "R3: entrar pelo e-mail novo" "$X"
+  X=$(post "/admin/usuarios/$UR3/recuperar-acesso" "{\"motivo\":\"Teste: tentativa indevida\",\"documento\":\"RG\",\"conferencias\":$CONF,\"novoEmail\":\"invasor.${SUF}@teste.fortalezamov.com.br\"}" "$TP"); sucesso "$X" && falha "R3: passageiro chamou a recuperacao" "$X" || ok "R3: passageiro nao chama a recuperacao da Central"
+else
+  falha "R3: criar a conta de teste da recuperacao" "$TR3"
+fi
 # Etapa 7: verificacao em duas etapas da Central (Google Authenticator) — a
 # rota existe e responde a situacao; ligar de verdade e na Central.
 X=$(get /auth/2fa "$TA"); [ "$(echo "$X" | jq -r '.data.ativo | type')" = "boolean" ] && ok "Central: verificacao em duas etapas disponivel (ligada: $(echo "$X" | jq -r '.data.ativo'))" || falha "Central: verificacao em duas etapas" "$X"
