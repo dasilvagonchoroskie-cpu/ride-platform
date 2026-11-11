@@ -7,19 +7,19 @@
 00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:02 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:02 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
 00:02 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
 00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
-00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
-00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
-00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
-00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:03 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:03 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:03 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:03 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
 00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
 00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
-00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
-00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
+00:04 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:05 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
 00:06 +22: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
 00:06 +23: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
