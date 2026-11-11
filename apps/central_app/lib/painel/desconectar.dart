@@ -197,6 +197,7 @@ class _DialogoRecuperarAcessoState extends State<DialogoRecuperarAcesso> {
               DropdownButtonFormField<String>(
                 key: const ValueKey('recuperar-documento'),
                 value: _documento,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Documento conferido'),
                 items: const [
                   DropdownMenuItem(value: 'CNH', child: Text('CNH')),

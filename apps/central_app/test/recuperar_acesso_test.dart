@@ -59,6 +59,14 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('recuperar-motivo')), 'Perdeu o celular e a senha do e-mail');
     await tester.enterText(find.byKey(const ValueKey('recuperar-email')), 'Joao.Novo@Gmail.com');
     await tester.enterText(find.byKey(const ValueKey('recuperar-telefone')), '(64) 99999-1234');
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> marcar(WidgetTester tester, String texto) async {
+    await tester.ensureVisible(find.text(texto));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(texto));
+    await tester.pumpAndSettle();
   }
 
   Future<void> liberarAcesso(WidgetTester tester) async {
@@ -78,16 +86,15 @@ void main() {
   testWidgets('motorista: tudo conferido libera e manda so as conferencias (sem documento)', (tester) async {
     await abrir(tester, motorista: true);
     expect(find.text('O número da CNH é o mesmo do cadastro'), findsOneWidget);
-    await preencher(tester);
     for (final t in [
       'O rosto é o mesmo da foto do documento',
       'O nome é o mesmo do cadastro',
       'O CPF é o mesmo do cadastro',
       'O número da CNH é o mesmo do cadastro',
     ]) {
-      await tester.tap(find.text(t));
-      await tester.pump();
+      await marcar(tester, t);
     }
+    await preencher(tester);
     await liberarAcesso(tester);
 
     expect(pedidos, hasLength(1));
@@ -103,9 +110,8 @@ void main() {
 
   testWidgets('faltou conferir: nao libera e mostra o que faltou', (tester) async {
     await abrir(tester, motorista: true);
+    await marcar(tester, 'O rosto é o mesmo da foto do documento');
     await preencher(tester);
-    await tester.tap(find.text('O rosto é o mesmo da foto do documento'));
-    await tester.pump();
     await liberarAcesso(tester);
     expect(find.textContaining('Não liberado'), findsOneWidget);
     expect(find.textContaining('CNH'), findsWidgets);
@@ -115,11 +121,14 @@ void main() {
     await abrir(tester, motorista: false);
     expect(find.text('O número da CNH é o mesmo do cadastro'), findsNothing);
     await tester.enterText(find.byKey(const ValueKey('recuperar-motivo')), 'curto');
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('recuperar-liberar')));
     await tester.tap(find.byKey(const ValueKey('recuperar-liberar')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Escreva o motivo'), findsOneWidget);
     await tester.enterText(find.byKey(const ValueKey('recuperar-motivo')), 'Perdeu o celular e o e-mail');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('recuperar-liberar')));
     await tester.tap(find.byKey(const ValueKey('recuperar-liberar')));
     await tester.pumpAndSettle();
     expect(find.textContaining('e-mail novo'), findsWidgets);
