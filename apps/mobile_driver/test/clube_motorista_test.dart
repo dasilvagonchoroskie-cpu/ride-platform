@@ -209,7 +209,7 @@ void main() {
     _apto = false;
     await _abrir(tester, const CarteirinhaScreen());
     expect(tester.widget<Text>(find.byKey(const ValueKey('situacao-carteirinha'))).data, 'NÃO APTO');
-    expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFFD93A3A));
+    expect((tester.widget<Container>(find.byKey(const ValueKey('selo-carteirinha'))).decoration! as BoxDecoration).color, const Color(0xFFF0545A));
     expect(find.textContaining('Menos de R\$ 100,00'), findsOneWidget);
     // Sem foto no perfil: as iniciais no lugar.
     expect(find.descendant(of: find.byKey(const ValueKey('foto-carteirinha')), matching: find.text('MD')), findsOneWidget);

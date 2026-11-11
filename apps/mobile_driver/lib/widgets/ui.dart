@@ -42,7 +42,7 @@ class AppButton extends StatelessWidget {
     final (Color background, Color foreground, BorderSide side) = switch (variant) {
       AppButtonVariant.primary ||
       AppButtonVariant.inverted =>
-        (AppColors.brand, Colors.white, BorderSide.none),
+        (AppColors.brand, AppColors.onBrand, BorderSide.none),
       AppButtonVariant.secondary =>
         (AppColors.surface, AppColors.text, const BorderSide(color: AppColors.border)),
       AppButtonVariant.accent => (AppColors.primary, Colors.white, BorderSide.none),

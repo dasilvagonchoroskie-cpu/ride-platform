@@ -104,12 +104,12 @@ class DriverHeader extends StatelessWidget {
                         tamanho: 80,
                         reserva: Text(
                           initials.isEmpty ? '?' : initials,
-                          style: AppText.title.copyWith(color: Colors.white, fontSize: 28),
+                          style: AppText.title.copyWith(color: AppColors.onBrand, fontSize: 28),
                         ),
                       )
                     : Text(
                         initials.isEmpty ? '?' : initials,
-                        style: AppText.title.copyWith(color: Colors.white, fontSize: 28),
+                        style: AppText.title.copyWith(color: AppColors.onBrand, fontSize: 28),
                       ),
               ),
               Positioned(left: 2, bottom: 0, child: RatingChip(rating: rating)),
@@ -183,7 +183,7 @@ class MenuLinha extends StatelessWidget {
                 margin: const EdgeInsets.only(right: Spacing.sm),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(color: AppColors.brand, borderRadius: BorderRadius.circular(Radii.pill)),
-                child: Text(selo!, style: AppText.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                child: Text(selo!, style: AppText.caption.copyWith(color: AppColors.onBrand, fontWeight: FontWeight.w600)),
               ),
             if (valor != null)
               Padding(
