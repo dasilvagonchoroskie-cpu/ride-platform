@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (12h15, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 11/11/2026 (12h40, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -26,7 +26,10 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] Etapa 1 — notificações no Android: diagnóstico e correção no código (11/11). Falta o teste no aparelho (seção 1).
 - [ ] Etapa 2 — arquivo administrativo digital: fichários de Motoristas, Entregadores/motoqueiros, Parceiros do Clube
       e Comércios; sem duplicar a pessoa que tem mais de uma função; dados e documentos guardados com segurança após
-      deploys. **Começa depois do teste das notificações.**
+      deploys. **Análise feita em 11/11 (plano em módulos M0–M6 no arquivo-mestre). Aguardando: teste das
+      notificações + autorização do dono + 5 decisões:** (1) diferença entre "Parceiro do Clube" e "Comércio parceiro";
+      (2) guardar a foto/PDF original dos documentos (necessário para o PDF da Etapa 3); (3) onde guardar os arquivos até
+      a Hostinger (proposta: Supabase Storage, cifrado); (4) gestor pode ver documentos?; (5) guardar CPF/CNPJ?
 - [ ] Etapa 3 — PDF de cada fichário concluído (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
       usuário autorizado, com nova versão sem apagar o histórico.
 - [ ] Etapa 4 — status reais e independentes para entregadores, parceiros e comércios (verde só para concluído).
@@ -41,6 +44,14 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] WhatsApp por "Dispositivos conectados" (não oficial): risco de bloqueio do número; migração futura para a via
       oficial da Meta.
 - [ ] Gemini grátis: o Google pode usar as conversas para melhorar os produtos (aviso na tela).
+
+- [ ] **Arquivos dos documentos não são guardados hoje**: do WhatsApp o CRM guarda só o texto lido (com números
+      mascarados); a foto/PDF original é descartada, e o link do WhatsApp expira. Resolver na Etapa 2 (módulo M5).
+- [ ] **Crescimento do cofre**: cada retrato leva o banco inteiro (hoje 673 KB) e o histórico guarda até ~63 versões
+      (hoje 34 versões = 17 MB; banco do Supabase 31 MB de 500 MB grátis). Documentos NUNCA podem entrar no retrato;
+      acompanhar o tamanho até a mudança para a Hostinger.
+- [ ] Render grátis sem disco persistente (conferido 11/11): os dados só sobrevivem pelo cofre (até ~30 s de perda) e,
+      se o Supabase estiver fora do ar, o CRM não liga (proteção contra subir vazio).
 
 ## 4. Itens técnicos ainda não validados em uso real
 
