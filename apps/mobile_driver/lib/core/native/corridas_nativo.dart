@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'ajustes_aparelho.dart';
+
 /// Ponte com o servico nativo de corridas do Android.
 ///
 /// O servico vigia chamados com o aplicativo fechado, toca o alarme e abre
@@ -94,7 +96,29 @@ class CorridasNativo {
     }
   }
 
-  static bool essenciaisOk(Map<String, bool> p) => essenciais.every((k) => p[k] == true);
+  /// Essenciais do Android e os ajustes obrigatorios do fabricante (chaves
+  /// "x_..." que o nativo manda so para o fabricante deste celular).
+  static bool essenciaisOk(Map<String, bool> p, [Map<String, dynamic> perfil = const {}]) {
+    if (!essenciais.every((k) => p[k] == true)) return false;
+    final extras = ((perfil['extras'] as List?) ?? const []).map((e) => e.toString()).toList();
+    final ajustes = ajustesDoAparelho((perfil['familia'] ?? '').toString(), extras);
+    return ajustes.where((a) => a.obrigatorio).every((a) => p['x_${a.chave}'] == true);
+  }
+
+  /// Marca, modelo, sistema (HyperOS, One UI...) e os ajustes do fabricante.
+  static Future<Map<String, dynamic>> aparelho() async {
+    if (!Platform.isAndroid) return const {};
+    try {
+      final r = await _canal.invokeMethod<Map<dynamic, dynamic>>('aparelho');
+      return (r ?? const {}).map((k, v) => MapEntry(k.toString(), v));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  static Future<void> abrirAjuste(String chave) => _chamar('abrirAjuste', {'chave': chave});
+
+  static Future<void> confirmarAjuste(String chave, bool sim) => _chamar('confirmarAjuste', {'chave': chave, 'sim': sim});
 
   static Future<void> _chamar(String metodo, [Map<String, dynamic>? args]) async {
     if (!Platform.isAndroid) return;
