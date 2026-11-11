@@ -50,3 +50,54 @@ jobs:
           git add -A
           git commit -q -m "Central web ${{ github.run_number }} (commit ${GITHUB_SHA::7})"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" central-web-site
+
+  # Confere o site publicado pelo Render: abre no navegador (computador e
+  # celular), tira foto da tela e testa se o servidor aceita o site (CORS).
+  conferir:
+    needs: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Esperar o Render publicar e conferir
+        run: |
+          SITE=https://fortaleza-move-central.onrender.com
+          for i in $(seq 1 30); do
+            V=$(curl -s "$SITE/versao.txt" || true)
+            echo "versao no ar: $V"
+            case "$V" in web-${{ github.run_number }}*) break;; esac
+            sleep 20
+          done
+          echo "--- CORS (o servidor aceita pedidos vindos do site?)"
+          curl -s -o /dev/null -D - -X OPTIONS "https://fortaleza-mov-backend.onrender.com/api/auth/me" \
+            -H "Origin: $SITE" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: authorization" \
+            | grep -i -E "^HTTP|access-control" | tee /tmp/cors.txt
+          grep -qi "access-control-allow-origin" /tmp/cors.txt && echo "CORS: OK" || echo "CORS: FALTA liberar o site"
+      - name: Fotos do site (computador e celular)
+        run: |
+          npm i -s playwright@1.48.2 >/dev/null 2>&1
+          npx -y playwright@1.48.2 install --with-deps chromium >/dev/null 2>&1
+          cat > fotos.js <<'J'
+          const { chromium } = require('playwright');
+          (async () => {
+            const b = await chromium.launch();
+            for (const [nome, vp] of [['computador', { width: 1366, height: 768 }], ['celular', { width: 390, height: 844 }]]) {
+              const p = await b.newPage({ viewport: vp });
+              const erros = [];
+              p.on('pageerror', (e) => erros.push(String(e)));
+              p.on('console', (m) => { if (m.type() === 'error') erros.push(m.text()); });
+              await p.goto('https://fortaleza-move-central.onrender.com/', { waitUntil: 'networkidle', timeout: 90000 });
+              await p.waitForTimeout(8000);
+              await p.screenshot({ path: `central-web-${nome}.png` });
+              console.log(nome, 'erros:', erros.length ? erros.slice(0, 5).join(' | ') : 'nenhum');
+            }
+            await b.close();
+          })();
+          J
+          node fotos.js
+      - name: Guardar as fotos no ramo fotos-central-web
+        run: |
+          mkdir -p /tmp/fotos && cp central-web-*.png /tmp/fotos/
+          cd /tmp/fotos && git init -q -b fotos-central-web
+          git config user.name "CI Fortaleza"; git config user.email "ci@fortalezadigitalsecurity.com.br"
+          git add -A && git commit -q -m "fotos da Central web ${{ github.run_number }}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" fotos-central-web
