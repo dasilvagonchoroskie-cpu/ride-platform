@@ -647,6 +647,7 @@ router.get('/meta', (req, res) => {
     entities: defs,
     pendentes,
     can: policy.permissionsFor(req.user.role, Object.keys(ENTITIES)),
+    etapa2: pessoas.ativa() ? { funcoes: pessoas.catalogo() } : null,
     hoje: todayISO()
   });
 });
@@ -1174,6 +1175,49 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ------------------------ Etapa 2: ficha central de pessoas ------------------------ */
+// Só existe com FM_ETAPA2=1 e as migrações aplicadas (pessoas.ativa()). Gestor consulta, cria e adiciona função;
+// juntar duplicados é só do administrador (confirmação explícita + auditoria).
+const { createPessoas, ErroPessoa } = require('./pessoas');
+const pessoas = createPessoas({ db, entities, ENTITIES, audit });
+function etapa2(req, res, next) {
+  if (!pessoas.ativa()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
+  next();
+}
+function respostaPessoa(res, fn) {
+  try { return fn(); } catch (err) {
+    if (err instanceof ErroPessoa) {
+      if (err.message === 'validacao' && err.resultado) {
+        const r = err.resultado;
+        if (r.errors) return res.status(r.status).json({ error: { code: 'validation', message: 'Verifique os campos destacados.', fields: r.errors } });
+        return fail(res, r.status, 'error', r.error);
+      }
+      return res.status(err.status).json({ error: { code: 'pessoa', message: err.message, ...(err.conflitos ? { conflitos: err.conflitos, opcoes: err.opcoes } : {}), ...(err.registro_id ? { registro_id: err.registro_id } : {}) } });
+    }
+    throw err;
+  }
+}
+router.get('/pessoas', etapa2, (req, res) => res.json(pessoas.listar({ q: req.query.q, page: req.query.page })));
+router.get('/pessoas/duplicados', etapa2, requireAdmin, (req, res) => {
+  const r = pessoas.duplicados();
+  audit(req, 'consultar', 'duplicados', null, `Possíveis duplicados de pessoas (${r.total_grupos} grupo(s))`);
+  res.json(r);
+});
+router.post('/pessoas/verificar-telefone', etapa2, (req, res) => {
+  const exceto = Number.isInteger(req.body.exceto) ? req.body.exceto : null;
+  res.json({ possiveis: pessoas.verificarTelefone(String(req.body.telefone || '').slice(0, 30), { exceto }) });
+});
+router.post('/pessoas/juntar', etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+  const b = req.body || {};
+  const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
+  res.json(pessoas.juntar({ manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
+}));
+router.get('/pessoas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(pessoas.ficha(Number(req.params.id)))));
+router.post('/pessoas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
+  const r = pessoas.adicionarFuncao(Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
+  res.status(201).json({ item: r.item, titular: r.titular });
+}));
+
 /* ----------------------- Etapa 2: consultas só de leitura ----------------------- */
 // Relatório de possíveis duplicados (mostra só nome, módulo, situação e 4 últimos dígitos do telefone) e estado das
 // migrações. Nenhuma das duas altera dados.
@@ -1244,6 +1288,13 @@ router.get('/:entity', (req, res) => {
 router.post('/:entity', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
+  if (pessoas.ativa() && Object.prototype.hasOwnProperty.call(pessoas.FUNCAO_DA_TABELA, def.table)) {
+    const pid = Number(req.body.pessoa_id);
+    return respostaPessoa(res, () => {
+      const r = pessoas.criarRegistro(def.table, req.body, req, { titularId: Number.isInteger(pid) && pid > 0 ? pid : null });
+      res.status(201).json({ item: r.item, titular: r.titular });
+    });
+  }
   const result = entities.createEntity(def, req.body, req);
   if (result.errors) return res.status(result.status).json({ error: { code: 'validation', message: 'Verifique os campos destacados.', fields: result.errors } });
   if (result.error) return fail(res, result.status, 'error', result.error);
@@ -1277,7 +1328,12 @@ router.get('/:entity/:id', (req, res) => {
   if (def.interactions) {
     interacoes = db.prepare('SELECT * FROM interacoes WHERE entity = ? AND entity_id = ? ORDER BY id DESC').all(def.table, id);
   }
-  res.json({ item, interacoes, ficha: fichaDoCadastro(req.params.entity, id) });
+  let titular = null;
+  if (pessoas.ativa()) {
+    const v = db.prepare('SELECT titular_tipo AS tipo, titular_id AS id FROM vinculos WHERE registro_tabela = ? AND registro_id = ? AND ativo = 1').get(def.table, id);
+    titular = v || null;
+  }
+  res.json({ item, interacoes, ficha: fichaDoCadastro(req.params.entity, id), titular });
 });
 
 router.patch('/:entity/:id', (req, res) => {
@@ -1297,6 +1353,7 @@ router.delete('/:entity/:id', (req, res) => {
   }
   const result = entities.deleteEntity(def, Number(req.params.id), req);
   if (result.error) return fail(res, result.status, 'error', result.error);
+  if (pessoas.ativa()) pessoas.aoExcluirRegistro(def.table, Number(req.params.id), req);
   res.json({ ok: true });
 });
 

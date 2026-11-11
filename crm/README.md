@@ -197,6 +197,9 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   original: `node scripts/simular-migracao.js caminho/crm.db` (mostra contagens antes/depois, se algum registro antigo
   mudou e os possíveis duplicados).
 - `GET /api/admin/duplicados` e `GET /api/admin/migracoes` (só administrador; somente leitura).
+- Com `FM_ETAPA2=1`: menu **Pessoas** (ficha central de cada pessoa com todas as funções, "Adicionar função", aviso de
+  telefone já cadastrado ao criar motorista/passageiro e, só para o administrador, "Possíveis duplicados" com
+  comparação e junção confirmada). Rotas em `/api/pessoas*`; sem a variável elas não existem.
 
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados

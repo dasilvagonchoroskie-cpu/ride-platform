@@ -75,6 +75,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   `GET /api/admin/migracoes`; `scripts/simular-migracao.js <crm.db>` (cópia em memória; o original não muda).
 - `src/protegidos.js`: CPF/CNPJ com AES-256-GCM + índice HMAC (`FM_DADOS_KEY`, 64 hex, fora do repositório); sem
   chave não grava. Nenhuma tela coleta ainda. Testes: `test/migracoes.test.js`.
+- M1 telas (11/11): `src/pessoas.js` (serviço) + rotas em routes.js, todas atrás de `pessoas.ativa()` (FM_ETAPA2=1 e
+  tabelas existentes; senão 404): `GET /pessoas` (busca), `GET /pessoas/:id` (ficha central: funções ativas e encerradas,
+  eventos, possíveis duplicados), `POST /pessoas/verificar-telefone` (só aviso), `POST /pessoas/:id/funcoes` (adicionar
+  função compatível; 409 se já tem), `GET /pessoas/duplicados` e `POST /pessoas/juntar` (só admin, `confirmo:true`,
+  `principais` para função repetida; nada apagado: a juntada vira `mesclada`, vínculos passam, ficha repetida é
+  ENCERRADA). Com a Etapa 2 ligada, `POST /:entity` de motoristas/passageiros/parceiros cria o registro + pessoa/empresa
+  na mesma transação (`pessoa_id` opcional = o usuário escolheu); `DELETE` encerra o vínculo. `GET /:entity/:id` traz
+  `titular`. `/meta` traz `etapa2` (catálogo de funções). Front: `public/js/views/pessoas.js` (#/pessoas, ?id=, ?duplicados=1),
+  aviso de telefone no formulário de motorista/passageiro (`escolherPessoa` em entity.js), `?abrir=ID` abre uma ficha,
+  `ui.modal({ onClose })`. Testes: `test/pessoas.test.js`.
 
 ## Ordem de serviço de 11/11 tarde (dashboard, push, financeiro, APK)
 - Dashboard: `motoristas_interessados` agora é só 'Novo interessado' (antes era o TOTAL e incluía contratados);

@@ -219,7 +219,9 @@ export async function renderEntity(view, state, key, params) {
 
     const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
     const podeContratar = key === 'motoristas' && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
-    const ficha = fichaHtml(item, data.ficha);
+    const ficha = (data.titular && data.titular.tipo === 'pessoa'
+      ? `<div class="ficha-acoes"><a class="btn btn-sm btn-soft" href="#/pessoas?id=${Number(data.titular.id)}">${ui.icon('users', 15)} Ficha central da pessoa (todas as funções)</a></div>` : '')
+      + fichaHtml(item, data.ficha);
 
     const m = ui.modal({
       title: `${key === 'motoristas' ? 'Ficha do motorista' : def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
@@ -237,7 +239,7 @@ export async function renderEntity(view, state, key, params) {
     });
 
     // Links para a conversa fecham a ficha antes de navegar.
-    m.dialog.querySelectorAll('a[href^="#/conversas"]').forEach((a) => a.addEventListener('click', () => m.close()));
+    m.dialog.querySelectorAll('a[href^="#/conversas"], a[href^="#/pessoas"]').forEach((a) => a.addEventListener('click', () => m.close()));
     m.dialog.querySelectorAll('[data-conferir]').forEach((b) => b.addEventListener('click', async () => {
       const campo = b.dataset.conferir;
       const estado = { ...item, [campo]: 'Conferido' };
@@ -326,6 +328,15 @@ export async function renderEntity(view, state, key, params) {
       const payload = form.getValues();
       try {
         if (isNew) {
+          // Etapa 2: antes de criar, avisa se o telefone já pertence a alguém. Nunca associa sozinho: o usuário escolhe.
+          if (state.meta.etapa2 && (key === 'motoristas' || key === 'passageiros') && payload.telefone) {
+            const v = await api.post('/pessoas/verificar-telefone', { telefone: payload.telefone });
+            if (v.possiveis.length) {
+              const escolha = await escolherPessoa(v.possiveis, def);
+              if (escolha === null) return;
+              if (escolha) payload.pessoa_id = escolha;
+            }
+          }
           await api.post(`/${key}`, payload);
         } else {
           // Envia só o que mudou: salvar o formulário inteiro sobrescrevia alterações feitas por outra pessoa no mesmo registro.
@@ -592,8 +603,36 @@ export async function renderEntity(view, state, key, params) {
 
   await load();
 
+  // Abrir direto uma ficha (ex.: vindo da ficha central da pessoa): #/motoristas?abrir=ID
+  if (/^\d+$/.test(params.get('abrir') || '')) {
+    const alvo = Number(params.get('abrir'));
+    history.replaceState(null, '', `#/${location.hash.split('/')[1].split('?')[0]}`);
+    openDetail(alvo);
+  }
+
   if (params.get('novo') === '1') {
     openForm(null);
     history.replaceState(null, '', `#/${key}`);
   }
+}
+
+// Telefone já cadastrado (Etapa 2): mostra quem é e deixa o usuário decidir.
+// Devolve o id da pessoa escolhida, 0 para "pessoa nova" ou null para cancelar.
+function escolherPessoa(possiveis, def) {
+  return new Promise((resolve) => {
+    const body = document.createElement('div');
+    body.innerHTML = `<div class="notice" style="margin-bottom:12px">Este telefone já aparece no cadastro abaixo. Se for a mesma pessoa, use o cadastro existente: a ficha de ${ui.esc(def.singular.toLowerCase())} fica ligada a ela, com situação e histórico próprios.</div>
+      <div class="stack">${possiveis.map((p) => `<div class="card" style="padding:12px">
+        <div class="spread" style="gap:10px;flex-wrap:wrap"><div><b>${ui.esc(p.nome)}</b><div class="muted small">${ui.esc(p.cidade || 'Cidade não informada')} · telefone terminado em ${ui.esc(p.telefone_final)}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${p.funcoes.map((f) => `<span class="badge">${ui.esc(f.rotulo)}: ${ui.esc(f.situacao || '—')}</span>`).join('') || '<span class="muted small">Sem funções</span>'}</div></div>
+        <button class="btn btn-sm btn-primary" data-usar="${p.id}" type="button">Usar este cadastro</button></div></div>`).join('')}</div>`;
+    let resolvido = false;
+    const fim = (v) => { if (!resolvido) { resolvido = true; resolve(v); } };
+    const m = ui.modal({ title: 'Possível cadastro existente', body, size: 'small',
+      footer: '<button class="btn btn-ghost" data-cancel type="button">Cancelar</button><button class="btn btn-soft" data-novo type="button">É outra pessoa: criar cadastro novo</button>',
+      onClose: () => fim(null) });
+    body.querySelectorAll('[data-usar]').forEach((b) => b.addEventListener('click', () => { fim(Number(b.dataset.usar)); m.close(); }));
+    m.dialog.querySelector('[data-novo]').addEventListener('click', () => { fim(0); m.close(); });
+    m.dialog.querySelector('[data-cancel]').addEventListener('click', () => { fim(null); m.close(); });
+  });
 }

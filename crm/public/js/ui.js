@@ -117,7 +117,7 @@ export function toast(message, type = 'info') {
 }
 
 /* -------------------------------- modal --------------------------------- */
-export function modal({ title, subtitle = '', body, footer = '', size = '' }) {
+export function modal({ title, subtitle = '', body, footer = '', size = '', onClose = null }) {
   const dialog = document.createElement('dialog');
   dialog.className = `modal ${size}`.trim();
   dialog.innerHTML = `
@@ -137,7 +137,8 @@ export function modal({ title, subtitle = '', body, footer = '', size = '' }) {
   else if (body) bodyEl.appendChild(body);
 
   document.getElementById('modal-root').appendChild(dialog);
-  const close = () => { try { dialog.close(); } catch (err) { /* ignore */ } dialog.remove(); };
+  let fechado = false;
+  const close = () => { if (fechado) return; fechado = true; try { dialog.close(); } catch (err) { /* ignore */ } dialog.remove(); if (onClose) onClose(); };
   dialog.querySelector('[data-modal-close]').addEventListener('click', close);
   dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
   dialog.addEventListener('cancel', (e) => { e.preventDefault(); close(); });

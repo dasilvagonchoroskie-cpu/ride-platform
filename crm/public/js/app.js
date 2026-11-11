@@ -6,6 +6,7 @@ import { renderFinance } from './views/finance.js';
 import { renderReports } from './views/reports.js';
 import { renderSettings } from './views/settings.js';
 import { renderConversas } from './views/whatsapp.js';
+import { renderPessoas } from './views/pessoas.js';
 import { iniciarAvisos, pararAvisos, sincronizarPush } from './notificacoes.js';
 
 const NAV = [
@@ -19,7 +20,9 @@ const NAV = [
   { key: 'tarefas', label: 'Tarefas', icon: 'check', entity: 'tarefas', title: 'Tarefas e calendário', sub: 'Central de tarefas da equipe' },
   { key: 'financeiro', label: 'Planejamento financeiro', icon: 'chart', title: 'Planejamento financeiro', sub: 'Simulações de receita e resultado da plataforma' },
   { key: 'relatorios', label: 'Relatórios', icon: 'file', title: 'Relatórios', sub: 'Histórico, filtros por período e exportação' },
-  { key: 'configuracoes', label: 'Configurações', icon: 'settings', title: 'Configurações', sub: 'Organização, usuários, segurança e auditoria' }
+  { key: 'configuracoes', label: 'Configurações', icon: 'settings', title: 'Configurações', sub: 'Organização, usuários, segurança e auditoria' },
+  // Etapa 2 (só aparece com a Etapa 2 ligada no servidor): ficha central de cada pessoa e as suas funções.
+  { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true }
 ];
 
 const state = {
@@ -446,11 +449,13 @@ async function enterApp() {
         </div>
         <nav class="nav" id="nav">
           <div class="nav-label">Gestão</div>
-          ${NAV.slice(0, 8).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${NAV.slice(0, 1).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${state.meta.etapa2 ? navItem(NAV.find((n) => n.key === 'pessoas'), state.meta.pendentes) : ''}
+          ${NAV.slice(1, 8).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Análise</div>
           ${NAV.slice(8, 10).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Sistema</div>
-          ${NAV.slice(10).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${NAV.slice(10, 11).map((i) => navItem(i, state.meta.pendentes)).join('')}
         </nav>
         <div class="side-foot">
           <button class="btn btn-ghost btn-sm hidden" id="install-btn">${ui.icon('install', 16)} Instalar aplicativo</button>
@@ -566,6 +571,8 @@ async function route() {
     else if (key === 'relatorios') await renderReports(view, state);
     else if (key === 'conversas') await renderConversas(view, state);
     else if (key === 'configuracoes') await renderSettings(view, state);
+    else if (key === 'pessoas' && state.meta.etapa2) await renderPessoas(view, state, params);
+    else if (key === 'pessoas') location.hash = '#/dashboard';
     else if (item.entity) await renderEntity(view, state, item.entity, params);
     state.refreshMeta();
   } catch (err) {

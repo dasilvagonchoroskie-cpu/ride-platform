@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v18';
+const CACHE = 'fm-crm-v19';
 const ASSETS = [
   '/',
   '/index.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   '/js/views/dashboard.js',
   '/js/views/entity.js',
   '/js/views/finance.js',
+  '/js/views/pessoas.js',
   '/js/views/reports.js',
   '/js/views/settings.js',
   '/manifest.webmanifest',

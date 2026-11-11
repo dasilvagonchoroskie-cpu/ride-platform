@@ -690,3 +690,40 @@ dialog.modal::backdrop { background: rgba(6, 26, 51, .55); backdrop-filter: blur
   .wa-composer { padding: 6px 8px; gap: 6px; }
   .wa-composer textarea { min-height: 40px; }
 }
+
+/* ---------------- Etapa 2: ficha central de pessoas ---------------- */
+.pessoa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.pessoa-card { display: flex; gap: 12px; padding: 14px; color: inherit; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.pessoa-card:hover { border-color: var(--royal); box-shadow: 0 0 0 3px var(--royal-100); }
+.pessoa-avatar { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #fff; background: linear-gradient(135deg, var(--navy-700), var(--royal)); }
+.pessoa-avatar.grande { width: 64px; height: 64px; font-size: 22px; }
+.pessoa-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pessoa-info b { font-size: 15px; }
+.pessoa-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.pessoa-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: #eff3f9; color: #3d4f69; border: 1px solid #e2e9f3; }
+.pessoa-chip.fechado { background: #16a34a; color: #fff; border-color: #15803d; }
+.pessoa-chip.success { background: var(--green-100); color: #0a7651; border-color: #c7efdd; }
+.pessoa-chip.warn { background: var(--amber-100); color: #8c5a0c; border-color: #f5dfae; }
+.pessoa-chip.danger { background: var(--red-100); color: #a32d1d; border-color: #f6cdc6; }
+.pessoa-chip.info { background: var(--info-100); color: #1c43a8; border-color: #d4e0ff; }
+.pessoa-topo { display: flex; gap: 16px; align-items: center; padding: 18px; border-top: 4px solid var(--gold); }
+.pessoa-dados h2 { margin: 0 0 6px; font-size: 22px; }
+.pessoa-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--text); }
+.pessoa-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.funcao-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.funcao-card { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-left: 4px solid var(--royal); }
+.funcao-card.fechada { border-left-color: #16a34a; background: linear-gradient(180deg, #f2fbf5, #fff 60%); }
+.funcao-card.encerrada { border-left-color: var(--line-strong); opacity: .78; }
+.funcao-topo { display: flex; gap: 10px; align-items: center; }
+.funcao-icone { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--royal-100); color: var(--royal); flex: none; }
+.funcao-card.fechada .funcao-icone { background: #dcf5e6; color: #15803d; }
+.funcao-situacao { display: flex; flex-wrap: wrap; gap: 6px; }
+.funcao-card .btn { align-self: flex-start; }
+.dup-lista { display: flex; flex-direction: column; gap: 8px; }
+.dup-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; }
+.dup-item:has(input:checked) { border-color: var(--royal); background: var(--royal-100); }
+.dup-item input { margin-top: 3px; }
+.table.compara th, .table.compara td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.table.compara tr.diferente td { background: var(--amber-100); }
+.check-line { display: flex; gap: 8px; align-items: flex-start; font-weight: 500; margin: 6px 0; cursor: pointer; }
+@media (max-width: 640px) { .pessoa-topo { flex-direction: column; align-items: flex-start; } .pessoa-grid, .funcao-grid { grid-template-columns: 1fr; } }

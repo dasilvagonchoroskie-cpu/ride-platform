@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (13h30, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 11/11/2026 (18h, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -33,8 +33,12 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       Preparação autorizada em 11/11 (só no ramo `etapa2`, sem produção):
       - [x] M0 migrações versionadas + simulação em cópia + relatório de duplicados (11/11, testado com dados fictícios).
       - [x] M1 (parte do banco) pessoas, empresas, vínculos e CPF/CNPJ protegidos (11/11, testado com dados fictícios).
-      - [ ] M1 (telas) ficha central da pessoa e "adicionar função" — sem ligar aos dados de produção.
-      - [ ] M3 entregadores · M4 comércios · M5 camada de documentos (sem documentos reais) · M6 IA/WhatsApp.
+      - [x] M1 (telas) ficha central da pessoa, "adicionar função", aviso de telefone repetido e junção de duplicados
+            (só admin) — 11/11, no ambiente de desenvolvimento com dados fictícios (testes automáticos + navegador).
+      - [ ] Próximos (aguardando conferência do dono): M2 entregadores/motociclistas · M3 comércios · M4 documentos e
+            armazenamento seguro (sem documentos reais). Depois: IA/WhatsApp ligados à pessoa (hoje o cadastro criado
+            pela IA ainda não ganha pessoa).
+      - [ ] Ficha central da EMPRESA (parceiros/comércios): hoje a empresa é criada e ligada, mas não há tela própria.
       - [ ] Política de retenção e descarte por tipo de dado (decisão da empresa; não usar prazo fixo sem avaliar).
       - [ ] **Migração dos dados reais e deploy da Etapa 2: só depois do teste das notificações + autorização.**
 - [ ] Etapa 3 — PDF de cada fichário concluído (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
