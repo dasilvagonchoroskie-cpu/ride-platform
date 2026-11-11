@@ -8,10 +8,11 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 ---
 
 ## 00000000. Requisição de continuidade — recuperação de contas R1–R5 (11/11/2026, PR #56)
-- [AUTO] R1: trocar/recuperar a senha derruba na hora os outros aparelhos (acesso de 15 min já aberto também cai); só o aparelho que trocou continua. Testes automáticos do servidor + cenário novo no ponta a ponta (rodará de madrugada).
-- [AUTO] R2: telefone só muda com código no e-mail da conta (nunca na tela, mesmo com OTP_DEBUG_RETURN); conta sem e-mail não troca telefone; e-mail novo só com código no e-mail novo (app do passageiro pede o código); 48 h entre trocar e-mail e telefone; operador de cidade não aprova nem muda telefone/e-mail.
+- [REAL] Ponta a ponta no servidor de verdade (execução 86, 11/11 18:54, autorizada pelo Evandro porque a plataforma ainda não opera): 385 OK, 4 falhas, 4 pulados. Todos os 23 cenários novos de R1, R2, R3 e abuso de códigos passaram. Falhas: as 3 da carteira (intencionais) + 1 "Central carrega cadastros pendentes" que recebeu a página do Render no lugar da resposta: o Render estava trocando de versão naquele minuto por causa de um envio só de documentos de outra sessão (21:53–21:54 UTC). Não é defeito do código; é exatamente o problema que o Build Filter resolve.
+- [REAL] R1: trocar/recuperar a senha derruba na hora os outros aparelhos (acesso de 15 min já aberto também cai); só o aparelho que trocou continua.
+- [REAL] R2: telefone só muda com código no e-mail da conta (nunca na tela, mesmo com OTP_DEBUG_RETURN); conta sem e-mail não troca telefone; e-mail novo só com código no e-mail novo (app do passageiro pede o código); 48 h entre trocar e-mail e telefone; operador de cidade não aprova nem muda telefone/e-mail.
 - [NÃO EXISTE] R2: confirmar o número novo por código no próprio número — depende de SMS (pago). Até lá a prova é o e-mail confirmado.
-- [AUTO] R3: "Recuperar acesso" na Central (só o dono), conferências do documento sem guardar o documento, auditoria LIBERADA/RECUSADA; e-mail novo obrigatório, senha antiga apagada. Selfie com prova de vida avaliada e não feita (custo + biometria).
+- [REAL] R3: "Recuperar acesso" na Central (só o dono), conferências do documento sem guardar o documento, auditoria LIBERADA/RECUSADA; e-mail novo obrigatório, senha antiga apagada. Selfie com prova de vida avaliada e não feita (custo + biometria).
 - [AUTO] R4: aviso de segurança no e-mail (antigo também, na troca) e nos aparelhos, sem dado pessoal; endereços de teste não recebem.
 - [AUTO] R5: "Esqueci a senha" da Central com duas etapas só grava a senha depois do código do autenticador; procedimento excepcional por esteira com aprovação do dono e auditoria (testado num banco de teste local, não em produção); Central travada até ligar o autenticador de novo.
 - [AUTO] Despacho manual da Central não manda corrida de teste para motorista real (e vice-versa). O automático já separava.
