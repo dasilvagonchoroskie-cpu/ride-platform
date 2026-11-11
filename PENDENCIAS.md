@@ -7,6 +7,11 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 00000. Visual premium (11/11/2026, PR #48, APKs 378)
+- Feito: marinho e dourado em todas as telas dos 3 aplicativos e da Central na web; mapa claro normal; testes, análise e compilação passaram (execução 378).
+- Falta conferir no celular de verdade: botão "Google Maps" do motorista numa linha só, leitura dos textos ao sol, e se o Evandro quer ajustes de gosto em alguma tela.
+- A bandeira do país na tela de telefone do passageiro aparece como desenho quebrado nas fotos do emulador (falta de fonte de emoji no emulador); conferir no celular.
+
 ## 0000. Permissões por fabricante, moto, encomenda e Central na web (10–11/11/2026, PRs #41 a #44)
 - Feito: motorista e passageiro identificam o celular e mostram os ajustes da marca (Xiaomi, Samsung, Oppo/Realme/OnePlus, Vivo, Huawei, Honor, Asus); cadastro de moto (CNH A); categoria Moto criada DESLIGADA (70% do Popular); encomenda com escolha Moto/Carro e tarifa Entrega de moto (75%); Central na web em https://fortaleza-move-central.onrender.com, instalável (PWA). APKs 364.
 - Pendente com o Evandro: ligar a Moto (Central → Categorias) e as entregas (Central → Entregas) quando tiver motoqueiro aprovado; ajustar as tarifas sugeridas.
