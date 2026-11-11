@@ -21,7 +21,7 @@ export class PracasService {
   constructor(private readonly prisma: PrismaService) {}
 
   private cache: { em: number; lista: Praca[] } | null = null;
-  private readonly escopos = new Map<string, { em: number; praca: string | null; provisoria: boolean }>();
+  private readonly escopos = new Map<string, { em: number; praca: string | null; provisoria: boolean; refazer2fa: boolean }>();
   private motoristas: { em: number; mapa: Map<string, string | null> } | null = null;
 
   // ------------------------------------------------------------------
