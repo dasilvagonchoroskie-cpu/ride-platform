@@ -65,6 +65,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// Autorizacoes do Android (localizacao, notificacao, sobrepor, bateria,
   /// tela cheia). null = ainda nao conferidas.
   Map<String, bool> permissoes = const {};
+
+  /// Celular onde o app esta (familia, marca, modelo, sistema, ajustes extras).
+  Map<String, dynamic> aparelho = const {};
   bool? permissoesOk;
 
   /// true quando o GPS deu a posicao AGORA (nesta abertura do app).
@@ -382,9 +385,18 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> checarPermissoes() async {
     permissoes = await CorridasNativo.permissoes();
-    permissoesOk = CorridasNativo.essenciaisOk(permissoes);
+    if (aparelho.isEmpty) aparelho = await CorridasNativo.aparelho();
+    permissoesOk = CorridasNativo.essenciaisOk(permissoes, aparelho);
     notifyListeners();
     if (permissoes['localizacao'] == true) unawaited(lerPosicaoInicial());
+  }
+
+  /// Motorista confirmou (ou desfez) um ajuste do fabricante. O nativo ja
+  /// guardou; aqui a tela atualiza na hora.
+  void marcarAjuste(String chave, bool feito) {
+    permissoes = {...permissoes, 'x_$chave': feito};
+    permissoesOk = CorridasNativo.essenciaisOk(permissoes, aparelho);
+    notifyListeners();
   }
 
   /// Primeira posicao, antes mesmo de ficar disponivel: o mapa abre onde o

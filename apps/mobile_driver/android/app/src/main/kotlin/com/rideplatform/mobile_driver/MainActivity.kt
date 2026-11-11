@@ -18,9 +18,6 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-/** Preferencias das autorizacoes (confirmacao da bateria no Xiaomi). */
-private const val PREFS_PERMISSOES = "fortaleza_permissoes"
-
 /**
  * Tela do aplicativo + ponte com o servico de corridas.
  *
@@ -167,8 +164,18 @@ class MainActivity : FlutterActivity() {
                     // Xiaomi/HyperOS: o motorista confirma que deixou o app
                     // em "Apps ativos" (o Android nao informa esse ajuste).
                     "confirmarBateria" -> {
-                        getSharedPreferences(PREFS_PERMISSOES, MODE_PRIVATE).edit()
-                            .putBoolean("bateriaXiaomi", call.argument<Boolean>("sim") == true).apply()
+                        Aparelho.confirmar(this, "bateriaFabricante", call.argument<Boolean>("sim") == true)
+                        result.success(true)
+                    }
+                    // Celular onde o app esta (marca, sistema) e os ajustes
+                    // proprios do fabricante que o motorista tem que fazer.
+                    "aparelho" -> result.success(Aparelho.perfil(this))
+                    "abrirAjuste" -> {
+                        Aparelho.abrir(this, call.argument<String>("chave") ?: "")
+                        result.success(true)
+                    }
+                    "confirmarAjuste" -> {
+                        Aparelho.confirmar(this, call.argument<String>("chave") ?: "", call.argument<Boolean>("sim") == true)
                         result.success(true)
                     }
                     "pedir" -> {
@@ -200,13 +207,14 @@ class MainActivity : FlutterActivity() {
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 == PackageManager.PERMISSION_GRANTED),
             "sobrepor" to (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(this)),
+            // Xiaomi: o Android nao enxerga o "Nenhuma restricao" da Xiaomi;
+            // vale a confirmacao do motorista no ajuste do fabricante.
             "bateria" to (Build.VERSION.SDK_INT < 23 || pm.isIgnoringBatteryOptimizations(packageName) ||
-                (ehXiaomi() && getSharedPreferences(PREFS_PERMISSOES, MODE_PRIVATE).getBoolean("bateriaXiaomi", false))),
-            // Xiaomi/Redmi/Poco: a tela mostra o botao de confirmar a bateria.
+                (ehXiaomi() && Aparelho.confirmado(this, "bateriaFabricante"))),
             "xiaomi" to ehXiaomi(),
             "telaCheia" to (Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent()),
             "gps" to gpsLigado()
-        )
+        ) + Aparelho.extras().associate { "x_$it" to Aparelho.confirmado(this, it) }
     }
 
     /** Abre o pedido certo do Android para cada autorizacao. */
@@ -234,7 +242,7 @@ class MainActivity : FlutterActivity() {
                 startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pacote))
             }
             "gps" -> startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-            "iniciarSozinho" -> abrirInicioAutomatico()
+            "iniciarSozinho" -> Aparelho.abrir(this, "inicioAutomatico")
             else -> abrirAjustesDoApp()
         }
     }
@@ -243,31 +251,6 @@ class MainActivity : FlutterActivity() {
         val lm = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
         return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
             lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
-    }
-
-    /**
-     * Xiaomi, Oppo, Vivo, Huawei... fecham o aplicativo em segundo plano se
-     * ele nao estiver em "iniciar automaticamente". Abre essa tela do
-     * fabricante; sem ela, os ajustes do aplicativo.
-     */
-    private fun abrirInicioAutomatico() {
-        val telas = listOf(
-            "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity",
-            "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
-            "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
-            "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
-            "com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
-            "com.samsung.android.lool" to "com.samsung.android.sm.ui.battery.BatteryActivity"
-        )
-        for ((pacote, tela) in telas) {
-            try {
-                startActivity(Intent().setClassName(pacote, tela).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                return
-            } catch (e: Exception) {
-                // Nao e deste fabricante: tenta o proximo.
-            }
-        }
-        abrirAjustesDoApp()
     }
 
     /**

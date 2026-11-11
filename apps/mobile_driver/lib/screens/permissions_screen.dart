@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/native/ajustes_aparelho.dart';
 import '../core/native/corridas_nativo.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
@@ -40,9 +41,7 @@ const _itens = [
   _Item('sobrepor', 'Aparecer sobre outros apps',
       'Para a chamada abrir em tela cheia por cima do que estiver aberto — GPS, WhatsApp, qualquer coisa.'),
   _Item('bateria', 'Sem restrição de bateria',
-      'Para o Android não desligar o aplicativo com o celular no bolso. Na tela que abrir, toque em Bateria e escolha "Sem restrições". '
-      'Xiaomi, Redmi e Poco: na tela "Economia de bateria de apps", o Fortaleza Move Motorista tem que estar em "Apps ativos" (não em "Apps suspensos"). '
-      'Também nos ajustes do app, em Bateria, deixe "Nenhuma restrição". Depois volte e toque em "Já deixei em Apps ativos".'),
+      'Para o Android não desligar o aplicativo com o celular no bolso. Na tela que abrir, toque em Bateria e escolha "Sem restrições".'),
   _Item('telaCheia', 'Tela cheia com o celular bloqueado',
       'Para a chamada acender a tela e abrir em tela cheia, com o botão de deslizar para aceitar, mesmo com o celular bloqueado.'),
 ];
@@ -72,6 +71,16 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
   Widget build(BuildContext context) {
     final driver = context.watch<DriverState>();
     final p = driver.permissoes;
+    final perfil = driver.aparelho;
+    final familia = (perfil['familia'] ?? '').toString();
+    final extras = ((perfil['extras'] as List?) ?? const []).map((e) => e.toString()).toList();
+    final ajustes = ajustesDoAparelho(familia, extras);
+    final nome = nomeDoAparelho(perfil);
+    // Xiaomi: a bateria do Android e coberta pelo ajuste "Nenhuma restricao"
+    // da Xiaomi (o Android nao enxerga esse ajuste); um cartao so.
+    final itens = [for (final i in _itens) if (!(familia == 'xiaomi' && i.chave == 'bateria')) i];
+    final faltam = itens.where((i) => p[i.chave] != true).length +
+        ajustes.where((a) => a.obrigatorio && p['x_${a.chave}'] != true).length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -87,10 +96,43 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
             'aplicativo precisa destas autorizações. Toque em cada uma.',
             style: AppText.body.copyWith(color: AppColors.textMuted),
           ),
+          if (nome.isNotEmpty) ...[
+            const SizedBox(height: Spacing.sm),
+            Row(
+              children: [
+                const Icon(Icons.smartphone, size: 18, color: AppColors.textMuted),
+                const SizedBox(width: Spacing.xs),
+                Expanded(
+                  child: Text('Seu celular: $nome', key: const ValueKey('nome-aparelho'), style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: Spacing.sm),
+          Text(
+            faltam == 0 ? 'Tudo pronto para receber corridas.' : 'Falta${faltam == 1 ? '' : 'm'} $faltam para você poder ficar Disponível.',
+            key: const ValueKey('faltam-autorizacoes'),
+            style: AppText.heading.copyWith(color: faltam == 0 ? AppColors.primary : AppColors.danger),
+          ),
           const SizedBox(height: Spacing.lg),
-          for (final item in _itens) ...[
-            _Linha(item: item, liberada: p[item.chave] == true, xiaomi: p['xiaomi'] == true),
+          for (final item in itens) ...[
+            _Linha(item: item, liberada: p[item.chave] == true),
             const SizedBox(height: Spacing.md),
+          ],
+          if (ajustes.isNotEmpty) ...[
+            const SizedBox(height: Spacing.sm),
+            Text('Ajustes do seu ${_marca(familia)}', style: AppText.heading),
+            const SizedBox(height: Spacing.xs),
+            Text(
+              'Este celular tem ajustes próprios que fecham o aplicativo ou escondem a chamada. O Android não '
+              'avisa o aplicativo quando você muda estes ajustes: abra cada um, deixe como está explicado e toque em "Já fiz".',
+              style: AppText.body.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: Spacing.md),
+            for (final a in ajustes) ...[
+              _LinhaFabricante(ajuste: a, feito: p['x_${a.chave}'] == true),
+              const SizedBox(height: Spacing.md),
+            ],
           ],
           const SizedBox(height: Spacing.sm),
           Text(
@@ -135,8 +177,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
             },
           ),
           const SizedBox(height: Spacing.sm),
-          // Xiaomi, Oppo, Vivo, Samsung: sem isto o aparelho fecha o
-          // aplicativo em segundo plano e o chamado nao chega.
+          // Marca sem lista propria: o botao generico de iniciar sozinho.
+          if (ajustes.isEmpty && familia != 'motorola') ...[
           AppButton(
             label: 'Deixar o aplicativo iniciar sozinho',
             icon: Icons.play_circle_outline,
@@ -146,11 +188,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
           Padding(
             padding: const EdgeInsets.only(top: Spacing.xs),
             child: Text(
-              'Em celulares Xiaomi, Redmi, Poco, Oppo, Vivo e Samsung: ligue o Fortaleza Move em "Início automático" '
-              'e deixe a bateria em "Sem restrições". Sem isso o aparelho fecha o aplicativo e o chamado não chega.',
+              'Se o seu celular tiver "Início automático" (ou "Inicialização automática"), ligue o Fortaleza Move Motorista '
+              'e deixe a bateria em "Sem restrições". Sem isso o aparelho pode fechar o aplicativo e o chamado não chega.',
               style: AppText.caption.copyWith(color: AppColors.textMuted),
             ),
           ),
+          ],
           const SizedBox(height: Spacing.sm),
           AppButton(
             label: 'Verificar de novo',
@@ -164,13 +207,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindi
 }
 
 class _Linha extends StatelessWidget {
-  const _Linha({required this.item, required this.liberada, this.xiaomi = false});
+  const _Linha({required this.item, required this.liberada});
 
   final _Item item;
   final bool liberada;
-
-  /// Xiaomi/Redmi/Poco: a bateria tem a confirmacao do motorista.
-  final bool xiaomi;
 
   @override
   Widget build(BuildContext context) {
@@ -208,20 +248,93 @@ class _Linha extends StatelessWidget {
               variant: AppButtonVariant.primary,
               onPressed: () => CorridasNativo.pedir(item.chave),
             ),
-            if (item.chave == 'bateria' && xiaomi) ...[
-              const SizedBox(height: Spacing.sm),
-              AppButton(
-                key: const ValueKey('confirmar-bateria-xiaomi'),
-                label: 'Já deixei em Apps ativos',
-                variant: AppButtonVariant.secondary,
-                onPressed: () async {
-                  final driver = context.read<DriverState>();
-                  await CorridasNativo.confirmarBateria(true);
-                  await driver.checarPermissoes();
-                },
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _marca(String familia) => switch (familia) {
+      'xiaomi' => 'Xiaomi',
+      'samsung' => 'Samsung',
+      'oppo' => 'Oppo / Realme / OnePlus',
+      'vivo' => 'Vivo',
+      'huawei' => 'Huawei',
+      'honor' => 'Honor',
+      'asus' => 'Asus',
+      _ => 'celular',
+    };
+
+/// Ajuste do fabricante: abre a tela certa e o motorista confirma.
+class _LinhaFabricante extends StatelessWidget {
+  const _LinhaFabricante({required this.ajuste, required this.feito});
+
+  final AjusteAparelho ajuste;
+  final bool feito;
+
+  Future<void> _confirmar(BuildContext context, bool sim) async {
+    final driver = context.read<DriverState>();
+    await CorridasNativo.confirmarAjuste(ajuste.chave, sim);
+    driver.marcarAjuste(ajuste.chave, sim);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cor = feito ? AppColors.primary : (ajuste.obrigatorio ? AppColors.danger : AppColors.textMuted);
+    return Container(
+      key: ValueKey('ajuste-${ajuste.chave}'),
+      padding: const EdgeInsets.all(Spacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: feito || !ajuste.obrigatorio ? AppColors.border : cor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(feito ? Icons.check_circle : Icons.error_outline, color: cor, size: 20),
+              const SizedBox(width: Spacing.sm),
+              Expanded(child: Text(ajuste.titulo, style: AppText.heading)),
+              Text(
+                feito ? 'feito' : (ajuste.obrigatorio ? 'obrigatório' : 'recomendado'),
+                style: AppText.body.copyWith(color: cor),
               ),
             ],
-          ],
+          ),
+          const SizedBox(height: Spacing.xs),
+          Text(ajuste.passos, style: AppText.body.copyWith(color: AppColors.textMuted)),
+          const SizedBox(height: Spacing.md),
+          if (!feito) ...[
+            if (ajuste.temTela) ...[
+              AppButton(
+                key: ValueKey('abrir-${ajuste.chave}'),
+                label: 'Abrir ajuste',
+                variant: AppButtonVariant.primary,
+                onPressed: () => CorridasNativo.abrirAjuste(ajuste.chave),
+              ),
+              const SizedBox(height: Spacing.sm),
+            ],
+            AppButton(
+              key: ValueKey('feito-${ajuste.chave}'),
+              label: 'Já fiz',
+              variant: AppButtonVariant.secondary,
+              onPressed: () => _confirmar(context, true),
+            ),
+          ] else
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: ValueKey('refazer-${ajuste.chave}'),
+                onPressed: () async {
+                  await _confirmar(context, false);
+                  if (ajuste.temTela) await CorridasNativo.abrirAjuste(ajuste.chave);
+                },
+                child: const Text('Conferir de novo'),
+              ),
+            ),
         ],
       ),
     );
