@@ -24,7 +24,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq age
       - name: Baixar, conferir e criptografar
         env:
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_EMAIL: fortalezamovegtba@gmail.com # e-mail publico da Central (11/11/2026); a protecao e o OTP_CHAVE_TESTE
           OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
           REL: /tmp/copia-banco.txt
           SAIDA: copia
