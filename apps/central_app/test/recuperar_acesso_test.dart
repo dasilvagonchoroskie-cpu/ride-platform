@@ -13,6 +13,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _id = '44444444-4444-4444-8444-444444444444';
 
@@ -84,6 +85,8 @@ void main() {
   }
 
   setUp(() {
+    // O cliente le o login guardado antes de cada pedido (igual ao painel_test).
+    SharedPreferences.setMockInitialValues({'ride.accessToken': 'token-de-teste'});
     pedidos = [];
     liberar = true;
   });
