@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v17';
+const CACHE = 'fm-crm-v18';
 const ASSETS = [
   '/',
   '/index.html',
@@ -60,7 +60,11 @@ self.addEventListener('push', (event) => {
   try { d = event.data ? event.data.json() : {}; } catch (err) { d = { titulo: 'CRM Fortaleza Move', corpo: event.data ? event.data.text() : '' }; }
   const urgente = d.tipo === 'transferencia';
   const discreto = d.tipo === 'ia';
-  event.waitUntil(self.registration.showNotification(d.titulo || 'CRM Fortaleza Move', {
+  event.waitUntil((async () => {
+    // CRM aberto e na tela: ele mesmo toca o som e mostra o aviso (sem notificação dupla). Teste sempre aparece.
+    const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (d.tipo !== 'teste' && janelas.some((c) => c.visibilityState === 'visible')) return;
+    await self.registration.showNotification(d.titulo || 'CRM Fortaleza Move', {
     body: d.corpo || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
@@ -70,7 +74,8 @@ self.addEventListener('push', (event) => {
     requireInteraction: urgente,
     vibrate: urgente ? [300, 150, 300, 150, 600] : discreto ? [] : [120, 80, 120],
     data: { url: d.url || '/#/conversas' }
-  }));
+    });
+  })());
 });
 
 // O serviço de push trocou a inscrição: refaz e avisa o CRM (mantém as escolhas do aparelho).

@@ -51,7 +51,7 @@ export async function renderFinance(view, state) {
       <div class="page-head">
         <div>
           <div class="eyebrow">Planejamento financeiro</div>
-          <h2>Simulação de arrecadação</h2>
+          <h2>Projeções e simulações</h2>
           <p class="sub">Comissão padrão da plataforma: ${data.comissao_padrao}% por corrida concluída · premissas editáveis</p>
         </div>
         <div class="page-actions">
@@ -67,7 +67,7 @@ export async function renderFinance(view, state) {
       <div class="scenario-tabs">
         ${data.items.map((c) => `<button class="scenario-tab ${c.id === ativo.id ? 'active' : ''}" data-cenario="${c.id}">
           <strong>${ui.esc(c.nome)}</strong>
-          <span>${ui.fmtInt(c.motoristas_ativos)} motoristas · ${ui.fmtMoney(c.resultado.receita_plataforma)}/mês</span>
+          <span>${ui.fmtInt(c.motoristas_ativos)} motoristas · receita projetada ${ui.fmtMoney(c.resultado.receita_plataforma)}/mês</span>
         </button>`).join('')}
       </div>
 
@@ -119,31 +119,33 @@ export async function renderFinance(view, state) {
         <div class="stack">
           <div class="card">
             <div class="card-head">
-              <div><h3>Resultado estimado</h3><p class="sub">Cenário ${ui.esc(ativo.nome)} · projeção mensal</p></div>
-              <span class="badge gold">Simulação</span>
+              <div><h3>Projeção mensal</h3><p class="sub">Cenário ${ui.esc(ativo.nome)} · calculada pelas premissas, não é resultado realizado</p></div>
+              <span class="badge gold">Projeção</span>
             </div>
             <div class="card-body">
-              <div class="result-hero">
-                <div class="result-box primary">
-                  <div class="lbl">Receita da plataforma</div>
-                  <div class="val" id="r-receita">${ui.fmtMoney(r.receita_plataforma)}</div>
-                  <div class="hint" id="r-receita-hint">${ui.fmtPct(ativo.comissao_pct)} sobre ${ui.fmtMoney(r.faturamento_bruto)}</div>
-                </div>
-                <div class="result-box ${r.resultado_operacional < 0 ? 'negative' : 'positive'}">
-                  <div class="lbl">Resultado operacional</div>
-                  <div class="val" id="r-resultado">${ui.fmtMoney(r.resultado_operacional)}</div>
-                  <div class="hint" id="r-resultado-hint">Margem de ${ui.fmtPct(r.margem_pct)}</div>
-                </div>
+              <div class="estimate-note warn hidden" id="r-incompleta" style="margin-bottom:12px">${ui.icon('alert', 15)}
+                <span><b>Simulação incompleta:</b> nenhum custo mensal foi informado. Sem custos, o resultado abaixo é só a receita projetada — não é lucro. Cadastre os custos (hospedagem, marketing, equipe, impostos…) para ver o resultado operacional.</span></div>
+
+              <div class="section-title">1. Receita (projeção)</div>
+              <div class="fin-linhas">
+                <div class="spread"><span class="muted">Corridas por mês</span><b id="r-corridas"></b></div>
+                <div class="spread"><span class="muted">Corridas por dia</span><b id="r-corridas-dia"></b></div>
+                <div class="spread"><span class="muted">Valor movimentado nas corridas</span><b id="r-faturamento"></b></div>
+                <div class="spread"><span class="muted">Repasse aos motoristas</span><b id="r-repasse"></b></div>
+                <div class="spread destaque"><span>Receita bruta da plataforma <small class="muted" id="r-receita-hint"></small></span><b id="r-receita"></b></div>
               </div>
 
-              <div class="section-title">Detalhamento</div>
-              <div class="detail-list" style="grid-template-columns:1fr">
-                <div class="spread" style="padding:7px 0;border-bottom:1px dashed #eef2f9"><span class="muted">Corridas estimadas por mês</span><b id="r-corridas">${ui.fmtInt(r.corridas_mes)}</b></div>
-                <div class="spread" style="padding:7px 0;border-bottom:1px dashed #eef2f9"><span class="muted">Corridas por dia</span><b id="r-corridas-dia">${ui.fmtInt(r.corridas_dia)}</b></div>
-                <div class="spread" style="padding:7px 0;border-bottom:1px dashed #eef2f9"><span class="muted">Faturamento bruto movimentado</span><b id="r-faturamento">${ui.fmtMoney(r.faturamento_bruto)}</b></div>
-                <div class="spread" style="padding:7px 0;border-bottom:1px dashed #eef2f9"><span class="muted">Repasse aos motoristas (antes de outros custos)</span><b id="r-repasse">${ui.fmtMoney(r.repasse_motoristas)}</b></div>
-                <div class="spread" style="padding:7px 0;border-bottom:1px dashed #eef2f9"><span class="muted">Custos mensais</span><b id="r-custos">${ui.fmtMoney(r.custos_total)}</b></div>
-                <div class="spread" style="padding:7px 0"><span class="muted">Custo por corrida</span><b id="r-custo-corrida">${ui.fmtMoney(r.custo_por_corrida)}</b></div>
+              <div class="section-title">2. Custos mensais (informados por você)</div>
+              <div class="fin-linhas">
+                <div class="spread destaque"><span>Total de custos</span><b id="r-custos"></b></div>
+                <div class="spread"><span class="muted">Custo por corrida</span><b id="r-custo-corrida"></b></div>
+              </div>
+
+              <div class="section-title">3. Resultado operacional (projeção)</div>
+              <div class="result-box" id="r-resultado-box">
+                <div class="lbl">Receita bruta − custos</div>
+                <div class="val" id="r-resultado"></div>
+                <div class="hint" id="r-resultado-hint"></div>
               </div>
 
               <div class="formula" id="r-equilibrio">${r.ponto_equilibrio_corridas !== null ? `Ponto de equilíbrio: ${ui.fmtInt(r.ponto_equilibrio_corridas)} corridas/mês para cobrir os custos cadastrados.` : 'Informe o valor médio e a comissão para calcular o ponto de equilíbrio.'}</div>
@@ -158,6 +160,7 @@ export async function renderFinance(view, state) {
       </div>`;
 
     bind();
+    recalc();
     loadHistory();
   }
 
@@ -177,20 +180,30 @@ export async function renderFinance(view, state) {
   function recalc() {
     const r = compute(readPremissas(), readCustos());
     ativo.resultado = r;
+    // Sem nenhum custo informado, não existe resultado de verdade: mostra a simulação como incompleta (sem "margem de 100%").
+    const semCustos = !readCustos().some((c) => (Number(c.valor) || 0) > 0);
+    view.querySelector('#r-incompleta').classList.toggle('hidden', !semCustos);
     view.querySelector('#r-receita').textContent = ui.fmtMoney(r.receita_plataforma);
-    view.querySelector('#r-receita-hint').textContent = `${ui.fmtPct(Number(view.querySelector('#p-comissao_pct').value) || 0)} sobre ${ui.fmtMoney(r.faturamento_bruto)}`;
-    view.querySelector('#r-resultado').textContent = ui.fmtMoney(r.resultado_operacional);
-    view.querySelector('#r-resultado-hint').textContent = `Margem de ${ui.fmtPct(r.margem_pct)}`;
-    view.querySelector('#r-resultado').parentElement.classList.toggle('negative', r.resultado_operacional < 0);
-    view.querySelector('#r-resultado').parentElement.classList.toggle('positive', r.resultado_operacional >= 0);
+    view.querySelector('#r-receita-hint').textContent = `(${ui.fmtPct(Number(view.querySelector('#p-comissao_pct').value) || 0)} de comissão)`;
+    const box = view.querySelector('#r-resultado-box');
+    if (semCustos) {
+      view.querySelector('#r-resultado').textContent = 'Incompleto';
+      view.querySelector('#r-resultado-hint').textContent = 'Informe os custos mensais para calcular o resultado e a margem.';
+      box.classList.remove('negative', 'positive');
+    } else {
+      view.querySelector('#r-resultado').textContent = ui.fmtMoney(r.resultado_operacional);
+      view.querySelector('#r-resultado-hint').textContent = `Margem projetada de ${ui.fmtPct(r.margem_pct)} sobre a receita bruta`;
+      box.classList.toggle('negative', r.resultado_operacional < 0);
+      box.classList.toggle('positive', r.resultado_operacional >= 0);
+    }
     view.querySelector('#r-corridas').textContent = ui.fmtInt(r.corridas_mes);
     view.querySelector('#r-corridas-dia').textContent = ui.fmtInt(r.corridas_dia);
     view.querySelector('#r-faturamento').textContent = ui.fmtMoney(r.faturamento_bruto);
     view.querySelector('#r-repasse').textContent = ui.fmtMoney(r.repasse_motoristas);
-    view.querySelector('#r-custos').textContent = ui.fmtMoney(r.custos_total);
-    view.querySelector('#fin-custos-total').textContent = ui.fmtMoney(r.custos_total);
-    view.querySelector('#r-custo-corrida').textContent = ui.fmtMoney(r.custo_por_corrida);
-    view.querySelector('#r-equilibrio').textContent = r.ponto_equilibrio_corridas !== null
+    view.querySelector('#r-custos').textContent = semCustos ? 'Não informados' : ui.fmtMoney(r.custos_total);
+    view.querySelector('#fin-custos-total').textContent = semCustos ? 'Não informados' : ui.fmtMoney(r.custos_total);
+    view.querySelector('#r-custo-corrida').textContent = semCustos ? '—' : ui.fmtMoney(r.custo_por_corrida);
+    view.querySelector('#r-equilibrio').textContent = semCustos ? 'Ponto de equilíbrio: informe os custos mensais para calcular.' : r.ponto_equilibrio_corridas !== null
       ? `Ponto de equilíbrio: ${ui.fmtInt(r.ponto_equilibrio_corridas)} corridas/mês para cobrir os custos cadastrados.`
       : 'Informe o valor médio e a comissão para calcular o ponto de equilíbrio.';
   }
@@ -208,8 +221,8 @@ export async function renderFinance(view, state) {
           { label: 'Data', render: (r) => `${ui.fmtDate(r.created_at)}<span class="sub">${ui.esc(r.autor || '')}</span>` },
           { label: 'Cenário', render: (r) => `<b>${ui.esc(r.cenario)}</b>` },
           { label: 'Corridas/mês', render: (r) => ui.fmtInt(r.resultados.corridas_mes) },
-          { label: 'Receita estimada', render: (r) => ui.fmtMoney(r.resultados.receita_plataforma) },
-          { label: 'Resultado', render: (r) => `<b style="color:${r.resultados.resultado_operacional < 0 ? '#cf3d2b' : '#0b8a5f'}">${ui.fmtMoney(r.resultados.resultado_operacional)}</b>` },
+          { label: 'Receita projetada', render: (r) => ui.fmtMoney(r.resultados.receita_plataforma) },
+          { label: 'Resultado projetado', render: (r) => !(Number(r.resultados.custos_total) > 0) ? '<span class="muted">Incompleto (sem custos)</span>' : `<b style="color:${r.resultados.resultado_operacional < 0 ? '#cf3d2b' : '#0b8a5f'}">${ui.fmtMoney(r.resultados.resultado_operacional)}</b>` },
           { label: 'Observação', render: (r) => r.observacao ? ui.esc(r.observacao) : '<span class="muted">—</span>' },
           { label: 'Ações', cls: 'right row-actions-cell', render: (r) => (state.meta.can && state.meta.can.excluir_financeiro) ? `<button class="btn btn-sm btn-ghost" data-del-sim="${r.id}">${ui.icon('trash', 15)}</button>` : '' }
         ],

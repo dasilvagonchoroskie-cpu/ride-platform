@@ -192,6 +192,17 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   `contratado_em`, registra no histórico e na auditoria. `GET /api/motoristas/:id` devolve também `ficha`
   (conversa, documentos recebidos, último resumo da IA).
 
+## Dashboard, notificações e planejamento (11/11/2026)
+- Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados
+  (aprovados + contratados, com o detalhe) e contratados. Documento pendente não muda a etapa (aparece à parte).
+  `GET /api/dashboard` não traz mais `financeiro`: a simulação fica só em Planejamento financeiro.
+- Push com prioridade alta em todos os tipos (com prioridade normal/baixa o Android segurava o aviso com a tela bloqueada);
+  com o CRM na tela, o service worker não mostra notificação do sistema (o próprio CRM avisa, sem duplicar); inscrições que
+  falham 8 vezes seguidas ou respondem 404/410 saem; a inscrição é refeita se a chave do servidor mudar. Log por envio
+  (só o tipo e contagens).
+- Planejamento financeiro: receita, custos e resultado separados e marcados como projeção; sem custos informados, a tela
+  diz "Simulação incompleta" e não mostra resultado nem margem.
+
 ## E-mail de acesso e "Esqueci minha senha"
 - Tela de login: botão "Esqueci minha senha" (link por e-mail). Sem envio de e-mail ligado no servidor, a tela explica
   os outros caminhos (código de recuperação, administrador redefine a senha do gestor, código pelo painel do servidor).

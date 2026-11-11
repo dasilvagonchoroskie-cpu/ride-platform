@@ -151,3 +151,18 @@ test('A1: resposta com anotação interna não é enviada (motivo no painel)', a
   assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 1, 'só a primeira resposta saiu');
   assert.match(ia.ultimaAnalise(r1.conversaId).aplicado_resumo, /repetia anotação interna/);
 });
+
+test('motorista já contratado que manda documento: o documento é marcado, mas a contratação não muda', async () => {
+  const { db, ia, receber, setResposta } = montar();
+  const r1 = receber('oi', 'K1');
+  setResposta({ resumo: 'x', perfil: 'motorista', campos: { nome: 'Evandro', cidade: 'Goiatuba' }, resposta_sugerida: 'Olá!' });
+  await ia.executarAutomatico(r1.conversaId);
+  const id = db.prepare('SELECT id FROM motoristas').get().id;
+  db.prepare("UPDATE motoristas SET situacao = 'Contratado' WHERE id = ?").run(id);
+  receber('[imagem] 📎 Tipo: CNH\nNome: Evandro\nCategoria da CNH: B', 'K2');
+  setResposta({ resumo: 'mandou a CNH', perfil: 'motorista', campos: {}, resposta_sugerida: 'Recebemos.' });
+  await ia.executarAutomatico(r1.conversaId, { forcar: true });
+  const m = db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id);
+  assert.equal(m.doc_cnh, 'Recebido — conferir');
+  assert.equal(m.situacao, 'Contratado', 'documento não rebaixa nem promove a etapa de quem já foi contratado');
+});

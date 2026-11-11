@@ -213,6 +213,15 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
   assert.equal(ct.j.item.situacao, 'Contratado');
   assert.ok(ct.j.item.contratado_em);
   assert.equal((await g('POST', `/motoristas/${id1}/contratar`, { confirmo: true })).s, 409);
+  // Dashboard: o contratado sai de "interessados" e entra em aprovados/contratados (com documentos ainda pendentes).
+  const dash = (await g('GET', '/dashboard')).j;
+  assert.equal(dash.financeiro, undefined, 'simulação financeira saiu do Dashboard (fica em Planejamento financeiro)');
+  const k = dash.kpis;
+  assert.equal(k.motoristas_total, 2);
+  assert.equal(k.motoristas_interessados, 1, 'só o novo interessado');
+  assert.equal(k.motoristas_contratados, 1);
+  assert.equal(k.motoristas_aprovados, 0);
+  assert.equal(k.motoristas_docs_a_conferir, 1, 'documento pendente não muda a contratação');
   const fech = await g('GET', '/motoristas?etapa=fechados');
   assert.deepEqual(fech.j.items.map((x) => x.id), [id1]);
   const and = await g('GET', '/motoristas?etapa=andamento');

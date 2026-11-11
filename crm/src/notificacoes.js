@@ -10,6 +10,7 @@ const path = require('path');
 const TIPOS = ['mensagem', 'ia', 'transferencia'];
 const RETENCAO_DIAS = 7;
 const INTERVALO_MESMA_CONVERSA_MS = 60 * 1000; // mensagem/IA: no máximo 1 push por conversa por minuto
+const MAX_FALHAS = 8; // falhas seguidas (sem ser 404/410) para descartar uma inscrição
 const MAX_CORPO = 140;
 
 // Só serviços de push conhecidos (o servidor faz POST no endereço da inscrição: lista fechada evita SSRF).
@@ -96,14 +97,19 @@ function createNotificacoes({ db, dataDir, waStore, publicUrl, webpush, log = co
     lista = lista.filter((s) => ativos.includes(s.user_id) && (!coluna || s[coluna]));
     if (!lista.length) return 0;
     const k = vapid();
+    // Prioridade ALTA para todos os tipos: no Android, "normal"/"low" ficam retidos pelo Firebase enquanto o celular
+    // está parado com a tela bloqueada e só chegam quando ele "acorda" (era o atraso visto pelo dono em 11/11).
+    // Cada push sempre mostra uma notificação visível, então a prioridade alta é permitida pelo Android.
     const opcoes = {
-      TTL: n.tipo === 'transferencia' ? 24 * 3600 : 3600,
-      urgency: n.tipo === 'transferencia' ? 'high' : n.tipo === 'ia' ? 'low' : 'normal',
+      TTL: n.tipo === 'transferencia' ? 24 * 3600 : 6 * 3600,
+      urgency: 'high',
       vapidDetails: { subject: publicUrl && /^https:/.test(publicUrl) ? publicUrl : 'mailto:crm@fortalezamove.invalid', publicKey: k.publicKey, privateKey: k.privateKey },
       timeout: 15000
     };
     const corpo = payload(n);
     let ok = 0;
+    let falhas = 0;
+    let removidas = 0;
     await Promise.all(lista.map(async (s) => {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, corpo, opcoes);
@@ -111,14 +117,19 @@ function createNotificacoes({ db, dataDir, waStore, publicUrl, webpush, log = co
         db.prepare('UPDATE push_inscricoes SET ultimo_envio_em = ?, falhas = 0 WHERE id = ?').run(agora(), s.id);
       } catch (err) {
         const status = err && err.statusCode;
-        if (status === 404 || status === 410) {
-          db.prepare('DELETE FROM push_inscricoes WHERE id = ?').run(s.id); // aparelho desinscrito
+        if (status === 404 || status === 410 || (s.falhas || 0) + 1 >= MAX_FALHAS) {
+          // Desinscrito/expirado (404/410) ou falhando sempre: sai da lista. O app se inscreve de novo ao abrir.
+          db.prepare('DELETE FROM push_inscricoes WHERE id = ?').run(s.id);
+          removidas += 1;
         } else {
           db.prepare('UPDATE push_inscricoes SET falhas = falhas + 1 WHERE id = ?').run(s.id);
+          falhas += 1;
           log.error(`[notificações] push falhou (${status || err.message})`);
         }
       }
     }));
+    // Registro para diagnóstico: só o tipo e as contagens (nada da mensagem nem do aparelho).
+    if (log.log) log.log(`[notificações] push ${n.tipo}: ${ok} entregue(s) ao serviço de push, ${falhas} falha(s), ${removidas} inscrição(ões) removida(s)`);
     return ok;
   }
 
@@ -136,6 +147,11 @@ function createNotificacoes({ db, dataDir, waStore, publicUrl, webpush, log = co
     await enviarPush(reg).catch((err) => log.error('[notificações]', err.message));
     return reg;
   }
+
+  try {
+    const t = db.prepare('SELECT COUNT(*) c FROM push_inscricoes').get().c;
+    if (log.log) log.log(`[notificações] ${t} aparelho(s) inscrito(s) para receber push`);
+  } catch (e) { /* tabela ainda não existe */ }
 
   waStore.ouvir((evt) => { processar(evt).catch((err) => log.error('[notificações]', err.message)); });
 

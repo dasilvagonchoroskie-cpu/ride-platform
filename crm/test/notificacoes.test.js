@@ -25,7 +25,7 @@ function montar() {
   const enviados = [];
   const webpush = {
     generateVAPIDKeys: () => ({ publicKey: 'PUB', privateKey: 'PRIV' }),
-    sendNotification: async (sub, corpo, opcoes) => { enviados.push({ sub, corpo: JSON.parse(corpo), opcoes }); if (sub.endpoint.includes('morto')) throw Object.assign(new Error('gone'), { statusCode: 410 }); }
+    sendNotification: async (sub, corpo, opcoes) => { enviados.push({ sub, corpo: JSON.parse(corpo), opcoes }); if (sub.endpoint.includes('morto')) throw Object.assign(new Error('gone'), { statusCode: 410 }); if (sub.endpoint.includes('ruim')) throw Object.assign(new Error('erro'), { statusCode: 500 }); }
   };
   const notif = createNotificacoes({ db, dataDir: dir, waStore, webpush, publicUrl: 'https://crm.exemplo', log: { error() {} } });
   const provider = { completar: async ({ system }) => ({ texto: JSON.stringify(/Central de Atendimento/.test(system) ? { resposta: 'Posso ajudar!' } : { resumo: 'x', perfil: 'desconhecido', campos: {}, atendimento: { opcao: 'indefinido', transferir: false } }), modelo: 'f', tokensEntrada: 1, tokensSaida: 1 }) };
@@ -44,7 +44,7 @@ function montar() {
   return { db, notif, enviados, receber, uid, dir };
 }
 
-test('mensagem nova e IA respondendo: feed + push com prioridades diferentes; IA silenciosa', async () => {
+test('mensagem nova e IA respondendo: feed + push com prioridade alta; IA silenciosa', async () => {
   const { notif, enviados, receber, uid } = montar();
   assert.equal(notif.inscrever(uid, { subscription: SUB }).ok, true);
   await receber('oi');
@@ -53,8 +53,10 @@ test('mensagem nova e IA respondendo: feed + push com prioridades diferentes; IA
   assert.match(itens[0].titulo, /^💬 Maria/);
   assert.match(itens[1].titulo, /^🤖 IA respondeu Maria/);
   assert.equal(enviados.length, 2);
-  assert.equal(enviados[0].opcoes.urgency, 'normal');
-  assert.equal(enviados[1].opcoes.urgency, 'low');
+  // Prioridade alta em todos: com "normal"/"low" o Android segura o push com a tela bloqueada (atraso real em 11/11).
+  assert.equal(enviados[0].opcoes.urgency, 'high');
+  assert.equal(enviados[1].opcoes.urgency, 'high');
+  assert.ok(enviados[0].opcoes.TTL >= 6 * 3600, 'mensagem não se perde se o celular ficar horas sem rede');
   assert.match(enviados[0].corpo.url, /^https:\/\/crm\.exemplo\/#\/conversas\?c=\d+$/);
   assert.equal(enviados[0].corpo.tipo, 'mensagem');
 });
@@ -119,4 +121,15 @@ test('renovação da inscrição (ao abrir o app ou troca pelo serviço de push)
   linha = db.prepare('SELECT * FROM push_inscricoes WHERE endpoint = ?').get(nova.endpoint);
   assert.equal(linha.avisar_ia, 0);
   assert.equal(linha.user_id, uid);
+});
+
+test('inscrição que falha sempre (sem ser 404/410) é descartada depois de várias tentativas', async () => {
+  const { notif, uid, db } = montar();
+  const ruim = { ...SUB, endpoint: 'https://fcm.googleapis.com/fcm/send/ruim500' };
+  notif.inscrever(uid, { subscription: ruim });
+  await notif.teste(uid);
+  assert.equal(db.prepare('SELECT falhas FROM push_inscricoes WHERE endpoint = ?').get(ruim.endpoint).falhas, 1, 'uma falha: continua inscrita');
+  db.prepare('UPDATE push_inscricoes SET falhas = 7 WHERE endpoint = ?').run(ruim.endpoint);
+  await notif.teste(uid);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM push_inscricoes WHERE endpoint = ?').get(ruim.endpoint).c, 0, 'oitava falha seguida: descartada');
 });

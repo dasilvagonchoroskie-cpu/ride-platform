@@ -57,6 +57,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   (`fichaDoCadastro` em routes.js). Front: abas Em andamento/✅ Fechados/Todos, linha verde (`linha-fechada`), badge
   `fechado`, "Ficha do motorista" em `entity.js`. Testado: seguranca.test.js + navegador (celular) com canal/IA falsos.
 
+## Ordem de serviço de 11/11 tarde (dashboard, push, financeiro, APK)
+- Dashboard: `motoristas_interessados` agora é só 'Novo interessado' (antes era o TOTAL e incluía contratados);
+  `motoristas_total`, `motoristas_docs_a_conferir` novos; card "Motoristas contratados". Financeiro saiu do Dashboard.
+- Push: `urgency: 'high'` para todos os tipos (normal/low ficavam retidos no Android em Doze), TTL 6 h (transferência 24 h);
+  `MAX_FALHAS` 8; log `[notificações] push <tipo>: N entregue(s)...` e contagem de inscritos ao ligar; sw não mostra
+  notificação com o CRM visível; feed não toca som de aviso com mais de 1 min; `sincronizarPush` refaz inscrição com chave antiga.
+- Financeiro (`finance.js`): blocos Receita / Custos / Resultado, "Simulação incompleta" sem custos.
+- APK: `ManageDataLauncherActivity` declarada no manifesto do app-twa (a biblioteca cria o atalho "Configurações do site"
+  apontando para ela; faltava no manifesto → erro "Component class ... does not exist").
+
 ## E-mail de acesso e recuperação na tela de login (11/11/2026, pedido do dono)
 - Login com botão "Esqueci minha senha" visível; sem e-mail configurado a tela mostra os caminhos alternativos
   (`/auth/status.recuperacao_email`). `PATCH /users/:id` aceita `email` (admin; 422 inválido, 409 repetido; derruba as

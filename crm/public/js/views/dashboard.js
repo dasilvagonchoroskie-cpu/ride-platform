@@ -14,7 +14,7 @@ export async function renderDashboard(view, state) {
   const d = await api.get('/dashboard');
   const k = d.kpis;
   const nome = state.user.nome.split(' ')[0];
-  const semDados = !k.motoristas_interessados && !k.passageiros_interessados && !k.parceiros_negociacao && !k.atendimentos_pendentes && !k.campanhas_andamento;
+  const semDados = !k.motoristas_total && !k.passageiros_interessados && !k.parceiros_negociacao && !k.atendimentos_pendentes && !k.campanhas_andamento;
 
   const acoes = d.proximas_acoes.length
     ? d.proximas_acoes.map((a) => `
@@ -79,9 +79,10 @@ export async function renderDashboard(view, state) {
     </div>` : ''}
 
     <div class="kpi-grid">
-      ${kpiCard({ icon: 'steering', label: 'Motoristas interessados', value: k.motoristas_interessados, foot: 'Total de registros na base' })}
+      ${kpiCard({ icon: 'steering', label: 'Motoristas interessados', value: k.motoristas_interessados, foot: `Novos, ainda sem contato · ${ui.fmtInt(k.motoristas_total)} no total` })}
       ${kpiCard({ icon: 'list', label: 'Motoristas em processo de cadastro', value: k.motoristas_em_processo, foot: 'Contato até análise', tone: 'gold' })}
-      ${kpiCard({ icon: 'check', label: 'Motoristas aprovados', value: k.motoristas_aprovados, foot: 'Prontos para operar', tone: 'green' })}
+      ${kpiCard({ icon: 'check', label: 'Motoristas aprovados', value: k.motoristas_aprovados + k.motoristas_contratados, foot: `${ui.fmtInt(k.motoristas_contratados)} contratado(s) · ${ui.fmtInt(k.motoristas_aprovados)} aguardando contratação`, tone: 'green' })}
+      ${kpiCard({ icon: 'users', label: 'Motoristas contratados', value: k.motoristas_contratados, foot: k.motoristas_docs_a_conferir ? `Trabalhando · ${ui.fmtInt(k.motoristas_docs_a_conferir)} aprovado(s)/contratado(s) com documentos a conferir` : 'Trabalhando · documentos em dia', tone: 'green' })}
       ${kpiCard({ icon: 'users', label: 'Passageiros interessados', value: k.passageiros_interessados, foot: `${ui.fmtInt(k.passageiros_cadastrados)} já cadastrados` })}
       ${kpiCard({ icon: 'store', label: 'Parceiros em negociação', value: k.parceiros_negociacao, foot: 'Clube de Vantagens' })}
       ${kpiCard({ icon: 'building', label: 'Parcerias confirmadas', value: k.parcerias_confirmadas, foot: 'Confirmação manual', tone: 'green' })}
@@ -91,7 +92,7 @@ export async function renderDashboard(view, state) {
       ${kpiCard({ icon: 'alert', label: 'Tarefas atrasadas', value: k.tarefas_atrasadas, foot: 'Vencidas e em aberto', tone: k.tarefas_atrasadas ? 'red' : '' })}
     </div>
 
-    <div class="grid-2" style="margin-top:16px">
+    <div style="margin-top:16px">
       <div class="card">
         <div class="card-head">
           <div><h3>Evolução dos últimos 6 meses</h3><p class="sub">Novos motoristas e passageiros por mês</p></div>
@@ -104,39 +105,6 @@ export async function renderDashboard(view, state) {
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-head">
-          <div><h3>Resumo financeiro estimado</h3><p class="sub">Cenário ${ui.esc(d.financeiro ? d.financeiro.cenario : 'não configurado')} · valores simulados</p></div>
-          <button class="btn btn-sm btn-soft" data-go="financeiro">Abrir simulação</button>
-        </div>
-        <div class="card-body">
-          ${d.financeiro ? `
-            <div class="result-hero">
-              <div class="result-box primary">
-                <div class="lbl">Receita da plataforma / mês</div>
-                <div class="val">${ui.fmtMoney(d.financeiro.receita_plataforma)}</div>
-                <div class="hint">${ui.fmtPct(d.financeiro.margem_pct)} de margem sobre a receita</div>
-              </div>
-              <div class="result-box ${d.financeiro.resultado_operacional < 0 ? 'negative' : 'positive'}">
-                <div class="lbl">Resultado operacional</div>
-                <div class="val">${ui.fmtMoney(d.financeiro.resultado_operacional)}</div>
-                <div class="hint">Receita menos custos mensais</div>
-              </div>
-              <div class="result-box">
-                <div class="lbl">Corridas estimadas / mês</div>
-                <div class="val">${ui.fmtInt(d.financeiro.corridas_mes)}</div>
-                <div class="hint">${ui.fmtMoney(d.financeiro.faturamento_bruto)} movimentados</div>
-              </div>
-              <div class="result-box">
-                <div class="lbl">Custos mensais</div>
-                <div class="val">${ui.fmtMoney(d.financeiro.custos_total)}</div>
-                <div class="hint">Cadastrados no cenário</div>
-              </div>
-            </div>
-            <div class="estimate-note" style="margin-top:14px">${ui.icon('alert', 15)}<span>Projeção calculada a partir das premissas configuradas. Não é garantia de arrecadação.</span></div>
-          ` : '<div class="empty" style="padding:26px 12px"><p>Nenhum cenário financeiro configurado.</p></div>'}
-        </div>
-      </div>
     </div>
 
     <div class="grid-2" style="margin-top:16px">

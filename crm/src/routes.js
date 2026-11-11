@@ -674,10 +674,15 @@ router.get('/dashboard', (req, res) => {
   const n = (sql, ...p) => db.prepare(sql).get(...p).c;
 
   const kpis = {
-    motoristas_interessados: n('SELECT COUNT(*) c FROM motoristas'),
+    // Cada motorista conta em UMA etapa: interessado (novo) → em processo → aprovado → contratado. Documentos são outra
+    // coisa: um contratado pode ter documento a conferir, e isso não muda a etapa dele.
+    motoristas_total: n('SELECT COUNT(*) c FROM motoristas'),
+    motoristas_interessados: n("SELECT COUNT(*) c FROM motoristas WHERE situacao = 'Novo interessado'"),
     motoristas_em_processo: n("SELECT COUNT(*) c FROM motoristas WHERE situacao IN ('Primeiro contato realizado','Aguardando retorno','Cadastro em andamento','Cadastro em análise')"),
     motoristas_aprovados: n("SELECT COUNT(*) c FROM motoristas WHERE situacao = 'Aprovado'"),
     motoristas_contratados: n("SELECT COUNT(*) c FROM motoristas WHERE situacao = 'Contratado'"),
+    motoristas_nao_prosseguiram: n("SELECT COUNT(*) c FROM motoristas WHERE situacao = 'Não prosseguiu'"),
+    motoristas_docs_a_conferir: n("SELECT COUNT(*) c FROM motoristas WHERE situacao IN ('Aprovado','Contratado') AND COALESCE(documentos,'') <> 'Conferidos'"),
     passageiros_interessados: n('SELECT COUNT(*) c FROM passageiros'),
     passageiros_cadastrados: n("SELECT COUNT(*) c FROM passageiros WHERE situacao = 'Usuário cadastrado'"),
     parceiros_negociacao: n("SELECT COUNT(*) c FROM parceiros WHERE situacao IN ('Identificado','Primeiro contato','Aguardando resposta','Em negociação','Proposta apresentada')"),
@@ -738,8 +743,6 @@ router.get('/dashboard', (req, res) => {
     .slice(0, 8)
     .map((r) => ({ ...r, atrasado: r.data < hoje }));
 
-  const cenarioRow = db.prepare("SELECT * FROM cenarios WHERE nome = 'Intermediário'").get() || db.prepare('SELECT * FROM cenarios ORDER BY id LIMIT 1').get();
-  const financeiro = cenarioRow ? { cenario: cenarioRow.nome, ...computeCenario(cenarioRow, db.prepare('SELECT * FROM cenario_custos WHERE cenario_id = ?').all(cenarioRow.id)) } : null;
 
   const atividade = req.user.role === 'admin'
     ? db.prepare('SELECT user_nome, action, entity, detail, created_at FROM audit_log ORDER BY id DESC LIMIT 8').all()
@@ -755,7 +758,6 @@ router.get('/dashboard', (req, res) => {
     proximas_acoes: proximas,
     ultimos_atendimentos: db.prepare('SELECT id, assunto, tipo, prioridade, situacao, data FROM atendimentos ORDER BY data DESC, id DESC LIMIT 5').all(),
     ultimos_cadastros: db.prepare("SELECT id, nome, cidade, created_at FROM motoristas ORDER BY id DESC LIMIT 5").all(),
-    financeiro,
     atividade
   });
 });

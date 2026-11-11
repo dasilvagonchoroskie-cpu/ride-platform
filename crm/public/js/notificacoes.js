@@ -87,7 +87,9 @@ export function iniciarAvisos() {
       const novos = ultimo === null ? [] : r.itens; // ao abrir o app, não repete avisos antigos
       ultimo = r.ultimo;
       // Vários de uma vez: um som por tipo (o mais importante primeiro) e no máximo 3 avisos na tela.
-      const tipos = new Set(novos.map((i) => i.tipo));
+      // Ao voltar para o CRM, avisos com mais de 1 minuto já tocaram como notificação do celular: aparecem sem som.
+      const recentes = novos.filter((i) => !i.criado_em || Date.now() - new Date(i.criado_em).getTime() < 60000);
+      const tipos = new Set(recentes.map((i) => i.tipo));
       for (const t of ['transferencia', 'mensagem', 'ia']) if (tipos.has(t) && somLigado(t)) { tocar(t); break; }
       novos.slice(-3).forEach(avisoNaTela);
     } catch (err) { /* sem sessão ou sem rede: tenta de novo depois */ }
@@ -143,15 +145,25 @@ export async function ativarPush(tipos) {
  * Ao abrir o CRM: mantém a inscrição deste aparelho em dia (o serviço de push pode trocar ou vencer a inscrição,
  * e outra pessoa pode ter entrado no mesmo aparelho). Não pede permissão: só age se ela já foi dada.
  */
+function mesmaChave(sub, chave) {
+  try {
+    const k = sub.options && sub.options.applicationServerKey;
+    if (!k) return true;
+    const a = new Uint8Array(k);
+    const b = chaveParaBytes(chave);
+    return a.length === b.length && a.every((x, i) => x === b[i]);
+  } catch (e) { return true; }
+}
+
 export async function sincronizarPush() {
   if (!suportaPush() || Notification.permission !== 'granted' || ler('fm_push_ativo') !== '1') return;
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      const { chave_publica: chave } = await api.get('/push/config');
-      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveParaBytes(chave) });
-    }
+    const { chave_publica: chave } = await api.get('/push/config');
+    // Inscrição feita com outra chave do servidor (chave trocada): não funciona mais, refaz.
+    if (sub && !mesmaChave(sub, chave)) { const antiga = sub.endpoint; await sub.unsubscribe().catch(() => {}); sub = null; await api.post('/push/cancelar', { endpoint: antiga }).catch(() => {}); }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveParaBytes(chave) });
     await api.post('/push/inscrever', { subscription: sub.toJSON(), renovar: true });
   } catch (err) { /* sem rede ou sem sessão: tenta na próxima abertura */ }
 }
