@@ -165,17 +165,25 @@ class MenuLinha extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Spacing.xl, vertical: 17),
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.xl, vertical: 12),
         child: Row(
           children: [
             if (icone != null) ...[
-              Icon(icone, size: 24, color: corIcone ?? AppColors.textMuted),
-              const SizedBox(width: Spacing.md),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: (cor ?? AppColors.gold).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icone, size: 22, color: cor ?? AppColors.gold),
+              ),
+              const SizedBox(width: Spacing.lg),
             ],
             Expanded(
               child: Text(
                 titulo,
-                style: AppText.body.copyWith(fontSize: 18, color: cor ?? AppColors.text, fontWeight: FontWeight.w500),
+                style: AppText.body.copyWith(fontSize: 17, color: cor ?? AppColors.text, fontWeight: FontWeight.w600),
               ),
             ),
             if (selo != null)
@@ -190,7 +198,7 @@ class MenuLinha extends StatelessWidget {
                 padding: const EdgeInsets.only(right: Spacing.sm),
                 child: Text(valor!, style: AppText.bodyStrong.copyWith(fontSize: 18)),
               ),
-            if (mostrarSeta) const Icon(Icons.chevron_right, color: AppColors.text, size: 26),
+            if (mostrarSeta) const Icon(Icons.arrow_forward_ios, color: AppColors.textFaint, size: 16),
           ],
         ),
       ),
@@ -216,12 +224,12 @@ class CampoLeitura extends StatelessWidget {
           floatingLabelBehavior: FloatingLabelBehavior.always,
           contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: 18),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.hairline),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppColors.hairline),
           ),
           filled: true,
           fillColor: AppColors.surface,

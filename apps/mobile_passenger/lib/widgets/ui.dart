@@ -72,15 +72,26 @@ class AppButton extends StatelessWidget {
             ],
           );
 
+    // Botao principal em degrade dourado com brilho (visual premium, 11/11/2026).
+    final ouro = variant == AppButtonVariant.primary || variant == AppButtonVariant.inverted;
+    final ligado = !isDisabled;
     return Padding(
       padding: margin ?? EdgeInsets.zero,
-      child: SizedBox(
+      child: Container(
         height: 56,
         width: double.infinity,
+        decoration: ouro && ligado
+            ? BoxDecoration(
+                gradient: AppColors.degradeOuro,
+                borderRadius: BorderRadius.circular(Radii.lg),
+                boxShadow: const [BoxShadow(color: Color(0x55E9B53D), blurRadius: 18, offset: Offset(0, 6))],
+              )
+            : null,
         child: FilledButton(
           onPressed: isDisabled ? null : onPressed,
           style: FilledButton.styleFrom(
-            backgroundColor: background,
+            backgroundColor: ouro && ligado ? Colors.transparent : background,
+            shadowColor: Colors.transparent,
             foregroundColor: foreground,
             disabledBackgroundColor: background.withValues(alpha: 0.42),
             disabledForegroundColor: foreground.withValues(alpha: 0.6),

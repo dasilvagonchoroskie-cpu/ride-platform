@@ -81,22 +81,33 @@ class AppButton extends StatelessWidget {
             ],
           );
 
+    // Botao principal em degrade dourado com brilho (visual premium, 11/11/2026).
+    final ouro = variant == AppButtonVariant.primary || variant == AppButtonVariant.inverted;
+    final ligado = !isDisabled;
     return Padding(
       padding: margin ?? EdgeInsets.zero,
-      child: SizedBox(
+      child: Container(
         height: 56,
         width: double.infinity,
+        decoration: ouro && ligado
+            ? BoxDecoration(
+                gradient: AppColors.degradeOuro,
+                borderRadius: BorderRadius.circular(Radii.lg),
+                boxShadow: const [BoxShadow(color: Color(0x55E9B53D), blurRadius: 18, offset: Offset(0, 6))],
+              )
+            : null,
         child: FilledButton(
           onPressed: isDisabled ? null : onPressed,
           style: FilledButton.styleFrom(
-            backgroundColor: background,
+            backgroundColor: ouro && ligado ? Colors.transparent : background,
+            shadowColor: Colors.transparent,
             foregroundColor: foreground,
             disabledBackgroundColor: background.withValues(alpha: 0.42),
             disabledForegroundColor: foreground.withValues(alpha: 0.6),
             side: side,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
           ),
           child: child,
         ),
@@ -119,8 +130,8 @@ class AppCard extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(Spacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(Radii.sm),
-        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 6, offset: Offset(0, 1))],
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: AppColors.hairline),
       ),
       child: child,
     );
@@ -150,8 +161,9 @@ class SheetSurface extends StatelessWidget {
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(roundedTop ? Radii.sheet : 0),
         ),
+        border: const Border(top: BorderSide(color: Color(0x40E9B53D))),
         boxShadow: const [
-          BoxShadow(color: Color(0x26000000), blurRadius: 18, offset: Offset(0, -4)),
+          BoxShadow(color: Color(0x80000000), blurRadius: 30, offset: Offset(0, -6)),
         ],
       ),
       // Material transparente: os ListTile e InkWell dentro da folha
@@ -196,7 +208,6 @@ class AppField extends StatelessWidget {
     final labelColor = onLight ? AppColors.sheetMuted : AppColors.textMuted;
     final textColor = onLight ? AppColors.sheetText : AppColors.text;
     final fill = onLight ? AppColors.sheetField : AppColors.surfaceElevated;
-    final borderColor = onLight ? AppColors.sheetBorder : AppColors.border;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,16 +235,16 @@ class AppField extends StatelessWidget {
             hintStyle: AppText.body.copyWith(color: labelColor),
             contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: BorderSide(color: borderColor),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.hairline),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: BorderSide(color: borderColor),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.hairline),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.brand, width: 1.4),
             ),
           ),
         ),
@@ -327,9 +338,17 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.md),
-      child: Text(
-        text,
-        style: AppText.heading.copyWith(color: onLight ? AppColors.sheetText : AppColors.text),
+      child: Row(
+        children: [
+          Container(width: 4, height: 18, decoration: BoxDecoration(gradient: AppColors.degradeOuro, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: AppText.heading.copyWith(color: onLight ? AppColors.sheetText : AppColors.text),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -362,6 +381,17 @@ class EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Spacing.xxl),
       child: Column(
         children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surfaceElevated,
+              border: Border.all(color: AppColors.hairline),
+            ),
+            child: const Icon(Icons.inbox_outlined, color: AppColors.gold, size: 32),
+          ),
+          const SizedBox(height: Spacing.lg),
           Text(title, style: AppText.heading.copyWith(color: AppColors.text)),
           const SizedBox(height: Spacing.sm),
           Text(

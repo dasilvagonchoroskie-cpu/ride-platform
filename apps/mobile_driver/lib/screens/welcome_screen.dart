@@ -4,29 +4,43 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
+import '../widgets/painel_ui.dart';
 import '../widgets/ui.dart';
 import 'phone_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-  static const List<List<String>> _highlights = [
-    ['Ganhe quando quiser', 'Fique disponível e receba chamadas na sua região.'],
-    ['Valores transparentes', 'Veja o ganho de cada corrida antes de aceitar.'],
-    ['Saque via Pix', 'Transfira seu saldo quando atingir o valor mínimo.'],
+  static const List<(IconData, String, String)> _highlights = [
+    (Icons.schedule, 'Ganhe quando quiser', 'Fique disponível e receba chamadas na sua região.'),
+    (Icons.visibility_outlined, 'Valores transparentes', 'Veja o ganho de cada corrida antes de aceitar.'),
+    (Icons.pix, 'Saque via Pix', 'Transfira seu saldo quando atingir o valor mínimo.'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      body: DecoratedBox(
+        // Visual premium (11/11/2026): marinho em degrade com brilho dourado.
+        decoration: const BoxDecoration(gradient: AppColors.degradeMarinho),
+        child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: Spacing.xxxl),
+              const SizedBox(height: Spacing.xl),
+              Center(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Color(0x66E9B53D), blurRadius: 44, spreadRadius: 2)],
+                  ),
+                  child: const BrandLogo(size: 104),
+                ),
+              ),
+              const SizedBox(height: Spacing.lg),
               const Text(
                 'Fortaleza',
                 textAlign: TextAlign.center,
@@ -54,12 +68,25 @@ class WelcomeScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: Spacing.md),
                   child: AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(item[0], style: AppText.bodyStrong.copyWith(fontSize: 16)),
-                        const SizedBox(height: Spacing.xs),
-                        Text(item[1], style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(color: AppColors.brandSoft, borderRadius: BorderRadius.circular(12)),
+                          child: Icon(item.$1, color: AppColors.gold),
+                        ),
+                        const SizedBox(width: Spacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.$2, style: AppText.bodyStrong.copyWith(fontSize: 16)),
+                              const SizedBox(height: Spacing.xs),
+                              Text(item.$3, style: AppText.caption.copyWith(color: AppColors.textMuted)),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -94,6 +121,7 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: Spacing.xxl),
             ],
           ),
+        ),
         ),
       ),
     );
