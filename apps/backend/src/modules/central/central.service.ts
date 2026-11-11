@@ -368,6 +368,17 @@ export class CentralService {
       );
     }
     if (!motorista.isOnline) throw BusinessException.validation(`${motorista.user.name} esta desconectado.`);
+    // Requisicao de continuidade (11/11/2026): como no despacho automatico,
+    // corrida de teste nunca vai para motorista de verdade (nem o contrario).
+    const [corridaDeTeste, motoristaDeTeste] = await Promise.all([
+      this.prisma.contaDeTeste(corrida.passengerId),
+      this.prisma.contaDeTeste(motorista.userId),
+    ]);
+    if (corridaDeTeste !== motoristaDeTeste) {
+      throw BusinessException.validation(
+        corridaDeTeste ? 'Corrida de teste so vai para motorista de teste.' : 'Motorista de teste nao recebe corrida de verdade.',
+      );
+    }
 
     const regras = await regrasDaCarteira(this.prisma);
     if (regras.bloquear) {

@@ -48,7 +48,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Segurança'),
-          if (AppConfig.hasApi) const _DoisFatores() else AppCard(child: Text('Disponível com o servidor ligado.', style: AppText.caption)),
+          if (AppConfig.hasApi) const CartaoDoisFatores() else AppCard(child: Text('Disponível com o servidor ligado.', style: AppText.caption)),
           const SizedBox(height: Spacing.lg),
           const SectionTitle(text: 'Conexões'),
           const _StatusDasConexoes(),
@@ -307,14 +307,17 @@ String textoDoUsoDoMapa(Map<dynamic, dynamic> u) {
 /// "Google Authenticator"). No celular nao da para ler QR code da propria
 /// tela: o botao abre o Google Authenticator ja com a conta, e a chave
 /// aparece para digitar se precisar.
-class _DoisFatores extends StatefulWidget {
-  const _DoisFatores();
+class CartaoDoisFatores extends StatefulWidget {
+  const CartaoDoisFatores({super.key, this.aoLigar});
+
+  /// Chamado depois que a pessoa guardou os codigos de recuperacao (R5).
+  final Future<void> Function()? aoLigar;
 
   @override
-  State<_DoisFatores> createState() => _DoisFatoresState();
+  State<CartaoDoisFatores> createState() => _DoisFatoresState();
 }
 
-class _DoisFatoresState extends State<_DoisFatores> {
+class _DoisFatoresState extends State<CartaoDoisFatores> {
   bool? _ativo;
   int _restantes = 0;
   String? _erro;
@@ -390,6 +393,7 @@ class _DoisFatoresState extends State<_DoisFatores> {
         _restantes = codigos.length;
       });
       await _mostrarRecuperacao(codigos);
+      await widget.aoLigar?.call();
     } on ApiException catch (e) {
       if (mounted) setState(() => _erro = e.message);
     } finally {

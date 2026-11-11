@@ -1059,8 +1059,11 @@ void main() {
     expect(find.text('Rejeitar', skipOffstage: false), findsNWidgets(2));
     // Carros: o em uso e o carro novo para a Central conferir.
     await tester.scrollUntilVisible(find.text('Cadastrar outro carro'), 300, scrollable: find.byType(Scrollable).first);
-    expect(find.text('Em uso'), findsOneWidget);
-    expect(find.text('Carro novo para conferir'), findsOneWidget);
+    // (11/11/2026) Com o botao "Recuperar acesso" o cadastro ficou mais alto
+    // e a lista de carros so carrega quando aparece: espera carregar.
+    await _carregar(tester);
+    expect(find.text('Em uso', skipOffstage: false), findsOneWidget);
+    expect(find.text('Carro novo para conferir', skipOffstage: false), findsOneWidget);
     expect(find.text('Aprovar carro', skipOffstage: false), findsOneWidget);
     await tester.ensureVisible(find.text('Aprovar carro'));
     await tester.pumpAndSettle();

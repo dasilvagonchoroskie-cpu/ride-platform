@@ -21,6 +21,7 @@ describe('Dados pessoais na Central: alcance do operador', () => {
       aprovar: jest.fn(async () => ({ ok: true })),
       recusar: jest.fn(async () => ({ ok: true })),
       editarPelaCentral: jest.fn(async () => ({ ok: true })),
+      pedidoMexeNoAcesso: jest.fn(async () => false),
       pendentes: jest.fn(async () => [
         { userId: 'motoristaA', driverId: 'dA' },
         { userId: 'motoristaB', driverId: 'dB' },

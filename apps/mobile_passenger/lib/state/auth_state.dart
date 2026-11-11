@@ -130,6 +130,9 @@ class AuthState extends ChangeNotifier {
   /// conta (pedido pelo telefone atual) e prova que e a propria pessoa.
   Future<String?> pedirCodigoTelefone() => _pedirCodigo(user?.phone ?? '', 'PHONE_VERIFICATION');
 
+  /// R2 (11/11/2026): trocar o e-mail pede o codigo que chega no e-mail NOVO.
+  Future<String?> pedirCodigoEmailNovo(String email) => _pedirCodigo(email, 'EMAIL_VERIFICATION');
+
   /// Codigo para criar uma senha nova ("Esqueci minha senha").
   Future<String?> pedirCodigoSenha(String destino) => _pedirCodigo(destino, 'PASSWORD_RESET');
 
@@ -271,6 +274,7 @@ class AuthState extends ChangeNotifier {
     String? endereco,
     String? telefone,
     String? codigo,
+    String? codigoEmail,
   }) async {
     final corpo = <String, dynamic>{
       if (nome != null) 'name': nome,
@@ -281,6 +285,7 @@ class AuthState extends ChangeNotifier {
       if (endereco != null) 'endereco': endereco.trim(),
       if (telefone != null) 'phone': telefone,
       if (codigo != null) 'codigo': codigo,
+      if (codigoEmail != null) 'codigoEmail': codigoEmail,
     };
     if (corpo.isEmpty) return;
     final data = await _client.request('PATCH', '/auth/perfil', body: corpo) as Map<String, dynamic>;

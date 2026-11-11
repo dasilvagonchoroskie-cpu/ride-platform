@@ -67,6 +67,8 @@ export const ERROR_CODES = {
   MAPA_LIMITE: 'MAPA_LIMITE',
   /** Operador da Central com senha provisoria: troque antes de usar (etapa 7). */
   SENHA_PROVISORIA: 'SENHA_PROVISORIA',
+  /** R5: conta da Central recuperada pelo procedimento excepcional: ligue as duas etapas de novo antes de usar. */
+  REFAZER_DOIS_FATORES: 'REFAZER_DOIS_FATORES',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

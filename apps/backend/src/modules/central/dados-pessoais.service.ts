@@ -4,6 +4,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { liberarTelefoneDeContaVazia } from '../auth/conta-existente';
+import { AvisosDeSeguranca } from '../auth/avisos-de-seguranca';
 
 /**
  * Dados pessoais (Evandro, 10/10/2026): o passageiro muda os proprios dados
@@ -64,6 +65,7 @@ export class DadosPessoaisService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly caixa: CaixaDeEntradaService,
+    private readonly avisos: AvisosDeSeguranca,
   ) {}
 
   // ------------------------------------------------------------------
@@ -252,6 +254,33 @@ export class DadosPessoaisService {
       .sort((a, b) => String(a.pedidaEm).localeCompare(String(b.pedidaEm)));
   }
 
+  /** O pedido aberto troca telefone ou e-mail (so o dono aprova). */
+  async pedidoMexeNoAcesso(id: string): Promise<boolean> {
+    const u = await this.prisma.user.findFirst({ where: { OR: [{ id }, { driver: { id } }] }, select: { metadata: true } });
+    const d = metaDe(metaDe(metaDe(u?.metadata).alteracaoPendente).dados);
+    return !!d.phone || !!d.email;
+  }
+
+  /**
+   * R4: telefone ou e-mail trocado pela Central -> aviso no e-mail (o antigo
+   * tambem) e nos aparelhos, e registro na auditoria (sem os dados novos).
+   */
+  private async registrarTrocaDeAcesso(adminId: string, userId: string, novo: Partial<Record<keyof DadosPelaCentral, string>>, emailAntigo: string | null) {
+    if (!novo.phone && !novo.email) return;
+    if (novo.email) await this.avisos.avisar(userId, 'EMAIL_TROCADO', { emailAntigo });
+    if (novo.phone) await this.avisos.avisar(userId, 'TELEFONE_TROCADO');
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        action: 'CENTRAL_TROCOU_ACESSO',
+        entity: 'user',
+        entityId: userId,
+        after: { campos: [novo.phone ? 'telefone' : null, novo.email ? 'e-mail' : null].filter(Boolean) } as never,
+      },
+    });
+  }
+
   async aprovar(adminId: string, id: string) {
     const u = await this.pessoa(id);
     const userId = u.id;
@@ -260,6 +289,7 @@ export class DadosPessoaisService {
     if (!p.dados) throw BusinessException.validation('Este motorista nao tem pedido de alteracao.');
     const novo = this.limpo(p.dados as DadosDoMotorista);
     await this.garantirLivres(u, novo);
+    await this.registrarTrocaDeAcesso(adminId, userId, novo, u.email ?? null);
     await this.gravar(userId, novo, {
       alteracaoPendente: null,
       ultimaAlteracao: { em: new Date().toISOString(), por: adminId, campos: Object.keys(novo) },
@@ -299,6 +329,7 @@ export class DadosPessoaisService {
     if (mudancas.length === 0) throw BusinessException.validation('Nada mudou.');
     const soQueMuda = Object.fromEntries(mudancas.map((m) => [m.campo, m.para])) as Partial<Record<keyof DadosPelaCentral, string>>;
     await this.garantirLivres(u, soQueMuda);
+    await this.registrarTrocaDeAcesso(adminId, userId, soQueMuda, u.email ?? null);
     await this.gravar(userId, soQueMuda, {
       ultimaAlteracao: { em: new Date().toISOString(), por: adminId, campos: Object.keys(soQueMuda) },
     });

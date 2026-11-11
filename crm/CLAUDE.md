@@ -59,6 +59,12 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   (`fichaDoCadastro` em routes.js). Front: abas Em andamento/✅ Fechados/Todos, linha verde (`linha-fechada`), badge
   `fechado`, "Ficha do motorista" em `entity.js`. Testado: seguranca.test.js + navegador (celular) com canal/IA falsos.
 
+## Ícone novo (11/11/2026 noite, escolhido pelo dono)
+- Logo hexagonal "FM" (azul, ciano e dourado), fundo transparente. Gerados de um original 1254×1254: `public/icons/`
+  (icon-192/512 transparentes, icon-maskable-512 e apple-touch com fundo branco, favicon-32.png, logo.png para a barra
+  lateral e o login em `.brand-mark` com fundo branco) e, no app Android (repo de backup, `app-twa`): ícone adaptável
+  (`mipmap-anydpi-v26`, fundo branco + logo na zona segura), `splash_logo` com abertura em fundo branco e `ic_notificacao`
+  (silhueta branca, PNG por densidade). APK 2.0.107. Cache do app v19 (main) / v20 (etapa2).
 ## Etapa 2 — preparação (ramo `etapa2`, 11/11/2026; NÃO está em produção)
 - Trabalho no ramo git `etapa2` (ride-platform e backup). `main` é o que vai para o Render: nada da Etapa 2 entra em
   `main` nem em deploy antes da autorização do dono (depois do teste das notificações no celular).

@@ -1,14 +1,25 @@
 name: Publicar o servidor
 
-# A cada envio que mexe no servidor, publica no Render e roda o teste de
-# ponta a ponta. Ninguem precisa lembrar de atualizar o servidor
-# (pedido do Evandro em 08/10/2026). Precisa do segredo RENDER_DEPLOY_HOOK.
+# A cada envio que mexe no servidor, publica no Render. Ninguem precisa
+# lembrar de atualizar o servidor (pedido do Evandro em 08/10/2026). Precisa
+# do segredo RENDER_DEPLOY_HOOK.
+#
+# Requisicao de continuidade (11/11/2026):
+# - So o que entra na imagem do servidor dispara (os mesmos caminhos do
+#   Build Filter do Render): mudanca so do CRM, dos apps, dos documentos ou
+#   dos relatorios NAO reinicia o servidor do Fortaleza Move.
+# - O teste de ponta a ponta nao roda mais logo depois de publicar (podia
+#   cair no horario de operacao): roda de madrugada (teste-ponta-a-ponta.yml).
 on:
   push:
     branches: [main]
     paths:
       - 'apps/backend/**'
       - 'packages/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
   workflow_dispatch: {}
 
 concurrency:
@@ -41,8 +52,3 @@ jobs:
           fi
           echo "publicado=sim" >> "$GITHUB_OUTPUT"
           exit $r
-      - name: Rodar o teste de ponta a ponta
-        if: steps.publicar.outputs.publicado == 'sim'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run teste-ponta-a-ponta.yml --repo "${{ github.repository }}" --ref main

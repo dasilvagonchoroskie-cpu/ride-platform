@@ -1550,6 +1550,30 @@ class PainelApi {
     return (r['sessoesEncerradas'] as num?)?.toInt() ?? 0;
   }
 
+  /// R3 (11/11/2026): quem perdeu o telefone E o e-mail. So o dono, depois
+  /// de conferir o documento com foto. Nada do documento e enviado: so o tipo
+  /// e as conferencias. Devolve (liberada, o que faltou conferir).
+  Future<(bool, List<String>)> recuperarAcesso(
+    String id, {
+    required String motivo,
+    required String documento,
+    required bool foto,
+    required bool nome,
+    required bool cpf,
+    bool? cnh,
+    required String novoEmail,
+    String? novoTelefone,
+  }) async {
+    final r = await _c.request('POST', '/admin/usuarios/$id/recuperar-acesso', body: {
+      'motivo': motivo,
+      'documento': documento,
+      'conferencias': {'fotoConfere': foto, 'nomeConfere': nome, 'cpfConfere': cpf, if (cnh != null) 'cnhConfere': cnh},
+      'novoEmail': novoEmail,
+      if (novoTelefone != null && novoTelefone.isNotEmpty) 'novoTelefone': novoTelefone,
+    }) as Map<String, dynamic>;
+    return (r['liberada'] == true, [for (final f in (r['faltaram'] as List? ?? const [])) f.toString()]);
+  }
+
   Future<void> bloquearPassageiro(String id, bool bloquear, String motivo) =>
       _c.request('PATCH', '/admin/passengers/$id/block', body: {'blocked': bloquear, 'reason': motivo});
 

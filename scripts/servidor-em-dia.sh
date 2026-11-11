@@ -16,7 +16,7 @@ API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
 
 # Ultimo envio que mexeu no codigo do servidor (precisa do historico).
 git fetch -q --unshallow 2>/dev/null || true
-ALVO=$(git log -1 --format=%H -- apps/backend packages/shared)
+ALVO=$(git log -1 --format=%H -- apps/backend packages/shared package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc)
 echo "Ultima mudanca do servidor no GitHub: ${ALVO:0:7} ($(git log -1 --format=%s "$ALVO" | cut -c1-80))"
 
 no_ar() { curl -s -m 60 "$API/health" | jq -r '.data.commit // .commit // empty' 2>/dev/null; }
