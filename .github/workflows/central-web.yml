@@ -81,14 +81,27 @@ jobs:
           (async () => {
             const b = await chromium.launch();
             for (const [nome, vp] of [['computador', { width: 1366, height: 768 }], ['celular', { width: 390, height: 844 }]]) {
-              const p = await b.newPage({ viewport: vp });
+              const ctx = await b.newContext({ viewport: vp });
+              const p = await ctx.newPage();
               const erros = [];
               p.on('pageerror', (e) => erros.push(String(e)));
               p.on('console', (m) => { if (m.type() === 'error') erros.push(m.text()); });
-              await p.goto('https://fortaleza-move-central.onrender.com/', { waitUntil: 'networkidle', timeout: 90000 });
-              await p.waitForTimeout(8000);
+              // Tempo ate a Central aparecer (11/11/2026): primeira vez (sem
+              // nada guardado) e reabrindo (com o navegador ja tendo guardado).
+              await p.addInitScript(() => window.addEventListener('flutter-first-frame', () => { window.__primeiraTela = performance.now(); }));
+              let bytes = 0;
+              p.on('response', async (r) => { try { bytes += Number(r.headers()['content-length'] || 0); } catch (_) {} });
+              for (const vez of ['primeira vez', 'reabrindo']) {
+                bytes = 0;
+                if (vez === 'primeira vez') await p.goto('https://fortaleza-move-central.onrender.com/', { waitUntil: 'commit', timeout: 90000 });
+                else await p.reload({ waitUntil: 'commit', timeout: 90000 });
+                const t = await p.waitForFunction(() => window.__primeiraTela, null, { timeout: 90000 }).then((h) => h.jsonValue()).catch(() => null);
+                console.log(`TEMPO ${nome} ${vez}: ${t ? (t / 1000).toFixed(1) + ' s' : 'nao abriu em 90 s'} (${(bytes / 1048576).toFixed(1)} MB informados)`);
+              }
+              await p.waitForTimeout(6000);
               await p.screenshot({ path: `central-web-${nome}.png` });
               console.log(nome, 'erros:', erros.length ? erros.slice(0, 5).join(' | ') : 'nenhum');
+              await ctx.close();
             }
             await b.close();
           })();

@@ -57,7 +57,7 @@ class ContadorDeImagens extends http.BaseClient {
   final Queue<DateTime> _saidas = Queue<DateTime>();
   int _baixando = 0;
 
-  Future<void> _vez() async {
+  Future<void> _vez([bool Function()? cancelada]) async {
     if (_baixando < maximoJuntas) {
       _baixando++;
     } else {
@@ -71,6 +71,8 @@ class ContadorDeImagens extends http.BaseClient {
       while (_saidas.isNotEmpty && agora.difference(_saidas.first) >= const Duration(seconds: 1)) {
         _saidas.removeFirst();
       }
+      // Cancelada enquanto esperava: nao gasta a cota do segundo.
+      if (cancelada != null && cancelada()) return;
       if (_saidas.length < maximoPorSegundo) {
         _saidas.add(agora);
         return;
@@ -91,12 +93,30 @@ class ContadorDeImagens extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    await _vez();
+    // Mapa mais rapido (Evandro, 11/11/2026: "o mapa da central esta
+    // demorando para carregar"): quando o mapa mexe ou muda o zoom (ex.: abre
+    // no zoom 14 e logo enquadra a cidade), o flutter_map cancela as imagens
+    // que sairam da tela. Antes elas continuavam na fila, gastando as vagas e
+    // a cota do segundo, e as imagens certas esperavam atras delas. Agora a
+    // cancelada nem sai: a vaga passa direto para a proxima.
+    var cancelada = false;
+    final gatilho = request is http.Abortable ? request.abortTrigger : null;
+    if (gatilho != null) {
+      unawaited(gatilho.then<void>((_) {
+        cancelada = true;
+      }, onError: (_) {}));
+    }
+    await _vez(() => cancelada);
     var liberado = false;
     void liberar() {
       if (liberado) return;
       liberado = true;
       _liberar();
+    }
+
+    if (cancelada) {
+      liberar();
+      throw http.RequestAbortedException(request.url);
     }
 
     try {
@@ -109,8 +129,9 @@ class ContadorDeImagens extends http.BaseClient {
           await r.stream.drain<void>().catchError((_) {});
           Medida.imagem(r.statusCode, 0, DateTime.now().difference(inicio).inMilliseconds);
           await Future<void>.delayed(Duration(milliseconds: 500 * (1 << tentativa) + _sorte.nextInt(400)));
+          if (cancelada) throw http.RequestAbortedException(request.url);
           // Um pedido HTTP so sai uma vez: copia para a nova tentativa.
-          pedido = http.Request(request.method, request.url)..headers.addAll(request.headers);
+          pedido = http.AbortableRequest(request.method, request.url, abortTrigger: gatilho)..headers.addAll(request.headers);
           continue;
         }
         if (r.statusCode == 403) MapaConfig.marcarLimite();
