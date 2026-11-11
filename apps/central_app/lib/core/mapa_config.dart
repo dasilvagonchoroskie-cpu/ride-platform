@@ -128,6 +128,7 @@ class MapaConfig {
   /// reclama de relogio pendurado no fim.
   static final bool _emTesteAutomatico = () {
     try {
+      if (kIsWeb) return false;
       return Platform.environment.containsKey('FLUTTER_TEST');
     } catch (_) {
       return false;
