@@ -53,6 +53,19 @@ describe('Taximetro: distancia que vale no fim', () => {
     }
   });
 
+  it('11/11/2026: desistiu perto do embarque e o celular nao mandou medicao: nada da estimativa', async () => {
+    // Viagem estimada em 200 km (Goiania); terminou a 50 m do embarque.
+    const pertinho = { latitude: -18.0129, longitude: -49.3547 };
+    const d = await distanciaDoTaximetro({ medida: undefined, embarque, fim: pertinho, estimadaMetros: 200_000, porRuaAte: porRua(0) });
+    expect(d).toBeLessThan(300);
+  });
+
+  it('11/11/2026: sem medicao e sem posicao, a estimativa fica limitada ao tempo da viagem', async () => {
+    // 2 minutos de viagem nao rodam 200 km: no maximo 2 x 60 x 22,2 m.
+    const d = await distanciaDoTaximetro({ medida: undefined, embarque, fim: null, estimadaMetros: 200_000, porRuaAte: porRua(0), duracaoSegundos: 120 });
+    expect(d).toBe(Math.round(120 * 22.2));
+  });
+
   it('sem medicao e sem saber onde terminou: a estimativa do pedido', async () => {
     const d = await distanciaDoTaximetro({ medida: undefined, embarque, fim: null, estimadaMetros: 5000, porRuaAte: porRua(0) });
     expect(d).toBe(5000);

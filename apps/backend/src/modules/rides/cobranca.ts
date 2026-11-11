@@ -38,7 +38,13 @@ type Ponto = { latitude: number; longitude: number };
  *   (GPS falhou, aplicativo reiniciado): vale o caminho pelas ruas ate ali;
  * - mais que 3 vezes o caminho pelas ruas (+2 km de folga para desvio) e
  *   salto de GPS: fica no teto.
- * Sem medicao nenhuma e sem saber onde terminou: a estimativa do pedido.
+ * Sem medicao nenhuma e sem saber onde terminou: a estimativa do pedido,
+ * mas nunca mais do que daria para rodar no tempo da viagem (a 80 km/h).
+ *
+ * Evandro (11/11/2026): passageiro desistiu perto do embarque, o taximetro
+ * ainda na bandeirada, e a taxa da Central saiu do valor ESTIMADO (ex.:
+ * R$ 400 de uma viagem a Goiania). Agora, terminou perto do embarque sem
+ * medicao: vale a distancia ate ali (a bandeirada), nunca a estimativa.
  */
 export async function distanciaDoTaximetro(params: {
   medida: number | null | undefined;
@@ -46,6 +52,8 @@ export async function distanciaDoTaximetro(params: {
   fim: Ponto | null;
   estimadaMetros: number;
   porRuaAte: (fim: Ponto) => Promise<number>;
+  /** Tempo da viagem (do "iniciar" ao "finalizar"), pelo relogio do servidor. */
+  duracaoSegundos?: number | null;
 }): Promise<number> {
   const { medida, embarque, fim, estimadaMetros } = params;
   const reta = fim ? Math.round(haversineKm(embarque, fim) * 1000) : 0;
@@ -59,9 +67,18 @@ export async function distanciaDoTaximetro(params: {
     return Math.round(Math.min(medida, Math.max(porRua, reta) * 3 + 2000));
   }
   if (fim && reta >= 300) return Math.round(await params.porRuaAte(fim));
+  // Terminou perto do embarque (desistiu, voltou): vale o pouco que andou.
+  if (fim) return Math.round(Math.max(medida ?? 0, reta));
   if (medida != null) return Math.round(Math.max(medida, reta));
+  // Nada medido e sem posicao: a estimativa, limitada ao que cabe no tempo.
+  if (params.duracaoSegundos != null && params.duracaoSegundos >= 0) {
+    return Math.round(Math.min(estimadaMetros, params.duracaoSegundos * VELOCIDADE_MAXIMA_MS));
+  }
   return estimadaMetros;
 }
+
+/** 80 km/h em metros por segundo: o maximo que se roda no tempo da viagem. */
+export const VELOCIDADE_MAXIMA_MS = 22.2;
 
 /**
  * Paradas da viagem que valem (Evandro, 09/10/2026: "se teve tempo parado,

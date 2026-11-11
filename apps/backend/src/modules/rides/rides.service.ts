@@ -539,7 +539,7 @@ export class RidesService {
       radiusMeters: RidesService.RAIOS_METROS[RidesService.RAIOS_METROS.length - 1],
       limit: 30,
       category: corrida.category,
-      // Carro de categoria igual ou mais alta tambem atende (Conforto leva Popular).
+      // So a categoria escolhida pelo passageiro (Evandro, 11/11/2026).
       categorias: daEntrega ? undefined : categoriasQueAtendem(corrida.category, await this.fare.categoriasNoPonto({ latitude: corrida.pickupLat, longitude: corrida.pickupLng })),
       // Entrega: carro, moto ou os dois, como a Central ligou na cidade.
       ...(daEntrega ? { veiculos: (daEntrega.veiculos as 'CARRO' | 'MOTO' | 'TODOS') ?? 'TODOS' } : {}),
@@ -972,6 +972,7 @@ export class RidesService {
       fim,
       estimadaMetros: corrida.distanceMeters,
       porRuaAte: async (ate) => (await this.medirRota(embarque, ate)).distanceMeters,
+      duracaoSegundos: corrida.startedAt ? durationSeconds : null,
     });
     // Paradas no meio da viagem (passageiro pediu para esperar) somam com a
     // espera no embarque: a mesma tarifa de minuto parado e a mesma franquia.
