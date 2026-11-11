@@ -104,8 +104,9 @@ function renderLogin(org) {
           <input id="login-senha" type="password" autocomplete="current-password" required placeholder="Sua senha">
         </div>
         <button class="btn btn-primary" type="submit" id="login-submit">Entrar</button>
+        <button class="btn btn-ghost" type="button" id="forgot-link" style="width:100%;margin-top:10px">Esqueci minha senha</button>
       </form>`,
-    foot: `<div class="auth-foot"><a href="#" id="forgot-link">Esqueci minha senha</a></div>
+    foot: `
            <div class="auth-note">Nenhum administrador ainda? A tela de configuração inicial aparece automaticamente quando o sistema não possui usuários.</div>`
   });
 
@@ -158,6 +159,16 @@ function renderEsqueci(emailInicial) {
            <div class="auth-foot"><a href="/" id="esq-voltar">Voltar para o login</a></div>`
   });
   document.getElementById('esq-email').value = emailInicial || '';
+  // Sem envio de e-mail ligado no servidor: explica os outros caminhos em vez de deixar a pessoa sem saída.
+  api.get('/auth/status').then((st) => {
+    if (st.recuperacao_email) return;
+    const ok = document.getElementById('esq-ok');
+    ok.hidden = false;
+    ok.innerHTML = `<b>O envio de e-mail ainda não está ligado neste CRM.</b> Enquanto isso:<br>
+      • tem um código de recuperação? Toque em “Tenho um código de recuperação”, logo abaixo;<br>
+      • é gestor? Peça ao administrador para criar uma senha nova para você (Configurações → Usuários → cadeado);<br>
+      • é o administrador? Peça ao suporte técnico do CRM o código de recuperação pelo painel do servidor.`;
+  }).catch(() => {});
   document.getElementById('esq-voltar').addEventListener('click', (e) => { e.preventDefault(); renderLogin(); });
   document.getElementById('esq-codigo').addEventListener('click', (e) => { e.preventDefault(); renderRecover(document.getElementById('esq-email').value); });
   document.getElementById('esq-form').addEventListener('submit', async (e) => {

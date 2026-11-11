@@ -192,6 +192,14 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   `contratado_em`, registra no histórico e na auditoria. `GET /api/motoristas/:id` devolve também `ficha`
   (conversa, documentos recebidos, último resumo da IA).
 
+## E-mail de acesso e "Esqueci minha senha"
+- Tela de login: botão "Esqueci minha senha" (link por e-mail). Sem envio de e-mail ligado no servidor, a tela explica
+  os outros caminhos (código de recuperação, administrador redefine a senha do gestor, código pelo painel do servidor).
+  `GET /api/auth/status` devolve `recuperacao_email` (true/false).
+- Admin troca o e-mail de acesso de qualquer usuário: Configurações → Usuários → lápis (`PATCH /api/users/:id` com
+  `email`; validado, sem repetir; as sessões do outro usuário caem).
+- Sem conseguir entrar: variável `FM_TROCAR_EMAIL="antigo@x.com>novo@y.com"` no servidor (start.js), reiniciar e apagar.
+
 ## Notificações no Android
 - O app 2.0+ é uma Trusted Web Activity: abre o CRM pelo Chrome do celular e as notificações chegam como notificações do
   app (canais com som próprio). A permissão de notificação é do app no Android e é pedida ao tocar em "Ativar notificações".

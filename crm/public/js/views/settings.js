@@ -52,6 +52,7 @@ export async function renderSettings(view, state) {
                 { label: 'Último acesso', render: (u) => u.last_login_at ? ui.fmtDateTime(u.last_login_at) : '<span class="muted">Nunca</span>' },
                 {
                   label: 'Ações', cls: 'right row-actions-cell', render: (u) => `<div class="row-actions">
+                    <button class="btn btn-sm btn-ghost" data-user-email="${u.id}" data-email-atual="${ui.esc(u.email)}" title="Alterar e-mail de acesso">${ui.icon('edit', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-pass="${u.id}" title="Redefinir senha">${ui.icon('lock', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-toggle="${u.id}" data-ativo="${u.ativo}" title="${u.ativo ? 'Desativar' : 'Ativar'}">${ui.icon(u.ativo ? 'x' : 'check', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-del="${u.id}" title="Excluir">${ui.icon('trash', 14)}</button>
@@ -309,6 +310,27 @@ export async function renderSettings(view, state) {
         ui.toast('Usuário excluído.', 'success');
         renderSettings(view, state);
       } catch (err) { ui.toast(err.message, 'error'); }
+    }));
+
+    view.querySelectorAll('[data-user-email]').forEach((b) => b.addEventListener('click', () => {
+      const body = document.createElement('div');
+      body.innerHTML = `<div class="form-errors" id="re-error" hidden></div>
+        <div class="field"><label for="re-email">E-mail de acesso</label><input id="re-email" type="email" autocomplete="off" maxlength="254">
+        <div class="form-hint">É o e-mail usado para entrar e para receber o link de senha nova. A senha continua a mesma.</div></div>`;
+      body.querySelector('#re-email').value = b.dataset.emailAtual || '';
+      const m = ui.modal({ title: 'Alterar e-mail de acesso', body, size: 'small',
+        footer: '<button class="btn btn-ghost" data-cancel>Cancelar</button><button class="btn btn-primary" data-save>Salvar</button>' });
+      m.dialog.querySelector('[data-cancel]').addEventListener('click', () => m.close());
+      m.dialog.querySelector('[data-save]').addEventListener('click', async () => {
+        const errorBox = m.body.querySelector('#re-error');
+        errorBox.hidden = true;
+        try {
+          await api.patch(`/users/${b.dataset.userEmail}`, { email: m.body.querySelector('#re-email').value });
+          ui.toast('E-mail de acesso alterado.', 'success');
+          m.close();
+          renderSettings(view, state);
+        } catch (err) { errorBox.hidden = false; errorBox.textContent = err.message; }
+      });
     }));
 
     view.querySelectorAll('[data-user-pass]').forEach((b) => b.addEventListener('click', () => {

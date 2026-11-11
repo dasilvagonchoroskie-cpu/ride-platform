@@ -175,6 +175,7 @@ router.get('/auth/status', (req, res) => {
   const session = auth.currentSession(req);
   res.json({
     needsSetup,
+    recuperacao_email: correio.configurado(),
     org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') },
     user: session ? { id: session.id, nome: session.nome, email: session.email, role: session.role } : null
   });
@@ -1118,6 +1119,14 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
     const pwdError = auth.passwordProblem(String(req.body.senha));
     if (pwdError) return fail(res, 422, 'weak_password', pwdError);
   }
+  let novoEmail = null;
+  if (req.body.email !== undefined) {
+    novoEmail = String(req.body.email || '').trim().toLowerCase();
+    if (novoEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(novoEmail)) return fail(res, 422, 'invalid_email', 'Informe um e-mail válido.');
+    const dono = db.prepare('SELECT id FROM users WHERE lower(email) = ?').get(novoEmail);
+    if (dono && dono.id !== id) return fail(res, 409, 'email_taken', 'Este e-mail já é usado por outro usuário.');
+    if (novoEmail === String(user.email).toLowerCase()) novoEmail = null;
+  }
 
   db.transaction(() => {
     if (req.body.ativo !== undefined) {
@@ -1126,6 +1135,11 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
     }
     if (req.body.role !== undefined) {
       db.prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?').run(req.body.role, nowISO(), id);
+    }
+    if (novoEmail) {
+      // E-mail de acesso: as sessões de OUTRO usuário caem (ele entra de novo com o e-mail novo); a do próprio admin continua.
+      db.prepare('UPDATE users SET email = ?, updated_at = ? WHERE id = ?').run(novoEmail, nowISO(), id);
+      db.prepare('DELETE FROM sessions WHERE user_id = ? AND id <> ?').run(id, req.user.sid);
     }
     if (req.body.senha !== undefined) {
       db.prepare('UPDATE users SET senha_hash = ?, updated_at = ? WHERE id = ?').run(auth.hashPassword(String(req.body.senha)), nowISO(), id);
@@ -1138,7 +1152,7 @@ router.patch('/users/:id', requireAdmin, (req, res) => {
       auth.esquecerAparelhos(id);
     }
   })();
-  audit(req, 'editar', 'users', id, 'Usuário atualizado');
+  audit(req, 'editar', 'users', id, novoEmail ? 'Usuário atualizado (e-mail de acesso alterado)' : 'Usuário atualizado');
   res.json({ ok: true });
 });
 

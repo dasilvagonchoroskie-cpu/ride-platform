@@ -57,6 +57,13 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   (`fichaDoCadastro` em routes.js). Front: abas Em andamento/✅ Fechados/Todos, linha verde (`linha-fechada`), badge
   `fechado`, "Ficha do motorista" em `entity.js`. Testado: seguranca.test.js + navegador (celular) com canal/IA falsos.
 
+## E-mail de acesso e recuperação na tela de login (11/11/2026, pedido do dono)
+- Login com botão "Esqueci minha senha" visível; sem e-mail configurado a tela mostra os caminhos alternativos
+  (`/auth/status.recuperacao_email`). `PATCH /users/:id` aceita `email` (admin; 422 inválido, 409 repetido; derruba as
+  sessões do outro usuário). `FM_TROCAR_EMAIL=antigo>novo` em start.js troca sem entrar (auditado; apagar depois).
+- E-mail de acesso do dono: fortalezamovegtba@gmail.com (11/11). Envio de e-mail depende da chave Resend (conta criada
+  pelo dono com esse mesmo e-mail; sem domínio, o Resend só entrega no e-mail da própria conta).
+
 ## Notificações (10/11/2026, pedido do dono)
 - `src/notificacoes.js`: o store do WhatsApp avisa eventos (`store.ouvir`: mensagem recebida, envio da IA, mudança de
   atendimento) e o notificador gera 3 tipos: 💬 mensagem nova, 🤖 IA respondeu (discreto), 🚨 transferência para a equipe

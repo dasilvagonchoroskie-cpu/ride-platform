@@ -265,3 +265,43 @@ test('assetlinks.json: o app Android do CRM é reconhecido (pacote e assinatura)
   assert.equal(j[0].target.package_name, 'br.com.fortalezamove.crm_fortaleza_move');
   assert.match(j[0].target.sha256_cert_fingerprints[0], /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
 });
+
+test('e-mail de acesso: admin troca (validado, sem repetir); entra com o novo; FM_TROCAR_EMAIL troca sem entrar; status diz se há recuperação por e-mail', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-email-acesso-'));
+  const subir = async (extra = {}, arquivo = 'server.js') => {
+    const porta = await portaLivre();
+    const env = { ...process.env, FM_DATA_DIR: dir, PORT: String(porta), HOST: '127.0.0.1', FM_INSTALL_KEY: 'FM-TEST-CHAV-E123', TRUST_PROXY: 'false', ...extra };
+    for (const k of ['SNAPSHOT_URL', 'RESEND_API_KEY', 'BREVO_API_KEY']) delete env[k];
+    let log = '';
+    const proc = spawn(process.execPath, [path.join(__dirname, '..', arquivo)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    proc.stdout.on('data', (d) => { log += d; }); proc.stderr.on('data', (d) => { log += d; });
+    const B = `http://127.0.0.1:${porta}/api`;
+    for (let i = 0; i < 50; i++) { try { await fetch(`${B}/health`); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
+    return { proc, B, log: () => log };
+  };
+  const cliente = (B) => { let ck = ''; return async (m, u, b) => { const r = await fetch(B + u, { method: m, headers: { 'content-type': 'application/json', cookie: ck }, body: b ? JSON.stringify(b) : undefined }); for (const sc of r.headers.getSetCookie()) { const [kv] = sc.split(';'); const nome = kv.split('=')[0]; const resto = ck.split('; ').filter((x) => x && !x.startsWith(nome + '=')); if (!/Max-Age=0/.test(sc)) resto.push(kv); ck = resto.join('; '); } let j = null; try { j = await r.json(); } catch (e) { /* */ } return { s: r.status, j }; }; };
+
+  let srv = await subir();
+  t.after(() => srv.proc.kill());
+  const adm = cliente(srv.B);
+  assert.equal((await adm('POST', '/auth/setup', { chave: 'FM-TEST-CHAV-E123', nome: 'Adm', email: 'adm@x.com', senha: 'senhaforte123' })).s, 201);
+  assert.equal((await adm('GET', '/auth/status')).j.recuperacao_email, false);
+  assert.equal((await adm('POST', '/users', { nome: 'Gestor', email: 'g@x.com', senha: 'senhaforte123', role: 'gestor' })).s, 201);
+  const g = cliente(srv.B);
+  assert.equal((await g('POST', '/auth/login', { email: 'g@x.com', senha: 'senhaforte123' })).s, 200);
+  const gid = (await adm('GET', '/settings')).j.users.find((u) => u.email === 'g@x.com').id;
+  assert.equal((await g('PATCH', `/users/${gid}`, { email: 'outro@x.com' })).s, 403, 'gestor não troca e-mail');
+  assert.equal((await adm('PATCH', `/users/${gid}`, { email: 'não é e-mail' })).s, 422);
+  assert.equal((await adm('PATCH', `/users/${gid}`, { email: 'ADM@x.com' })).s, 409, 'e-mail de outro usuário');
+  assert.equal((await adm('PATCH', `/users/${gid}`, { email: 'Gestor.Novo@X.com' })).s, 200);
+  assert.equal((await g('GET', '/auth/me')).s, 401, 'sessão do gestor cai ao trocar o e-mail');
+  assert.equal((await cliente(srv.B)('POST', '/auth/login', { email: 'g@x.com', senha: 'senhaforte123' })).s, 401);
+  assert.equal((await cliente(srv.B)('POST', '/auth/login', { email: 'gestor.novo@x.com', senha: 'senhaforte123' })).s, 200);
+
+  // Sem entrar no CRM (Render): variável no start.js.
+  srv.proc.kill(); await new Promise((r) => setTimeout(r, 300));
+  srv = await subir({ FM_TROCAR_EMAIL: 'adm@x.com>dono.novo@x.com' }, 'start.js');
+  assert.match(srv.log(), /trocado para dono\.novo@x\.com/);
+  assert.equal((await cliente(srv.B)('POST', '/auth/login', { email: 'dono.novo@x.com', senha: 'senhaforte123' })).s, 200);
+  assert.equal((await cliente(srv.B)('POST', '/auth/login', { email: 'adm@x.com', senha: 'senhaforte123' })).s, 401);
+});
