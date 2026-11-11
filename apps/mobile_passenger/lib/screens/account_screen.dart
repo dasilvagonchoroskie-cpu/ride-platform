@@ -17,6 +17,7 @@ import 'cupons_screen.dart';
 import 'motoristas_salvos_screen.dart';
 import 'help_screen.dart';
 import 'my_data_screen.dart';
+import 'permissoes_screen.dart';
 import 'wallet_screen.dart';
 
 /// Aba Conta: foto e nome, como a pessoa paga, menu e sair.
@@ -289,6 +290,13 @@ class AccountScreen extends StatelessWidget {
               titulo: 'Avisos',
               selo: avisoNovo ? 'novo' : null,
               onTap: () => _abrir(context, const AvisosScreen()),
+            ),
+            separador,
+            MenuLinha(
+              icone: Icons.smartphone,
+              corIcone: AppColors.text,
+              titulo: 'Autorizações do celular',
+              onTap: () => _abrir(context, const AutorizacoesScreen()),
             ),
             separador,
             MenuLinha(
