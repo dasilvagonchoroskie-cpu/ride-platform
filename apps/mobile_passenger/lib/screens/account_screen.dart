@@ -150,7 +150,7 @@ class AccountScreen extends StatelessWidget {
       decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
       child: Text(
         user?.iniciais ?? 'P',
-        style: AppText.title.copyWith(color: Colors.white, fontSize: 26),
+        style: AppText.title.copyWith(color: AppColors.onBrand, fontSize: 26),
       ),
     );
 

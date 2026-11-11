@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                           Text(
                             Marca.nome,
-                            style: AppText.heading.copyWith(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
+                            style: AppText.heading.copyWith(color: Theme.of(context).colorScheme.onPrimary, fontSize: 21, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -487,7 +487,7 @@ class FaixaDaCentral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       elevation: 3,
       shadowColor: const Color(0x55000000),
       borderRadius: BorderRadius.circular(Radii.md),

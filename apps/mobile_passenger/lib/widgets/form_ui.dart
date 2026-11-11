@@ -271,9 +271,9 @@ class BotaoPrincipal extends StatelessWidget {
         onPressed: ativo && !carregando ? aoTocar : null,
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.brand,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onBrand,
           disabledBackgroundColor: carregando ? AppColors.brand : AppColors.desativado,
-          disabledForegroundColor: carregando ? Colors.white : AppColors.desativadoTexto,
+          disabledForegroundColor: carregando ? AppColors.onBrand : AppColors.desativadoTexto,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
         ),
@@ -281,7 +281,7 @@ class BotaoPrincipal extends StatelessWidget {
             ? const SizedBox(
                 width: 22,
                 height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.onBrand),
               )
             // Uma linha so, centralizada: texto comprido diminui a letra
             // em vez de quebrar torto (o da Ajuda quebrava em 2 linhas).

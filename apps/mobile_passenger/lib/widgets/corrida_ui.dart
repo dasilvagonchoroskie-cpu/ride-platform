@@ -36,7 +36,7 @@ class CartaoMotorista extends StatelessWidget {
           decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
           child: Text(
             motorista.initials,
-            style: AppText.heading.copyWith(color: Colors.white),
+            style: AppText.heading.copyWith(color: AppColors.onBrand),
           ),
         ),
         const SizedBox(width: Spacing.md),

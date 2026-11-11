@@ -83,7 +83,7 @@ class FaixaTempoAteVoce extends StatelessWidget {
                     titulo,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.bodyStrong.copyWith(color: Colors.white, fontSize: 16),
+                    style: AppText.bodyStrong.copyWith(color: AppColors.onBrand, fontSize: 16),
                   ),
                   // Diminui a letra em vez de cortar ("Ele está te es..."
                   // aparecia cortado na foto da tela de 360 de largura).
@@ -92,12 +92,12 @@ class FaixaTempoAteVoce extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(chegou ? Icons.place : Icons.schedule, color: Colors.white, size: 20),
+                        Icon(chegou ? Icons.place : Icons.schedule, color: AppColors.onBrand, size: 20),
                         const SizedBox(width: Spacing.xs),
                         Text(
                           linha,
                           maxLines: 1,
-                          style: AppText.heading.copyWith(color: Colors.white, fontSize: 20),
+                          style: AppText.heading.copyWith(color: AppColors.onBrand, fontSize: 20),
                         ),
                       ],
                     ),
@@ -160,8 +160,8 @@ class BotaoChat extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.forum, color: Colors.white, size: 26),
-                Text('chat', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                Icon(Icons.forum, color: AppColors.onBrand, size: 26),
+                Text('chat', style: TextStyle(color: AppColors.onBrand, fontSize: 12, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -227,7 +227,7 @@ class PainelMotorista extends StatelessWidget {
       height: 84,
       alignment: const Alignment(-0.2, -0.15),
       decoration: const BoxDecoration(color: AppColors.brand, shape: BoxShape.circle),
-      child: Text(m.initials, style: AppText.title.copyWith(color: Colors.white, fontSize: 24)),
+      child: Text(m.initials, style: AppText.title.copyWith(color: AppColors.onBrand, fontSize: 24)),
     );
     final carro = Container(
       width: 48,
@@ -436,7 +436,7 @@ class BotaoCancelarPilula extends StatelessWidget {
         onPressed: carregando ? null : aoTocar,
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.brand,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onBrand,
           minimumSize: const Size(180, 52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
           textStyle: AppText.heading.copyWith(fontSize: 18),
