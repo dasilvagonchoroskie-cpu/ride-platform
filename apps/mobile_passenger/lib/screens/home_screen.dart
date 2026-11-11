@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                           Text(
                             Marca.nome,
-                            style: AppText.heading.copyWith(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
+                            style: AppText.heading.copyWith(color: Theme.of(context).colorScheme.onPrimary, fontSize: 21, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -365,22 +365,30 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Material(
+                  // Busca grande (visual premium, 11/11/2026).
+                  Material(
+                    key: const ValueKey('buscar-destino'),
                     color: AppColors.sheetField,
-                    borderRadius: BorderRadius.circular(Radii.pill),
+                    borderRadius: BorderRadius.circular(Radii.lg),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(Radii.pill),
+                      borderRadius: BorderRadius.circular(Radii.lg),
                       onTap: _escolherDestino,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: 13),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(Radii.lg),
+                          border: Border.all(color: AppColors.hairline),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(Spacing.sm, Spacing.sm, Spacing.lg, Spacing.sm),
                         child: Row(
                           children: [
-                            const Icon(Icons.search, color: AppColors.sheetText, size: 24),
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(gradient: AppColors.degradeOuro, borderRadius: BorderRadius.circular(Radii.md)),
+                              child: const Icon(Icons.search, color: AppColors.onBrand, size: 24),
+                            ),
                             const SizedBox(width: Spacing.md),
-                            Flexible(
+                            Expanded(
                               child: Text(
                                 'Buscar destino',
                                 maxLines: 1,
@@ -388,41 +396,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: SheetText.heading.copyWith(fontSize: 18),
                               ),
                             ),
+                            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
                           ],
                         ),
                       ),
                     ),
                   ),
-                      ),
+                  const SizedBox(height: Spacing.md),
+                  // Atalhos: viagem, encomenda (onde a Central ligou) e agendar.
+                  Row(
+                    children: [
+                      Expanded(child: _Atalho(icone: Icons.local_taxi_outlined, texto: 'Viagem', aoTocar: _escolherDestino)),
+                      if (ride.entregaAqui) ...[
+                        const SizedBox(width: Spacing.sm),
+                        Expanded(
+                          child: _Atalho(
+                            key: const ValueKey('atalho-encomenda'),
+                            icone: Icons.inventory_2_outlined,
+                            texto: 'Encomenda',
+                            aoTocar: () => _abrir(const EntregaScreen()),
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: Spacing.sm),
-                      Material(
-                        color: AppColors.surface,
-                        shape: const CircleBorder(side: BorderSide(color: AppColors.sheetText, width: 1.5)),
-                        child: IconButton(
-                          tooltip: 'Agendar corrida',
-                          iconSize: 24,
-                          padding: const EdgeInsets.all(11),
-                          onPressed: _agendar,
-                          icon: const Icon(Icons.edit_calendar, color: AppColors.sheetText),
+                      Expanded(
+                        child: _Atalho(
+                          key: const ValueKey('atalho-agendar'),
+                          icone: Icons.edit_calendar_outlined,
+                          texto: 'Agendar',
+                          dica: 'Agendar corrida',
+                          aoTocar: _agendar,
                         ),
                       ),
                     ],
                   ),
-                  // Etapa 5: entrega de encomenda (so onde a Central ligou).
-                  if (ride.entregaAqui) ...[
-                    const SizedBox(height: Spacing.sm),
-                    OutlinedButton.icon(
-                      onPressed: () => _abrir(const EntregaScreen()),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(44),
-                        foregroundColor: AppColors.sheetText,
-                        side: const BorderSide(color: AppColors.sheetText, width: 1.5),
-                        shape: const StadiumBorder(),
-                      ),
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      label: Text('Entrega de encomenda', style: SheetText.heading.copyWith(fontSize: 16)),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -432,6 +439,44 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Atalho do Inicio (viagem, encomenda, agendar).
+class _Atalho extends StatelessWidget {
+  const _Atalho({super.key, required this.icone, required this.texto, required this.aoTocar, this.dica});
+
+  final IconData icone;
+  final String texto;
+  final VoidCallback aoTocar;
+  final String? dica;
+
+  @override
+  Widget build(BuildContext context) {
+    final botao = Material(
+      color: AppColors.surfaceElevated,
+      borderRadius: BorderRadius.circular(Radii.lg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.lg),
+        onTap: aoTocar,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Radii.lg),
+            border: Border.all(color: AppColors.hairline),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icone, color: AppColors.gold, size: 26),
+              const SizedBox(height: 6),
+              Text(texto, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.caption.copyWith(color: AppColors.text, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ),
+    );
+    return dica == null ? botao : Tooltip(message: dica!, child: botao);
   }
 }
 
@@ -487,7 +532,7 @@ class FaixaDaCentral extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       elevation: 3,
       shadowColor: const Color(0x55000000),
       borderRadius: BorderRadius.circular(Radii.md),

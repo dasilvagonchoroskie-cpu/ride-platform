@@ -170,8 +170,8 @@ void main() {
     expect(find.text('BRANCO'), findsOneWidget);
     expect(find.text('OBL3A45'), findsOneWidget);
     expect(find.text('4821'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Cancelar'), 200, scrollable: find.byType(Scrollable).last);
-    expect(find.text('Cancelar'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Cancelar corrida'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('Cancelar corrida'), findsOneWidget);
   });
 
   testWidgets('Bloquear pede confirmacao e avisa o servidor', (tester) async {

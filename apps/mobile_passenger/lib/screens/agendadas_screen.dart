@@ -106,7 +106,7 @@ class _AgendadasScreenState extends State<AgendadasScreen> {
     final lista = [...context.watch<RideState>().agendadas]
       ..sort((a, b) => (a.agendadaPara ?? '').compareTo(b.agendadaPara ?? ''));
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Corridas agendadas')),
       body: _carregando && lista.isEmpty
           ? const Center(child: CircularProgressIndicator())
@@ -150,7 +150,7 @@ class _AgendadasScreenState extends State<AgendadasScreen> {
       margin: const EdgeInsets.only(bottom: Spacing.md),
       color: nova ? AppColors.brandSoft : AppColors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(Spacing.md),
+        padding: const EdgeInsets.all(Spacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

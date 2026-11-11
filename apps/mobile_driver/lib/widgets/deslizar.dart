@@ -76,8 +76,8 @@ class _DeslizarState extends State<Deslizar> {
                     height: _altura,
                     decoration: BoxDecoration(color: widget.cor, shape: BoxShape.circle),
                     child: ocupado
-                        ? const Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                        : const Icon(Icons.double_arrow, color: Colors.white),
+                        ? Padding(padding: const EdgeInsets.all(18), child: CircularProgressIndicator(strokeWidth: 2.4, color: _sobre(widget.cor)))
+                        : Icon(Icons.double_arrow, color: _sobre(widget.cor)),
                   ),
                 ),
               ),
@@ -88,3 +88,7 @@ class _DeslizarState extends State<Deslizar> {
     );
   }
 }
+
+/// Icone por cima da bolinha: marinho no dourado, branco no verde/vermelho.
+Color _sobre(Color fundo) =>
+    ThemeData.estimateBrightnessForColor(fundo) == Brightness.light ? AppColors.onBrand : Colors.white;

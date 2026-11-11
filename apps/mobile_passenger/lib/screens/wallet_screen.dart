@@ -25,7 +25,8 @@ class WalletScreen extends StatelessWidget {
             padding: const EdgeInsets.all(Spacing.lg),
             decoration: BoxDecoration(
               color: AppColors.brandSoft,
-              borderRadius: BorderRadius.circular(Radii.sm),
+              borderRadius: BorderRadius.circular(Radii.lg),
+              border: Border.all(color: const Color(0x55E9B53D)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

@@ -117,7 +117,7 @@ class _MotoristasState extends State<Motoristas> {
               style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: _marcados.isEmpty || _excluindo ? null : _excluirMarcados,
               icon: _excluindo
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary))
                   : const Icon(Icons.delete_forever),
               label: Text('Excluir (${_marcados.length})'),
             ),

@@ -11,24 +11,27 @@ class AppColors {
   const AppColors._();
 
   // ---- Base clara ----
-  static const Color background = Color(0xFFEEF0F3);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceElevated = Color(0xFFF4F5F7);
-  static const Color border = Color(0xFFE3E6EA);
+  static const Color background = Color(0xFF07122B);
+  static const Color surface = Color(0xFF0F1E42);
+  static const Color surfaceElevated = Color(0xFF162A55);
+  static const Color border = Color(0xFF25396A);
 
-  static const Color text = Color(0xFF14181F);
-  static const Color textMuted = Color(0xFF667085);
-  static const Color textFaint = Color(0xFF98A2B3);
+  static const Color text = Color(0xFFF3F5FA);
+  static const Color textMuted = Color(0xFFA7B2CB);
+  static const Color textFaint = Color(0xFF6E7C9C);
 
   /// Texto e icone por cima das cores fortes (botao azul, faixa vermelha).
-  static const Color onPrimary = Color(0xFFFFFFFF);
+  static const Color onPrimary = Color(0xFF07122B);
+
+  /// Texto por cima do vermelho e do verde.
+  static const Color onStrong = Color(0xFFFFFFFF);
 
   // ---- Marca Fortaleza Move: azul do icone + dourado das asas ----
-  static const Color brand = Color(0xFF1E5BB8);
-  static const Color brandDark = Color(0xFF143E80);
-  static const Color brandSoft = Color(0x1A1E5BB8);
-  static const Color gold = Color(0xFFF2B81B);
-  static const Color goldSoft = Color(0x26F2B81B);
+  static const Color brand = Color(0xFFE9B53D);
+  static const Color brandDark = Color(0xFFC8922A);
+  static const Color brandSoft = Color(0xFF1C2E5C);
+  static const Color gold = Color(0xFFE9B53D);
+  static const Color goldSoft = Color(0xFF1C2E5C);
 
   /// Acao principal, aprovacoes e metricas financeiras (azul da marca).
   static const Color primary = brand;
@@ -39,13 +42,13 @@ class AppColors {
   static const Color accent = brand;
 
   /// Verde: confirmacoes de sucesso (aprovado, pago, online).
-  static const Color success = Color(0xFF1E9E5A);
-  static const Color successSoft = Color(0x1F1E9E5A);
+  static const Color success = Color(0xFF34C17A);
+  static const Color successSoft = Color(0xFF12383A);
 
-  static const Color danger = Color(0xFFD93A3A);
-  static const Color dangerSoft = Color(0x1AD93A3A);
-  static const Color warning = Color(0xFFE8710A);
-  static const Color warningSoft = Color(0x1AE8710A);
+  static const Color danger = Color(0xFFF0545A);
+  static const Color dangerSoft = Color(0xFF3A1D2C);
+  static const Color warning = Color(0xFFFF9A3D);
+  static const Color warningSoft = Color(0xFF382B24);
 
   // ---- Mapa ----
   static const Color mapBackground = Color(0xFFE9E7E2);
@@ -67,7 +70,7 @@ class AppColors {
   static const LinearGradient degradeMarca = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2A6BCB), brand, brandDark],
+    colors: [Color(0xFF16306A), Color(0xFF0F2350), Color(0xFF0A1838)],
   );
 }
 
@@ -163,16 +166,16 @@ class CentralTheme {
   static ThemeData get light {
     final esquema = ColorScheme.fromSeed(
       seedColor: AppColors.brand,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
     ).copyWith(
       primary: AppColors.brand,
       onPrimary: AppColors.onPrimary,
-      primaryContainer: const Color(0xFFDCE7F8),
-      onPrimaryContainer: AppColors.brandDark,
+      primaryContainer: AppColors.surfaceElevated,
+      onPrimaryContainer: AppColors.gold,
       secondary: AppColors.gold,
-      onSecondary: AppColors.text,
-      secondaryContainer: const Color(0xFFDCE7F8),
-      onSecondaryContainer: AppColors.brandDark,
+      onSecondary: AppColors.onPrimary,
+      secondaryContainer: AppColors.surfaceElevated,
+      onSecondaryContainer: AppColors.text,
       surface: AppColors.surface,
       onSurface: AppColors.text,
       onSurfaceVariant: AppColors.textMuted,
@@ -182,12 +185,12 @@ class CentralTheme {
       surfaceContainerHigh: AppColors.surface,
       surfaceContainerHighest: AppColors.surfaceElevated,
       surfaceTint: Colors.transparent,
-      outline: const Color(0xFFC9CED6),
+      outline: const Color(0xFF2E4579),
       outlineVariant: AppColors.border,
       error: AppColors.danger,
-      onError: AppColors.onPrimary,
-      inverseSurface: AppColors.text,
-      onInverseSurface: AppColors.onPrimary,
+      onError: AppColors.onStrong,
+      inverseSurface: AppColors.surfaceElevated,
+      onInverseSurface: AppColors.text,
     );
 
     final base = ThemeData(
@@ -198,7 +201,7 @@ class CentralTheme {
 
     final borda = OutlineInputBorder(
       borderRadius: BorderRadius.circular(Radii.sm),
-      borderSide: const BorderSide(color: Color(0xFFC9CED6)),
+      borderSide: const BorderSide(color: Color(0xFF2E4579)),
     );
     const formaBotao = RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Radii.sm)));
 
@@ -268,7 +271,7 @@ class CentralTheme {
         modalBackgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         showDragHandle: true,
-        dragHandleColor: Color(0xFFD0D5DD),
+        dragHandleColor: Color(0xFF2E4579),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.lg))),
       ),
       popupMenuTheme: PopupMenuThemeData(
@@ -280,14 +283,14 @@ class CentralTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.text,
-        contentTextStyle: AppText.body.copyWith(color: AppColors.onPrimary),
+        backgroundColor: AppColors.surfaceElevated,
+        contentTextStyle: AppText.body.copyWith(color: AppColors.text),
         actionTextColor: AppColors.gold,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
       ),
       inputDecorationTheme: InputDecorationThemeData(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: AppColors.surfaceElevated,
         labelStyle: AppText.body.copyWith(color: AppColors.textMuted),
         floatingLabelStyle: AppText.body.copyWith(color: AppColors.brand, fontWeight: FontWeight.w600),
         hintStyle: AppText.body.copyWith(color: AppColors.textFaint),
@@ -306,8 +309,8 @@ class CentralTheme {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.brand,
           foregroundColor: AppColors.onPrimary,
-          disabledBackgroundColor: const Color(0xFFC7C9CC),
-          disabledForegroundColor: const Color(0xFF7D838C),
+          disabledBackgroundColor: const Color(0xFF2A3A60),
+          disabledForegroundColor: const Color(0xFF7D89A6),
           minimumSize: const Size(64, 46),
           padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
           textStyle: AppText.bodyStrong,
@@ -317,7 +320,7 @@ class CentralTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.brand,
-          side: const BorderSide(color: Color(0xFFC9CED6)),
+          side: const BorderSide(color: Color(0xFF2E4579)),
           minimumSize: const Size(64, 46),
           padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
           textStyle: AppText.bodyStrong,
@@ -350,7 +353,7 @@ class CentralTheme {
           iconColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected) ? AppColors.onPrimary : AppColors.textMuted,
           ),
-          side: const WidgetStatePropertyAll(BorderSide(color: Color(0xFFC9CED6))),
+          side: const WidgetStatePropertyAll(BorderSide(color: Color(0xFF2E4579))),
           textStyle: WidgetStatePropertyAll(AppText.caption.copyWith(fontWeight: FontWeight.w600)),
         ),
       ),
@@ -373,13 +376,13 @@ class CentralTheme {
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? Colors.white : const Color(0xFFBFC5CE),
+          (s) => s.contains(WidgetState.selected) ? Colors.white : AppColors.textMuted,
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? AppColors.success : const Color(0xFFE6E8EC),
+          (s) => s.contains(WidgetState.selected) ? AppColors.success : AppColors.surfaceElevated,
         ),
         trackOutlineColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? AppColors.success : const Color(0xFFD0D5DD),
+          (s) => s.contains(WidgetState.selected) ? AppColors.success : const Color(0xFF2E4579),
         ),
       ),
       checkboxTheme: CheckboxThemeData(
@@ -387,15 +390,15 @@ class CentralTheme {
           (s) => s.contains(WidgetState.selected) ? AppColors.brand : Colors.transparent,
         ),
         checkColor: const WidgetStatePropertyAll(AppColors.onPrimary),
-        side: const BorderSide(color: Color(0xFFA9B1BE), width: 1.6),
+        side: const BorderSide(color: Color(0xFF6E7C9C), width: 1.6),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? AppColors.brand : const Color(0xFFA9B1BE),
+          (s) => s.contains(WidgetState.selected) ? AppColors.brand : const Color(0xFF6E7C9C),
         ),
       ),
-      badgeTheme: const BadgeThemeData(backgroundColor: AppColors.danger, textColor: AppColors.onPrimary),
+      badgeTheme: const BadgeThemeData(backgroundColor: AppColors.danger, textColor: AppColors.onStrong),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(color: AppColors.text, borderRadius: BorderRadius.circular(Radii.sm)),
         textStyle: AppText.caption.copyWith(color: AppColors.onPrimary),

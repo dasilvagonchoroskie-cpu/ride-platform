@@ -79,7 +79,7 @@ class BotaoDoMapa extends StatelessWidget {
     return Tooltip(
       message: dica,
       child: Material(
-        color: ativo ? AppColors.primary : Colors.white,
+        color: ativo ? AppColors.primary : AppColors.surface,
         shape: const CircleBorder(),
         elevation: 4,
         child: InkWell(

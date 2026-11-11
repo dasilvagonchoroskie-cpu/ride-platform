@@ -1,67 +1,87 @@
 import 'package:flutter/material.dart';
 
-/// Identidade visual no proprio da plataforma.
-///
-/// - Primaria: preto puro (#000000)
-/// - Secundaria: branco (#FFFFFF)
-/// - Destaque: verde (#27A770) e azul (#286EF1)
-/// - Tipografia: Inter (sem serifa), com fallback para Roboto
+/// Identidade visual premium (Evandro, 11/11/2026): azul-marinho e dourado,
+/// as cores dos icones da marca. Fundo marinho profundo, cartoes em marinho
+/// mais claro, texto claro e o dourado nas acoes e destaques.
 class AppColors {
   const AppColors._();
 
-  // ---- Base clara (padrao dos aplicativos de motorista) ----
-  // Fundo cinza bem claro, cartoes brancos, texto quase preto: legivel no
-  // sol do meio-dia, que e onde o motorista trabalha.
-  static const Color background = Color(0xFFEEF0F3);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceElevated = Color(0xFFF4F5F7);
-  static const Color border = Color(0xFFE3E6EA);
+  // ---- Base marinho ----
+  static const Color background = Color(0xFF07122B);
+  static const Color surface = Color(0xFF0F1E42);
+  static const Color surfaceElevated = Color(0xFF162A55);
+  static const Color border = Color(0xFF25396A);
 
-  static const Color text = Color(0xFF14181F);
-  static const Color textMuted = Color(0xFF667085);
-  static const Color textFaint = Color(0xFF98A2B3);
+  static const Color text = Color(0xFFF3F5FA);
+  static const Color textMuted = Color(0xFFA7B2CB);
+  static const Color textFaint = Color(0xFF6E7C9C);
 
-  // ---- Marca Fortaleza Move: azul do icone + dourado das asas ----
-  static const Color brand = Color(0xFF1E5BB8);
-  static const Color brandDark = Color(0xFF143E80);
-  static const Color brandSoft = Color(0x1A1E5BB8);
-  static const Color gold = Color(0xFFF2B81B);
+  // ---- Marca: dourado das asas (acoes) sobre o marinho ----
+  static const Color brand = Color(0xFFE9B53D);
+  static const Color brandDark = Color(0xFFC8922A);
+  // Dourado transparente sobre marinho vira cinza (cores opostas): o fundo
+  // suave da marca e um marinho mais claro, e o dourado fica no icone/borda.
+  static const Color brandSoft = Color(0xFF1C2E5C);
+  static const Color gold = brand;
+
+  /// Texto e icone por cima do dourado.
+  static const Color onBrand = Color(0xFF07122B);
+
+  /// Marinho da marca (fundos de destaque, faixas).
+  static const Color navy = Color(0xFF0B1A3A);
 
   // ---- Estados ----
   /// Verde: conectado, credito, valor positivo.
-  static const Color primary = Color(0xFF2E9E5B);
-  static const Color primaryDark = Color(0xFF237A46);
-  static const Color primarySoft = Color(0x1F2E9E5B);
+  static const Color primary = Color(0xFF34C17A);
+  static const Color primaryDark = Color(0xFF26995E);
+  static const Color primarySoft = Color(0xFF12383A);
 
   static const Color accent = brand;
   static const Color accentSoft = brandSoft;
 
-  static const Color success = Color(0xFF1E9E5A);
-  static const Color danger = Color(0xFFD93A3A);
-  static const Color dangerSoft = Color(0x1AD93A3A);
-  static const Color warning = Color(0xFFE8710A);
-  static const Color warningSoft = Color(0x1AE8710A);
+  static const Color success = Color(0xFF34C17A);
+  static const Color danger = Color(0xFFF0545A);
+  static const Color dangerSoft = Color(0xFF3A1D2C);
+  static const Color warning = Color(0xFFFF9A3D);
+  static const Color warningSoft = Color(0xFF382B24);
 
-  static const Color info = brand;
-  static const Color infoSoft = brandSoft;
+  static const Color info = Color(0xFF6EA2FF);
+  static const Color infoSoft = Color(0xFF1A3366);
 
-  // ---- Superficie clara (bottom sheet branco) ----
-  static const Color sheet = Color(0xFFFFFFFF);
-  static const Color sheetText = Color(0xFF14181F);
-  static const Color sheetMuted = Color(0xFF667085);
-  static const Color sheetFaint = Color(0xFFA9B1BE);
-  static const Color sheetBorder = Color(0xFFE3E6EA);
-  static const Color sheetField = Color(0xFFF4F5F7);
+  // ---- Paineis de baixo (sobre o mapa) ----
+  static const Color sheet = Color(0xFF0F1E42);
+  static const Color sheetText = text;
+  static const Color sheetMuted = textMuted;
+  static const Color sheetFaint = textFaint;
+  static const Color sheetBorder = border;
+  static const Color sheetField = Color(0xFF162A55);
 
   // ---- Formularios (entrada, cidade, cadastro) ----
-  static const Color campoBorda = Color(0xFFC9CED6);
-  static const Color desativado = Color(0xFFC7C9CC);
-  static const Color desativadoTexto = Color(0xFF7D838C);
+  static const Color campoBorda = Color(0xFF2E4579);
+  static const Color desativado = Color(0xFF2A3A60);
+  static const Color desativadoTexto = Color(0xFF7D89A6);
 
-  /// Faixa cinza que separa os blocos da tela Conta.
-  static const Color faixa = Color(0xFFF1F2F4);
+  /// Faixa que separa os blocos da tela Conta.
+  static const Color faixa = Color(0xFF0A1734);
 
   // ---- Mapa ----
+  /// Contorno fino dos cartoes (vidro sobre o marinho).
+  static const Color hairline = Color(0x1AFFFFFF);
+
+  /// Degrade do dourado nos botoes principais.
+  static const LinearGradient degradeOuro = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF6CF6A), Color(0xFFE9B53D), Color(0xFFD39A28)],
+  );
+
+  /// Fundo de destaque (entrada, cabecalhos): marinho com brilho.
+  static const LinearGradient degradeMarinho = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF13285A), Color(0xFF0A1838), Color(0xFF060F24)],
+  );
+
   static const Color mapBackground = Color(0xFFE9E7E2);
   static const Color mapRoad = Color(0xFFFFFFFF);
   static const Color mapRoadLight = Color(0xFFF7F6F3);
@@ -87,7 +107,7 @@ class Radii {
   static const double sm = 8;
   static const double md = 12;
   static const double lg = 16;
-  static const double sheet = 16;
+  static const double sheet = 28;
   static const double xl = 24;
   static const double pill = 999;
 }
@@ -165,9 +185,12 @@ class AppTheme {
   static ThemeData comCor(Color marca) {
     final base = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
       fontFamily: AppText.family,
     );
+    // Texto por cima da cor da marca: marinho no dourado (e em cor clara),
+    // branco em cor escura (se a Central escolher um azul, por exemplo).
+    final sobreMarca = ThemeData.estimateBrightnessForColor(marca) == Brightness.light ? AppColors.onBrand : Colors.white;
 
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
@@ -176,31 +199,81 @@ class AppTheme {
       // do Flutter (as fotos das telas pegaram em 10/10/2026).
       colorScheme: ColorScheme.fromSeed(
         seedColor: marca,
-        brightness: Brightness.light,
+        brightness: Brightness.dark,
       ).copyWith(
         primary: marca,
         secondary: AppColors.gold,
         surface: AppColors.surface,
         error: AppColors.danger,
-        onPrimary: Colors.white,
+        onPrimary: sobreMarca,
         onSurface: AppColors.text,
-        onSecondary: AppColors.text,
-        secondaryContainer: const Color(0xFFDCE6F7),
-        onSecondaryContainer: AppColors.brandDark,
+        onSecondary: AppColors.onBrand,
+        secondaryContainer: AppColors.surfaceElevated,
+        onSecondaryContainer: AppColors.text,
+        surfaceContainerHighest: AppColors.surfaceElevated,
+        outline: AppColors.border,
       ),
-      appBarTheme: const AppBarTheme(
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.lg),
+          side: const BorderSide(color: AppColors.hairline),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 1,
-        scrolledUnderElevation: 1,
-        shadowColor: Color(0x33000000),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.xl),
+          side: const BorderSide(color: AppColors.hairline),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.sheet,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      ),
+      listTileTheme: const ListTileThemeData(iconColor: AppColors.textMuted, textColor: AppColors.text),
+      // Campos premium (11/11/2026): cantos de 14, contorno fino e dourado
+      // ao focar. Quem passa o proprio `border` (ex.: InputBorder.none dentro
+      // de um cartao) continua mandando no seu campo.
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surfaceElevated,
+        hintStyle: const TextStyle(color: AppColors.textFaint),
+        labelStyle: const TextStyle(color: AppColors.textMuted),
+        floatingLabelStyle: TextStyle(color: marca, fontWeight: FontWeight.w600),
+        prefixIconColor: AppColors.textMuted,
+        suffixIconColor: AppColors.textMuted,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: WidgetStateInputBorder.resolveWith((estado) {
+          final cor = estado.contains(WidgetState.error)
+              ? AppColors.danger
+              : estado.contains(WidgetState.focused)
+                  ? marca
+                  : AppColors.hairline;
+          return OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: cor, width: estado.contains(WidgetState.focused) ? 1.4 : 1),
+          );
+        }),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        shadowColor: Color(0x66000000),
         centerTitle: true,
         iconTheme: IconThemeData(color: AppColors.text),
         titleTextStyle: TextStyle(
           fontFamily: AppText.family,
           color: AppColors.text,
           fontSize: 19,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
         ),
       ),
       textTheme: base.textTheme.apply(
@@ -209,14 +282,99 @@ class AppTheme {
       ),
       dividerColor: AppColors.border,
       progressIndicatorTheme: ProgressIndicatorThemeData(color: marca),
-      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surfaceElevated,
+        contentTextStyle: TextStyle(fontFamily: AppText.family, color: AppColors.text),
+      ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? Colors.white : const Color(0xFFBFC5CE),
+          (s) => s.contains(WidgetState.selected) ? Colors.white : AppColors.textMuted,
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? AppColors.primary : const Color(0xFFE6E8EC),
+          (s) => s.contains(WidgetState.selected) ? AppColors.primary : AppColors.surfaceElevated,
         ),
+      ),
+      // Botoes do Material com a mesma cara dos botoes da casa: 16 de canto,
+      // 54 de altura e letra forte (antes vinham em pilula, sem peso).
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: marca,
+          foregroundColor: sobreMarca,
+          disabledBackgroundColor: AppColors.desativado,
+          disabledForegroundColor: AppColors.desativadoTexto,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          minimumSize: const Size(64, 54),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          textStyle: AppText.button,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: marca,
+          foregroundColor: sobreMarca,
+          disabledBackgroundColor: AppColors.desativado,
+          disabledForegroundColor: AppColors.desativadoTexto,
+          minimumSize: const Size(64, 50),
+          textStyle: AppText.button,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.text,
+          minimumSize: const Size(64, 50),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          side: const BorderSide(color: AppColors.border),
+          textStyle: AppText.bodyStrong,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: marca,
+          textStyle: AppText.bodyStrong,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md)),
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: AppColors.text,
+        unselectedLabelColor: AppColors.textMuted,
+        indicatorColor: marca,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: AppColors.hairline,
+        labelStyle: AppText.bodyStrong,
+        unselectedLabelStyle: AppText.body,
+      ),
+      dividerTheme: const DividerThemeData(color: AppColors.hairline, thickness: 1, space: 1),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surfaceElevated,
+        selectedColor: AppColors.brandSoft,
+        side: const BorderSide(color: AppColors.hairline),
+        labelStyle: AppText.caption.copyWith(color: AppColors.text, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: marca,
+        foregroundColor: sobreMarca,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? marca : Colors.transparent),
+        checkColor: WidgetStatePropertyAll(sobreMarca),
+        side: const BorderSide(color: AppColors.textMuted, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? marca : AppColors.textMuted),
+      ),
+      expansionTileTheme: const ExpansionTileThemeData(
+        iconColor: AppColors.gold,
+        collapsedIconColor: AppColors.textMuted,
+        shape: Border(),
+        collapsedShape: Border(),
       ),
     );
   }

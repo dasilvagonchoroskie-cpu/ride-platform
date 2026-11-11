@@ -34,14 +34,14 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.primary ||
       AppButtonVariant.approve =>
         (AppColors.primary, AppColors.onPrimary, BorderSide.none),
-      AppButtonVariant.success => (AppColors.success, AppColors.onPrimary, BorderSide.none),
+      AppButtonVariant.success => (AppColors.success, AppColors.onStrong, BorderSide.none),
       AppButtonVariant.secondary => (
           AppColors.surface,
           AppColors.text,
           const BorderSide(color: Color(0xFFC9CED6)),
         ),
       AppButtonVariant.ghost => (Colors.transparent, AppColors.textMuted, BorderSide.none),
-      AppButtonVariant.danger => (AppColors.danger, AppColors.onPrimary, BorderSide.none),
+      AppButtonVariant.danger => (AppColors.danger, AppColors.onStrong, BorderSide.none),
     };
 
     return Padding(
@@ -130,8 +130,8 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final corRotulo = highlight ? AppColors.onPrimary.withValues(alpha: 0.85) : AppColors.textMuted;
-    final corValor = highlight ? AppColors.onPrimary : AppColors.text;
+    final corRotulo = AppColors.textMuted;
+    final corValor = highlight ? AppColors.gold : AppColors.text;
     return Container(
       padding: const EdgeInsets.all(Spacing.lg),
       decoration: BoxDecoration(
@@ -151,7 +151,7 @@ class MetricCard extends StatelessWidget {
                   height: 28,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: highlight ? AppColors.onPrimary.withValues(alpha: 0.18) : AppColors.brandSoft,
+                    color: AppColors.brandSoft,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, size: 16, color: highlight ? AppColors.gold : AppColors.brand),

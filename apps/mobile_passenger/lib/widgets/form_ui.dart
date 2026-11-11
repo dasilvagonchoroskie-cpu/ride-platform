@@ -84,13 +84,13 @@ class RotuloCampo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.sm),
-      child: Text(texto, style: AppText.bodyStrong.copyWith(fontSize: 17, color: AppColors.text)),
+      child: Text(texto, style: AppText.bodyStrong.copyWith(fontSize: 14, color: AppColors.textMuted, letterSpacing: 0.2)),
     );
   }
 }
 
 OutlineInputBorder _borda(Color cor, [double largura = 1]) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(Radii.sm),
+      borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(color: cor, width: largura),
     );
 
@@ -101,14 +101,14 @@ InputDecoration _decoracao({String? dica, String? erro, Widget? prefixo, Widget?
     errorText: erro,
     errorMaxLines: 3,
     filled: true,
-    fillColor: leitura ? AppColors.surfaceElevated : AppColors.surface,
+    fillColor: leitura ? AppColors.surface : AppColors.surfaceElevated,
     contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: 18),
     prefixIcon: prefixo,
     suffixIcon: sufixo,
-    border: _borda(AppColors.campoBorda),
-    enabledBorder: _borda(AppColors.campoBorda),
+    border: _borda(AppColors.hairline),
+    enabledBorder: _borda(AppColors.hairline),
     disabledBorder: _borda(AppColors.border),
-    focusedBorder: _borda(AppColors.brand, 1.6),
+    focusedBorder: _borda(AppColors.brand, 1.4),
     errorBorder: _borda(AppColors.danger),
     focusedErrorBorder: _borda(AppColors.danger, 1.6),
   );
@@ -232,7 +232,7 @@ class CampoSelecao extends StatelessWidget {
       children: [
         if (rotulo != null) RotuloCampo(rotulo!),
         InkWell(
-          borderRadius: BorderRadius.circular(Radii.sm),
+          borderRadius: BorderRadius.circular(14),
           onTap: aoTocar,
           child: InputDecorator(
             decoration: _decoracao(
@@ -264,31 +264,50 @@ class BotaoPrincipal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 54,
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: ativo && !carregando ? aoTocar : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.brand,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: carregando ? AppColors.brand : AppColors.desativado,
-          disabledForegroundColor: carregando ? Colors.white : AppColors.desativadoTexto,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+    final ligado = ativo && !carregando && aoTocar != null;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 180),
+      opacity: ativo || carregando ? 1 : 0.55,
+      child: Container(
+        height: 56,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: ativo || carregando ? AppColors.degradeOuro : null,
+          color: ativo || carregando ? null : AppColors.desativado,
+          borderRadius: BorderRadius.circular(Radii.lg),
+          boxShadow: ligado ? const [BoxShadow(color: Color(0x55E9B53D), blurRadius: 18, offset: Offset(0, 6))] : null,
         ),
-        child: carregando
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-              )
-            // Uma linha so, centralizada: texto comprido diminui a letra
-            // em vez de quebrar torto (o da Ajuda quebrava em 2 linhas).
-            : FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(texto, maxLines: 1, style: AppText.button.copyWith(fontSize: 18)),
-              ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(Radii.lg),
+            onTap: ligado ? aoTocar : null,
+            child: Center(
+              child: carregando
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.onBrand),
+                    )
+                  // Uma linha so, centralizada: texto comprido diminui a letra
+                  // em vez de quebrar torto (o da Ajuda quebrava em 2 linhas).
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          texto,
+                          maxLines: 1,
+                          style: AppText.button.copyWith(
+                            fontSize: 18,
+                            color: ativo ? AppColors.onBrand : AppColors.desativadoTexto,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -311,8 +330,10 @@ class BotaoContorno extends StatelessWidget {
         onPressed: aoTocar,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.text,
-          side: const BorderSide(color: AppColors.textMuted, width: 1.2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+          side: const BorderSide(color: Color(0x40FFFFFF), width: 1.2),
+          backgroundColor: const Color(0x0DFFFFFF),
+          minimumSize: const Size.fromHeight(56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

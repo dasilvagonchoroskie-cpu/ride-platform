@@ -363,11 +363,11 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   children: [
                     Text('GANHO DA CENTRAL', style: AppText.label.copyWith(color: AppColors.gold, fontSize: 11)),
                     const SizedBox(height: Spacing.xs),
-                    Text(reais(i.ganhoCentralHojeCents), style: AppText.metric.copyWith(color: AppColors.onPrimary)),
+                    Text(reais(i.ganhoCentralHojeCents), style: AppText.metric.copyWith(color: AppColors.text)),
                     Text(
                       'Comissão das corridas ${reais(i.comissaoHojeCents)}'
                       '${i.mensalidadesHojeCents > 0 ? ' + mensalidades ${reais(i.mensalidadesHojeCents)}' : ''}',
-                      style: AppText.caption.copyWith(color: AppColors.onPrimary.withValues(alpha: 0.85)),
+                      style: AppText.caption.copyWith(color: AppColors.textMuted),
                     ),
                   ],
                 ),

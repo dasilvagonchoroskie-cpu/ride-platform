@@ -165,13 +165,13 @@ class _ChatScreenState extends State<ChatScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(m.texto, style: AppText.body.copyWith(color: m.minha ? Colors.white : AppColors.text)),
+                                  Text(m.texto, style: AppText.body.copyWith(color: m.minha ? AppColors.onBrand : AppColors.text)),
                                   const SizedBox(height: 2),
                                   Text(
                                     m.minha ? '${_hora(m.hora)}${m.lida ? ' · lida' : ''}' : _hora(m.hora),
                                     style: AppText.caption.copyWith(
                                       fontSize: 11,
-                                      color: m.minha ? Colors.white70 : AppColors.textMuted,
+                                      color: m.minha ? AppColors.onBrand.withValues(alpha: 0.7) : AppColors.textMuted,
                                     ),
                                   ),
                                 ],
