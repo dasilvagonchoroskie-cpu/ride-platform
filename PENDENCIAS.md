@@ -7,6 +7,19 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 00000000. Requisição de continuidade — recuperação de contas R1–R5 (11/11/2026, PR #56)
+- [AUTO] R1: trocar/recuperar a senha derruba na hora os outros aparelhos (acesso de 15 min já aberto também cai); só o aparelho que trocou continua. Testes automáticos do servidor + cenário novo no ponta a ponta (rodará de madrugada).
+- [AUTO] R2: telefone só muda com código no e-mail da conta (nunca na tela, mesmo com OTP_DEBUG_RETURN); conta sem e-mail não troca telefone; e-mail novo só com código no e-mail novo (app do passageiro pede o código); 48 h entre trocar e-mail e telefone; operador de cidade não aprova nem muda telefone/e-mail.
+- [NÃO EXISTE] R2: confirmar o número novo por código no próprio número — depende de SMS (pago). Até lá a prova é o e-mail confirmado.
+- [AUTO] R3: "Recuperar acesso" na Central (só o dono), conferências do documento sem guardar o documento, auditoria LIBERADA/RECUSADA; e-mail novo obrigatório, senha antiga apagada. Selfie com prova de vida avaliada e não feita (custo + biometria).
+- [AUTO] R4: aviso de segurança no e-mail (antigo também, na troca) e nos aparelhos, sem dado pessoal; endereços de teste não recebem.
+- [AUTO] R5: "Esqueci a senha" da Central com duas etapas só grava a senha depois do código do autenticador; procedimento excepcional por esteira com aprovação do dono e auditoria (testado num banco de teste local, não em produção); Central travada até ligar o autenticador de novo.
+- [AUTO] Despacho manual da Central não manda corrida de teste para motorista real (e vice-versa). O automático já separava.
+- [AUTO] Código de 6 números não vai mais para o registro (log) do servidor.
+- Esteiras: publicar o servidor só quando muda o servidor; teste de ponta a ponta todo dia às 04:37 (Brasília), MUDAR_CONFIG=nao, e não mais logo depois de publicar.
+- [SEM TESTE] Separação do CRM no Render: falta o Evandro pôr o **Build Filter** (docs/RENDER-SEPARAR-CRM.md). Depois disso eu testo (envio só de documento não publica; envio do servidor publica uma vez).
+- Pendentes do Evandro: criar o ambiente `recuperacao-excepcional` no GitHub com ele como aprovador (docs/DUAS-ETAPAS-DONO.md); decidir o achado **A9** (chave do teste entra na conta do dono sem as duas etapas — proposta: conta de serviço para as esteiras); Build Filter do Render; ligar as duas etapas com o próprio celular; roteiro L–P no celular (docs/TESTE-DE-RUA.md); desligar OTP_DEBUG_RETURN antes da loja (com as contas de revisão do Google prontas).
+
 ## 0000000. Requisição 1 — aparelhos, cofre, segurança da Central (11/11/2026, PR #54, APKs 391)
 - [REAL] Servidor no ar com: código único por instalação, desconectar UM aparelho (só o dono, com auditoria), renovação presa ao mesmo aparelho, aviso (push) ligado ao aparelho da sessão. Teste de ponta a ponta (execução 85: 363 OK, 3 falhas da carteira que são intencionais, 4 pulados por não mexer em produção): dois celulares na mesma conta, desconecta um, o outro continua; motorista desconectado cai na hora; pedido Popular não toca no carro Conforto.
 - [REAL] Correção de segurança: operador da cidade só vê/muda dados pessoais dos motoristas da cidade dele; passageiros só o dono (4 testes automáticos).
@@ -14,8 +27,8 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 - Teste de ponta a ponta agora NÃO grava configuração de produção (MUDAR_CONFIG=nao): aparência, aviso de saldo, tarifas e Conforto na cidade aparecem como "PULADO".
 - Documentos: docs/SEGURANCA-CENTRAL.md, docs/RECUPERACAO-DE-CONTAS.md (decisões R1–R5), docs/DUAS-ETAPAS-DONO.md (não ligado), docs/TESTE-DE-RUA.md (roteiro A–K), docs/MIGRACAO-HOSTINGER.md (só plano; decisão M1/M2), docs/GOOGLE-PLAY.md + docs/loja/TEXTOS-DA-LOJA.md + recurso gráfico 1024×500.
 - Risco de prazo: conta pessoal da Google Play exige 12 testadores por 14 dias + até 7 dias de análise (≈ 3 a 4 semanas).
-- Risco operacional: todo envio ao `main` (inclusive relatórios da esteira e o CRM) republica o servidor no Render (~30 s fora). Proposta: filtro de pastas no Render (só `apps/backend` e `packages/shared`). Decisão do Evandro.
-- Pendentes do Evandro: R1–R5 (recuperação), M1/M2 (Hostinger), ligar duas etapas, roteiro no celular, rodar o teste de ponta a ponta fora do horário de operação (A7).
+- Risco operacional: todo envio ao `main` (inclusive relatórios da esteira e o CRM) republica o servidor no Render (~30 s fora). Encaminhado na Requisição de continuidade (seção acima).
+- Pendentes do Evandro: R1–R5 aprovadas e feitas (seção acima); Hostinger: direção M1 (sem executar); ligar duas etapas; roteiro no celular.
 
 ## Prazo: Play Store em menos de um mês (dito em 11/11/2026)
 - Meta do Evandro: plataforma blindada e 100% funcional, publicada na Play Store, até o começo de dezembro/2026.

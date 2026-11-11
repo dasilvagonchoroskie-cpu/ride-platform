@@ -7,11 +7,12 @@ import { OtpService } from './otp.service';
 import { TokenService } from './token.service';
 import { DoisFatoresService } from './dois-fatores';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { AvisosDeSeguranca } from './avisos-de-seguranca';
 
 @Module({
   imports: [PassportModule.register({ defaultStrategy: 'jwt' }), JwtModule.register({})],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, TokenService, JwtStrategy, DoisFatoresService],
-  exports: [AuthService, TokenService],
+  providers: [AuthService, OtpService, TokenService, JwtStrategy, DoisFatoresService, AvisosDeSeguranca],
+  exports: [AuthService, TokenService, AvisosDeSeguranca, OtpService, DoisFatoresService],
 })
 export class AuthModule {}

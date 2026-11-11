@@ -24,6 +24,13 @@ export interface EstadoDaConta {
    * 2 dias saem (o acesso dura 15 min e as renovacoes ja foram revogadas).
    */
   aparelhosCortados?: Record<string, number>;
+  /**
+   * R1 (Requisicao de continuidade, 11/11/2026): ao trocar ou recuperar a
+   * senha, a conta toda e cortada MENOS o aparelho que fez a troca (id
+   * interno em devices.id). Guardado em users.metadata.sessoesExceto e
+   * apagado no proximo corte total.
+   */
+  sessoesExceto?: string | null;
 }
 
 /** Quanto tempo o corte de um aparelho fica guardado na conta. */
@@ -33,14 +40,16 @@ export const CACHE_MS = 30_000;
 
 /** Token emitido (iat, em segundos) antes do corte nao vale mais. */
 export function tokenValido(
-  estado: Pick<EstadoDaConta, 'sessoesDesde' | 'ativa' | 'aparelhosCortados'>,
+  estado: Pick<EstadoDaConta, 'sessoesDesde' | 'ativa' | 'aparelhosCortados' | 'sessoesExceto'>,
   iat?: number,
   aparelho?: string | null,
 ): boolean {
   if (!estado.ativa) return false;
   const corteDoAparelho = aparelho ? estado.aparelhosCortados?.[aparelho] : undefined;
+  // O aparelho que trocou a senha fica fora do corte da conta (so ele).
+  const poupado = !!aparelho && !!estado.sessoesExceto && aparelho === estado.sessoesExceto;
   // O corte que vale e o mais recente: o da conta toda ou o deste aparelho.
-  const desde = Math.max(estado.sessoesDesde || 0, corteDoAparelho || 0);
+  const desde = Math.max(poupado ? 0 : estado.sessoesDesde || 0, corteDoAparelho || 0);
   if (!desde) return true;
   if (typeof iat !== 'number') return false;
   return iat >= Math.floor(desde / 1000);
@@ -67,12 +76,13 @@ export class SessoesService {
     const guardado = this.cache.get(userId);
     if (guardado && agora - guardado.lidoEm < CACHE_MS) return guardado;
     const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { status: true, metadata: true } });
-    const m = (u?.metadata ?? {}) as { sessoesDesde?: unknown; aparelhosCortados?: unknown };
+    const m = (u?.metadata ?? {}) as { sessoesDesde?: unknown; aparelhosCortados?: unknown; sessoesExceto?: unknown };
     const estado: EstadoDaConta = {
       sessoesDesde: typeof m.sessoesDesde === 'number' ? m.sessoesDesde : 0,
       ativa: !!u && u.status !== 'BLOCKED' && u.status !== 'DELETED',
       lidoEm: agora,
       aparelhosCortados: cortesRecentes(m.aparelhosCortados, agora),
+      sessoesExceto: typeof m.sessoesExceto === 'string' ? m.sessoesExceto : null,
     };
     // Conta bloqueada nao fica no cache: ao desbloquear, volta na hora.
     if (estado.ativa) {
@@ -128,18 +138,29 @@ export class SessoesService {
     return r;
   }
 
-  /** Derruba todos os aparelhos da conta. Devolve quantas sessoes e aparelhos foram encerrados. */
-  async cortar(userId: string): Promise<{ sessoesEncerradas: number; aparelhos: number }> {
+  /**
+   * Derruba todos os aparelhos da conta. Com [manter] (R1: troca ou
+   * recuperacao de senha), so o aparelho que fez a troca continua: as
+   * renovacoes e os avisos dele ficam, e o acesso dele nao cai.
+   */
+  async cortar(userId: string, manter?: string | null): Promise<{ sessoesEncerradas: number; aparelhos: number }> {
     // +1 s: o token emitido no mesmo segundo do corte tambem cai.
     const desde = Date.now() + 1000;
     const r = await this.prisma.withTransaction(async (tx) => {
       const u = await tx.user.findUnique({ where: { id: userId }, select: { metadata: true } });
       if (!u) return null;
-      const meta = { ...((u.metadata ?? {}) as Record<string, unknown>), sessoesDesde: desde };
+      const meta: Record<string, unknown> = { ...((u.metadata ?? {}) as Record<string, unknown>), sessoesDesde: desde };
+      if (manter) meta.sessoesExceto = manter;
+      else delete meta.sessoesExceto;
       await tx.user.update({ where: { id: userId }, data: { metadata: meta as Prisma.InputJsonValue } });
-      const tokens = await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
-      const aparelhos = await tx.device.updateMany({ where: { userId }, data: { fcmToken: null } });
-      await tx.driver.updateMany({ where: { userId }, data: { isOnline: false } });
+      const outros = manter ? { OR: [{ deviceId: null }, { deviceId: { not: manter } }] } : {};
+      const tokens = await tx.refreshToken.updateMany({ where: { userId, revokedAt: null, ...outros }, data: { revokedAt: new Date() } });
+      const aparelhos = await tx.device.updateMany({
+        where: { userId, ...(manter ? { id: { not: manter } } : {}) },
+        data: { fcmToken: null },
+      });
+      // Motorista trocando a senha no proprio celular continua no ar.
+      if (!manter) await tx.driver.updateMany({ where: { userId }, data: { isOnline: false } });
       return { sessoesEncerradas: tokens.count, aparelhos: aparelhos.count };
     });
     this.cache.delete(userId);

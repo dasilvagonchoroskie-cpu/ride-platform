@@ -11,6 +11,8 @@ import { DoisFatoresService, doisFatoresLigado } from './dois-fatores';
 import { PracasService } from '../pracas/pracas.service';
 import { acharContaComOsMesmosDados, DadosDaPessoa, liberarTelefoneDeContaVazia } from './conta-existente';
 import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
+import { AvisosDeSeguranca } from './avisos-de-seguranca';
+import { randomToken } from '../../common/utils/crypto.util';
 
 /** Genero informado no cadastro do passageiro. */
 export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
@@ -27,6 +29,9 @@ interface MetaUsuario {
   teste?: boolean;
   [k: string]: unknown;
 }
+
+/** R2: depois de trocar o e-mail, o telefone so muda 48 h depois. */
+export const ESPERA_TELEFONE_DEPOIS_DO_EMAIL_MS = 48 * 3600 * 1000;
 
 /** Conta criada pelo e-mail ainda sem telefone (o campo e obrigatorio e unico). */
 const PREFIXO_PROVISORIO = 'pend-';
@@ -79,6 +84,8 @@ export interface AuthResult extends IssuedTokens {
     telefonePendente: boolean;
     trocarSenha: boolean;
     doisFatores: boolean;
+    /** R5: conta da Central recuperada pelo procedimento excepcional (ligar as duas etapas de novo). */
+    refazerDoisFatores: boolean;
   };
   isNewUser: boolean;
 }
@@ -105,6 +112,7 @@ export class AuthService {
     private readonly doisFatores: DoisFatoresService,
     private readonly pracas: PracasService,
     private readonly sessoes: SessoesService,
+    private readonly avisos: AvisosDeSeguranca,
   ) {}
 
   /** Central com as duas etapas ligadas: devolve o desafio no lugar dos tokens. */
@@ -115,7 +123,7 @@ export class AuthService {
 
   /** Segunda etapa: o codigo do Google Authenticator (ou um de recuperacao). */
   async entrarComDoisFatores(desafio: string, codigo: string, device?: DeviceContext): Promise<AuthResult> {
-    const userId = this.doisFatores.lerDesafio(desafio);
+    const { userId, senhaNova, aparelho } = this.doisFatores.lerDadosDoDesafio(desafio);
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
@@ -124,10 +132,28 @@ export class AuthService {
     this.assertUserActive(user.status);
     const ok = await this.doisFatores.conferirEGastar(user.id, (user.metadata ?? {}) as Record<string, unknown>, codigo);
     if (!ok) throw BusinessException.unauthorized('Codigo errado. Digite o codigo que aparece agora no Google Authenticator.', ERROR_CODES.INVALID_CREDENTIALS);
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    const meta = { ...metaDe(await this.prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { metadata: true } })) } as Record<string, unknown>;
+    if (senhaNova) {
+      // R5: "Esqueci a senha" da Central com duas etapas. So agora, com o
+      // codigo do autenticador conferido, a senha nova passa a valer.
+      delete meta.senhaProvisoria;
+    }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), ...(senhaNova ? { passwordHash: senhaNova, metadata: meta as never } : {}) },
+    });
+    let aparelhoDaEntrada: DeviceContext | undefined = device;
+    if (senhaNova) {
+      this.pracas.esquecerEscopo(user.id);
+      const manter = device ? await this.tokens.upsertDevice(user.id, device) : aparelho;
+      await this.avisos.avisar(user.id, 'SENHA_RECUPERADA', { exceto: manter });
+      await this.sessoes.cortar(user.id, manter);
+      if (!device && !manter) aparelhoDaEntrada = { deviceId: `recuperacao-${randomToken(12)}`, platform: 'WEB' as never };
+    }
     const issued = await this.tokens.issueTokens(
       { id: user.id, role: user.role, name: user.name, phone: user.phone, email: user.email, driverId: user.driver?.id ?? null },
-      device,
+      aparelhoDaEntrada,
+      aparelhoDaEntrada ? null : aparelho,
     );
     return { ...issued, isNewUser: false, user: this.paraUsuario(user) };
   }
@@ -373,7 +399,13 @@ export class AuthService {
     };
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  /**
+   * Troca de senha com a pessoa ja dentro da conta. R1 (11/11/2026): todos
+   * os outros aparelhos caem NA HORA (inclusive o acesso de 15 min que ja
+   * estava aberto); so o aparelho que fez a troca continua. R4: aviso no
+   * e-mail e nos outros aparelhos.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string, aparelho?: string | null): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
 
@@ -394,7 +426,9 @@ export class AuthService {
     });
     if (eraProvisoria) this.pracas.esquecerEscopo(userId);
 
-    await this.tokens.revokeAllUserTokens(userId);
+    // Senha provisoria do operador (primeiro acesso) nao e "troca": sem aviso.
+    if (!eraProvisoria) await this.avisos.avisar(userId, 'SENHA_TROCADA', { exceto: aparelho });
+    await this.sessoes.cortar(userId, aparelho ?? null);
   }
 
   async refresh(refreshToken: string, device?: DeviceContext): Promise<AuthResult> {
@@ -476,6 +510,7 @@ export class AuthService {
       trocarSenha: user.role === UserRole.ADMIN && metaDe(user).senhaProvisoria === true,
       /** Central: verificacao em duas etapas ligada. */
       doisFatores: user.role === UserRole.ADMIN && doisFatoresLigado(user.metadata),
+      refazerDoisFatores: user.role === UserRole.ADMIN && metaDe(user).refazerDoisFatores === true,
     };
   }
 
@@ -553,7 +588,17 @@ export class AuthService {
   /** Meus dados: nome, e-mail, genero e cidade. O CPF so entra se ainda estiver vazio. */
   async atualizarPerfil(
     userId: string,
-    input: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string; codigo?: string; endereco?: string },
+    input: {
+      name?: string;
+      email?: string;
+      gender?: Genero;
+      city?: string;
+      cpf?: string;
+      phone?: string;
+      codigo?: string;
+      endereco?: string;
+      codigoEmail?: string;
+    },
   ): Promise<AuthResult['user']> {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { driver: { select: { id: true } } } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
@@ -572,7 +617,25 @@ export class AuthService {
         );
       }
     }
-    const novoTelefone = input.phone ? await this.validarTelefoneNovo(userId, user.phone, input.phone, input.codigo) : null;
+    const trocaEmail = !!input.email && input.email !== user.email;
+    const emailAntigo = user.email;
+    const trocaTelefone = !!input.phone && input.phone !== user.phone && !telefonePendente(user.phone);
+    if (trocaEmail && trocaTelefone) {
+      throw BusinessException.validation('Por seguranca, troque o e-mail e o telefone em momentos separados.');
+    }
+    const novoTelefone = input.phone
+      ? await this.validarTelefoneNovo(userId, user.phone, input.phone, input.codigo, { email: user.email, meta: metaDe(user) })
+      : null;
+    // R2: e-mail novo so com o codigo que chegou NELE (prova que e da pessoa).
+    if (trocaEmail) {
+      await this.garantirUnicos(userId, input.email);
+      if (!input.codigoEmail) {
+        throw BusinessException.validation('Para trocar o e-mail, peca o codigo e digite o que chegou no e-mail novo.', {
+          precisaCodigoEmail: true,
+        });
+      }
+      await this.otp.verify({ email: input.email, purpose: OtpPurpose.EMAIL_VERIFICATION, code: input.codigoEmail });
+    }
 
     if (input.cpf && user.cpf && input.cpf !== user.cpf) {
       throw BusinessException.validation('O CPF nao pode ser trocado depois do cadastro. Fale com a Central.');
@@ -586,22 +649,27 @@ export class AuthService {
         where: { id: userId },
         data: {
           ...(input.name ? { name: input.name.replace(/\s+/g, ' ').trim() } : {}),
-          ...(input.email && input.email !== user.email ? { email: input.email, emailVerifiedAt: null } : {}),
+          ...(trocaEmail ? { email: input.email, emailVerifiedAt: new Date() } : {}),
           ...(input.cpf && !user.cpf ? { cpf: input.cpf } : {}),
-          ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null } : {}),
-          ...(input.gender || cidade || input.endereco
+          // O codigo da troca de telefone chegou no e-mail: o e-mail esta confirmado.
+          ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null, ...(trocaTelefone ? { emailVerifiedAt: new Date() } : {}) } : {}),
+          ...(input.gender || cidade || input.endereco || trocaEmail
             ? {
                 metadata: {
                   ...meta,
                   ...(input.gender ? { genero: input.gender } : {}),
                   ...(cidade ? { cidade } : {}),
                   ...(input.endereco ? { endereco: input.endereco } : {}),
+                  ...(trocaEmail ? { emailTrocadoEm: new Date().toISOString() } : {}),
                 } as never,
               }
             : {}),
         },
         include: { driver: { select: { id: true, status: true, isOnline: true } } },
       });
+      // R4: aviso no e-mail (o antigo tambem) e nos aparelhos da conta.
+      if (trocaEmail) await this.avisos.avisar(userId, 'EMAIL_TROCADO', { emailAntigo });
+      if (trocaTelefone && novoTelefone) await this.avisos.avisar(userId, 'TELEFONE_TROCADO');
       return this.paraUsuario(salvo);
     } catch (e) {
       throw this.traduzirDuplicado(e);
@@ -639,6 +707,21 @@ export class AuthService {
     if (!conta) throw BusinessException.notFound(params.phone ? 'Nao ha conta com este telefone.' : 'Nao ha conta com este e-mail.');
     this.assertUserActive(conta.status);
 
+    // R5: Central com as duas etapas ligadas: a senha nova so vale depois do
+    // codigo do Google Authenticator (POST /auth/2fa/entrar). Nada muda
+    // antes disso (a esteira de testes, com a chave do teste, passa direto).
+    if (conta.role === UserRole.ADMIN && doisFatoresLigado(conta.metadata) && !this.otp.chaveTesteValida(params.chaveTeste)) {
+      const aparelhoDaCentral = params.device ? await this.tokens.upsertDevice(conta.id, params.device) : null;
+      return {
+        precisa2fa: true,
+        nome: conta.name,
+        desafio: this.doisFatores.criarDesafio(conta.id, Date.now(), {
+          senhaNova: await hashPassword(params.newPassword),
+          aparelho: aparelhoDaCentral,
+        }),
+      };
+    }
+
     // Senha nova feita pela propria pessoa deixa de ser provisoria (etapa 7).
     const meta = { ...metaDe(conta) } as Record<string, unknown>;
     const eraProvisoria = meta.senhaProvisoria === true;
@@ -652,18 +735,18 @@ export class AuthService {
       },
     });
     if (eraProvisoria) this.pracas.esquecerEscopo(conta.id);
-    await this.tokens.revokeAllUserTokens(conta.id);
+
+    // R1: o aparelho que recuperou a senha e o UNICO que continua. Sem os
+    // dados do aparelho, cria um so para esta entrada.
+    const aparelho: DeviceContext = params.device ?? { deviceId: `recuperacao-${randomToken(12)}`, platform: 'WEB' as never };
+    const manter = await this.tokens.upsertDevice(conta.id, aparelho);
+    await this.avisos.avisar(conta.id, 'SENHA_RECUPERADA', { exceto: manter });
+    await this.sessoes.cortar(conta.id, manter);
 
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: conta.id },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
     });
-    // Central com as duas etapas: trocar a senha pelo e-mail nao pula o
-    // codigo do Google Authenticator (a esteira de testes passa direto).
-    if (!this.otp.chaveTesteValida(params.chaveTeste)) {
-      const desafio = this.segundaEtapa(user);
-      if (desafio) return desafio;
-    }
     const issued = await this.tokens.issueTokens(
       {
         id: user.id,
@@ -673,7 +756,7 @@ export class AuthService {
         email: user.email,
         driverId: user.driver?.id ?? null,
       },
-      params.device,
+      aparelho,
     );
     return { ...issued, isNewUser: false, user: this.paraUsuario(user) };
   }
@@ -682,9 +765,25 @@ export class AuthService {
    * Telefone de quem entrou pelo e-mail. Obrigatorio enquanto a conta nao
    * tem telefone; depois disso so muda pela Central.
    */
-  private async validarTelefoneNovo(userId: string, atual: string, novo?: string, codigo?: string): Promise<string | null> {
+  private async validarTelefoneNovo(
+    userId: string,
+    atual: string,
+    novo?: string,
+    codigo?: string,
+    conta?: { email: string | null; meta: MetaUsuario },
+  ): Promise<string | null> {
     if (!telefonePendente(atual)) {
       if (!novo || novo === atual) return null;
+      // R2 (11/11/2026): sem e-mail na conta, nao troca o telefone.
+      if (conta && !conta.email) {
+        throw BusinessException.validation('Para trocar o telefone, cadastre e confirme um e-mail em Meus dados primeiro.');
+      }
+      // E-mail trocado ha pouco: espera 48 h (quem pegou a conta nao troca
+      // o e-mail e o telefone em seguida).
+      const trocadoEm = typeof conta?.meta.emailTrocadoEm === 'string' ? Date.parse(conta.meta.emailTrocadoEm) : NaN;
+      if (Number.isFinite(trocadoEm) && Date.now() - trocadoEm < ESPERA_TELEFONE_DEPOIS_DO_EMAIL_MS) {
+        throw BusinessException.validation('Por seguranca, o telefone so pode ser trocado 48 horas depois da troca do e-mail.');
+      }
       // Evandro (10/10/2026): o passageiro troca o proprio telefone. Prova
       // que e ele: o codigo que chegou no e-mail da conta (pedido pelo
       // telefone atual, finalidade PHONE_VERIFICATION).

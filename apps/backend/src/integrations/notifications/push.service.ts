@@ -114,6 +114,36 @@ export class PushService implements OnApplicationBootstrap {
     })().catch((e) => this.logger.warn(`Push falhou: ${(e as Error).message}`));
   }
 
+  /**
+   * Le AGORA os aparelhos com aviso ligado e manda em seguida (R4). Usado
+   * antes de cortar as sessoes: o corte apaga os enderecos de push, entao a
+   * lista tem que ser lida antes. Devolve quantos aparelhos vao receber.
+   */
+  async paraAparelhosAgora(
+    userId: string,
+    data: Record<string, string>,
+    validadeSegundos = 3600,
+    exceto?: string | null,
+  ): Promise<number> {
+    const c = this.credencial;
+    if (!c) return 0;
+    const aparelhos = await this.prisma.device.findMany({
+      where: { userId, fcmToken: { not: null }, ...(exceto ? { id: { not: exceto } } : {}) },
+      select: { id: true, fcmToken: true },
+    });
+    void (async () => {
+      for (const a of aparelhos) {
+        try {
+          const r = await enviarFcm(c, a.fcmToken!, { data, validadeSegundos });
+          if (!r.ok && !r.invalido) this.logger.warn(`Push nao foi: ${r.erro}`);
+        } catch (e) {
+          this.logger.warn(`Push falhou: ${(e as Error).message}`);
+        }
+      }
+    })();
+    return aparelhos.length;
+  }
+
   /** Aviso simples (titulo + texto) para uma pessoa: ex. "dados atualizados". */
   aviso(userId: string, titulo: string, texto: string): void {
     if (!this.ligado) return;

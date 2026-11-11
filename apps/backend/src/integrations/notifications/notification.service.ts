@@ -117,7 +117,7 @@ export class NotificationService {
     const m = this.config.mail;
     const para = input.to ?? '';
     if (!this.emailConfigurado || !para) {
-      this.logger.log(`[DEV] E-mail para ${this.mask(para)}: ${input.title}`);
+      this.logger.log(`[DEV] E-mail para ${this.mask(para)} (assunto nao vai para o registro).`);
       return { delivered: false, error: 'E-mail nao configurado.' };
     }
     const html = typeof input.data?.html === 'string' ? (input.data.html as string) : undefined;
@@ -144,7 +144,7 @@ export class NotificationService {
         this.logger.error(`Brevo recusou o e-mail (${r.status}): ${motivo}`);
         return { delivered: false, error: `Brevo ${r.status}` };
       }
-      this.logger.log(`E-mail enviado para ${this.mask(para)}: ${input.title}`);
+      this.logger.log(`E-mail enviado para ${this.mask(para)}.`);
       return { delivered: true };
     } catch (e) {
       this.logger.error(`Falha ao falar com a Brevo: ${(e as Error).message}`);

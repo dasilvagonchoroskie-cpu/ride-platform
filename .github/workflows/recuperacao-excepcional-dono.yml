@@ -1,0 +1,48 @@
+name: Recuperacao excepcional do dono
+
+# R5 (11/11/2026). SO quando o dono perdeu o Google Authenticator E os 8
+# codigos de recuperacao. Precisa do dono e do responsavel tecnico:
+#   - o responsavel tecnico dispara (com o motivo e a frase);
+#   - o dono APROVA no GitHub (ambiente "recuperacao-excepcional", com o dono
+#     como "Required reviewer"). Sem a aprovacao, nada roda.
+# Ver docs/DUAS-ETAPAS-DONO.md, "Procedimento excepcional".
+on:
+  workflow_dispatch:
+    inputs:
+      email_dono:
+        description: 'E-mail da conta do dono da Central'
+        required: true
+      motivo:
+        description: 'Motivo (ex.: celular roubado em DD/MM, codigos de recuperacao perdidos)'
+        required: true
+      responsavel_tecnico:
+        description: 'Nome do responsavel tecnico que conferiu o pedido'
+        required: true
+      confirmacao:
+        description: 'Digite exatamente: EU SOU O DONO E ESTOU PRESENTE'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servidor-real
+  cancel-in-progress: false
+
+jobs:
+  recuperar:
+    runs-on: ubuntu-latest
+    environment: recuperacao-excepcional
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar o cliente do banco
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Redefinir as duas etapas do dono (com auditoria)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EMAIL_DONO: ${{ inputs.email_dono }}
+          MOTIVO: ${{ inputs.motivo }}
+          RESPONSAVEL: ${{ inputs.responsavel_tecnico }}
+          CONFIRMACAO: ${{ inputs.confirmacao }}
+          EXECUCAO: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash scripts/recuperacao-excepcional-dono.sh

@@ -21,6 +21,15 @@ export class SenhaProvisoriaGuard implements CanActivate {
     if (!user || user.role !== UserRole.ADMIN) return true;
     const caminho = (req.originalUrl ?? req.url ?? '').split('?')[0];
     if (SenhaProvisoriaGuard.LIVRES.some((r) => r.test(caminho))) return true;
+    // R5: depois do procedimento excepcional, so entra de novo na Central
+    // depois de ligar o Google Authenticator outra vez (rotas /auth/2fa/ livres).
+    if (await this.pracas.refazerDoisFatores(user.id)) {
+      throw new BusinessException(
+        ERROR_CODES.REFAZER_DOIS_FATORES,
+        'Ligue a verificacao em duas etapas de novo antes de usar a Central.',
+        HttpStatus.FORBIDDEN,
+      );
+    }
     if (!(await this.pracas.senhaProvisoria(user.id))) return true;
     throw new BusinessException(
       ERROR_CODES.SENHA_PROVISORIA,

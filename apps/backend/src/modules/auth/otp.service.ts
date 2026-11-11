@@ -81,6 +81,16 @@ export class OtpService {
       emailDoTelefone = dono?.email ?? null;
       donoDoTelefone = dono?.id ?? null;
     }
+    // R2 (11/11/2026): trocar o telefone so com o codigo no E-MAIL da conta.
+    // Nunca na tela (nem com OTP_DEBUG_RETURN ligado): o controle de um chip
+    // sozinho nao basta para mexer na conta.
+    if (purpose === OtpPurpose.PHONE_VERIFICATION && phone && !teste && !emailDoTelefone) {
+      throw new BusinessException(
+        ERROR_CODES.TELEFONE_SEM_EMAIL,
+        'Para trocar o telefone, a conta precisa de um e-mail. Cadastre o seu e-mail em Meus dados e tente de novo.',
+        422,
+      );
+    }
     const entrega = !teste && (this.entregaReal(target) || !!emailDoTelefone);
     const devolver = teste || (this.config.otp.debugReturn && !entrega);
     if (!entrega && !devolver) {

@@ -45,6 +45,7 @@ class AdminUser {
     required this.role,
     this.trocarSenha = false,
     this.doisFatores = false,
+    this.refazerDoisFatores = false,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class AdminUser {
   /// Verificacao em duas etapas (Google Authenticator) ligada nesta conta.
   final bool doisFatores;
 
+  /// R5: conta recuperada pelo procedimento excepcional. Antes de usar a
+  /// Central, liga o Google Authenticator de novo (celular novo).
+  final bool refazerDoisFatores;
+
   String get initials {
     final parts = name.split(' ').where((p) => p.isNotEmpty).take(2);
     return parts.map((p) => p[0].toUpperCase()).join();
@@ -70,6 +75,7 @@ class AdminUser {
         'role': role,
         'trocarSenha': trocarSenha,
         'doisFatores': doisFatores,
+        'refazerDoisFatores': refazerDoisFatores,
       };
 
   factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
@@ -79,6 +85,7 @@ class AdminUser {
         role: json['role'] as String? ?? 'ADMIN',
         trocarSenha: json['trocarSenha'] == true,
         doisFatores: json['doisFatores'] == true,
+        refazerDoisFatores: json['refazerDoisFatores'] == true,
       );
 }
 

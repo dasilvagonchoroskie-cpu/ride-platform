@@ -160,6 +160,7 @@ class CentralRepository {
       role: u['role'] as String? ?? 'ADMIN',
       trocarSenha: u['trocarSenha'] == true,
       doisFatores: u['doisFatores'] == true,
+      refazerDoisFatores: u['refazerDoisFatores'] == true,
     );
   }
 

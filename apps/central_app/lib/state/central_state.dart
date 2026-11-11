@@ -82,6 +82,7 @@ class CentralState extends ChangeNotifier {
         role: a.role,
         trocarSenha: u['trocarSenha'] == true,
         doisFatores: u['doisFatores'] == true,
+        refazerDoisFatores: u['refazerDoisFatores'] == true,
       );
       await AppStorage.write(AppStorage.adminUser, jsonEncode(admin!.toJson()));
       notifyListeners();
@@ -276,6 +277,10 @@ class CentralState extends ChangeNotifier {
   Future<Map<String, dynamic>> situacaoDoisFatores() => _repository.situacaoDoisFatores();
   Future<Map<String, dynamic>> iniciarDoisFatores() => _repository.iniciarDoisFatores();
   Future<List<String>> ativarDoisFatores(String codigo) => _repository.ativarDoisFatores(codigo);
+
+  /// R5: ligou o Google Authenticator de novo depois do procedimento
+  /// excepcional — confere no servidor e libera a Central.
+  Future<void> doisFatoresRefeitos() => conferirConta();
   Future<void> desligarDoisFatores(String codigo) => _repository.desligarDoisFatores(codigo);
 
   /// Operador com senha provisoria: troca e entra de novo com a senha nova
