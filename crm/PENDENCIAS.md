@@ -1,13 +1,13 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (18h, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 11/11/2026 (19h, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)
 
-- [ ] **Testar o app 2.0.106 no celular**: instalar por cima do 2.0.105 e confirmar que abre sem o erro
-      "ManageDataLauncherActivity".
+- [ ] **Testar o app 2.0.107 no celular** (ícone novo + correção do erro "ManageDataLauncherActivity"): instalar por
+      cima do 2.0.105/2.0.106 e confirmar que abre e que o ícone aparece certo.
 - [ ] **Testar as notificações com o CRM fechado**: Dashboard → "Ativar agora" → Permitir; deixar o app sem
       restrição de bateria no POCO; fechar, bloquear a tela e receber mensagem. Conferir os 3 tipos (mensagem nova,
       IA respondeu, transferência) e se o toque abre a conversa certa. Avisar o Claude para conferir o log do servidor.
