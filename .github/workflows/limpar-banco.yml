@@ -26,7 +26,7 @@ jobs:
         env:
           ACAO: ${{ github.event.inputs.acao }}
           MANTER: ${{ github.event.inputs.manter }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_EMAIL: fortalezamovegtba@gmail.com # e-mail publico da Central (11/11/2026); a protecao e o OTP_CHAVE_TESTE
           OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
           REL: /tmp/limpeza.txt
         run: bash scripts/limpar-banco.sh
