@@ -42,7 +42,9 @@ void main() {
     // No Xiaomi a bateria do Android da lugar ao ajuste da Xiaomi.
     expect(find.text('Bateria sem restrição'), findsNothing);
     await tester.scrollUntilVisible(find.byKey(const ValueKey('feito-inicioAutomatico')), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('feito-inicioAutomatico')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
     await tester.pump();
     expect(find.byKey(const ValueKey('refazer-inicioAutomatico')), findsOneWidget);
     expect(find.text('obrigatória'), findsNothing);
