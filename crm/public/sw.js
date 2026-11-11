@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v18';
+const CACHE = 'fm-crm-v19';
 const ASSETS = [
   '/',
   '/index.html',
@@ -17,7 +17,8 @@ const ASSETS = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/favicon.svg'
+  '/icons/favicon-32.png',
+  '/icons/logo.png'
 ];
 
 self.addEventListener('install', (event) => {

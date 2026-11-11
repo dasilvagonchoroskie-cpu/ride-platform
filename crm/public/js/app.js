@@ -59,7 +59,7 @@ function authShell({ title, subtitle, body, foot = '', sideTitle = 'Gestão comp
     <div class="auth-wrap">
       <section class="auth-side">
         <div class="auth-brand">
-          <div class="brand-mark">FM</div>
+          <div class="brand-mark"><img src="/icons/logo.png" alt="Fortaleza Move"></div>
           <div>
             <strong style="display:block;color:#fff;font-size:16px">Fortaleza Move</strong>
             <span style="color:#a9c1dc;font-size:12px">Seu caminho, sua viagem, sua segurança.</span>
@@ -438,7 +438,7 @@ async function enterApp() {
     <div class="shell" id="shell">
       <aside class="sidebar" id="sidebar">
         <div class="brand">
-          <div class="brand-mark">FM</div>
+          <div class="brand-mark"><img src="/icons/logo.png" alt="Fortaleza Move"></div>
           <div class="brand-text">
             <strong>CRM Fortaleza Move</strong>
             <span>${ui.esc(state.meta.org.slogan)}</span>
