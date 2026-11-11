@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (12h40, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 11/11/2026 (13h30, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -30,6 +30,13 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       notificações + autorização do dono + 5 decisões:** (1) diferença entre "Parceiro do Clube" e "Comércio parceiro";
       (2) guardar a foto/PDF original dos documentos (necessário para o PDF da Etapa 3); (3) onde guardar os arquivos até
       a Hostinger (proposta: Supabase Storage, cifrado); (4) gestor pode ver documentos?; (5) guardar CPF/CNPJ?
+      Preparação autorizada em 11/11 (só no ramo `etapa2`, sem produção):
+      - [x] M0 migrações versionadas + simulação em cópia + relatório de duplicados (11/11, testado com dados fictícios).
+      - [x] M1 (parte do banco) pessoas, empresas, vínculos e CPF/CNPJ protegidos (11/11, testado com dados fictícios).
+      - [ ] M1 (telas) ficha central da pessoa e "adicionar função" — sem ligar aos dados de produção.
+      - [ ] M3 entregadores · M4 comércios · M5 camada de documentos (sem documentos reais) · M6 IA/WhatsApp.
+      - [ ] Política de retenção e descarte por tipo de dado (decisão da empresa; não usar prazo fixo sem avaliar).
+      - [ ] **Migração dos dados reais e deploy da Etapa 2: só depois do teste das notificações + autorização.**
 - [ ] Etapa 3 — PDF de cada fichário concluído (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
       usuário autorizado, com nova versão sem apagar o histórico.
 - [ ] Etapa 4 — status reais e independentes para entregadores, parceiros e comércios (verde só para concluído).
