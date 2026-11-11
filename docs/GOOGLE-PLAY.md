@@ -9,6 +9,34 @@ Situação: ✅ pronto · ⏳ falta.
 
 ---
 
+## 0. Decisão de 11/11/2026 e prazo (Requisição 1)
+
+- Evandro decidiu: conta **pessoal, no CPF** (sem CNPJ por enquanto).
+  Abrir a conta fica para as últimas etapas, mas **atenção ao calendário**:
+  conta pessoal criada depois de 13/11/2023 só publica depois de um **teste
+  fechado com pelo menos 12 testadores, inscritos sem parar por 14 dias**, e
+  depois o Google analisa o pedido de produção (normalmente até **7 dias**).
+- Conta nova (verificação de identidade, alguns dias) + 14 dias de teste +
+  até 7 dias de análise ≈ **3 a 4 semanas**. Com o prazo de menos de um mês,
+  a conta e o teste fechado precisam começar **logo**, não no fim.
+- Os 12 testadores: pessoas reais com conta Google (motoristas, família,
+  amigos), que instalam pela loja (link do teste fechado) e usam o app de
+  vez em quando nesses 14 dias.
+- O item 1 abaixo (CNPJ, D-U-N-S, conta de organização) fica para quando
+  houver CNPJ; a conta pessoal pode passar para empresa depois.
+
+Materiais já prontos (Requisição 1, item 10):
+
+| O quê | Onde |
+|---|---|
+| Ícone 512 × 512 | `apps/mobile_passenger/loja/icone-512.png`, `apps/mobile_driver/loja/icone-512.png` |
+| Recurso gráfico 1024 × 500 (marinho e dourado) | `apps/*/loja/recurso-grafico.png` (gerado por `scripts/gerar-recurso-grafico.py`) |
+| Textos da loja (curto e completo), categoria e respostas | `docs/loja/TEXTOS-DA-LOJA.md` |
+| Segurança dos dados (rascunho) | seção 8 abaixo |
+| Pacote AAB assinado | a esteira `android-apks.yml` gera junto com o APK |
+
+Fonte do teste fechado: [Requisitos de teste para contas pessoais novas (Google)](https://support.google.com/googleplay/android-developer/answer/14151465?hl=pt-BR).
+
 ## 1. Conta de desenvolvedor (antes de tudo)
 
 | # | O quê | Quem | Situação |
