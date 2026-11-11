@@ -1,7 +1,7 @@
 Ultima mudanca do servidor no GitHub: d213801 (Requisicao 1: aparelhos, desconectar um so, cofre do celular (#54))
-No ar agora: 0f2c631
+No ar agora: 6fd2cfc
 OK: servidor em dia.
-Teste de ponta a ponta - 11/11/2026 15:44 UTC
+Teste de ponta a ponta - 11/11/2026 15:54 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
@@ -79,7 +79,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST8179)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST3905)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -98,10 +98,8 @@ OK     Seguranca: operador de outra cidade nao abre a carteira pelo id
 OK     Central: abre a foto do documento
 OK     Seguranca: passageiro nao abre documento de motorista
 OK     Central: motorista aprovado com conferencia presencial
-FALHA  Motorista: ver aprovacao
-       resposta: 
-FALHA  Motorista: onde abrir o mapa sem GPS
-       resposta: 
+OK     App do motorista ve a aprovacao (botao Atualizar status)
+OK     Motorista: mapa abre sem esperar o GPS (cidade Goiatuba, ultima posicao: ainda nao)
 OK     Motorista: primeira foto de perfil ja aparece
 OK     Central: aprova a foto de perfil
 OK     Motorista: troca a foto; o passageiro continua vendo a aprovada ate a Central conferir
@@ -160,19 +158,19 @@ OK     Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, 1295.9 km)
 OK     Seguranca: busca no Brasil todo so na Central
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 119 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 118 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE1544259 criado (R$ 3,00)
+OK     Central: cupom TESTE15541549 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1638 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1586 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1147 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1129 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 9877 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 3141 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Passageiro: o carro da corrida vem com o rumo (180 graus: andando para o sul)
 OK     Chat: passageiro manda mensagem ao motorista
@@ -246,9 +244,9 @@ OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
 FALHA  Carteira: saldo zerado
-       resposta: {"success":true,"data":{"balanceCents":0,"minimumCents":2000,"blockEnabled":true,"blocking":true,"status":"insufficient","warningCents":6000,"last":{"id":"6da43689-9f5b-4201-be8c-0feb0a606dff","kind":"DEBIT","amountCents":-6100,"description":"Zerar para teste","createdAt":"2026-11-11T15:48:23.366Z"}},"timestamp":"2026-11-11T15:48:24.076Z"}
+       resposta: {"success":true,"data":{"balanceCents":0,"minimumCents":2000,"blockEnabled":true,"blocking":true,"status":"insufficient","warningCents":6000,"last":{"id":"3c27084f-4605-461c-aac0-6ff38897d99d","kind":"DEBIT","amountCents":-6100,"description":"Zerar para teste","createdAt":"2026-11-11T15:58:22.689Z"}},"timestamp":"2026-11-11T15:58:23.400Z"}
 FALHA  Carteira: chamado sem saldo
-       resposta: {"success":true,"data":[],"timestamp":"2026-11-11T15:48:25.141Z"}
+       resposta: {"success":true,"data":[],"timestamp":"2026-11-11T15:58:24.658Z"}
 FALHA  Motorista: dados do chamado
        resposta: {"driverNetCents":null,"commissionPercent":null,"passengerRating":null,"tabela":"diurna 10"}
 OK     Carteira: sem saldo nao consegue ficar online de novo
@@ -353,12 +351,12 @@ OK     Motorista: parceiro desativado some da lista
 OK     Motorista: detalhe de parceiro desativado avisa que saiu do clube
 OK     Central: o inativo continua na lista da Central
 OK     Central: excluiu o parceiro de teste (com os beneficios)
-OK     Motorista: carteirinha da conta logada (FM-41F7CC04, APTO)
+OK     Motorista: carteirinha da conta logada (FM-AB83D5DB, APTO)
 OK     Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo
 OK     Clube: pagina do QR removida
 OK     Clube: motorista sem recarga esta NAO APTO (Nenhuma recarga confirmada nos últimos 30 dias.)
 OK     Clube: recarga de R$ 50,00 nao deixa APTO
-OK     Clube: R$ 50 + R$ 60 em recargas (total R$ 110) deixam APTO (vale ate 2026-12-11T15:50:41.552Z)
+OK     Clube: R$ 50 + R$ 60 em recargas (total R$ 110) deixam APTO (vale ate 2026-12-11T16:00:49.356Z)
 OK     Clube: a situacao do clube nao mexe no acesso ao aplicativo
 OK     Seguranca: motorista nao altera a propria situacao
 OK     Clube: motorista suspenso fica NAO APTO mesmo com recarga
@@ -367,7 +365,7 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 12/666, reverse 9/666, routing 36/666, search 6/83, tiles 88/6666)
+OK     Central: uso da TomTom hoje (geocode 18/666, reverse 11/666, routing 62/666, search 7/83, tiles 88/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
@@ -381,4 +379,4 @@ OK     Operador: desligou as duas etapas com um codigo valido
 OK     Central: apagou a conta do operador de teste
 OK     Limpeza: apagou as 7 contas deste teste e 12 corridas delas
 
-Resultado: 5 falha(s).
+Resultado: 3 falha(s).
