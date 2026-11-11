@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <!-- "/" no site; a esteira troca se publicar numa subpasta. -->
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Central da plataforma Fortaleza Move">
+  <meta name="theme-color" content="#011469">
+  <meta name="robots" content="noindex, nofollow">
+  <!-- iPhone / iPad: tela inicial -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FM Central">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>Fortaleza Move Central</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #011469; }
+    #carregando { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; color: #fff; font: 600 16px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    #carregando img { width: 96px; height: 96px; border-radius: 22px; }
+    /* Botao "Instalar" (Chrome/Edge no computador e no Android). */
+    #instalar { position: fixed; right: 16px; bottom: 16px; z-index: 10; display: none; border: 0; border-radius: 24px;
+      padding: 12px 18px; background: #F5B700; color: #011469; font: 700 15px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      box-shadow: 0 4px 14px rgba(0,0,0,.3); cursor: pointer; }
+    #instalar span { margin-left: 8px; font-weight: 400; opacity: .7; }
+  </style>
+</head>
+<body>
+  <div id="carregando"><img src="icons/Icon-192.png" alt=""><div>Abrindo a Central…</div></div>
+  <button id="instalar" type="button" title="Instala a Central como aplicativo neste aparelho">
+    Instalar a Central<span id="fechar-instalar" title="Agora não">✕</span>
+  </button>
+  <script>
+    // Instalar como aplicativo (ícone na área de trabalho / tela inicial).
+    (function () {
+      var pedido = null;
+      var botao = document.getElementById('instalar');
+      var fechar = document.getElementById('fechar-instalar');
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        pedido = e;
+        try { if (localStorage.getItem('fm.instalar.depois') === '1') return; } catch (_) {}
+        botao.style.display = 'block';
+      });
+      botao.addEventListener('click', function (e) {
+        if (e.target === fechar) {
+          botao.style.display = 'none';
+          try { localStorage.setItem('fm.instalar.depois', '1'); } catch (_) {}
+          return;
+        }
+        if (!pedido) return;
+        pedido.prompt();
+        pedido.userChoice.finally(function () { pedido = null; botao.style.display = 'none'; });
+      });
+      window.addEventListener('appinstalled', function () { botao.style.display = 'none'; });
+      // Some a tela de "abrindo" quando o Flutter desenha.
+      window.addEventListener('flutter-first-frame', function () {
+        var c = document.getElementById('carregando');
+        if (c) c.remove();
+      });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gm;
 
@@ -18,7 +19,7 @@ const bool googleNaMontagem = bool.fromEnvironment('MAPA_GOOGLE');
 /// Google so quando a montagem tem a chave do Google E o servidor manda usar
 /// o Google (GET /app/config -> mapa.provedor = 'google'). Desde 29/10/2026
 /// o padrao e a TomTom (core/mapa/map_provider.dart).
-bool get usarGoogleMaps => googleNaMontagem && MapaConfig.provedor == 'google';
+bool get usarGoogleMaps => !kIsWeb && googleNaMontagem && MapaConfig.provedor == 'google';
 
 gm.LatLng paraGoogle(Coords c) => gm.LatLng(c.latitude, c.longitude);
 
