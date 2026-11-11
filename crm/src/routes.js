@@ -18,6 +18,7 @@ const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
 const { createNotificacoes } = require('./notificacoes');
+const { documentosRecebidos } = require('./ia/documentos');
 const { gerarCodigoRecuperacao } = require('./reset');
 // Rota assíncrona: erro vira resposta 500 do Express (sem rejeição solta que derrubaria o processo).
 const seguro = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -609,6 +610,8 @@ router.get('/meta', (req, res) => {
       statuses: def.statuses,
       interactions: !!def.interactions,
       confirmStatus: def.confirmStatus || null,
+      fechados: def.fechados || [],
+      perdidos: def.perdidos || [],
       columns: def.columns,
       views: def.views || ['lista'],
       fields: def.fields
@@ -618,7 +621,7 @@ router.get('/meta', (req, res) => {
   const pendentes = {
     atendimentos: db.prepare("SELECT COUNT(*) c FROM atendimentos WHERE situacao IN ('Aberto','Em andamento','Aguardando retorno')").get().c,
     tarefas: db.prepare("SELECT COUNT(*) c FROM tarefas WHERE situacao IN ('Pendente','Em andamento')").get().c,
-    motoristas: db.prepare("SELECT COUNT(*) c FROM motoristas WHERE situacao NOT IN ('Aprovado','Não prosseguiu')").get().c,
+    motoristas: db.prepare("SELECT COUNT(*) c FROM motoristas WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c,
     passageiros: db.prepare("SELECT COUNT(*) c FROM passageiros WHERE situacao NOT IN ('Usuário cadastrado','Não prosseguiu')").get().c,
     parceiros: db.prepare("SELECT COUNT(*) c FROM parceiros WHERE situacao NOT IN ('Parceria confirmada','Não concretizada')").get().c,
     wa: wa.store.contarNaoLidas()
@@ -670,6 +673,7 @@ router.get('/dashboard', (req, res) => {
     motoristas_interessados: n('SELECT COUNT(*) c FROM motoristas'),
     motoristas_em_processo: n("SELECT COUNT(*) c FROM motoristas WHERE situacao IN ('Primeiro contato realizado','Aguardando retorno','Cadastro em andamento','Cadastro em análise')"),
     motoristas_aprovados: n("SELECT COUNT(*) c FROM motoristas WHERE situacao = 'Aprovado'"),
+    motoristas_contratados: n("SELECT COUNT(*) c FROM motoristas WHERE situacao = 'Contratado'"),
     passageiros_interessados: n('SELECT COUNT(*) c FROM passageiros'),
     passageiros_cadastrados: n("SELECT COUNT(*) c FROM passageiros WHERE situacao = 'Usuário cadastrado'"),
     parceiros_negociacao: n("SELECT COUNT(*) c FROM parceiros WHERE situacao IN ('Identificado','Primeiro contato','Aguardando resposta','Em negociação','Proposta apresentada')"),
@@ -721,7 +725,7 @@ router.get('/dashboard', (req, res) => {
   };
 
   const proximas = [
-    ...db.prepare("SELECT id, nome AS titulo, 'Motorista' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM motoristas WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Não prosseguiu')").all(limite),
+    ...db.prepare("SELECT id, nome AS titulo, 'Motorista' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM motoristas WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite),
     ...db.prepare("SELECT id, nome AS titulo, 'Passageiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM passageiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Usuário cadastrado','Não prosseguiu')").all(limite),
     ...db.prepare("SELECT id, nome_estabelecimento AS titulo, 'Parceiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM parceiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Parceria confirmada','Não concretizada')").all(limite),
     ...db.prepare("SELECT id, titulo, 'Tarefa' AS modulo, data_vencimento AS data, situacao, descricao AS acao FROM tarefas WHERE data_vencimento <= ? AND situacao NOT IN ('Concluída','Cancelada')").all(limite)
@@ -1169,6 +1173,20 @@ router.post('/parceiros/:id/confirmar', (req, res) => {
   res.json({ item: db.prepare('SELECT * FROM parceiros WHERE id = ?').get(id) });
 });
 
+// Motorista contratado (já trabalhando): marcação manual e datada, como a confirmação de parceria. Fica verde na lista.
+router.post('/motoristas/:id/contratar', (req, res) => {
+  const id = Number(req.params.id);
+  const row = db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id);
+  if (!row) return fail(res, 404, 'not_found', 'Motorista não encontrado.');
+  if (row.situacao === 'Contratado') return fail(res, 409, 'already', 'Este motorista já está como contratado.');
+  if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+  const now = nowISO();
+  db.prepare('UPDATE motoristas SET situacao = ?, contratado_em = ?, updated_at = ? WHERE id = ?').run('Contratado', todayISO(), now, id);
+  entities.logInteraction('motoristas', id, req, `Motorista contratado (marcado por ${req.user.nome})`, row.situacao, 'Contratado', 'Confirmação');
+  audit(req, 'contratar', 'motoristas', id, 'Motorista marcado como contratado');
+  res.json({ item: db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id) });
+});
+
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".
 whatsappRoutes.registrar(router, { service: wa, fail, audit, requireAdmin, ENTITIES, entities, db, central: ia.central });
@@ -1196,6 +1214,23 @@ router.post('/:entity', (req, res) => {
   res.status(result.status).json({ item: result.item });
 });
 
+// Ficha: conversa do WhatsApp vinculada, documentos recebidos (motorista) e o último resumo da IA.
+function fichaDoCadastro(tipo, id) {
+  if (!['motoristas', 'passageiros', 'parceiros'].includes(tipo)) return null;
+  const conv = db.prepare(`SELECT c.id, c.atendimento, c.atend_motivo, c.ultima_em FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id
+    WHERE k.vinculo_tipo = ? AND k.vinculo_id = ? ORDER BY c.ultima_em DESC LIMIT 1`).get(tipo, id);
+  const ficha = { conversa: conv || null, documentos: null, resumo_ia: null };
+  if (conv) {
+    const a = db.prepare('SELECT resultado, criado_em FROM ia_analises WHERE conversa_id = ? ORDER BY id DESC LIMIT 1').get(conv.id);
+    if (a) { try { ficha.resumo_ia = { texto: JSON.parse(a.resultado).resumo || '', em: a.criado_em }; } catch (err) { /* análise antiga */ } }
+  }
+  if (tipo === 'motoristas') {
+    const rec = conv ? documentosRecebidos(wa.store.listarMensagens(conv.id, { limite: 500 })) : { cnh: null, crlv: null, endereco: null };
+    ficha.documentos = rec;
+  }
+  return ficha;
+}
+
 router.get('/:entity/:id', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
@@ -1206,7 +1241,7 @@ router.get('/:entity/:id', (req, res) => {
   if (def.interactions) {
     interacoes = db.prepare('SELECT * FROM interacoes WHERE entity = ? AND entity_id = ? ORDER BY id DESC').all(def.table, id);
   }
-  res.json({ item, interacoes });
+  res.json({ item, interacoes, ficha: fichaDoCadastro(req.params.entity, id) });
 });
 
 router.patch('/:entity/:id', (req, res) => {

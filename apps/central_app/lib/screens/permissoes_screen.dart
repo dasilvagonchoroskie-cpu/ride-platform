@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../core/permissoes_nativas.dart';
@@ -79,6 +80,8 @@ class _PortaoPermissoesState extends State<PortaoPermissoes> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
+    // Central pelo navegador: nao ha autorizacao do Android para pedir.
+    if (kIsWeb) return widget.child;
     final e = _estado;
     if (e == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final ok = _obrigatoriasOk(e);

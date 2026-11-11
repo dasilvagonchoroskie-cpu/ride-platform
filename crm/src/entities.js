@@ -89,6 +89,17 @@ function listEntity(def, query) {
     }
   }
 
+  // Etapa: "andamento" (nem fechado nem perdido) ou "fechados" (verde: contratado / parceria fechada / cadastrado).
+  const fechados = def.fechados || [];
+  const encerrados = [...fechados, ...(def.perdidos || [])];
+  if (query.etapa === 'fechados' && fechados.length) {
+    where.push(`${def.statusField} IN (${fechados.map(() => '?').join(',')})`);
+    params.push(...fechados);
+  } else if (query.etapa === 'andamento' && encerrados.length) {
+    where.push(`(${def.statusField} IS NULL OR ${def.statusField} NOT IN (${encerrados.map(() => '?').join(',')}))`);
+    params.push(...encerrados);
+  }
+
   // Mesmo critério dos relatórios: campanhas sem data planejada usam a data de publicação.
   const dateExpr = def.table === 'campanhas' ? 'COALESCE(data_publicacao, data_planejada)' : def.dateField;
   if (query.de && isDateISO(query.de)) { where.push(`${dateExpr} >= ?`); params.push(query.de); }

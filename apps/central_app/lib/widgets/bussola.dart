@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -17,7 +18,7 @@ class SensorDeDirecao {
   static Stream<double>? _fluxo;
 
   /// Fora do Android (testes automaticos no computador) nao ha sensor.
-  static Stream<double> get direcao => _fluxo ??= Platform.isAndroid
+  static Stream<double> get direcao => _fluxo ??= !kIsWeb && Platform.isAndroid
       ? _canal.receiveBroadcastStream().map((e) => (e as num).toDouble()).asBroadcastStream()
       : const Stream<double>.empty();
 }

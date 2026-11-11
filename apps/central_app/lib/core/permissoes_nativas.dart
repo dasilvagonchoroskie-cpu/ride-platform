@@ -1,15 +1,19 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 
 /// Ponte com o Android para as autorizacoes e a posicao do aparelho.
 class PermissoesNativas {
   PermissoesNativas._();
 
+  /// Na web (Central pelo navegador) nao ha Android: tudo liberado.
+  static bool get _android => !kIsWeb && Platform.isAndroid;
+
   static const MethodChannel _canal = MethodChannel('fortaleza/permissoes');
 
   static Future<Map<String, bool>> estado() async {
-    if (!Platform.isAndroid) return const {'localizacao': true, 'gps': true, 'notificacao': true};
+    if (!_android) return const {'localizacao': true, 'gps': true, 'notificacao': true};
     try {
       final r = await _canal.invokeMethod<Map<dynamic, dynamic>>('estado');
       return (r ?? const {}).map((k, v) => MapEntry(k.toString(), v == true));
@@ -19,7 +23,7 @@ class PermissoesNativas {
   }
 
   static Future<void> pedir(String qual) async {
-    if (!Platform.isAndroid) return;
+    if (!_android) return;
     try {
       await _canal.invokeMethod<dynamic>('pedir', {'qual': qual});
     } catch (_) {}
@@ -27,7 +31,7 @@ class PermissoesNativas {
 
   /// Ultima posicao conhecida do aparelho: {'latitude':..., 'longitude':...}.
   static Future<Map<String, double>?> posicao() async {
-    if (!Platform.isAndroid) return null;
+    if (!_android) return null;
     try {
       final r = await _canal.invokeMethod<Map<dynamic, dynamic>>('posicao');
       if (r == null) return null;

@@ -194,6 +194,35 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
   const lista = await g('GET', '/wa/conversas?atendimento=aguardando');
   assert.equal(lista.s, 200);
   assert.deepEqual(Object.keys(lista.j.contagem).sort(), ['aguardando', 'concluido', 'humano', 'ia']);
+
+  // Ficha do motorista, contratação (gestor pode) e separação "em andamento" x "fechados".
+  const base = { telefone: '85999990000', cidade: 'Fortaleza', data_primeiro_contato: '2026-11-01', origem: 'WhatsApp' };
+  const m1 = await g('POST', '/motoristas', { ...base, nome: 'Motorista Teste A', situacao: 'Aprovado' });
+  assert.equal(m1.s, 201, JSON.stringify(m1.j));
+  const m2 = await g('POST', '/motoristas', { ...base, nome: 'Motorista Teste B', situacao: 'Novo interessado' });
+  assert.equal(m2.s, 201);
+  const id1 = m1.j.item.id;
+  const ficha = await g('GET', `/motoristas/${id1}`);
+  assert.equal(ficha.s, 200);
+  assert.deepEqual(Object.keys(ficha.j.ficha.documentos).sort(), ['cnh', 'crlv', 'endereco']);
+  assert.equal(ficha.j.ficha.conversa, null);
+  assert.equal((await g('POST', '/motoristas/99999/contratar', { confirmo: true })).s, 404);
+  assert.equal((await g('POST', `/motoristas/${id1}/contratar`, {})).s, 422, 'exige confirmação explícita');
+  const ct = await g('POST', `/motoristas/${id1}/contratar`, { confirmo: true });
+  assert.equal(ct.s, 200);
+  assert.equal(ct.j.item.situacao, 'Contratado');
+  assert.ok(ct.j.item.contratado_em);
+  assert.equal((await g('POST', `/motoristas/${id1}/contratar`, { confirmo: true })).s, 409);
+  const fech = await g('GET', '/motoristas?etapa=fechados');
+  assert.deepEqual(fech.j.items.map((x) => x.id), [id1]);
+  const and = await g('GET', '/motoristas?etapa=andamento');
+  assert.deepEqual(and.j.items.map((x) => x.id), [m2.j.item.id]);
+  assert.equal((await g('GET', '/motoristas')).j.items.length, 2);
+  const hist = await g('GET', `/motoristas/${id1}`);
+  assert.ok(hist.j.interacoes.some((i) => i.situacao_nova === 'Contratado'));
+  const meta = await g('GET', '/meta');
+  assert.deepEqual(meta.j.entities.motoristas.fechados, ['Contratado']);
+  assert.deepEqual(meta.j.entities.parceiros.fechados, ['Parceria confirmada']);
 });
 
 test('notificações: exigem login; inscrição só aceita serviço de push conhecido', async (t) => {

@@ -22,6 +22,8 @@ dependencies:
   google_maps_flutter: ^2.16.0
   # Foto do motorista tirada ou escolhida pela Central (09/10/2026).
   image_picker: ^1.1.2
+  # Central pelo navegador (10/11/2026): abrir WhatsApp, mapa e telefone na web.
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

@@ -47,16 +47,7 @@ class RideApp extends StatelessWidget {
       theme: AppTheme.comCor(cor),
       // Logo ao instalar: autorizacoes antes de qualquer outra tela.
       home: PortaoPermissoes(
-        itens: const [
-          ItemPermissao('localizacao', 'Localização',
-              'Para achar você no mapa e o motorista saber onde buscar. Usada só com o aplicativo aberto; '
-              'durante a corrida, o motorista vê o ponto de embarque, não a sua localização ao vivo.'),
-          ItemPermissao('gps', 'GPS do celular ligado',
-              'Sem o GPS ligado o celular não sabe onde você está.'),
-          ItemPermissao('notificacao', 'Notificações',
-              'Para avisar quando o motorista aceitar e quando ele chegar.',
-              obrigatoria: false),
-        ],
+        itens: itensDoPassageiro,
         aoLiberar: () => context.read<AppState>().atualizarLocalizacao(),
         child: const _Root(),
       ),
