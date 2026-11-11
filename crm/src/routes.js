@@ -1174,6 +1174,19 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ----------------------- Etapa 2: consultas só de leitura ----------------------- */
+// Relatório de possíveis duplicados (mostra só nome, módulo, situação e 4 últimos dígitos do telefone) e estado das
+// migrações. Nenhuma das duas altera dados.
+router.get('/admin/duplicados', requireAdmin, (req, res) => {
+  const r = require('./duplicados').relatorioDuplicados(db);
+  audit(req, 'consultar', 'duplicados', null, `Relatório de possíveis duplicados (${r.total_grupos} grupo(s))`);
+  res.json(r);
+});
+router.get('/admin/migracoes', requireAdmin, (req, res) => {
+  const m = require('./migracoes');
+  res.json({ etapa2_ligada: process.env.FM_ETAPA2 === '1', ...m.estado(db), integridade: m.verificarIntegridade(db) });
+});
+
 router.get('/audit', requireAdmin, (req, res) => {
   const limit = Math.min(300, Math.max(1, parseInt(req.query.limit, 10) || 100));
   res.json({ items: db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(limit) });

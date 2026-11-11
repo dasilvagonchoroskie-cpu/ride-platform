@@ -59,6 +59,23 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   (`fichaDoCadastro` em routes.js). Front: abas Em andamento/✅ Fechados/Todos, linha verde (`linha-fechada`), badge
   `fechado`, "Ficha do motorista" em `entity.js`. Testado: seguranca.test.js + navegador (celular) com canal/IA falsos.
 
+## Etapa 2 — preparação (ramo `etapa2`, 11/11/2026; NÃO está em produção)
+- Trabalho no ramo git `etapa2` (ride-platform e backup). `main` é o que vai para o Render: nada da Etapa 2 entra em
+  `main` nem em deploy antes da autorização do dono (depois do teste das notificações no celular).
+- Migrações versionadas: `src/migracoes/index.js` (tabela `schema_migracoes` com checksum; cada migração numa transação
+  com `verificar()` + foreign_key_check; integrity_check antes/depois; recusa código alterado ou banco mais novo).
+  Só rodam com `FM_ETAPA2=1` (db.js), com cópia em `data/backups/pre-migracao-*` antes de cada uma. Migrações são
+  CONGELADAS: nunca editar uma já aplicada; mudança = migração nova.
+- 001: `pessoas`/`empresas` (uid permanente, `telefone_chave` só para achar duplicado, CPF/CNPJ só cifrados com
+  finalidade), `vinculos` (titular pessoa|empresa × função motorista|entregador|passageiro|parceiro_clube|comercio ×
+  registro funcional; 1 ativo por função; 1 titular por registro; CHECK de compatibilidade), `titulares_eventos`.
+- 002: liga os cadastros atuais sem alterá-los (une só mesmo telefone + mesmo nome em funções diferentes; o resto fica
+  separado e aparece no relatório).
+- Só leitura: `src/duplicados.js` (`GET /api/admin/duplicados`, admin, auditado, telefone só com 4 dígitos),
+  `GET /api/admin/migracoes`; `scripts/simular-migracao.js <crm.db>` (cópia em memória; o original não muda).
+- `src/protegidos.js`: CPF/CNPJ com AES-256-GCM + índice HMAC (`FM_DADOS_KEY`, 64 hex, fora do repositório); sem
+  chave não grava. Nenhuma tela coleta ainda. Testes: `test/migracoes.test.js`.
+
 ## Ordem de serviço de 11/11 tarde (dashboard, push, financeiro, APK)
 - Dashboard: `motoristas_interessados` agora é só 'Novo interessado' (antes era o TOTAL e incluía contratados);
   `motoristas_total`, `motoristas_docs_a_conferir` novos; card "Motoristas contratados". Financeiro saiu do Dashboard.

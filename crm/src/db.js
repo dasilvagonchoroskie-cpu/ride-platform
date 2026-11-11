@@ -49,6 +49,10 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
   }
 })();
 
+// Etapa 2 (pessoas, empresas, vínculos): migrações versionadas, SÓ com FM_ETAPA2=1 (desligado em produção até a
+// autorização do dono). Cada migração roda numa transação com verificação; falhou → nada muda e o CRM não liga.
+if (process.env.FM_ETAPA2 === '1') require('./migracoes').migrarAoLigar(db, DATA_DIR);
+
 const nowISO = () => new Date().toISOString();
 
 /* ----------------------------- configurações ----------------------------- */

@@ -192,6 +192,12 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   `contratado_em`, registra no histórico e na auditoria. `GET /api/motoristas/:id` devolve também `ficha`
   (conversa, documentos recebidos, último resumo da IA).
 
+## Etapa 2 (em preparação, fora de produção)
+- Migrações versionadas em `src/migracoes/` — só rodam com `FM_ETAPA2=1`. Para testar numa cópia sem mexer no
+  original: `node scripts/simular-migracao.js caminho/crm.db` (mostra contagens antes/depois, se algum registro antigo
+  mudou e os possíveis duplicados).
+- `GET /api/admin/duplicados` e `GET /api/admin/migracoes` (só administrador; somente leitura).
+
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados
   (aprovados + contratados, com o detalhe) e contratados. Documento pendente não muda a etapa (aparece à parte).
