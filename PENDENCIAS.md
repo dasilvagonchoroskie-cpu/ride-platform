@@ -7,9 +7,12 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## Prazo: Play Store em menos de um mês (dito em 11/11/2026)
+- Meta do Evandro: plataforma blindada e 100% funcional, publicada na Play Store, até o começo de dezembro/2026.
+
 ## 000000. Comissão, categoria e mapa (11/11/2026, PR #50, APKs 383)
 - Feito: taxa pelo que o taxímetro marcou mesmo sem medição do celular; chamada só para a categoria escolhida; mapa sem fila de imagens canceladas; Central web com conexão antecipada.
-- Decisão do Evandro pendente: devolver ou não os R$ 40,01 da corrida 886794 (10/11, preço fechado, 6 segundos).
+- R$ 40,01 da corrida 886794 (10/11): era teste, Evandro decidiu não devolver.
 - Preço fechado continua cobrando o estimado mesmo se a viagem acabar logo (é a regra do modo).
 - Conferir no celular: motorista Conforto não recebe mais pedido Popular (e vice-versa); tempo do mapa da Central em Goiatuba.
 
