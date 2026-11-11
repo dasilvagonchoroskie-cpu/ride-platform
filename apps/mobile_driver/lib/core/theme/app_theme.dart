@@ -19,7 +19,9 @@ class AppColors {
   // ---- Marca: dourado das asas (acoes) sobre o marinho ----
   static const Color brand = Color(0xFFE9B53D);
   static const Color brandDark = Color(0xFFC8922A);
-  static const Color brandSoft = Color(0x26E9B53D);
+  // Dourado transparente sobre marinho vira cinza (cores opostas): o fundo
+  // suave da marca e um marinho mais claro, e o dourado fica no icone/borda.
+  static const Color brandSoft = Color(0xFF1C2E5C);
   static const Color gold = brand;
 
   /// Texto e icone por cima do dourado.
@@ -32,19 +34,19 @@ class AppColors {
   /// Verde: conectado, credito, valor positivo.
   static const Color primary = Color(0xFF34C17A);
   static const Color primaryDark = Color(0xFF26995E);
-  static const Color primarySoft = Color(0x2634C17A);
+  static const Color primarySoft = Color(0xFF12383A);
 
   static const Color accent = brand;
   static const Color accentSoft = brandSoft;
 
   static const Color success = Color(0xFF34C17A);
   static const Color danger = Color(0xFFF0545A);
-  static const Color dangerSoft = Color(0x26F0545A);
+  static const Color dangerSoft = Color(0xFF3A1D2C);
   static const Color warning = Color(0xFFFF9A3D);
-  static const Color warningSoft = Color(0x26FF9A3D);
+  static const Color warningSoft = Color(0xFF382B24);
 
   static const Color info = Color(0xFF6EA2FF);
-  static const Color infoSoft = Color(0x266EA2FF);
+  static const Color infoSoft = Color(0xFF1A3366);
 
   // ---- Paineis de baixo (sobre o mapa) ----
   static const Color sheet = Color(0xFF0F1E42);
@@ -205,14 +207,52 @@ class AppTheme {
         surfaceContainerHighest: AppColors.surfaceElevated,
         outline: AppColors.border,
       ),
-      cardTheme: const CardThemeData(color: AppColors.surface, surfaceTintColor: Colors.transparent, elevation: 0),
-      dialogTheme: const DialogThemeData(backgroundColor: AppColors.surface, surfaceTintColor: Colors.transparent),
-      bottomSheetTheme: const BottomSheetThemeData(backgroundColor: AppColors.sheet, surfaceTintColor: Colors.transparent),
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.lg),
+          side: const BorderSide(color: AppColors.hairline),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.xl),
+          side: const BorderSide(color: AppColors.hairline),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.sheet,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet))),
+      ),
       listTileTheme: const ListTileThemeData(iconColor: AppColors.textMuted, textColor: AppColors.text),
-      inputDecorationTheme: const InputDecorationTheme(
+      // Campos premium (11/11/2026): cantos de 14, contorno fino e dourado
+      // ao focar. Quem passa o proprio `border` (ex.: InputBorder.none dentro
+      // de um cartao) continua mandando no seu campo.
+      inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceElevated,
-        hintStyle: TextStyle(color: AppColors.textFaint),
+        hintStyle: const TextStyle(color: AppColors.textFaint),
+        labelStyle: const TextStyle(color: AppColors.textMuted),
+        floatingLabelStyle: const TextStyle(color: AppColors.brand, fontWeight: FontWeight.w600),
+        prefixIconColor: AppColors.textMuted,
+        suffixIconColor: AppColors.textMuted,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: WidgetStateInputBorder.resolveWith((estado) {
+          final cor = estado.contains(WidgetState.error)
+              ? AppColors.danger
+              : estado.contains(WidgetState.focused)
+                  ? AppColors.brand
+                  : AppColors.hairline;
+          return OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: cor, width: estado.contains(WidgetState.focused) ? 1.4 : 1),
+          );
+        }),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
@@ -226,7 +266,8 @@ class AppTheme {
           fontFamily: AppText.family,
           color: AppColors.text,
           fontSize: 19,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
         ),
       ),
       textTheme: base.textTheme.apply(
@@ -247,6 +288,86 @@ class AppTheme {
         trackColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? AppColors.primary : AppColors.surfaceElevated,
         ),
+      ),
+      // Botoes do Material com a mesma cara dos botoes da casa: 16 de canto,
+      // 54 de altura e letra forte (antes vinham em pilula, sem peso).
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.brand,
+          foregroundColor: AppColors.onBrand,
+          disabledBackgroundColor: AppColors.desativado,
+          disabledForegroundColor: AppColors.desativadoTexto,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          minimumSize: const Size(64, 54),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          textStyle: AppText.button,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.brand,
+          foregroundColor: AppColors.onBrand,
+          disabledBackgroundColor: AppColors.desativado,
+          disabledForegroundColor: AppColors.desativadoTexto,
+          minimumSize: const Size(64, 50),
+          textStyle: AppText.button,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.text,
+          minimumSize: const Size(64, 50),
+          side: const BorderSide(color: AppColors.border),
+          textStyle: AppText.bodyStrong,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.brand,
+          textStyle: AppText.bodyStrong,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md)),
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: AppColors.text,
+        unselectedLabelColor: AppColors.textMuted,
+        indicatorColor: AppColors.brand,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: AppColors.hairline,
+        labelStyle: AppText.bodyStrong,
+        unselectedLabelStyle: AppText.body,
+      ),
+      dividerTheme: const DividerThemeData(color: AppColors.hairline, thickness: 1, space: 1),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surfaceElevated,
+        selectedColor: AppColors.brandSoft,
+        side: const BorderSide(color: AppColors.hairline),
+        labelStyle: AppText.caption.copyWith(color: AppColors.text, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.brand,
+        foregroundColor: AppColors.onBrand,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.brand : Colors.transparent),
+        checkColor: const WidgetStatePropertyAll(AppColors.onBrand),
+        side: const BorderSide(color: AppColors.textMuted, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.brand : AppColors.textMuted),
+      ),
+      expansionTileTheme: const ExpansionTileThemeData(
+        iconColor: AppColors.gold,
+        collapsedIconColor: AppColors.textMuted,
+        shape: Border(),
+        collapsedShape: Border(),
       ),
     );
   }

@@ -460,7 +460,7 @@ class _ACaminho extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: d.enviandoEtapa ? null : d.markArrived,
             icon: const Icon(Icons.flag),
-            label: Text(d.enviandoEtapa ? 'Enviando...' : 'Cheguei ao local', style: AppText.button.copyWith(color: Colors.white)),
+            label: Text(d.enviandoEtapa ? 'Enviando...' : 'Cheguei ao local', style: AppText.button.copyWith(color: AppColors.onBrand)),
           ),
         ),
         TextButton(
@@ -656,7 +656,7 @@ class _Resumo extends StatelessWidget {
           height: 56,
           child: FilledButton(
             onPressed: d.closeRide,
-            child: Text('Concluir', style: AppText.button.copyWith(color: Colors.white)),
+            child: Text('Concluir', style: AppText.button.copyWith(color: AppColors.onBrand)),
           ),
         ),
       ],

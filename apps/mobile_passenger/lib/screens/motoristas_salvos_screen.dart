@@ -78,8 +78,10 @@ class _MotoristasSalvosScreenState extends State<MotoristasSalvosScreen> {
                   style: AppText.body.copyWith(color: AppColors.textMuted),
                 ),
               for (final m in favoritos)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
+                Card(
+                  margin: const EdgeInsets.only(bottom: Spacing.sm),
+                  child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.xs),
                   leading: const Icon(Icons.favorite, color: AppColors.danger),
                   title: Text(m.name, style: AppText.bodyStrong),
                   subtitle: Text(
@@ -87,6 +89,7 @@ class _MotoristasSalvosScreenState extends State<MotoristasSalvosScreen> {
                     style: AppText.caption,
                   ),
                   trailing: TextButton(onPressed: () => _tirarFavorito(m), child: const Text('Tirar')),
+                ),
                 ),
               const SizedBox(height: Spacing.xl),
               Text('Bloqueados', style: AppText.heading),
@@ -98,12 +101,15 @@ class _MotoristasSalvosScreenState extends State<MotoristasSalvosScreen> {
               if (bloqueados.isEmpty)
                 Text('Nenhum motorista bloqueado.', style: AppText.body.copyWith(color: AppColors.textMuted)),
               for (final m in bloqueados)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
+                Card(
+                  margin: const EdgeInsets.only(bottom: Spacing.sm),
+                  child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.xs),
                   leading: const Icon(Icons.block, color: AppColors.textMuted),
                   title: Text(m.name, style: AppText.bodyStrong),
                   subtitle: Text([m.vehicle, m.plate].where((p) => p.isNotEmpty).join(' · '), style: AppText.caption),
                   trailing: TextButton(onPressed: () => _desbloquear(m), child: const Text('Desbloquear')),
+                ),
                 ),
             ],
           );

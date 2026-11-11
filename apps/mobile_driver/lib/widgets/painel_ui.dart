@@ -173,7 +173,8 @@ class MenuLinha extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: (cor ?? AppColors.gold).withValues(alpha: 0.12),
+                  color: cor == null ? AppColors.brandSoft : cor!.withValues(alpha: 0.14),
+                  border: Border.all(color: AppColors.hairline),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icone, size: 22, color: cor ?? AppColors.gold),

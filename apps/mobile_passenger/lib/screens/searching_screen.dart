@@ -126,9 +126,10 @@ class _SearchingScreenState extends State<SearchingScreen> {
                       onPressed: _cancelando ? null : () => _cancelar(corrida),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.danger,
-                        side: const BorderSide(color: AppColors.danger),
+                        side: const BorderSide(color: Color(0x66F0545A)),
+                        backgroundColor: AppColors.dangerSoft,
                         minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
                       ),
                       child: Text(_cancelando ? 'Cancelando...' : 'Cancelar corrida'),
                     ),

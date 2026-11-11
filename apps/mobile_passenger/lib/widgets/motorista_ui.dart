@@ -432,16 +432,20 @@ class BotaoCancelarPilula extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: FilledButton(
+      // Cancelar nao e a acao principal: contorno vermelho discreto, para
+      // nao competir com o dourado (visual premium, 11/11/2026).
+      child: OutlinedButton.icon(
         onPressed: carregando ? null : aoTocar,
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.brand,
-          foregroundColor: AppColors.onBrand,
-          minimumSize: const Size(180, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
-          textStyle: AppText.heading.copyWith(fontSize: 18),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.danger,
+          side: const BorderSide(color: Color(0x66F0545A)),
+          backgroundColor: AppColors.dangerSoft,
+          minimumSize: const Size(200, 50),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
+          textStyle: AppText.bodyStrong.copyWith(fontSize: 16),
         ),
-        child: Text(carregando ? 'Cancelando...' : 'Cancelar'),
+        icon: const Icon(Icons.close_rounded, size: 20),
+        label: Text(carregando ? 'Cancelando...' : 'Cancelar corrida'),
       ),
     );
   }

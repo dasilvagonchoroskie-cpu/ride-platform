@@ -29,9 +29,9 @@ class AppColors {
   // ---- Marca Fortaleza Move: azul do icone + dourado das asas ----
   static const Color brand = Color(0xFFE9B53D);
   static const Color brandDark = Color(0xFFC8922A);
-  static const Color brandSoft = Color(0x26E9B53D);
+  static const Color brandSoft = Color(0xFF1C2E5C);
   static const Color gold = Color(0xFFE9B53D);
-  static const Color goldSoft = Color(0x26E9B53D);
+  static const Color goldSoft = Color(0xFF1C2E5C);
 
   /// Acao principal, aprovacoes e metricas financeiras (azul da marca).
   static const Color primary = brand;
@@ -43,12 +43,12 @@ class AppColors {
 
   /// Verde: confirmacoes de sucesso (aprovado, pago, online).
   static const Color success = Color(0xFF34C17A);
-  static const Color successSoft = Color(0x2634C17A);
+  static const Color successSoft = Color(0xFF12383A);
 
   static const Color danger = Color(0xFFF0545A);
-  static const Color dangerSoft = Color(0x26F0545A);
+  static const Color dangerSoft = Color(0xFF3A1D2C);
   static const Color warning = Color(0xFFFF9A3D);
-  static const Color warningSoft = Color(0x26FF9A3D);
+  static const Color warningSoft = Color(0xFF382B24);
 
   // ---- Mapa ----
   static const Color mapBackground = Color(0xFFE9E7E2);

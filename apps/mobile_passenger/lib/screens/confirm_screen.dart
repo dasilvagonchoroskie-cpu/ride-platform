@@ -515,9 +515,14 @@ class _PriceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.md),
       decoration: BoxDecoration(
-        color: AppColors.sheet,
-        borderRadius: BorderRadius.circular(Radii.sm),
-        border: Border.all(color: AppColors.sheetText, width: 2),
+        // Cartao do preco em destaque: marinho elevado com fio dourado.
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1A3061), Color(0xFF12234B)],
+        ),
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: const Color(0x66E9B53D)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
