@@ -60,7 +60,7 @@ describe('R1: corte da conta poupando so o aparelho que trocou a senha', () => {
 
 /** AuthService com tudo simulado. */
 function montarAuth(conta: Record<string, unknown>, opcoes: { chaveTeste?: boolean } = {}) {
-  const user = { id: 'u1', role: UserRole.PASSENGER, name: 'Ana Souza', phone: '+5564999990001', email: 'ana@x.com', status: 'ACTIVE', metadata: {}, driver: null, ...conta };
+  const user: Record<string, any> = { id: 'u1', role: UserRole.PASSENGER, name: 'Ana Souza', phone: '+5564999990001', email: 'ana@x.com', status: 'ACTIVE', metadata: {}, driver: null, ...conta };
   const prisma = {
     user: {
       findUnique: jest.fn(async () => user),

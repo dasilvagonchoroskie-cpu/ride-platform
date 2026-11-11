@@ -37,8 +37,59 @@ de recuperação vale uma vez, desligar).
 - Entre com a senha e, no lugar do código do autenticador, use **um** dos 8
   códigos de recuperação (cada um vale uma vez). Depois desligue e ligue de
   novo no celular novo.
-- Sem o celular e sem os códigos: só eu, com acesso ao banco e com você
-  presente, consigo desligar (fica registrado).
+- Sem o celular e sem os códigos: **procedimento excepcional** (abaixo).
+
+## "Esqueci a senha" com as duas etapas ligadas
+
+Desde a Requisição de continuidade (R5): o código do e-mail sozinho não troca
+a senha da Central. Depois do código do e-mail e da senha nova, a Central
+pede o código do Google Authenticator (ou um de recuperação). Só então a
+senha nova passa a valer e os outros aparelhos são desconectados.
+
+## Procedimento excepcional (perdeu o autenticador E os 8 códigos)
+
+Não é atalho: precisa de **você e do responsável técnico**, e tudo fica na
+auditoria. Não existe senha mestra.
+
+### Preparar uma vez (você, no GitHub, 3 minutos)
+
+Sem este passo a esteira roda sem esperar a sua aprovação.
+
+1. github.com → repositório `ride-platform` → **Settings** ("Configurações").
+2. Menu da esquerda → **Environments** ("Ambientes") → **New environment**
+   ("Novo ambiente").
+3. Nome: `recuperacao-excepcional` → **Configure environment**
+   ("Configurar ambiente").
+4. Marque **Required reviewers** ("Revisores obrigatórios") e adicione o seu
+   usuário `dasilvagonchoroskie-cpu`.
+5. **Save protection rules** ("Salvar regras de proteção").
+
+### Quando precisar
+
+1. O responsável técnico confere o pedido com você (chamada de vídeo) e
+   dispara no GitHub: **Actions** ("Ações") → **Recuperacao excepcional do
+   dono** → **Run workflow** ("Executar fluxo de trabalho"), com:
+   - e-mail da conta do dono;
+   - motivo (ex.: "celular roubado em 20/11, códigos de recuperação perdidos");
+   - nome do responsável técnico;
+   - a frase exata `EU SOU O DONO E ESTOU PRESENTE`.
+2. Você recebe o pedido de aprovação no GitHub (e-mail/app do GitHub) →
+   **Review deployments** ("Revisar implantações") → marque
+   `recuperacao-excepcional` → **Approve and deploy** ("Aprovar e implantar").
+3. A esteira, numa transação só:
+   - desliga as duas etapas (o celular perdido e os códigos antigos deixam de
+     valer);
+   - derruba todas as sessões e aparelhos da conta do dono;
+   - grava na auditoria (`RECUPERACAO_EXCEPCIONAL_DONO`): motivo,
+     responsável técnico, quem disparou e o link da execução.
+   Se o e-mail não for de **uma** conta de dono (operador, passageiro, e-mail
+   errado), nada é mudado.
+4. Você entra na Central com a senha (ou o código do e-mail). A Central abre
+   a tela **Ligue a verificação de novo** e só libera o resto depois de ligar
+   o Google Authenticator no celular novo e guardar os 8 códigos novos.
+
+Testado num banco de teste local (não no de produção): dono certo, frase
+errada, e-mail de operador e tentativa de injeção no e-mail.
 
 ## O que muda para a esteira de testes
 

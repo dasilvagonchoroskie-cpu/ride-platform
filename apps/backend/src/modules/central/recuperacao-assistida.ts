@@ -1,17 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Injectable, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Injectable } from '@nestjs/common';
 import { emailSchema, phoneSchema, UserRole } from '@ride/shared';
 import { z } from 'zod';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { BusinessException } from '../../common/errors/business.exception';
-import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PrismaService } from '../../database/prisma.service';
 import { AvisosDeSeguranca } from '../auth/avisos-de-seguranca';
 import { SessoesService } from '../auth/sessoes.service';
 import { liberarTelefoneDeContaVazia } from '../auth/conta-existente';
-import { SoDonoGuard } from '../pracas/so-dono.guard';
 
 /**
  * R3 (Requisicao de continuidade, 11/11/2026): a pessoa perdeu o telefone
@@ -119,26 +113,5 @@ export class RecuperacaoAssistidaService {
     await this.prisma.auditLog.create({
       data: { actorId: donoId, actorRole: UserRole.ADMIN, action: 'RECUPERACAO_ASSISTIDA', entity: 'user', entityId: userId, after: after as never },
     });
-  }
-}
-
-@ApiTags('Admin - Central')
-@ApiBearerAuth()
-@Roles(UserRole.ADMIN)
-@Controller('admin')
-export class RecuperacaoAssistidaController {
-  constructor(private readonly recuperacao: RecuperacaoAssistidaService) {}
-
-  @Post('usuarios/:id/recuperar-acesso')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(SoDonoGuard)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Recupera o acesso de quem perdeu o telefone e o e-mail (documento conferido) — so o dono' })
-  recuperar(
-    @CurrentUser('id') donoId: string,
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body(new ZodValidationPipe(recuperacaoSchema)) body: PedidoDeRecuperacao,
-  ) {
-    return this.recuperacao.recuperar(donoId, id, body);
   }
 }

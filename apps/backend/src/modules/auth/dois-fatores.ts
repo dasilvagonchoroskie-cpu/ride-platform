@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ERROR_CODES, UserRole } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { AppConfigService } from '../../config/app-config.service';
@@ -143,7 +143,7 @@ export class DoisFatoresService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
-    private readonly pracas: PracasService,
+    @Optional() private readonly pracas?: PracasService,
   ) {}
 
   private get mestre(): string {

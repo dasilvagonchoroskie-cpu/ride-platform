@@ -140,6 +140,53 @@ vierem errados.
 Se tiver acesso a um Samsung, Motorola ou outro: abrir **Autorizações**,
 tocar em cada **Abrir ajuste** e dizer se abriu a tela certa.
 
+## Requisição de continuidade (11/11/2026) — recuperação de contas
+
+Use a versão nova dos três aplicativos. Precisa de dois celulares (o seu e o
+emprestado servem) e de uma conta de passageiro de teste com e-mail que você
+consiga abrir.
+
+### L. Trocar a senha derruba o outro celular na hora
+
+1. Entre com a mesma conta de passageiro nos dois celulares (A e B).
+2. No A: Conta → Meus dados → **Alterar senha**.
+3. No B, em seguida (sem esperar): abra qualquer tela que busca no servidor
+   (Histórico, por exemplo). Esperado: o B volta para a tela de entrar.
+4. O A continua usando normalmente.
+5. Confira o e-mail da conta: chegou o **Aviso de segurança** com o horário
+   certo de Brasília. No B pode chegar o mesmo aviso como notificação.
+
+### M. "Esqueci minha senha" deixa só o celular que recuperou
+
+1. Entre nos dois celulares de novo.
+2. No B: sair → **Esqueci minha senha** → código do e-mail → senha nova.
+3. No A: deve voltar para a tela de entrar na próxima ação.
+
+### N. Trocar o e-mail e o telefone (passageiro)
+
+1. Meus dados → mude o **E-mail** → **Salvar**: aparece **Confirmar e-mail
+   novo** e o código chega no e-mail **novo**. Digite → salvo.
+2. O e-mail antigo recebe o aviso "O e-mail da sua conta... foi trocado".
+3. Logo em seguida, **Trocar telefone**: deve recusar ("48 horas depois da
+   troca do e-mail").
+4. Numa conta sem e-mail: **Trocar telefone** → deve pedir para cadastrar o
+   e-mail antes (o código **não** aparece na tela).
+
+### O. Recuperar acesso pela Central (só o dono)
+
+1. Central → Passageiros → a conta de teste → **Recuperar acesso**.
+2. Deixe uma conferência desmarcada → **Liberar acesso** → deve dizer "Não
+   liberado" e o celular da pessoa continua conectado.
+3. Marque todas → e-mail novo → **Liberar**: o celular da pessoa sai da conta
+   na hora; ela entra pelo código que chega no e-mail novo.
+4. Num operador de cidade, o botão não aparece (e o servidor recusa).
+
+### P. Duas etapas (só quando você estiver com o seu celular)
+
+Siga `docs/DUAS-ETAPAS-DONO.md`. Depois teste: sair → **Esqueci a senha** na
+Central → código do e-mail + senha nova → a Central **pede o código do Google
+Authenticator** antes de entrar. Sem o código, a senha antiga continua valendo.
+
 ## O que me mandar
 
 Os horários, os segundos de cada passo, os km (taxímetro x odômetro), os

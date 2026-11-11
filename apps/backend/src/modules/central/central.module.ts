@@ -9,7 +9,8 @@ import { CentralService } from './central.service';
 import { DadosPessoaisCentralController, MeusDadosMotoristaController } from './dados-pessoais.controller';
 import { DadosPessoaisService } from './dados-pessoais.service';
 import { PedidosExclusaoService } from './pedidos-exclusao.service';
-import { RecuperacaoAssistidaController, RecuperacaoAssistidaService } from './recuperacao-assistida';
+import { RecuperacaoAssistidaService } from './recuperacao-assistida';
+import { RecuperacaoAssistidaController } from './recuperacao-assistida.controller';
 
 @Module({
   imports: [PrismaModule, RidesModule, VehiclesModule, AuthModule],
