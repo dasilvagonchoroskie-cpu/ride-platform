@@ -8,7 +8,7 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 ---
 
 ## 0000000. Requisição 1 — aparelhos, cofre, segurança da Central (11/11/2026, PR #54, APKs 391)
-- [REAL] Servidor no ar com: código único por instalação, desconectar UM aparelho (só o dono, com auditoria), renovação presa ao mesmo aparelho, aviso (push) ligado ao aparelho da sessão. Teste de ponta a ponta (execução 84): dois celulares na mesma conta, desconecta um, o outro continua; motorista desconectado cai na hora; pedido Popular não toca no carro Conforto.
+- [REAL] Servidor no ar com: código único por instalação, desconectar UM aparelho (só o dono, com auditoria), renovação presa ao mesmo aparelho, aviso (push) ligado ao aparelho da sessão. Teste de ponta a ponta (execução 85: 363 OK, 3 falhas da carteira que são intencionais, 4 pulados por não mexer em produção): dois celulares na mesma conta, desconecta um, o outro continua; motorista desconectado cai na hora; pedido Popular não toca no carro Conforto.
 - [REAL] Correção de segurança: operador da cidade só vê/muda dados pessoais dos motoristas da cidade dele; passageiros só o dono (4 testes automáticos).
 - [AUTO] Passageiro e motorista: login e código do aparelho no cofre do celular (flutter_secure_storage 10.0.0 travado); sessão antiga migra sem deslogar; serviços nativos leem o mesmo cofre (CofreNativo.java). Testes automáticos passam (motorista 119, passageiro 106, Central 66). **Falta prova no celular**: instalar o APK 391 por cima do antigo e continuar logado (roteiro A em docs/TESTE-DE-RUA.md).
 - Teste de ponta a ponta agora NÃO grava configuração de produção (MUDAR_CONFIG=nao): aparência, aviso de saldo, tarifas e Conforto na cidade aparecem como "PULADO".
