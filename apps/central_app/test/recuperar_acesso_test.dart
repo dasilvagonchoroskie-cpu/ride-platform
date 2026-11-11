@@ -76,6 +76,11 @@ void main() {
     // Confirmacao (acao forte): "Liberar".
     await tester.tap(find.widgetWithText(FilledButton, 'Liberar').last);
     await tester.pumpAndSettle();
+    // A resposta do servidor (simulado) chega fora do relogio do teste.
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pumpAndSettle();
+    }
   }
 
   setUp(() {
