@@ -77,8 +77,10 @@ export class TokenService {
     return record.id;
   }
 
-  async issueTokens(subject: TokenSubject, device?: DeviceContext): Promise<IssuedTokens> {
-    const deviceRowId = await this.upsertDevice(subject.id, device);
+  async issueTokens(subject: TokenSubject, device?: DeviceContext, aparelhoAnterior?: string | null): Promise<IssuedTokens> {
+    // Renovacao sem dados do aparelho continua presa ao MESMO aparelho: assim
+    // o corte de um aparelho so (Central) tambem vale para o acesso renovado.
+    const deviceRowId = device ? await this.upsertDevice(subject.id, device) : (aparelhoAnterior ?? null);
 
     const payload: JwtPayload = {
       sub: subject.id,
@@ -146,6 +148,7 @@ export class TokenService {
         driverId: stored.user.driver?.id ?? null,
       },
       device,
+      stored.deviceId,
     );
 
     const newHash = hashToken(issued.refreshToken, this.refreshPepper);

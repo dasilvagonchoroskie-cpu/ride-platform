@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile_driver/core/api/api_client.dart';
+import 'package:mobile_driver/core/storage/app_storage.dart';
 import 'package:mobile_driver/data/models/driver_models.dart';
 import 'package:mobile_driver/screens/onboarding_screen.dart';
 import 'package:mobile_driver/state/driver_state.dart';
@@ -180,8 +181,10 @@ void main() {
     await d.entrarNaContaVinculada('123456');
     expect(d.profile!.phone, '+5564992686632');
     expect(d.cpfConta, '52998224725');
+    // Requisicao 1: o login fica no cofre do celular, nao no arquivo comum.
+    expect(await AppStorage.read(AppStorage.accessToken), 'acesso-da-conta-de-passageiro');
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('ride.accessToken'), 'acesso-da-conta-de-passageiro');
+    expect(prefs.getString('ride.accessToken'), isNull);
 
     expect(await enviar(), ResultadoCadastro.enviado);
     expect(pedidos.where((p) => p == 'POST /api/drivers/onboarding').length, 2);

@@ -112,10 +112,9 @@ button { font-family: inherit; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 6px 6px 18px; }
 .brand-mark {
   width: 42px; height: 42px; border-radius: 12px; flex: none; display: grid; place-items: center;
-  background: linear-gradient(150deg, #1b4bd0, #0f2c52);
-  border: 1px solid rgba(242, 183, 5, .5); color: var(--gold);
-  font-weight: 800; letter-spacing: .05em; font-size: 15px;
+  background: #fff; padding: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
 }
+.brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .brand-text strong { display: block; color: #fff; font-size: 14px; letter-spacing: .01em; }
 .brand-text span { display: block; color: #8ea6c4; font-size: 10.5px; line-height: 1.35; margin-top: 2px; }
 .nav { display: flex; flex-direction: column; gap: 3px; overflow-y: auto; flex: 1; padding-right: 2px; }

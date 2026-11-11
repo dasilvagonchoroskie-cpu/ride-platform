@@ -58,17 +58,87 @@ corrida.
 4. Busca de destino: digite 5 ruas de Goiatuba (das 20 que você vai mandar)
    e veja se a primeira opção é a certa.
 
-## Categorias (novo)
+## Requisição 1 (11/11/2026) — roteiro em aparelho real
 
-1. Central → escolher **Goiatuba** no topo → Tarifas → Conforto → **Ligada
-   nesta cidade** → Salvar.
-2. Motorista: Meus veículos → **Mudar categoria** → Conforto → Pedir à
-   Central. Central: aprovar na faixa "pedido(s) de categoria".
-3. Passageiro: escolher o destino → devem aparecer Popular e Conforto, cada
-   um com preço e "Chega em ~N min". Pedir Conforto: o chamado vai para o
-   motorista aprovado no Conforto.
-4. Depois: Central → Motoristas → voltar o carro para Popular (se quiser) e
-   desligar o Conforto em Goiatuba.
+Marque cada linha **ok** ou **falhou** (com o horário). Teste de emulador
+não vale para esta lista.
+
+### A. Atualizar sem deslogar (cofre do celular)
+
+1. Com a versão antiga instalada e **logada** (passageiro e motorista),
+   instale o APK novo **por cima** (não desinstale).
+2. Esperado: abre já logado, sem pedir código.
+3. Feche o app, tire da lista de recentes, abra de novo: continua logado.
+
+### B. Aparelhos e desconectar (Central)
+
+1. Entre com a **mesma conta de passageiro** em dois celulares.
+2. Central → Passageiros → a conta → **Aparelhos**: devem aparecer **dois**
+   celulares, cada um com o modelo (ex.: "Xiaomi Redmi 12").
+3. Toque **Desconectar** em um deles. Esperado: em até 1 minuto (no próximo
+   uso) ele volta para a tela de entrada; o outro continua usando normal.
+4. Repita com o motorista: o motorista desconectado sai do ar se não tiver
+   outro aparelho aberto.
+
+### C. GPS
+
+1. Passageiro e motorista com GPS ligado, ao ar livre: o ponto azul deve
+   ficar na rua certa em até 10 s.
+2. Desligue o GPS 10 s e ligue: o app avisa e volta sozinho.
+
+### D. Notificações — passageiro
+
+Faça três vezes, com o app **aberto**, **em segundo plano** (botão início) e
+**fechado** (tirado dos recentes):
+
+1. Motorista aceita a corrida → chega "motorista a caminho".
+2. Motorista toca **Cheguei** → chega o aviso.
+3. Anote quais não chegaram e em quantos segundos chegaram.
+
+### E. Chamadas — motorista (tela apagada e app fechado)
+
+Igual ao Risco 1 acima: disponível, **tela apagada**; depois **app fechado**.
+O celular deve acender e tocar em até 15 s.
+
+### F. Categoria (sem ligar nada na cidade)
+
+O Conforto continua **desligado** para os passageiros. Para conferir a
+separação use só o carro do motorista de teste:
+
+1. Central → Motoristas → o motorista de teste → bloco **Categoria do
+   veículo** → "Recebe chamados de" → **Conforto**.
+2. Motorista disponível perto do passageiro. Passageiro pede **Popular**.
+3. Esperado: o motorista do carro Conforto **não** recebe a chamada.
+4. Volte o carro para **Popular**: pedindo de novo, agora ele recebe.
+
+### G. Taxímetro e navegação
+
+1. Corrida real de 3 a 5 km com uma parada de 2 minutos (Risco 3 acima).
+2. Botões **Google Maps** e **Waze** na corrida do motorista: abrem a rota
+   até o passageiro e depois até o destino.
+3. Anote km do taxímetro × odômetro e o valor final × estimado.
+
+### H. Carteira depois da corrida
+
+1. Anote o saldo do motorista antes.
+2. Depois da corrida: Carteira → a taxa da Central aparece e o saldo baixou
+   exatamente essa taxa (taxa sobre o **valor final**, não o estimado).
+
+### I. Busca e rota em Goiatuba
+
+Digite 5 endereços reais de Goiatuba (rua e número) e 3 lugares conhecidos
+(mercado, posto, hospital). A primeira opção deve ser a certa; anote os que
+vierem errados.
+
+### J. Visual
+
+Ícones, a **bandeira do Brasil** na tela do telefone e o botão
+**Google Maps** do motorista numa linha só. Print de qualquer coisa estranha.
+
+### K. Autorizações em outras marcas
+
+Se tiver acesso a um Samsung, Motorola ou outro: abrir **Autorizações**,
+tocar em cada **Abrir ajuste** e dizer se abriu a tela certa.
 
 ## O que me mandar
 

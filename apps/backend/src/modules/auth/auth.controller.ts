@@ -243,8 +243,12 @@ export class AuthController {
   @ApiOperation({ summary: 'Confere o codigo e entra na conta que ja existe' })
   entrarNaContaVinculada(
     @CurrentUser() user: AuthenticatedUser,
-    @Body(new ZodValidationPipe(vinculoSchema.extend({ code: z.string().regex(/^\d{4,8}$/, 'Codigo invalido.') })))
-    body: { email?: string; cpf?: string; cnhNumber?: string; phone?: string; code: string },
+    @Body(
+      new ZodValidationPipe(
+        vinculoSchema.extend({ code: z.string().regex(/^\d{4,8}$/, 'Codigo invalido.'), device: deviceInfoSchema.optional() }),
+      ),
+    )
+    body: { email?: string; cpf?: string; cnhNumber?: string; phone?: string; code: string; device?: DeviceInfoInput },
     @Req() req: Request,
     @Headers('x-chave-teste') chaveTeste?: string,
   ): Promise<AuthResult> {
@@ -252,7 +256,12 @@ export class AuthController {
       user.id,
       body,
       body.code,
-      { deviceId: 'vinculo-de-conta', platform: 'ANDROID' as never, ip: getClientIp(req), userAgent: getUserAgent(req) },
+      // O celular manda o codigo da instalacao (Requisicao 1); sem ele, o nome antigo.
+      {
+        ...(body.device ?? { deviceId: 'vinculo-de-conta', platform: 'ANDROID' as never }),
+        ip: getClientIp(req),
+        userAgent: getUserAgent(req),
+      },
       chaveTeste,
     );
   }

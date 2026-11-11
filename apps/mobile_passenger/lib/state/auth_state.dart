@@ -7,6 +7,7 @@ import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import '../core/config/app_config.dart';
 import '../core/storage/app_storage.dart';
+import '../core/storage/identidade_aparelho.dart';
 import '../core/vigia_corrida.dart';
 import '../core/legal/legal_content.dart';
 import '../data/models/models.dart';
@@ -65,7 +66,6 @@ class AuthState extends ChangeNotifier {
   /// Cidade escolhida na tela Cidade, antes de o cadastro ser enviado.
   String? cidadeEscolhida;
 
-  static const Map<String, dynamic> _aparelho = {'deviceId': 'flutter-android', 'platform': 'ANDROID'};
 
   bool get isDemoSession => accessToken == 'demo-token';
 
@@ -161,26 +161,26 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> verifyOtp(String destino, String code) => _entrar('/auth/otp/verify', {
+  Future<void> verifyOtp(String destino, String code) async => _entrar('/auth/otp/verify', {
         ..._alvo(destino),
         'code': code,
         'purpose': 'LOGIN',
         'role': 'PASSENGER',
-        'device': _aparelho,
+        'device': await IdentidadeDoAparelho.dados(),
       });
 
-  Future<void> entrarComEmail(String email, String senha) => _entrar('/auth/password/login', {
+  Future<void> entrarComEmail(String email, String senha) async => _entrar('/auth/password/login', {
         'email': email.trim().toLowerCase(),
         'password': senha,
-        'device': _aparelho,
+        'device': await IdentidadeDoAparelho.dados(),
       });
 
   /// Codigo (telefone ou e-mail) + senha nova. Ja deixa a pessoa conectada.
-  Future<void> redefinirSenha(String destino, String code, String novaSenha) => _entrar('/auth/password/reset', {
+  Future<void> redefinirSenha(String destino, String code, String novaSenha) async => _entrar('/auth/password/reset', {
         ..._alvo(destino),
         'code': code,
         'newPassword': novaSenha,
-        'device': _aparelho,
+        'device': await IdentidadeDoAparelho.dados(),
       });
 
   Future<void> _entrar(String caminho, Map<String, dynamic> corpo) async {

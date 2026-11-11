@@ -3,6 +3,8 @@ package com.rideplatform.mobile_driver;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.it_nomads.fluttersecurestorage.CofreNativo;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -27,16 +29,44 @@ public final class Sessao {
     private Sessao() { }
 
     private static final String ARQUIVO_FLUTTER = "FlutterSharedPreferences";
+    // Arquivo comum (antes do cofre) e nomes no cofre (lib/core/storage/cofre.dart).
     private static final String CHAVE_ACESSO = "flutter.ride.accessToken";
     private static final String CHAVE_REFRESH = "flutter.ride.refreshToken";
+    private static final String COFRE_ACESSO = "ride.accessToken";
+    private static final String COFRE_REFRESH = "ride.refreshToken";
 
     private static SharedPreferences flutter(Context c) {
         return c.getApplicationContext().getSharedPreferences(ARQUIVO_FLUTTER, Context.MODE_PRIVATE);
     }
 
+    /**
+     * Le do cofre (Requisicao 1, 11/11/2026); se o cofre falhar ou ainda nao
+     * tiver o valor (app de antes do cofre que nao abriu desde a atualizacao),
+     * usa o arquivo comum.
+     */
+    private static String ler(Context c, String noCofre, String noComum) {
+        try {
+            String v = CofreNativo.ler(c, noCofre);
+            if (v != null && !v.isEmpty()) return v;
+        } catch (Exception ignorado) {
+            // cofre com defeito neste aparelho: segue com o arquivo comum
+        }
+        return flutter(c).getString(noComum, null);
+    }
+
+    /** Grava no cofre e tira a copia do arquivo comum; se o cofre falhar, grava no comum. */
+    private static void gravar(Context c, String noCofre, String noComum, String valor) {
+        try {
+            CofreNativo.gravar(c, noCofre, valor);
+            flutter(c).edit().remove(noComum).commit();
+        } catch (Exception e) {
+            flutter(c).edit().putString(noComum, valor).commit();
+        }
+    }
+
     /** Acesso atual do aplicativo (ou o reserva, se o aplicativo nao tiver). */
     public static String acesso(Context c, String reserva) {
-        String t = flutter(c).getString(CHAVE_ACESSO, null);
+        String t = ler(c, COFRE_ACESSO, CHAVE_ACESSO);
         return t != null && !t.isEmpty() ? t : (reserva == null ? "" : reserva);
     }
 
@@ -45,11 +75,10 @@ public final class Sessao {
      * null se o login acabou de vez (precisa entrar de novo no aplicativo).
      */
     public static synchronized String renovar(Context c, String api, String usado) {
-        SharedPreferences p = flutter(c);
-        String atual = p.getString(CHAVE_ACESSO, null);
+        String atual = ler(c, COFRE_ACESSO, CHAVE_ACESSO);
         // O aplicativo ja renovou enquanto esperavamos: usa o novo.
         if (atual != null && !atual.isEmpty() && !atual.equals(usado)) return atual;
-        String refresh = p.getString(CHAVE_REFRESH, null);
+        String refresh = ler(c, COFRE_REFRESH, CHAVE_REFRESH);
         if (refresh == null || refresh.isEmpty()) return null;
         try {
             HttpURLConnection con = (HttpURLConnection) new URL(api + "/api/auth/refresh").openConnection();
@@ -67,8 +96,8 @@ public final class Sessao {
             if (codigo >= 500) return usado; // servidor acordando: tenta depois com o mesmo
             if (codigo >= 400) {
                 // Outro lado (o aplicativo) pode ter trocado o refresh agora mesmo.
-                String depois = p.getString(CHAVE_REFRESH, null);
-                if (depois != null && !depois.equals(refresh)) return p.getString(CHAVE_ACESSO, null);
+                String depois = ler(c, COFRE_REFRESH, CHAVE_REFRESH);
+                if (depois != null && !depois.equals(refresh)) return ler(c, COFRE_ACESSO, CHAVE_ACESSO);
                 return null;
             }
             StringBuilder r = new StringBuilder();
@@ -81,9 +110,8 @@ public final class Sessao {
             String novo = d.optString("accessToken", "");
             String novoRefresh = d.optString("refreshToken", "");
             if (novo.isEmpty()) return null;
-            SharedPreferences.Editor e = p.edit().putString(CHAVE_ACESSO, novo);
-            if (!novoRefresh.isEmpty()) e.putString(CHAVE_REFRESH, novoRefresh);
-            e.commit();
+            gravar(c, COFRE_ACESSO, CHAVE_ACESSO, novo);
+            if (!novoRefresh.isEmpty()) gravar(c, COFRE_REFRESH, CHAVE_REFRESH, novoRefresh);
             return novo;
         } catch (Exception e) {
             // Sem rede: nao e login vencido. Tenta de novo na proxima volta.

@@ -59,9 +59,25 @@ export class PushService implements OnApplicationBootstrap {
   }
 
   /** Guarda o endereco de push do aparelho; tira de outra conta que usava o mesmo celular. */
-  async registrar(userId: string, token: string, deviceId?: string | null): Promise<void> {
-    const id = (deviceId?.trim() || `push-${token.slice(-24)}`).slice(0, 200);
+  async registrar(userId: string, token: string, deviceId?: string | null, aparelhoDaSessao?: string | null): Promise<void> {
     await this.prisma.device.updateMany({ where: { fcmToken: token, NOT: { userId } }, data: { fcmToken: null } });
+    // Requisicao 1 (11/11/2026): o aviso fica no MESMO aparelho da sessao
+    // (o do login). Assim a lista da Central mostra um aparelho por celular e
+    // desconectar um aparelho tambem para os avisos dele.
+    if (aparelhoDaSessao) {
+      const r = await this.prisma.device.updateMany({
+        where: { id: aparelhoDaSessao, userId },
+        data: { fcmToken: token, lastSeenAt: new Date() },
+      });
+      if (r.count > 0) {
+        await this.prisma.device.updateMany({
+          where: { userId, fcmToken: token, NOT: { id: aparelhoDaSessao } },
+          data: { fcmToken: null },
+        });
+        return;
+      }
+    }
+    const id = (deviceId?.trim() || `push-${token.slice(-24)}`).slice(0, 200);
     await this.prisma.device.upsert({
       where: { userId_deviceId: { userId, deviceId: id } },
       update: { fcmToken: token, lastSeenAt: new Date() },

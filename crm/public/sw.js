@@ -18,7 +18,8 @@ const ASSETS = [
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/icons/favicon.svg'
+  '/icons/favicon-32.png',
+  '/icons/logo.png'
 ];
 
 self.addEventListener('install', (event) => {

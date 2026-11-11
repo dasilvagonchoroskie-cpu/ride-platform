@@ -1,4 +1,17 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PayoutStatus, UserStatus } from '@prisma/client';
 import { UserRole } from '@ride/shared';
@@ -136,6 +149,32 @@ export class AdminCentralController {
   @ApiOperation({ summary: 'Aparelhos que entraram na conta e as sessoes abertas em cada um — so o dono' })
   async aparelhos(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.sessoes.aparelhos(await this.contaDe(id));
+  }
+
+  @Post('usuarios/:id/aparelhos/:aparelhoId/desconectar')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(SoDonoGuard)
+  @ApiOperation({ summary: 'Desconecta UM aparelho da conta na hora; os outros continuam — so o dono' })
+  async desconectarAparelho(
+    @CurrentUser('id') adminId: string,
+    @Param('id', new ParseUUIDPipe()) idInformado: string,
+    @Param('aparelhoId', new ParseUUIDPipe()) aparelhoId: string,
+  ) {
+    const id = await this.contaDe(idInformado);
+    const r = await this.sessoes.cortarAparelho(id, aparelhoId);
+    // Aparelho de outra conta (ou inexistente): nao revela se existe.
+    if (!r) throw new NotFoundException('Aparelho nao encontrado nesta conta.');
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: UserRole.ADMIN,
+        action: 'DESCONECTAR_APARELHO',
+        entity: 'device',
+        entityId: aparelhoId,
+        after: { conta: id, ...r } as never,
+      },
+    });
+    return r;
   }
 
   /** Aceita o id da conta ou o id do motorista (a tela do motorista so tem este). */

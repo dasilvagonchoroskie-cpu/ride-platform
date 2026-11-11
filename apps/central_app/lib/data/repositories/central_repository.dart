@@ -4,6 +4,7 @@ import '../../core/utils/geo.dart';
 import '../demo/central_demo.dart';
 import '../models/central_models.dart';
 import '../../core/storage/app_storage.dart';
+import '../../core/storage/identidade_aparelho.dart';
 import '../models/motorista_no_mapa.dart';
 
 /// Acesso aos dados da Central.
@@ -53,7 +54,7 @@ class CentralRepository {
   /// Login real do administrador (e-mail e senha no servidor).
   Future<AdminUser> login(String email, String password) async {
     final data = await _client.request('POST', '/auth/password/login',
-        body: {'email': email, 'password': password}) as Map<String, dynamic>;
+        body: {'email': email, 'password': password, 'device': await IdentidadeDoAparelho.dados()}) as Map<String, dynamic>;
     return _sessaoDaCentral(data, email);
   }
 
@@ -73,7 +74,7 @@ class CentralRepository {
       'email': email,
       'code': codigo,
       'newPassword': senhaNova,
-      'device': {'deviceId': 'flutter-android-central', 'platform': 'ANDROID'},
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
     return _sessaoDaCentral(data, email);
   }
@@ -84,7 +85,7 @@ class CentralRepository {
       'code': codigo,
       'purpose': 'LOGIN',
       'role': 'PASSENGER',
-      'device': {'deviceId': 'flutter-android-central', 'platform': 'ANDROID'},
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
     return _sessaoDaCentral(data, email);
   }
@@ -105,7 +106,7 @@ class CentralRepository {
     final data = await _client.request('POST', '/auth/2fa/entrar', body: {
       'desafio': desafio,
       'codigo': codigo,
-      'device': {'deviceId': 'flutter-android-central', 'platform': 'ANDROID'},
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
     return _sessaoDaCentral(data, email);
   }
