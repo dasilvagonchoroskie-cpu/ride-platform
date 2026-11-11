@@ -195,3 +195,44 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
   assert.equal(lista.s, 200);
   assert.deepEqual(Object.keys(lista.j.contagem).sort(), ['aguardando', 'concluido', 'humano', 'ia']);
 });
+
+test('notificações: exigem login; inscrição só aceita serviço de push conhecido', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-push-'));
+  const porta = await portaLivre();
+  const proc = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
+    env: { ...process.env, FM_DATA_DIR: dir, PORT: String(porta), HOST: '127.0.0.1', FM_INSTALL_KEY: 'FM-TEST-CHAV-E123', TRUST_PROXY: 'false' }, stdio: 'ignore'
+  });
+  t.after(() => proc.kill());
+  const B = `http://127.0.0.1:${porta}/api`;
+  for (let i = 0; i < 50; i++) { try { await fetch(`${B}/health`); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
+  let ck = '';
+  const r = async (m, u, b) => { const x = await fetch(B + u, { method: m, headers: { 'content-type': 'application/json', cookie: ck }, body: b ? JSON.stringify(b) : undefined }); for (const sc of x.headers.getSetCookie()) { const [kv] = sc.split(';'); const nome = kv.split('=')[0]; const resto = ck.split('; ').filter((y) => y && !y.startsWith(nome + '=')); if (!/Max-Age=0/.test(sc)) resto.push(kv); ck = resto.join('; '); } let j = null; try { j = await x.json(); } catch (e) { /* */ } return { s: x.status, j }; };
+  assert.equal((await r('GET', '/notificacoes')).s, 401);
+  assert.equal((await r('GET', '/push/config')).s, 401);
+  assert.equal((await r('POST', '/auth/setup', { chave: 'FM-TEST-CHAV-E123', nome: 'Adm', email: 'adm@x.com', senha: 'senhaforte123' })).s, 201);
+  const cfg = await r('GET', '/push/config');
+  assert.equal(cfg.s, 200);
+  assert.ok(cfg.j.chave_publica.length > 60, 'chave VAPID pública');
+  const keys = { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) };
+  assert.equal((await r('POST', '/push/inscrever', { subscription: { endpoint: 'https://meu-servidor.com/x', keys } })).s, 422);
+  const ok = await r('POST', '/push/inscrever', { subscription: { endpoint: 'https://fcm.googleapis.com/fcm/send/xyz', keys }, tipos: { ia: false } });
+  assert.equal(ok.s, 200);
+  assert.equal(ok.j.aparelhos[0].avisar_ia, 0);
+  const f = await r('GET', '/notificacoes');
+  assert.equal(f.s, 200);
+  assert.deepEqual(f.j.itens, []);
+});
+
+test('assetlinks.json: o app Android do CRM é reconhecido (pacote e assinatura)', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-al-'));
+  const porta = await portaLivre();
+  const proc = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, FM_DATA_DIR: dir, PORT: String(porta), HOST: '127.0.0.1', TRUST_PROXY: 'false' }, stdio: 'ignore' });
+  t.after(() => proc.kill());
+  let r;
+  for (let i = 0; i < 50; i++) { try { r = await fetch(`http://127.0.0.1:${porta}/.well-known/assetlinks.json`); break; } catch (e) { await new Promise((x) => setTimeout(x, 100)); } }
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /application\/json/);
+  const j = await r.json();
+  assert.equal(j[0].target.package_name, 'br.com.fortalezamove.crm_fortaleza_move');
+  assert.match(j[0].target.sha256_cert_fingerprints[0], /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+});

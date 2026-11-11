@@ -45,6 +45,20 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Notificações (10/11/2026, pedido do dono)
+- `src/notificacoes.js`: o store do WhatsApp avisa eventos (`store.ouvir`: mensagem recebida, envio da IA, mudança de
+  atendimento) e o notificador gera 3 tipos: 💬 mensagem nova, 🤖 IA respondeu (discreto), 🚨 transferência para a equipe
+  (urgente, com o motivo). Cada um vira item do feed (`notificacoes`, 7 dias) e Web Push (`web-push` 4.0.0, chaves VAPID
+  em `data/vapid.json`, inscrições por aparelho em `push_inscricoes` com os tipos escolhidos). Mensagem/IA: no máximo 1
+  push por conversa por minuto. Endpoint de push só de serviços conhecidos (FCM, Mozilla, Windows, Apple): evita SSRF.
+  Rotas: `GET /notificacoes?desde=`, `GET /push/config`, `POST /push/inscrever|cancelar|teste` (qualquer usuário logado).
+- Front: `public/js/notificacoes.js` (sons gerados por WebAudio, diferentes por tipo; aviso clicável que abre a conversa
+  `#/conversas?c=ID`), `sw.js` (push + clique), cartão "Notificações" em Configurações.
+- App Android virou Trusted Web Activity (repo CRM-Fortaleza-move-, `app-twa/`, androidbrowserhelper): abre o CRM pelo
+  Chrome, então o push chega com o app fechado; `NotificacoesService` escolhe o canal pelo emoji do título (alarme,
+  "plim", silencioso). O servidor publica `/.well-known/assetlinks.json` (`TWA_PACOTE`, `TWA_SHA256`; padrão = assinatura
+  de `app/assinatura/debug.keystore`). Mesmo pacote e assinatura do app Flutter antigo: instala por cima.
+
 ## Mudança de conta (09/11/2026)
 - O dono perdeu o acesso às contas da Fortaleza Move (vendeu o celular). O CRM foi montado de novo, do zero, nas contas
   pessoais dele: Render "Evandro's workspace" (serviço `crm-fortaleza-move`, srv-dbp6u4utlv9c73en3b0g, Oregon,

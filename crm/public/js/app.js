@@ -6,6 +6,7 @@ import { renderFinance } from './views/finance.js';
 import { renderReports } from './views/reports.js';
 import { renderSettings } from './views/settings.js';
 import { renderConversas } from './views/whatsapp.js';
+import { iniciarAvisos, pararAvisos } from './notificacoes.js';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard', title: 'Dashboard', sub: 'Visão geral da operação e do relacionamento' },
@@ -491,6 +492,7 @@ async function enterApp() {
   window.removeEventListener('hashchange', route);
   window.addEventListener('hashchange', route);
   await route();
+  iniciarAvisos();
   // Lembrete só quando dá para ativar a verificação por e-mail (envio configurado) e ela ainda está desligada.
   if (state.user && state.user.role === 'admin') {
     api.get('/auth/2fa').then((st) => {
@@ -517,6 +519,7 @@ function paintBadges() {
 
 async function logout() {
   try { await api.post('/auth/logout'); } catch (err) { /* ignore */ }
+  pararAvisos();
   state.user = null;
   state.meta = null;
   history.replaceState(null, '', '/');

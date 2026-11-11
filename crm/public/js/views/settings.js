@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
+import * as notif from '../notificacoes.js';
 
 export async function renderSettings(view, state) {
   const isAdmin = state.user.role === 'admin';
@@ -145,6 +146,11 @@ export async function renderSettings(view, state) {
           </div>
         </div>
 
+        <div class="card" id="notif-card">
+          <div class="card-head"><div><h3>Notificações</h3><p class="sub">Avisos do atendimento neste aparelho: mensagem nova, IA trabalhando e IA passando para você</p></div></div>
+          <div class="card-body" id="notif-corpo">Carregando…</div>
+        </div>
+
         <div class="card" id="mfa-card">
           <div class="card-head"><div><h3>Verificação em duas etapas</h3><p class="sub">Código no seu e-mail só quando entrar por um aparelho novo</p></div></div>
           <div class="card-body"><div id="mfa-corpo" class="muted">Carregando…</div><div class="form-errors" id="mfa-error" hidden></div></div>
@@ -232,6 +238,7 @@ export async function renderSettings(view, state) {
 
   setupRecuperacao(view);
   setupDuasEtapas(view);
+  setupNotificacoes(view);
 
   view.querySelectorAll('[data-session]').forEach((b) => b.addEventListener('click', async () => {
     try {
@@ -566,6 +573,59 @@ function setupRecuperacao(view) {
 }
 
 // Verificação em duas etapas: código por e-mail só em aparelho novo (padrão) + autenticador opcional.
+// Notificações: push (app fechado, quando o navegador permite) e sons com o CRM aberto. Cada aparelho escolhe os tipos.
+function setupNotificacoes(view) {
+  const corpo = view.querySelector('#notif-corpo');
+  const TIPOS = Object.entries(notif.TIPOS);
+  async function desenhar() {
+    let sub = null; let aparelho = null; let erroCfg = '';
+    if (notif.suportaPush()) {
+      try {
+        sub = await notif.inscricaoAtual();
+        const cfg = await api.get('/push/config');
+        aparelho = sub ? (cfg.aparelhos || []).find((a) => a.endpoint === sub.endpoint) : null;
+      } catch (e) { erroCfg = e.message; }
+    }
+    const marcado = (t) => {
+      if (!aparelho) return true;
+      return !!aparelho[{ mensagem: 'avisar_mensagem', ia: 'avisar_ia', transferencia: 'avisar_transferencia' }[t]];
+    };
+    let push;
+    if (!notif.suportaPush()) {
+      push = `<p class="muted small">Este app (ou navegador) não recebe notificações com a tela fechada. Para receber no celular mesmo com o app fechado,
+        abra <b>${ui.esc(location.origin)}</b> no <b>Chrome</b>, entre e ative aqui. Com o CRM aberto, os sons abaixo funcionam em qualquer lugar.</p>`;
+    } else if (Notification.permission === 'denied') {
+      push = '<p class="muted small">As notificações estão bloqueadas neste navegador. Libere em Configurações do navegador → Configurações do site → Notificações e recarregue.</p>';
+    } else {
+      push = `<p style="margin:0 0 8px">${aparelho ? ui.badge('Ativadas neste aparelho', 'success') : ui.badge('Desativadas neste aparelho', 'warn')}</p>
+        <div class="stack" style="gap:6px">${TIPOS.map(([t, d]) => `<label class="check"><input type="checkbox" class="np-tipo" data-tipo="${t}" ${marcado(t) ? 'checked' : ''}><span>${d.icone} ${ui.esc(d.nome)}</span></label>`).join('')}</div>
+        <div class="wa-actions-row" style="margin-top:10px">
+          <button class="btn btn-primary" id="np-ativar" type="button">${aparelho ? 'Salvar escolhas' : 'Ativar notificações'}</button>
+          ${aparelho ? '<button class="btn btn-ghost" id="np-teste" type="button">Enviar teste</button><button class="btn btn-ghost" id="np-off" type="button">Desativar</button>' : ''}
+        </div>`;
+    }
+    corpo.innerHTML = `${erroCfg ? `<div class="form-errors">${ui.esc(erroCfg)}</div>` : ''}
+      <h4 style="margin:0 0 6px">Com o app fechado</h4>${push}
+      <h4 style="margin:16px 0 6px">Sons com o CRM aberto</h4>
+      <div class="stack" style="gap:6px">${TIPOS.map(([t, d]) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <label class="check" style="margin:0"><input type="checkbox" class="ns-tipo" data-tipo="${t}" ${notif.somLigado(t) ? 'checked' : ''}><span>${d.icone} ${ui.esc(d.nome)}</span></label>
+        <button class="btn btn-sm btn-ghost ns-ouvir" data-tipo="${t}" type="button">Ouvir</button></div>`).join('')}</div>`;
+    corpo.querySelectorAll('.ns-tipo').forEach((c) => c.addEventListener('change', () => notif.ligarSom(c.dataset.tipo, c.checked)));
+    corpo.querySelectorAll('.ns-ouvir').forEach((b) => b.addEventListener('click', () => notif.tocar(b.dataset.tipo)));
+    const tipos = () => Object.fromEntries([...corpo.querySelectorAll('.np-tipo')].map((c) => [c.dataset.tipo, c.checked]));
+    corpo.querySelector('#np-ativar')?.addEventListener('click', async () => {
+      try { await notif.ativarPush(tipos()); ui.toast('Notificações ativadas neste aparelho.', 'success'); desenhar(); } catch (e) { ui.toast(e.message, 'error'); }
+    });
+    corpo.querySelector('#np-teste')?.addEventListener('click', async () => {
+      try { await api.post('/push/teste', {}); ui.toast('Teste enviado. Deve chegar em alguns segundos.', 'success'); } catch (e) { ui.toast(e.message, 'error'); }
+    });
+    corpo.querySelector('#np-off')?.addEventListener('click', async () => {
+      try { await notif.desativarPush(); ui.toast('Notificações desativadas neste aparelho.', 'success'); desenhar(); } catch (e) { ui.toast(e.message, 'error'); }
+    });
+  }
+  desenhar();
+}
+
 function setupDuasEtapas(view) {
   const $ = (sel) => view.querySelector(sel);
   const erro = (msg) => { const b = $('#mfa-error'); b.hidden = !msg; b.textContent = msg || ''; };

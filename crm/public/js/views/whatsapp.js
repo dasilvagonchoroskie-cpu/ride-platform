@@ -586,4 +586,7 @@ export async function renderConversas(view, state) {
   }, 4000);
 
   await Promise.all([carregarStatus(), carregarLista(), carregarIaStatus()]);
+  // Veio de uma notificação (#/conversas?c=ID): abre a conversa direto.
+  const cIni = Number(new URLSearchParams(location.hash.split('?')[1] || '').get('c'));
+  if (Number.isInteger(cIni) && cIni > 0) abrir(cIni).catch(() => {});
 }

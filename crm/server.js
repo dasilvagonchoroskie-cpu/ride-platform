@@ -56,6 +56,19 @@ app.use((req, res, next) => {
 });
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
+// Digital Asset Links: prova que o app Android (Trusted Web Activity) é do próprio CRM. Sem isso o Chrome mostra a barra
+// de endereço e não entrega as notificações ao app. Pacote e impressão digital da assinatura (públicos) por variável.
+const TWA_PACOTE = process.env.TWA_PACOTE || 'br.com.fortalezamove.crm_fortaleza_move';
+const TWA_SHA256 = (process.env.TWA_SHA256 || '3B:61:62:6A:0C:29:50:A1:E1:BA:DF:A5:7A:8F:72:BB:8F:16:DC:30:BC:4C:DD:66:FC:36:84:B0:ED:94:1C:99')
+  .split(',').map((x) => x.trim()).filter(Boolean);
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.json([{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: { namespace: 'android_app', package_name: TWA_PACOTE, sha256_cert_fingerprints: TWA_SHA256 }
+  }]);
+});
+
 app.use(express.static(PUBLIC_DIR, {
   extensions: ['html'],
   setHeaders(res, filePath) {

@@ -91,6 +91,14 @@ function createStore(db, opts = {}) {
 
   /* ------------------------------ recebimento (entrada) -------------------------- */
   // evt: { jid, telefone, nome, externoId, texto, tipo, quando, deMim }
+  // Ouvintes de eventos (notificações). Disparados depois da transação, fora do caminho de gravação.
+  const ouvintes = [];
+  const ouvir = (fn) => { ouvintes.push(fn); };
+  function avisar(evento) {
+    if (!ouvintes.length) return;
+    setImmediate(() => { for (const fn of ouvintes) { try { fn(evento); } catch (err) { /* notificação nunca derruba o WhatsApp */ } } });
+  }
+
   function ingerir(evt) {
     if (!evt || !evt.jid || JID_IGNORADO.test(evt.jid)) return { ignorado: 'grupo_ou_canal' };
     return db.transaction(() => {
@@ -128,6 +136,7 @@ function createStore(db, opts = {}) {
           mudarAtendimento(conversa.id, 'ia', { detalhe: 'Cliente voltou a escrever', novoAtendimento: antigo });
         }
       }
+      if (!deMim) avisar({ tipo: 'mensagem', conversaId: conversa.id, mensagemId: Number(info.lastInsertRowid) });
       return { inserido: true, conversaId: conversa.id, contatoId: contato.id, mensagemId: Number(info.lastInsertRowid) };
     }).immediate();
   }
@@ -165,6 +174,7 @@ function createStore(db, opts = {}) {
     if (c.atendimento === estado && !assunto && !motivo) return false;
     db.prepare(`UPDATE wa_conversas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conversaId);
     if (c.atendimento !== estado) {
+      avisar({ tipo: 'atendimento', conversaId, de: c.atendimento, para: estado, motivo: motivo || null, usuarioId: usuarioId || null });
       db.prepare('INSERT INTO wa_eventos (conversa_id, tipo, detalhe, usuario_id, criado_em) VALUES (?, ?, ?, ?, ?)')
         .run(conversaId, c.atendimento === 'concluido' && estado === 'ia' ? 'reaberta' : TIPO_EVENTO[estado], String(detalhe || motivo || '').slice(0, 200) || null, usuarioId || null, t);
     }
@@ -200,6 +210,7 @@ function createStore(db, opts = {}) {
     ).run(conversaId, limpo, t, usuarioId || null, origem, t, t);
     atualizarResumo(conversa, { texto: limpo, quando: t, direcao: 'out' });
     db.prepare(`UPDATE wa_conversas SET nao_lidas = 0, updated_at = ? WHERE id = ?`).run(t, conversaId);
+    if (origem === 'ia') avisar({ tipo: 'ia', conversaId, mensagemId: Number(info.lastInsertRowid) });
     return { mensagem: db.prepare('SELECT * FROM wa_mensagens WHERE id = ?').get(info.lastInsertRowid) };
   }
 
@@ -395,7 +406,7 @@ function createStore(db, opts = {}) {
     reservarPendentes, concluirEnvio, falharEnvio, reenviar, registrarStatus, listarConversas, obterConversa,
     listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, excluirConversa,
     contarNaoLidas, resumoFila, definirTranscricao,
-    mudarAtendimento, marcarSaudado, marcarEspera, definirAssunto, listarEventos, contarPorAtendimento
+    ouvir, mudarAtendimento, marcarSaudado, marcarEspera, definirAssunto, listarEventos, contarPorAtendimento
   };
 }
 

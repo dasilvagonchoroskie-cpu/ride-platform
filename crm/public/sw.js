@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v13';
+const CACHE = 'fm-crm-v14';
 const ASSETS = [
   '/',
   '/index.html',
@@ -7,6 +7,8 @@ const ASSETS = [
   '/js/app.js',
   '/js/api.js',
   '/js/ui.js',
+  '/js/notificacoes.js',
+  '/js/views/whatsapp.js',
   '/js/views/dashboard.js',
   '/js/views/entity.js',
   '/js/views/finance.js',
@@ -50,4 +52,37 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => caches.match(event.request).then((cached) => cached || (event.request.mode === 'navigate' ? caches.match('/index.html') : Response.error())))
   );
+});
+
+// Notificações push (cifradas até o aparelho). Cada tipo tem aparência e vibração próprias.
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (err) { d = { titulo: 'CRM Fortaleza Move', corpo: event.data ? event.data.text() : '' }; }
+  const urgente = d.tipo === 'transferencia';
+  const discreto = d.tipo === 'ia';
+  event.waitUntil(self.registration.showNotification(d.titulo || 'CRM Fortaleza Move', {
+    body: d.corpo || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: d.tag || undefined,
+    renotify: !discreto,
+    silent: discreto,
+    requireInteraction: urgente,
+    vibrate: urgente ? [300, 150, 300, 150, 600] : discreto ? [] : [120, 80, 120],
+    data: { url: d.url || '/#/conversas' }
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const alvo = (event.notification.data && event.notification.data.url) || '/#/conversas';
+  event.waitUntil((async () => {
+    const url = new URL(alvo, self.location.origin);
+    if (url.origin !== self.location.origin) return; // só abre o próprio CRM
+    const janelas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of janelas) {
+      if (new URL(c.url).origin === self.location.origin) { await c.focus(); return c.navigate(url.href).catch(() => null); }
+    }
+    return self.clients.openWindow(url.href);
+  })());
 });

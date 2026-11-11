@@ -329,3 +329,30 @@ CREATE TABLE IF NOT EXISTS ia_transcricoes (
   erro TEXT,
   criado_em TEXT NOT NULL
 );
+
+-- Notificações do atendimento (feed do CRM + push). Retenção curta (7 dias).
+CREATE TABLE IF NOT EXISTS notificacoes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tipo TEXT NOT NULL,                 -- mensagem | ia | transferencia
+  conversa_id INTEGER,
+  titulo TEXT NOT NULL,
+  corpo TEXT,
+  criado_em TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_notificacoes_criado ON notificacoes (criado_em);
+
+-- Aparelhos inscritos para receber notificações push (um por navegador/aparelho), com os tipos escolhidos.
+CREATE TABLE IF NOT EXISTS push_inscricoes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  aparelho TEXT,
+  avisar_mensagem INTEGER NOT NULL DEFAULT 1,
+  avisar_ia INTEGER NOT NULL DEFAULT 1,
+  avisar_transferencia INTEGER NOT NULL DEFAULT 1,
+  falhas INTEGER NOT NULL DEFAULT 0,
+  criado_em TEXT NOT NULL,
+  ultimo_envio_em TEXT
+);

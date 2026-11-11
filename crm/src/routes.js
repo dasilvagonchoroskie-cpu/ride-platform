@@ -17,6 +17,7 @@ const { criarTranscritor } = require('./ia/transcricao');
 const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
+const { createNotificacoes } = require('./notificacoes');
 const { gerarCodigoRecuperacao } = require('./reset');
 // Rota assíncrona: erro vira resposta 500 do Express (sem rejeição solta que derrubaria o processo).
 const seguro = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -35,6 +36,12 @@ const ia = createIaService({
 });
 ia.usarProvedor(criarProvedorMulti({ resolver: ia.resolverProvedor }));
 wa.definirGancho((conversaId, opcoes) => ia.agendarAutomatico(conversaId, opcoes));
+
+// Notificações (mensagem nova, IA respondeu, IA transferiu): feed do CRM + push nos aparelhos inscritos.
+const notificacoes = createNotificacoes({
+  db, dataDir: DATA_DIR, waStore: wa.store, webpush: require('web-push'),
+  publicUrl: String(process.env.PUBLIC_URL || '').replace(/\/+$/, '')
+});
 
 // Leitura das mídias do WhatsApp: áudio (Gemini; Groq como reserva), foto/PDF/vídeo (Gemini), Office/texto (no servidor).
 const LIMITE_TRANSCRICOES_DIA = Number(process.env.IA_LIMITE_TRANSCRICOES) || 300;
@@ -98,6 +105,7 @@ function aplicarRetencao() {
     }
     const a = db.prepare('DELETE FROM ia_analises WHERE criado_em < ?').run(limite).changes;
     const t = db.prepare('DELETE FROM ia_transcricoes WHERE criado_em < ?').run(limite).changes;
+    notificacoes.limpar();
     if (velhas.length || a || t) console.log(`[retenção] apagadas ${velhas.length} conversa(s) sem cadastro, ${a} análise(s) e ${t} registro(s) de leitura com mais de ${RETENCAO_DIAS} dias.`);
   } catch (err) { console.error('[retenção]', err.message); }
 }
@@ -504,6 +512,25 @@ router.post('/auth/2fa/email/desativar', (req, res) => {
   audit(req, '2fa_email_desativada', 'users', user.id, 'Verificação por e-mail desativada');
   res.json({ ok: true });
 });
+
+/* ------------------------------ notificações ------------------------------ */
+// Cada usuário inscreve os próprios aparelhos e escolhe os tipos. O feed serve aos avisos com o CRM aberto.
+router.get('/notificacoes', (req, res) => res.json(notificacoes.feed(req.query.desde)));
+router.get('/push/config', (req, res) => res.json({ chave_publica: notificacoes.chavePublica(), aparelhos: notificacoes.minhas(req.user.id) }));
+router.post('/push/inscrever', (req, res) => {
+  const r = notificacoes.inscrever(req.user.id, { subscription: req.body.subscription, tipos: req.body.tipos, aparelho: auth.nomeAparelhoPublico(req) });
+  if (r.erro) return fail(res, 422, 'invalid', r.erro);
+  res.json({ ok: true, aparelhos: notificacoes.minhas(req.user.id) });
+});
+router.post('/push/cancelar', (req, res) => {
+  notificacoes.cancelar(req.user.id, req.body.endpoint);
+  res.json({ ok: true, aparelhos: notificacoes.minhas(req.user.id) });
+});
+router.post('/push/teste', seguro(async (req, res) => {
+  const n = await notificacoes.teste(req.user.id);
+  if (!n) return fail(res, 409, 'sem_aparelho', 'Nenhum aparelho seu recebeu. Ative as notificações neste aparelho primeiro.');
+  res.json({ ok: true, enviados: n });
+}));
 
 // Esquecer os outros aparelhos confirmados (celular perdido, computador emprestado). O atual continua confirmado.
 router.post('/auth/aparelhos/esquecer', (req, res) => {
