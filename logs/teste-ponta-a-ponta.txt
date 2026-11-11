@@ -1,12 +1,24 @@
-Ultima mudanca do servidor no GitHub: d213801 (Requisicao 1: aparelhos, desconectar um so, cofre do celular (#54))
-No ar agora: 6fd2cfc
+Ultima mudanca do servidor no GitHub: 6a367d9 (Recuperacao de contas R1-R5, avisos de seguranca e separacao do deploy do CRM (#)
+No ar agora: 83d1c72
 OK: servidor em dia.
-Teste de ponta a ponta - 11/11/2026 15:54 UTC
+Teste de ponta a ponta - 11/11/2026 21:54 UTC
 
 OK     Servidor, banco e Redis no ar
 OK     Aviso push (Firebase): Google aceitou a chave
 OK     Central: login do administrador pelo codigo do e-mail
-OK     Central carrega /admin/drivers?status=PENDING
+FALHA  Central carrega /admin/drivers?status=PENDING
+       resposta: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>502</title>
+    <style>@font-face {
+  font-family: "Roobert";
+  font-weight: 500;
+  font-style: normal;
+  font-stretch: normal;
+  src: url("data:font/woff2;base64,d09GMk9UVE8AAKewAAwAAAABa6QAAKdfAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAADYKmehqCHhuC4UocpRQG
 OK     Central carrega /admin/rides/active
 OK     Central carrega /admin/reports/summary
 OK     Central carrega /admin/tariffs
@@ -45,6 +57,16 @@ OK     Passageiro: cadastro completo gravado (cidade: Goiatuba - GO)
 OK     Passageiro: cadastro repetido recusado
 OK     Passageiro: entra pelo e-mail e senha
 OK     Passageiro: esqueci a senha (codigo do telefone + senha nova)
+OK     R1: passageiro conectado em dois celulares (A e B)
+OK     R1: trocou a senha no celular A
+OK     R1: o celular que trocou a senha continua conectado
+OK     R1: o acesso ja aberto no celular B caiu na hora (sem esperar 15 min)
+OK     R1: o celular B tambem nao renova o login
+OK     R1: a senha antiga nao entra mais
+OK     R1: recuperou a senha no celular C e ficou conectado
+OK     R1: recuperar a senha derrubou o celular A na hora
+OK     Seguranca: o mesmo codigo de recuperacao nao vale duas vezes
+OK     Seguranca: 5 codigos errados bloqueiam o codigo (nem o certo entra)
 OK     Passageiro: Meus dados atualizados
 OK     Seguranca: conta da Central nao entra por codigo
 OK     Passageiro: preco da corrida calculado
@@ -79,7 +101,7 @@ OK     Numero errado: conta nova vazia desfeita
 OK     Numero errado: a conta desfeita sumiu
 OK     Seguranca: conta com cadastro nao e desfeita
 OK     Seguranca: telefone novo nao recebe codigo na tela (o app pede o e-mail)
-OK     Central: cadastrou motorista novo ja aprovado (placa TST3905)
+OK     Central: cadastrou motorista novo ja aprovado (placa TST5562)
 OK     Central: nao cadastra o mesmo motorista duas vezes
 OK     Motorista da Central: entra so com telefone e codigo e ja esta aprovado
 OK     Motorista da Central: carro ja cadastrado
@@ -152,25 +174,25 @@ OK     Passageiro: ve 1 carro(s) disponivel(is) no mapa (dado real)
 OK     Passageiro: carro por perto vem com o rumo do GPS (90 graus) e livre
 OK     Passageiro: o mesmo carro tem o mesmo id anonimo nas duas consultas (sem o id do motorista)
 OK     GPS: leitura imprecisa (300 m) nao tira o carro da posicao boa e o rumo continua
-OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1895 km)
+OK     Passageiro: ve o preco para fora da regiao (Porto Alegre, 1902 km)
 OK     Passageiro: busca fica na regiao de operacao ('Porto Alegre' -> Rua Porto Alegre - Morrinhos - GO, 40.3 km)
 OK     Central: 'Abrir cidade nova' acha cidade longe (Teutonia RS, 1295.9 km)
 OK     Seguranca: busca no Brasil todo so na Central
 OK     Passageiro: rua com nome comum acha primeiro a da cidade
 OK     Mapa: rota pelas ruas (24 pontos, 1375 m)
-OK     Passageiro: tempo de viagem pela estrada (Goiania: 118 min, antes dava 479)
+OK     Passageiro: tempo de viagem pela estrada (Goiania: 116 min, antes dava 479)
 OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 OK     Seguranca: refresh ja usado nao vale de novo
-OK     Central: cupom TESTE15541549 criado (R$ 3,00)
+OK     Central: cupom TESTE21543375 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
-OK     Passageiro: corrida pedida (resposta em 1147 ms)
-OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1129 ms depois do passageiro tocar em pedir)
+OK     Passageiro: corrida pedida (resposta em 1113 ms)
+OK     Motorista: chamado chegou NA HORA no celular que estava esperando (1116 ms depois do passageiro tocar em pedir)
 OK     Motorista: chamado chegou
 OK     Motorista: chamado mostra a forma de pagamento (CASH)
-OK     Motorista: accept (PIN de embarque 3141 vindo do servidor)
+OK     Motorista: accept (PIN de embarque 9984 vindo do servidor)
 OK     Passageiro: acompanha o aceite de verdade (motorista, PIN e posicao do carro)
 OK     Passageiro: o carro da corrida vem com o rumo (180 graus: andando para o sul)
 OK     Chat: passageiro manda mensagem ao motorista
@@ -189,9 +211,9 @@ OK     Passageiro: ve o taximetro correndo (1000 centavos, 1 km)
 OK     Motorista: corrida finalizada, valor 1000 centavos
 OK     Taximetro: parada maior que a viagem nao entra na conta (anti-fraude)
 OK     Motorista: sabe quanto cobrar com o cupom (700 centavos)
-OK     Bandeira certa pela hora de Brasilia (12h, diurna: 1000 centavos)
+OK     Bandeira certa pela hora de Brasilia (18h, diurna: 1000 centavos)
 OK     Central: resumo de hoje com 2 corrida(s)
-OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 25s
+OK     Motorista: Atividades de hoje - 1 corrida(s), ganho 900 centavos, online 86s
 OK     Motorista: grafico week com 7 dias
 OK     Motorista: grafico month com 30 dias
 OK     Motorista: desconto do cupom creditado na carteira (pago pela plataforma)
@@ -244,9 +266,9 @@ OK     Central: aba Carteiras lista o motorista com o saldo
 OK     Central: remover saldo (-R$ 1,00) com extrato e saldo restante
 OK     Motorista: o aplicativo recebe o saldo novo e o ultimo lancamento
 FALHA  Carteira: saldo zerado
-       resposta: {"success":true,"data":{"balanceCents":0,"minimumCents":2000,"blockEnabled":true,"blocking":true,"status":"insufficient","warningCents":6000,"last":{"id":"3c27084f-4605-461c-aac0-6ff38897d99d","kind":"DEBIT","amountCents":-6100,"description":"Zerar para teste","createdAt":"2026-11-11T15:58:22.689Z"}},"timestamp":"2026-11-11T15:58:23.400Z"}
+       resposta: {"success":true,"data":{"balanceCents":0,"minimumCents":2000,"blockEnabled":true,"blocking":true,"status":"insufficient","warningCents":6000,"last":{"id":"df2268c4-73f6-4ed8-8670-6a83b6006b2f","kind":"DEBIT","amountCents":-6100,"description":"Zerar para teste","createdAt":"2026-11-11T21:59:49.270Z"}},"timestamp":"2026-11-11T21:59:49.988Z"}
 FALHA  Carteira: chamado sem saldo
-       resposta: {"success":true,"data":[],"timestamp":"2026-11-11T15:58:24.658Z"}
+       resposta: {"success":true,"data":[],"timestamp":"2026-11-11T21:59:51.189Z"}
 FALHA  Motorista: dados do chamado
        resposta: {"driverNetCents":null,"commissionPercent":null,"passengerRating":null,"tabela":"diurna 10"}
 OK     Carteira: sem saldo nao consegue ficar online de novo
@@ -324,6 +346,10 @@ OK     Despacho: so motoristas online
 OK     Passageiro: mudou o endereco em Meus dados
 OK     Passageiro: trocar telefone sem o codigo do e-mail nao passa
 OK     Passageiro: trocou o proprio telefone com o codigo do e-mail
+OK     R2: trocar o e-mail sem o codigo do e-mail novo nao passa
+OK     R2: codigo errado nao troca o e-mail
+OK     R2: trocou o e-mail com o codigo que chegou no e-mail novo
+OK     R2: logo depois de trocar o e-mail, o telefone espera 48 h
 OK     Motorista: nao muda o nome pelo caminho do passageiro (vai para a Central aprovar)
 OK     Motorista: Meus dados mostra o cadastro (CNH, telefone, e-mail)
 OK     Motorista: pediu para mudar endereco e PIX (ainda nao vale)
@@ -334,6 +360,8 @@ OK     Central: recusou e o motorista ve o motivo (nada mudou)
 OK     Central: mudou o endereco do passageiro direto
 OK     Central: nao deixa colocar telefone que ja e de outra pessoa
 OK     Motorista: telefone preso numa conta vazia (cadastro nao terminado) fica livre
+OK     R2/R3: operador nao aprova troca de telefone (So o dono da Central pode mexer nisto.)
+OK     R2/R3: operador nao troca o e-mail de ninguem (So o dono da Central pode mexer nisto.)
 OK     Motorista: abre o Clube de Vantagens (0 parceiro(s) ativo(s))
 OK     Central: cadastrou parceiro no clube (WhatsApp normalizado, ativo)
 OK     Central: cadastro do clube sem nome e endereco e recusado
@@ -351,12 +379,12 @@ OK     Motorista: parceiro desativado some da lista
 OK     Motorista: detalhe de parceiro desativado avisa que saiu do clube
 OK     Central: o inativo continua na lista da Central
 OK     Central: excluiu o parceiro de teste (com os beneficios)
-OK     Motorista: carteirinha da conta logada (FM-AB83D5DB, APTO)
+OK     Motorista: carteirinha da conta logada (FM-FFEEA76C, APTO)
 OK     Seguranca: carteirinha sem QR, telefone, CPF, e-mail ou saldo
 OK     Clube: pagina do QR removida
 OK     Clube: motorista sem recarga esta NAO APTO (Nenhuma recarga confirmada nos últimos 30 dias.)
 OK     Clube: recarga de R$ 50,00 nao deixa APTO
-OK     Clube: R$ 50 + R$ 60 em recargas (total R$ 110) deixam APTO (vale ate 2026-12-11T16:00:49.356Z)
+OK     Clube: R$ 50 + R$ 60 em recargas (total R$ 110) deixam APTO (vale ate 2026-12-11T22:02:18.476Z)
 OK     Clube: a situacao do clube nao mexe no acesso ao aplicativo
 OK     Seguranca: motorista nao altera a propria situacao
 OK     Clube: motorista suspenso fica NAO APTO mesmo com recarga
@@ -365,8 +393,15 @@ OK     Central: excluiu 4 motoristas de teste (ANONIMIZADO, APAGADO, VIROU_PASSA
 OK     Central: motorista excluido sumiu
 OK     Passageiro: historico de corridas continua depois de excluir o motorista
 OK     Quem tambem e passageiro continua com a conta de passageiro
-OK     Central: uso da TomTom hoje (geocode 18/666, reverse 11/666, routing 62/666, search 7/83, tiles 88/6666)
+OK     Central: uso da TomTom hoje (geocode 24/666, reverse 13/666, routing 88/666, search 8/83, tiles 88/6666)
 OK     Seguranca: so a Central ve o uso da TomTom
+OK     R3: operador de cidade nao libera conta
+OK     R3: sem conferir a foto nao libera (e ninguem e derrubado)
+OK     R3: dono conferiu o documento e liberou o acesso
+OK     R3: o aparelho antigo caiu na hora
+OK     R3: a senha antiga nao vale mais
+OK     R3: a pessoa volta a entrar pelo codigo do e-mail novo (mesma conta)
+OK     R3: passageiro nao chama a recuperacao da Central
 OK     Central: verificacao em duas etapas disponivel (ligada: false)
 OK     Seguranca: so a Central usa a verificacao em duas etapas
 OK     Operador: ligou as duas etapas com o codigo do autenticador (8 codigos de recuperacao)
@@ -377,6 +412,6 @@ OK     Seguranca: codigo de recuperacao vale uma vez so
 OK     Seguranca: desafio do login alterado e recusado
 OK     Operador: desligou as duas etapas com um codigo valido
 OK     Central: apagou a conta do operador de teste
-OK     Limpeza: apagou as 7 contas deste teste e 12 corridas delas
+OK     Limpeza: apagou as 8 contas deste teste e 12 corridas delas
 
-Resultado: 3 falha(s).
+Resultado: 4 falha(s).
