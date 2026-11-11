@@ -113,6 +113,9 @@ export class DadosPessoaisCentralController {
   @HttpCode(HttpStatus.OK)
   async aprovar(@CurrentUser() admin: AuthenticatedUser, @Param('userId', ParseUUIDPipe) userId: string) {
     await this.exigirAlcance(admin, userId);
+    // R2/R3 (11/11/2026): telefone e e-mail sao a porta de entrada da conta.
+    // Operador de cidade nao troca: so o dono aprova esse pedido.
+    if (await this.dados.pedidoMexeNoAcesso(userId)) await this.pracas.exigirDono(admin);
     return this.dados.aprovar(admin.id, userId);
   }
 
@@ -145,6 +148,8 @@ export class DadosPessoaisCentralController {
     // operador de cidade nunca troca o e-mail do dono (tomaria a Central).
     const alvo = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
     if (alvo?.role === UserRole.ADMIN) await this.pracas.exigirDono(admin);
+    // R2/R3: trocar telefone ou e-mail de alguem e "liberar a conta": so o dono.
+    if (body.phone || body.email) await this.pracas.exigirDono(admin);
     await this.exigirAlcance(admin, userId);
     return this.dados.editarPelaCentral(admin.id, userId, body);
   }

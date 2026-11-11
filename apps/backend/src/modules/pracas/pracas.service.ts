@@ -73,13 +73,23 @@ export class PracasService {
     return (await this.contaDaCentral(userId)).provisoria;
   }
 
-  private async contaDaCentral(userId: string): Promise<{ praca: string | null; provisoria: boolean }> {
+  /** R5: conta recuperada pelo procedimento excepcional, falta ligar as duas etapas de novo. */
+  async refazerDoisFatores(userId: string): Promise<boolean> {
+    return (await this.contaDaCentral(userId)).refazer2fa;
+  }
+
+  private async contaDaCentral(userId: string): Promise<{ praca: string | null; provisoria: boolean; refazer2fa: boolean }> {
     const c = this.escopos.get(userId);
     if (c && Date.now() - c.em < 60_000) return c;
     const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { metadata: true, role: true } });
-    const meta = (u?.metadata ?? {}) as Meta & { senhaProvisoria?: boolean };
+    const meta = (u?.metadata ?? {}) as Meta & { senhaProvisoria?: boolean; refazerDoisFatores?: boolean };
     const praca = u?.role === UserRole.ADMIN && typeof meta.praca === 'string' && meta.praca ? meta.praca : null;
-    const r = { em: Date.now(), praca, provisoria: u?.role === UserRole.ADMIN && meta.senhaProvisoria === true };
+    const r = {
+      em: Date.now(),
+      praca,
+      provisoria: u?.role === UserRole.ADMIN && meta.senhaProvisoria === true,
+      refazer2fa: u?.role === UserRole.ADMIN && meta.refazerDoisFatores === true,
+    };
     this.escopos.set(userId, r);
     return r;
   }
