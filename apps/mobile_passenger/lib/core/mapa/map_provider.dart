@@ -194,9 +194,7 @@ class TomTomMapProvider implements MapProvider {
         final camada = tiles == null
             ? const SizedBox.shrink()
             : TileLayer(
-                // Visual premium (11/11/2026): mapa escuro combinando com o
-                // marinho do app (estilo "night" do TomTom, mesmo custo).
-                urlTemplate: tiles.replaceFirst('/basic/main/', '/basic/night/'),
+                urlTemplate: tiles,
                 userAgentPackageName: pacote,
                 tileDimension: nitido ? 256 : MapaConfig.tamanho,
                 zoomOffset: nitido || MapaConfig.tamanho < 512 ? 0 : -1,

@@ -194,8 +194,7 @@ class TomTomMapProvider implements MapProvider {
         final camada = tiles == null
             ? const SizedBox.shrink()
             : TileLayer(
-                // Visual premium (11/11/2026): mapa escuro como o resto da Central.
-                urlTemplate: tiles.replaceFirst('/basic/main/', '/basic/night/'),
+                urlTemplate: tiles,
                 userAgentPackageName: pacote,
                 tileDimension: nitido ? 256 : MapaConfig.tamanho,
                 zoomOffset: nitido || MapaConfig.tamanho < 512 ? 0 : -1,

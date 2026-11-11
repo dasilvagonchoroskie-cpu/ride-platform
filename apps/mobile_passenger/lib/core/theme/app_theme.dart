@@ -63,9 +63,9 @@ class AppColors {
   static const Color faixa = Color(0xFF0A1734);
 
   // ---- Mapa ----
-  static const Color mapBackground = Color(0xFF0D1830);
-  static const Color mapRoad = Color(0xFF22324F);
-  static const Color mapRoadLight = Color(0xFF1A2742);
+  static const Color mapBackground = Color(0xFFE9E7E2);
+  static const Color mapRoad = Color(0xFFFFFFFF);
+  static const Color mapRoadLight = Color(0xFFF7F6F3);
 }
 
 /// Espacamento em multiplos de 4.

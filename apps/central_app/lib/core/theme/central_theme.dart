@@ -51,7 +51,7 @@ class AppColors {
   static const Color warningSoft = Color(0x26FF9A3D);
 
   // ---- Mapa ----
-  static const Color mapBackground = Color(0xFF0D1830);
+  static const Color mapBackground = Color(0xFFE9E7E2);
   static const Color mapRoad = Color(0xFFFFFFFF);
   static const Color mapRoadLight = Color(0xFFF7F6F3);
 
