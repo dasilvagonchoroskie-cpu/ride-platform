@@ -7,6 +7,12 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 0000. Permissões por fabricante, moto, encomenda e Central na web (10–11/11/2026, PRs #41 a #44)
+- Feito: motorista e passageiro identificam o celular e mostram os ajustes da marca (Xiaomi, Samsung, Oppo/Realme/OnePlus, Vivo, Huawei, Honor, Asus); cadastro de moto (CNH A); categoria Moto criada DESLIGADA (70% do Popular); encomenda com escolha Moto/Carro e tarifa Entrega de moto (75%); Central na web em https://fortaleza-move-central.onrender.com, instalável (PWA). APKs 364.
+- Pendente com o Evandro: ligar a Moto (Central → Categorias) e as entregas (Central → Entregas) quando tiver motoqueiro aprovado; ajustar as tarifas sugeridas.
+- Pendente técnico: testar "Abrir ajuste" em celulares de outras marcas (só o Redmi 12 foi provado de verdade); autorizações por fabricante no iPhone quando houver build iOS; incluir a escolha moto/carro da encomenda no teste de ponta a ponta.
+- Teste de ponta a ponta: 3 falhas da carteira enquanto "bloquear motorista sem saldo" estiver ligado (o teste supõe desligado).
+
 ## 000. Celular vendido (09/11/2026, PRs #32 a #35)
 - Feito: corte de sessões na hora, botão Desconectar aparelhos na Central, esteira Desconectar aparelhos. Todas as contas reais derrubadas em 10/11 01:00 UTC.
 - Pendente: os apps mandarem o aparelho no login, para a lista de aparelhos da Central mostrar cada celular.
