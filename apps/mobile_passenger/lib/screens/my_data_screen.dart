@@ -114,11 +114,27 @@ class _MyDataScreenState extends State<MyDataScreen> {
 
     final nome = _nome.text.trim().replaceAll(RegExp(r'\s+'), ' ');
     final email = _email.text.trim().toLowerCase();
+    final trocaEmail = email != (u.email ?? '');
+    // R2 (11/11/2026): e-mail novo so com o codigo que chega nele.
+    String? codigoEmail;
+    if (trocaEmail) {
+      codigoEmail = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AppColors.surface,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: _ConfirmarEmailNovo(email: email),
+        ),
+      );
+      if (codigoEmail == null || !mounted) return;
+    }
     setState(() => _salvando = true);
     try {
       await context.read<AuthState>().atualizarPerfil(
             nome: nome != u.name ? nome : null,
-            email: email != (u.email ?? '') ? email : null,
+            email: trocaEmail ? email : null,
+            codigoEmail: codigoEmail,
             genero: _genero != null && _genero != u.genero ? _genero : null,
             cidade: _cidade != null && _cidade != u.cidade ? _cidade : null,
             cpf: cpfNovo ? onlyDigits(_cpf.text) : null,
@@ -227,6 +243,105 @@ class _MyDataScreenState extends State<MyDataScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Trocar o e-mail (R2): manda o codigo para o e-mail NOVO e devolve o
+/// codigo digitado (o servidor confere ao salvar).
+class _ConfirmarEmailNovo extends StatefulWidget {
+  const _ConfirmarEmailNovo({required this.email});
+
+  final String email;
+
+  @override
+  State<_ConfirmarEmailNovo> createState() => _ConfirmarEmailNovoState();
+}
+
+class _ConfirmarEmailNovoState extends State<_ConfirmarEmailNovo> {
+  final TextEditingController _codigo = TextEditingController();
+  bool _enviado = false;
+  bool _ocupado = false;
+  String? _erro;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pedir());
+  }
+
+  @override
+  void dispose() {
+    _codigo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pedir() async {
+    final auth = context.read<AuthState>();
+    setState(() {
+      _ocupado = true;
+      _erro = null;
+    });
+    try {
+      final teste = await auth.pedirCodigoEmailNovo(widget.email);
+      if (!mounted) return;
+      setState(() {
+        _enviado = true;
+        if (teste != null) _codigo.text = teste;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _erro = 'Sem conexão. Tente de novo.');
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  void _confirmar() {
+    final c = onlyDigits(_codigo.text);
+    if (c.length != 6) {
+      setState(() => _erro = 'O código tem 6 números.');
+      return;
+    }
+    Navigator.of(context).pop(c);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(Spacing.xl, Spacing.xl, Spacing.xl, Spacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Confirmar e-mail novo', style: AppText.title),
+            const SizedBox(height: Spacing.sm),
+            Text(
+              _enviado
+                  ? 'Enviamos um código de 6 números para ${widget.email}. Digite o código para confirmar.'
+                  : 'Para sua segurança, vamos mandar um código para o e-mail novo.',
+              style: AppText.body.copyWith(color: AppColors.textMuted),
+            ),
+            const SizedBox(height: Spacing.lg),
+            CampoForm(
+              rotulo: 'Código do e-mail novo',
+              controller: _codigo,
+              teclado: TextInputType.number,
+              tamanhoMaximo: 6,
+              aoMudar: (_) => setState(() => _erro = null),
+            ),
+            if (_erro != null) ...[
+              const SizedBox(height: Spacing.md),
+              Text(_erro!, style: AppText.body.copyWith(color: AppColors.danger)),
+            ],
+            const SizedBox(height: Spacing.xl),
+            BotaoPrincipal(texto: 'Confirmar e salvar', carregando: _ocupado, aoTocar: _confirmar),
+            TextButton(onPressed: _ocupado ? null : _pedir, child: const Text('Mandar outro código')),
+          ],
+        ),
       ),
     );
   }
