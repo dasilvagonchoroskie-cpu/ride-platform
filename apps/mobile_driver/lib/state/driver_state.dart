@@ -12,6 +12,7 @@ import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
 import '../core/native/corridas_nativo.dart';
 import '../core/storage/app_storage.dart';
+import '../core/storage/identidade_aparelho.dart';
 import '../core/taximetro.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/geo.dart';
@@ -707,7 +708,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       'code': code,
       'purpose': 'LOGIN',
       'role': 'DRIVER',
-      'device': {'deviceId': 'flutter-android-driver', 'platform': 'ANDROID'},
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
 
     await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
@@ -781,6 +782,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final data = await _client.request('POST', '/auth/vincular-conta/entrar', body: {
       ..._dadosDoCadastro,
       'code': codigo.trim(),
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
     await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
     final refresh = data['refreshToken'] as String?;

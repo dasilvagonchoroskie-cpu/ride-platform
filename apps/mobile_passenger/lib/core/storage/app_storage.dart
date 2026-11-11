@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'cofre.dart';
+
 /// Persistencia local (sessao, corrida ativa, lugares recentes).
 class AppStorage {
   const AppStorage._();
@@ -20,25 +22,36 @@ class AppStorage {
   /// Conta dona dos dados guardados no aparelho (historico, destinos).
   static const String donoDosDados = 'ride.donoDosDados';
 
+  /// Codigo unico desta instalacao (Requisicao 1, 11/11/2026): a Central
+  /// separa cada celular da conta e pode desconectar um so.
+  static const String idDoAparelho = 'ride.idDoAparelho';
+
+  /// O que vai para o cofre do celular (flutter_secure_storage). O resto e
+  /// dado comum (preferencias, ultima posicao) e fica no arquivo comum.
+  static const Set<String> _noCofre = {accessToken, refreshToken, idDoAparelho};
+
   static Future<void> write(String key, String value) async {
+    if (_noCofre.contains(key)) return Cofre.gravar(key, value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
   }
 
   static Future<String?> read(String key) async {
+    if (_noCofre.contains(key)) return Cofre.ler(key);
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(key);
   }
 
   static Future<void> remove(String key) async {
+    if (_noCofre.contains(key)) return Cofre.apagar(key);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(key);
   }
 
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(accessToken);
-    await prefs.remove(refreshToken);
+    await Cofre.apagar(accessToken);
+    await Cofre.apagar(refreshToken);
     await prefs.remove(user);
     await prefs.remove(activeRide);
     // Destinos e lugares recentes sao da pessoa: a proxima conta comeca limpa.

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@ride/shared';
@@ -82,31 +82,55 @@ export class DadosPessoaisCentralController {
     private readonly prisma: PrismaService,
   ) {}
 
+  /**
+   * Revisao de seguranca (Requisicao 1, 11/11/2026): o operador de uma cidade
+   * via e mudava os dados pessoais de QUALQUER pessoa (outras cidades,
+   * passageiros). Agora: dono ve e muda todos; operador so os motoristas da
+   * cidade dele. Passageiros e contas da Central: so o dono (como a lista de
+   * passageiros, que ja era so do dono). Fora do alcance: "nao encontrado",
+   * sem dizer se a pessoa existe.
+   */
+  private async exigirAlcance(admin: AuthenticatedUser, userId: string): Promise<void> {
+    const minha = await this.pracas.escopoDe(admin.id);
+    if (!minha) return; // dono
+    const alvo = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, driver: { select: { id: true } } },
+    });
+    const doMotorista = alvo?.role === UserRole.DRIVER && alvo.driver ? await this.pracas.pracaDoMotorista(alvo.driver.id) : null;
+    if (doMotorista !== minha) throw new NotFoundException('Pessoa nao encontrada na sua cidade.');
+  }
+
   @Get('alteracoes')
-  @ApiOperation({ summary: 'Pedidos de mudanca de dados dos motoristas' })
-  pendentes() {
-    return this.dados.pendentes();
+  @ApiOperation({ summary: 'Pedidos de mudanca de dados dos motoristas (operador: so da cidade dele)' })
+  async pendentes(@CurrentUser() admin: AuthenticatedUser) {
+    const lista = await this.dados.pendentes();
+    const ids = await this.pracas.idsDeMotoristas(await this.pracas.escopoDe(admin.id));
+    return ids === null ? lista : lista.filter((p) => p.driverId !== null && ids.includes(p.driverId));
   }
 
   @Post('alteracoes/:userId/aprovar')
   @HttpCode(HttpStatus.OK)
-  aprovar(@CurrentUser('id') adminId: string, @Param('userId', ParseUUIDPipe) userId: string) {
-    return this.dados.aprovar(adminId, userId);
+  async aprovar(@CurrentUser() admin: AuthenticatedUser, @Param('userId', ParseUUIDPipe) userId: string) {
+    await this.exigirAlcance(admin, userId);
+    return this.dados.aprovar(admin.id, userId);
   }
 
   @Post('alteracoes/:userId/recusar')
   @HttpCode(HttpStatus.OK)
-  recusar(
-    @CurrentUser('id') adminId: string,
+  async recusar(
+    @CurrentUser() admin: AuthenticatedUser,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body(new ZodValidationPipe(recusaSchema)) body: { motivo: string },
   ) {
-    return this.dados.recusar(adminId, userId, body.motivo);
+    await this.exigirAlcance(admin, userId);
+    return this.dados.recusar(admin.id, userId, body.motivo);
   }
 
   @Get('pessoas/:userId')
   @ApiOperation({ summary: 'Dados de um passageiro ou motorista' })
-  ver(@Param('userId', ParseUUIDPipe) userId: string) {
+  async ver(@CurrentUser() admin: AuthenticatedUser, @Param('userId', ParseUUIDPipe) userId: string) {
+    await this.exigirAlcance(admin, userId);
     return this.dados.dadosDaPessoa(userId);
   }
 
@@ -121,6 +145,7 @@ export class DadosPessoaisCentralController {
     // operador de cidade nunca troca o e-mail do dono (tomaria a Central).
     const alvo = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
     if (alvo?.role === UserRole.ADMIN) await this.pracas.exigirDono(admin);
+    await this.exigirAlcance(admin, userId);
     return this.dados.editarPelaCentral(admin.id, userId, body);
   }
 }

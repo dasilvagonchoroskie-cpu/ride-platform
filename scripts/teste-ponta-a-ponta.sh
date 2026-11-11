@@ -39,9 +39,15 @@ entrar() {
     [ -n "$c" ] && break
     sleep 20
   done
-  v=$(post /auth/otp/verify "{\"phone\":\"$1\",\"code\":\"$c\",\"purpose\":\"LOGIN\",\"role\":\"$2\",\"device\":{\"deviceId\":\"teste-automatico\",\"platform\":\"ANDROID\"}}")
+  # 3o parametro (Requisicao 1): codigo da instalacao, para simular outro celular.
+  v=$(post /auth/otp/verify "{\"phone\":\"$1\",\"code\":\"$c\",\"purpose\":\"LOGIN\",\"role\":\"$2\",\"device\":{\"deviceId\":\"${3:-teste-automatico}\",\"platform\":\"ANDROID\",\"model\":\"Celular de teste\"}}")
   echo "$v" | jq -r '.data.accessToken // empty'
 }
+# Requisicao 1 (11/11/2026): por padrao o teste NAO grava configuracao de
+# producao (aparencia, aviso de saldo, entregas, tarifas, categorias da
+# cidade). So com MUDAR_CONFIG=sim (autorizacao do Evandro) essas partes rodam.
+MUDAR_CONFIG="${MUDAR_CONFIG:-nao}"
+pulado() { echo "PULADO $1 (MUDAR_CONFIG=nao: nao mexe em configuracao de producao)" | tee -a "$REL"; }
 echo "Teste de ponta a ponta - $(date -u '+%d/%m/%Y %H:%M UTC')" | tee -a "$REL"; echo | tee -a "$REL"
 
 S=$(get /health); echo "$S" | grep -q '"status":"ok"' && ok "Servidor, banco e Redis no ar" || falha "Servidor, banco e Redis" "$S"
@@ -127,7 +133,9 @@ X=$(get /notificacoes "$TP"); [ "$(echo "$X" | jq -r --arg t "$TIT" '[.data.iten
 A=$(get /admin/aparencia "$TA"); NOME_APP=$(echo "$A" | jq -r '.data.nome // empty')
 X=$(put /admin/aparencia '{"nome":"x","cor":"azul","bannerAtivo":false,"bannerTexto":""}' "$TA"); sucesso "$X" && falha "Aparencia: nome e cor invalidos deveriam ser recusados" "$X" || ok "Central: aparencia recusa nome curto e cor fora do formato #RRGGBB"
 X="$A"
-if [ "$(echo "$A" | jq -r '.data.definida')" = "true" ]; then
+if [ "$MUDAR_CONFIG" != "sim" ]; then
+  pulado "Central: gravar de volta a aparencia do app"
+elif [ "$(echo "$A" | jq -r '.data.definida')" = "true" ]; then
   # Ja personalizada pela Central: grava de volta o mesmo (nao muda o app).
   X=$(put /admin/aparencia "$(echo "$A" | jq -c '.data | {nome, cor, bannerAtivo, bannerTexto}')" "$TA")
   # Igual ao padrao de fabrica (sobra de um teste antigo): volta ao padrao.
@@ -749,7 +757,9 @@ X=$(get /notificacoes "$TM"); [ "$(echo "$X" | jq -r '[.data.itens[] | select(.t
 # Aviso "Saldo se esgotando" com limite por cidade, em reais (30/10/2026).
 AV=$(get "/admin/settings/aviso-saldo?praca=$PRACA" "$TA"); AV_TINHA=$(echo "$AV" | jq -r --arg p "$PRACA" '.data.porCidade[$p] // empty')
 R=$(get /driver/wallet/resumo "$TM"); SAL=$(echo "$R" | jq -r '.data.balanceCents'); MIN=$(echo "$R" | jq -r '.data.minimumCents')
-if [ -n "$PRACA" ] && [ "${SAL:-0}" -gt "${MIN:-0}" ] 2>/dev/null; then
+if [ "$MUDAR_CONFIG" != "sim" ]; then
+  pulado "Central: aviso de saldo por cidade"
+elif [ -n "$PRACA" ] && [ "${SAL:-0}" -gt "${MIN:-0}" ] 2>/dev/null; then
   LIM=$((SAL + 100))
   X=$(put /admin/settings/aviso-saldo "{\"praca\":\"$PRACA\",\"avisoCents\":$LIM}" "$TA")
   [ "$(echo "$X" | jq -r '"\(.data.origem)/\(.data.valeCents)"')" = "cidade/$LIM" ] && ok "Central: limite do aviso de saldo so nesta cidade ($LIM centavos)" || falha "Central: aviso de saldo por cidade" "$X"
@@ -808,7 +818,9 @@ if [ "$(echo "$ENT_TINHA" | jq -r '.ligada')" = "false" ]; then
   X=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"ENTREGA\"}" "$TP"); sucesso "$X" && falha "Entrega desligada nao deveria dar preco" "$X" || ok "Entregas: desligada, o pedido de preco e recusado"
 fi
 X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":true,\"veiculos\":\"CARRO\"}" "$TO"); sucesso "$X" && falha "Operador nao deveria ligar a entrega" "$X" || ok "Operador: nao liga nem desliga a entrega (so o dono)"
-X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":true,\"veiculos\":\"TODOS\"}" "$TA")
+# Sem MUDAR_CONFIG: so usa a entrega se ela JA estiver ligada (Evandro deixou
+# ligada em Goiatuba para testes, 11/11/2026); nao liga nem desliga nada.
+if [ "$MUDAR_CONFIG" = "sim" ]; then X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":true,\"veiculos\":\"TODOS\"}" "$TA"); else X="$EC"; fi
 [ "$(echo "$X" | jq -r --arg p "$PRACA" '.data.cidades[] | select(.praca==$p) | "\(.ligada)/\(.veiculos)"')" = "true/TODOS" ] && ok "Central: ligou a entrega so nesta cidade (carro e moto)" || falha "Central: ligar entrega" "$X"
 X=$(get "/entregas/disponivel?lat=-18.0125&lng=-49.3547" "$TP"); [ "$(echo "$X" | jq -r '.data.ligada')" = "true" ] && ok "Cliente: botao Entrega aparece na cidade ligada ($(echo "$X" | jq -r '.data.cidade'))" || falha "Cliente: entrega disponivel" "$X"
 X=$(get /vehicles/categorias); [ "$(echo "$X" | jq -r '[.data[].codigo] | index("ENTREGA") == null')" = "true" ] && ok "Motorista: 'Entrega' nao aparece como categoria de carro" || falha "Motorista: Entrega na lista de categorias" "$X"
@@ -851,7 +863,7 @@ U3=$(uso_total)
 MEDE=$(python3 -c "import json,sys; a=json.loads(sys.argv[1] or '{}'); b=json.loads(sys.argv[2] or '{}'); d={k:b.get(k,0)-a.get(k,0) for k in b}; print(sum(d.values()), d.get('routing',0), json.dumps(d))" "$U2" "$U3")
 NE=$(echo "$MEDE" | cut -d' ' -f1); RE=$(echo "$MEDE" | cut -d' ' -f2)
 [ "${RE:-99}" -le "${NROT:-4}" ] 2>/dev/null && ok "TomTom: entrega com $NE chamadas, $RE rotas (corrida: $NROT rotas) — igual ou menor que a corrida" || falha "TomTom: entrega gastou mais que a corrida" "$MEDE"
-X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":$(echo "$ENT_TINHA" | jq -r '.ligada'),\"veiculos\":\"$(echo "$ENT_TINHA" | jq -r '.veiculos')\"}" "$TA")
+if [ "$MUDAR_CONFIG" = "sim" ]; then X=$(put /admin/entregas-config "{\"praca\":\"$PRACA\",\"ligada\":$(echo "$ENT_TINHA" | jq -r '.ligada'),\"veiculos\":\"$(echo "$ENT_TINHA" | jq -r '.veiculos')\"}" "$TA"); else X=$(get /admin/entregas-config "$TA"); fi
 [ "$(echo "$X" | jq -c --arg p "$PRACA" '.data.cidades[] | select(.praca==$p) | {ligada, veiculos}')" = "$ENT_TINHA" ] && ok "Central: entrega da cidade voltou como estava ($ENT_TINHA)" || falha "Central: restaurar entrega" "$X"
 
 # ================= Painel da Central =================
@@ -872,6 +884,9 @@ X=$(get /admin/tariffs "$TA")
 [ "$(echo "$X" | jq -r '.data.categorias | length')" -ge 1 ] 2>/dev/null && ok "Central: tarifas por categoria ($(echo "$X" | jq -r '[.data.categorias[].nome] | join(", ")'))" || falha "Central: tarifas por categoria" "$X"
 CARRO=$(echo "$X" | jq -c '.data.categorias[] | select(.codigo=="CARRO") | {nome, ativa, diurna: (.diurna | del(.flag, .updatedAt)), noturna: (.noturna | del(.flag, .updatedAt))}')
 MULT=$(echo "$X" | jq -c '.data.multiplicador')
+if [ "$MUDAR_CONFIG" != "sim" ]; then
+  pulado "Central: salvar tarifas e multiplicador"
+else
 X=$(put /admin/tariffs/categoria/CARRO "$CARRO" "$TA"); sucesso "$X" && ok "Central: salvou a categoria Carro (antes dava 'Metodo PUT nao suportado')" || falha "Central: salvar categoria" "$X"
 # 30/10/2026: tela aberta antes de outra salvar nao grava por cima (versao velha = 409).
 X=$(put /admin/tariffs/categoria/CARRO "$(echo "$CARRO" | jq -c '.versao = "2000-01-01T00:00:00.000Z"')" "$TA")
@@ -879,6 +894,7 @@ X=$(put /admin/tariffs/categoria/CARRO "$(echo "$CARRO" | jq -c '.versao = "2000
 NOMEP=$(get /admin/tariffs "$TA" | jq -r '.data.categorias[] | select(.codigo=="CARRO") | .nome')
 [ -n "$NOMEP" ] && ok "Central: nome da categoria comum (CARRO) continua '$NOMEP' depois de salvar sem versao (Central antiga nao troca o nome)" || falha "Central: nome do CARRO" "$NOMEP"
 X=$(put /admin/tariffs/multiplicador "$MULT" "$TA"); sucesso "$X" && ok "Central: multiplicador dinamico salvo ($(echo "$MULT" | jq -r '.cidade')x)" || falha "Central: multiplicador" "$X"
+fi
 X=$(patch "/admin/drivers/$DID/finance" '{"financeModel":"TAXA_FIXA","fixedFeeCents":200}' "$TA")
 [ "$(echo "$X" | jq -r '.data.financeModel')" = "TAXA_FIXA" ] && ok "Central: modelo financeiro do motorista (taxa fixa R\$ 2,00)" || falha "Central: modelo financeiro" "$X"
 patch "/admin/drivers/$DID/finance" '{"financeModel":"PADRAO"}' "$TA" >/dev/null
@@ -891,7 +907,9 @@ X=$(patch "/admin/drivers/$DID/category" '{"category":"CARRO"}' "$TA"); sucesso 
 X=$(get /admin/tariffs "$TA")
 [ "$(echo "$X" | jq -r '[.data.categorias[].codigo] | (index("CARRO") != null) and (index("CONFORTO") != null) and (index("PREMIUM") != null)')" = "true" ] \
   && ok "Central: categorias padrao criadas ($(echo "$X" | jq -r '[.data.categorias[] | "\(.nome) (\(.codigo), \(if .ativa then "ligada" else "desligada" end))"] | join(", ")'))" || falha "Central: semente das categorias" "$(echo "$X" | jq -c '[.data.categorias[]?.codigo]')"
-if [ -n "$PRACA" ] && [ -n "${VID1:-}" ]; then
+if [ "$MUDAR_CONFIG" != "sim" ]; then
+  pulado "Categorias: ligar o Conforto na cidade e o motorista pedir/a Central aprovar"
+elif [ -n "$PRACA" ] && [ -n "${VID1:-}" ]; then
   ANTES=$(get "/admin/tariffs?praca=$PRACA" "$TA")
   CONF_TINHA=$(echo "$ANTES" | jq -r '.data.categorias[] | select(.codigo=="CONFORTO") | .daCidade')
   CONF_ORIG=$(echo "$ANTES" | jq -c '.data.categorias[] | select(.codigo=="CONFORTO") | {nome, ativa, multiplicador, diurna: (.diurna | del(.flag, .updatedAt)), noturna: (.noturna | del(.flag, .updatedAt))}')
@@ -953,6 +971,30 @@ if [ -n "$PRACA" ] && [ -n "${VID1:-}" ]; then
   if [ "$CONF_TINHA" = "true" ]; then X=$(put "/admin/tariffs/categoria/CONFORTO?praca=$PRACA" "$CONF_ORIG" "$TA"); else X=$(curl -s -m 90 -X DELETE "$API/admin/tariffs/categoria/CONFORTO?praca=$PRACA" -H "Authorization: Bearer $TA"); fi
   [ "$(echo "$X" | jq -r '.data.categorias[] | select(.codigo=="CONFORTO") | .daCidade')" = "$CONF_TINHA" ] && ok "Central: Conforto da cidade voltou como estava (ajuste da cidade: $CONF_TINHA)" || falha "Central: voltar o Conforto" "$X"
 fi
+# Requisicao 1 (11/11/2026): pedido Popular NAO toca para o carro Conforto.
+# So mexe no carro do motorista de TESTE (volta ao Popular no fim); nao liga
+# categoria nenhuma na cidade.
+X=$(patch "/admin/drivers/$DID/category" '{"category":"CONFORTO"}' "$TA")
+if [ "$(get /vehicles/me "$TM" | jq -r '[.data[] | select(.category=="CONFORTO")] | length')" -ge 1 ] 2>/dev/null; then
+  patch /drivers/me/online '{"isOnline":true}' "$TM" >/dev/null
+  post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
+  if [ "$(get /drivers/me "$TM" | jq -r '.data.isOnline')" = "true" ]; then
+    sleep 2; X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\"}" "$TP"); RPOP=$(echo "$X" | jq -r '.data.ride.id // empty')
+    if [ -n "$RPOP" ] && [ "$(echo "$X" | jq -r '.data.ride.category')" = "CARRO" ]; then
+      N=0; for t in 1 2 3 4; do sleep 2; N=$(get /driver/rides/offers "$TM" | jq -r --arg r "$RPOP" '[.data[] | select(.rideId==$r)] | length' 2>/dev/null); [ "${N:-0}" != "0" ] && break; done
+      [ "${N:-0}" = "0" ] && ok "Despacho: pedido Popular nao tocou para o carro Conforto" || falha "Despacho: Popular tocou no Conforto" "offers: $N"
+      post "/rides/$RPOP/cancel" '{"reason":"Teste de categoria"}' "$TP" >/dev/null
+    else
+      falha "Despacho: pedir Popular para o teste de categoria" "$X"
+    fi
+  else
+    echo "AVISO  despacho por categoria nao conferido (motorista de teste nao ficou online; saldo?)" | tee -a "$REL"
+  fi
+else
+  falha "Despacho: colocar o carro de teste no Conforto" "$X"
+fi
+X=$(patch "/admin/drivers/$DID/category" '{"category":"CARRO"}' "$TA")
+[ "$(get /vehicles/me "$TM" | jq -r '[.data[] | select(.category=="CONFORTO")] | length')" = "0" ] && ok "Despacho: carro de teste voltou ao Popular" || falha "Despacho: voltar o carro de teste" "$X"
 FONE_P=$(get /auth/me "$TP" | jq -r '.data.phone')
 X=$(post /admin/rides "{\"passengerName\":\"Passageiro Teste\",\"passengerPhone\":\"$FONE_P\",\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"CARRO\",\"paymentMethodType\":\"CASH\"}" "$TA")
 RMAN=$(echo "$X" | jq -r '.data.rideId // empty')
@@ -997,7 +1039,26 @@ X=$(get "/admin/usuarios/$PIDP/aparelhos" "$TA"); [ "$(echo "$X" | jq -r '[.data
 X=$(post "/admin/usuarios/$PIDP/desconectar" '{}' "$TP"); sucesso "$X" && falha "Passageiro nao pode usar o desconectar da Central" "$X" || ok "Seguranca: so a Central desconecta aparelhos"
 sleep 2; TP=$(entrar "$FONE_P" PASSENGER)
 X=$(get /auth/me "$TP"); sucesso "$X" && ok "Passageiro: entra de novo com o codigo depois de desconectado" || falha "Passageiro: entrar de novo depois de desconectado" "$X"
+# Requisicao 1 (11/11/2026): dois celulares na mesma conta; a Central desconecta so um.
+sleep 2; TPA=$(entrar "$FONE_P" PASSENGER "teste-celular-a"); sleep 2; TPB=$(entrar "$FONE_P" PASSENGER "teste-celular-b")
+X=$(get "/admin/usuarios/$PIDP/aparelhos" "$TA")
+APA=$(echo "$X" | jq -r '[.data[] | select(.instalacao=="...ular-a")][0].id // empty'); APB=$(echo "$X" | jq -r '[.data[] | select(.instalacao=="...ular-b")][0].id // empty')
+[ -n "$APA" ] && [ -n "$APB" ] && [ "$APA" != "$APB" ] && [ "$(echo "$X" | jq -r '[.data[] | select(.instalacao=="...ular-a")][0].model')" = "Celular de teste" ] \
+  && ok "Central: separa os dois celulares da mesma conta (codigo de instalacao + modelo)" || falha "Central: aparelhos separados" "$X"
+X=$(post "/admin/usuarios/$PIDP/aparelhos/$APA/desconectar" '{}' "$TPB"); sucesso "$X" && falha "Passageiro nao pode desconectar aparelho" "$X" || ok "Seguranca: so a Central desconecta um aparelho"
+X=$(post "/admin/usuarios/$DID/aparelhos/$APA/desconectar" '{}' "$TA"); sucesso "$X" && falha "Aparelho de outra conta foi desconectado" "$X" || ok "Seguranca: aparelho de outra conta nao e desconectado"
+X=$(post "/admin/usuarios/$PIDP/aparelhos/$APA/desconectar" '{}' "$TA"); [ "$(echo "$X" | jq -r '.data.sessoesEncerradas')" -ge 1 ] 2>/dev/null && ok "Central: desconectou so o celular A ($(echo "$X" | jq -r '.data.sessoesEncerradas') sessao)" || falha "Central: desconectar um aparelho" "$X"
+X=$(get /auth/me "$TPA"); sucesso "$X" && falha "Celular desconectado continuou entrando" "$X" || ok "Seguranca: o celular A cai na hora"
+X=$(get /auth/me "$TPB"); sucesso "$X" && ok "Seguranca: o celular B da mesma conta continua conectado" || falha "Celular B caiu junto" "$X"
+X=$(get "/admin/usuarios/$PIDP/aparelhos" "$TA"); [ "$(echo "$X" | jq -r --arg a "$APA" '[.data[] | select(.id==$a)][0].sessoesAbertas')" = "0" ] && ok "Central: o celular A aparece sem sessao aberta" || falha "Central: sessao do A continuou aberta" "$X"
+TP="$TPB"
 
+# Requisicao 1 (11/11/2026): "desconectar todos" tambem derruba o motorista e o tira do ar.
+patch /drivers/me/online '{"isOnline":true}' "$TM" >/dev/null
+X=$(post "/admin/usuarios/$DID/desconectar" '{}' "$TA"); [ "$(echo "$X" | jq -r '.data.sessoesEncerradas')" -ge 1 ] 2>/dev/null && ok "Central: desconectou o motorista de todos os aparelhos" || falha "Central: desconectar o motorista" "$X"
+X=$(get /drivers/me "$TM"); sucesso "$X" && falha "Acesso antigo do motorista deveria cair na hora" "$X" || ok "Seguranca: acesso do motorista desconectado cai na hora"
+sleep 2; TM=$(entrar "+55649${SUF}72" DRIVER)
+X=$(get /drivers/me "$TM"); [ "$(echo "$X" | jq -r '.data.isOnline')" = "false" ] && ok "Motorista: desconectado saiu do ar e entra de novo com o codigo" || falha "Motorista: depois de desconectado" "$(echo "$X" | jq -c '{ok: .success, online: .data.isOnline}')"
 patch /drivers/me/online '{"isOnline":false}' "$TM" >/dev/null
 # Mapa da Central: motorista offline continua no mapa (cinza), na ultima posicao.
 X=$(get "/admin/dispatch/drivers?lat=-18.0125&lng=-49.3547&todos=1" "$TA")

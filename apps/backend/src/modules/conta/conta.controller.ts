@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { z } from 'zod';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -27,10 +28,10 @@ export class ContaController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Guarda o endereco de notificacao (Firebase) deste celular para esta conta' })
   async registrarPush(
-    @CurrentUser('id') userId: string,
+    @CurrentUser() eu: AuthenticatedUser,
     @Body(new ZodValidationPipe(pushSchema)) body: { token: string; deviceId?: string },
   ) {
-    await this.push.registrar(userId, body.token, body.deviceId);
+    await this.push.registrar(eu.id, body.token, body.deviceId, eu.deviceId);
     return { ok: true, pushLigado: this.push.ligado };
   }
 
