@@ -9,8 +9,12 @@ const STATUS_MOTORISTA = [
   'Cadastro em andamento',
   'Cadastro em análise',
   'Aprovado',
+  'Contratado',
   'Não prosseguiu'
 ];
+
+// Situação de cada documento do motorista (o servidor marca "Recebido — conferir" quando o documento chega pelo WhatsApp).
+const STATUS_DOC = ['Não enviado', 'Recebido — conferir', 'Conferido'];
 
 const STATUS_PASSAGEIRO = [
   'Novo interessado',
@@ -55,8 +59,11 @@ const ENTITIES = {
     searchFields: ['nome', 'telefone', 'cidade', 'origem', 'placa', 'veiculo', 'proxima_acao', 'observacoes'],
     statusField: 'situacao',
     statuses: STATUS_MOTORISTA,
+    // Fechado (verde): motorista contratado, já trabalhando. Perdido: não segue.
+    fechados: ['Contratado'],
+    perdidos: ['Não prosseguiu'],
     interactions: true,
-    columns: ['nome', 'telefone', 'cidade', 'situacao', 'data_acompanhamento'],
+    columns: ['nome', 'cidade', 'situacao', 'documentos', 'data_acompanhamento'],
     fields: [
       { key: 'nome', label: 'Nome completo', type: 'text', required: true, max: 120, full: true },
       { key: 'telefone', label: 'Telefone', type: 'tel', required: true, max: 25 },
@@ -67,7 +74,12 @@ const ENTITIES = {
       { key: 'veiculo', label: 'Veículo (modelo, cor, ano)', type: 'text', max: 120 },
       { key: 'placa', label: 'Placa', type: 'text', max: 10 },
       { key: 'cnh_categoria', label: 'Categoria da CNH', type: 'select', options: ['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE'] },
-      { key: 'documentos', label: 'Documentos', type: 'select', options: ['Não enviados', 'Recebidos — conferir', 'Conferidos'] },
+      { key: 'documentos', label: 'Documentos', type: 'select', options: ['Não enviados', 'Incompletos', 'Recebidos — conferir', 'Conferidos'] },
+      { key: 'doc_cnh', label: 'CNH', type: 'select', options: STATUS_DOC },
+      { key: 'doc_crlv', label: 'Documento do veículo (CRLV)', type: 'select', options: STATUS_DOC },
+      { key: 'doc_endereco', label: 'Comprovante de endereço', type: 'select', options: STATUS_DOC },
+      { key: 'endereco', label: 'Endereço', type: 'text', max: 200, full: true },
+      { key: 'contratado_em', label: 'Contratado em', type: 'date' },
       { key: 'proxima_acao', label: 'Próxima ação', type: 'text', max: 160 },
       { key: 'data_acompanhamento', label: 'Data do acompanhamento', type: 'date' },
       { key: 'observacoes', label: 'Observações', type: 'textarea', max: 2000, full: true }
@@ -86,6 +98,8 @@ const ENTITIES = {
     searchFields: ['nome', 'telefone', 'cidade', 'origem', 'proxima_acao', 'observacoes'],
     statusField: 'situacao',
     statuses: STATUS_PASSAGEIRO,
+    fechados: ['Usuário cadastrado'],
+    perdidos: ['Não prosseguiu'],
     interactions: true,
     columns: ['nome', 'telefone', 'cidade', 'situacao', 'data_primeiro_contato'],
     fields: [
@@ -113,6 +127,8 @@ const ENTITIES = {
     searchFields: ['nome_estabelecimento', 'responsavel', 'telefone', 'cidade', 'beneficio', 'condicoes', 'observacoes'],
     statusField: 'situacao',
     statuses: STATUS_PARCEIRO,
+    fechados: ['Parceria confirmada'],
+    perdidos: ['Não concretizada'],
     interactions: true,
     confirmStatus: 'Parceria confirmada',
     columns: ['nome_estabelecimento', 'categoria', 'cidade', 'situacao', 'data_contato'],

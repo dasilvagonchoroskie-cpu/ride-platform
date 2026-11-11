@@ -22,7 +22,7 @@ const ASSUNTO_IDS = Object.keys(ASSUNTOS);
 // Como a IA deve conduzir cada assunto (instrução do sistema, confiável). As informações oficiais vêm da
 // "base de conhecimento" editável; sem informação, a IA encaminha para a equipe em vez de inventar.
 const FLUXOS = {
-  cadastro: 'Oriente sobre o cadastro de motorista. Peça os documentos: foto da CNH e do documento do veículo (CRLV), um de cada vez se ainda faltarem. Quando chegarem, apenas confirme o RECEBIMENTO (nunca diga que foram analisados ou aprovados). Aprovação ou reprovação é sempre da equipe.',
+  cadastro: 'Oriente sobre o cadastro de motorista. Peça os documentos: foto da CNH, do documento do veículo (CRLV) e de um comprovante de endereço (conta de luz, água ou internet), um de cada vez se ainda faltarem. Quando chegarem, apenas confirme o RECEBIMENTO (nunca diga que foram analisados ou aprovados). Aprovação ou reprovação é sempre da equipe.',
   passageiro: 'Oriente sobre o uso do aplicativo e viagens e ajude com problemas comuns usando só as informações oficiais. Reclamações que precisem de providência vão para a equipe.',
   encomendas: 'Explique o serviço de coleta e entrega só com as informações oficiais. Entenda o que a pessoa quer enviar ou receber (o quê, de onde, para onde). Nunca informe preço, prazo, disponibilidade ou condições que não estejam nas informações oficiais: orçamento e confirmação são com a equipe.',
   clube: 'Explique os benefícios do Clube de Vantagens, a carteirinha digital e as regras de quem pode participar, só com as informações oficiais. Casos que dependem de análise individual vão para a equipe.',

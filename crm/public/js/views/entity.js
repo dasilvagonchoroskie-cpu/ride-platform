@@ -8,7 +8,11 @@ export async function renderEntity(view, state, key, params) {
   const hasCategoria = def.fields.some((f) => f.key === 'categoria');
   let vista = params.get('vista') || 'lista';
   if (!def.views.includes(vista)) vista = 'lista';
-  const filtros = { q: '', situacao: '', categoria: '', page: 1 };
+  // Separação do que está em andamento e do que já está 100% fechado (verde).
+  const fechados = def.fechados || [];
+  const filtros = { q: '', situacao: '', categoria: '', page: 1, etapa: fechados.length ? 'andamento' : '' };
+  const ehFechado = (row) => fechados.includes(row[def.statusField]);
+  const ROTULO_FECHADO = { motoristas: 'Contratados', parceiros: 'Parcerias fechadas', passageiros: 'Cadastrados' }[key] || 'Fechados';
   let listSeq = 0; // descarta respostas antigas (a busca dispara várias requisições; a mais lenta não pode vencer a mais nova)
   let calRef = null;
   let calMes = ui.todayISO().slice(0, 7);
@@ -30,6 +34,11 @@ export async function renderEntity(view, state, key, params) {
       </div>
     </div>
 
+    ${fechados.length ? `<div class="etapas ${vista !== 'lista' ? 'hidden' : ''}" id="etapas">
+      <button class="btn btn-sm btn-ghost ativo" data-etapa="andamento" type="button">Em andamento</button>
+      <button class="btn btn-sm btn-ghost verde" data-etapa="fechados" type="button">✅ ${ui.esc(ROTULO_FECHADO)}</button>
+      <button class="btn btn-sm btn-ghost" data-etapa="" type="button">Todos</button>
+    </div>` : ''}
     <div class="toolbar ${vista !== 'lista' ? 'hidden' : ''}" id="toolbar">
       <div class="search">
         ${ui.icon('search', 16)}
@@ -54,6 +63,7 @@ export async function renderEntity(view, state, key, params) {
     if (filtros.q) p.set('q', filtros.q);
     if (filtros.situacao) p.set('f_situacao', filtros.situacao);
     if (filtros.categoria) p.set('f_categoria', filtros.categoria);
+    if (filtros.etapa && vista === 'lista') p.set('etapa', filtros.etapa);
     p.set('page', String(filtros.page));
     p.set('size', vista === 'lista' ? '20' : '200');
     if (key === 'tarefas') { p.set('sort', 'data_vencimento'); p.set('dir', 'asc'); }
@@ -64,6 +74,7 @@ export async function renderEntity(view, state, key, params) {
     const value = row[field.key];
     if (!field) return ui.esc(value || '—');
     if (field.key === def.statusField) return ui.badge(value);
+    if (field.key === 'documentos') return value ? ui.badge(value) : '—';
     if (field.key === 'prioridade') return ui.badge(value, ui.priorityTone(value));
     if (field.type === 'date') return ui.fmtDate(value);
     if (field.type === 'number') return /invest|custo|valor/.test(field.key) ? ui.fmtMoney(value) : ui.fmtInt(value);
@@ -110,7 +121,7 @@ export async function renderEntity(view, state, key, params) {
     });
 
     content.innerHTML = `<div class="card">
-      ${ui.tableHtml({ columns, rows: data.items, rowClick: true })}
+      ${ui.tableHtml({ columns, rows: data.items, rowClick: true, rowClass: (r) => (ehFechado(r) ? 'linha-fechada' : '') })}
       <div class="pager">
         <span>Página ${data.page} de ${data.pages} · ${ui.fmtInt(data.total)} registros</span>
         <span class="row">
@@ -152,14 +163,49 @@ export async function renderEntity(view, state, key, params) {
     return value === null || value === undefined || value === '' ? '<span class="muted">—</span>' : ui.esc(value);
   }
 
+  const DOCS = [['cnh', 'doc_cnh', 'CNH'], ['crlv', 'doc_crlv', 'Documento do veículo (CRLV)'], ['endereco', 'doc_endereco', 'Comprovante de endereço']];
+
+  // Ficha: tudo do cadastro num lugar só. Motorista: documentos (CNH, CRLV, comprovante), etapa e contratação.
+  function fichaHtml(item, ficha) {
+    if (!ficha) return '';
+    const status = item[def.statusField];
+    let banner = '';
+    if (fechados.includes(status)) {
+      const quando = item.contratado_em || item.confirmado_em;
+      banner = `<div class="ficha-banner fechado">✅ ${ui.esc(status)}${quando ? ` em ${ui.fmtDate(quando)}` : ''}${key === 'motoristas' ? ' — motorista trabalhando' : key === 'parceiros' ? ' — parceria fechada' : ''}</div>`;
+    } else if (key === 'motoristas' && status === 'Aprovado') {
+      banner = '<div class="ficha-banner quase">Cadastro aprovado. Falta marcar como contratado quando ele começar a trabalhar.</div>';
+    } else if (!(def.perdidos || []).includes(status)) {
+      banner = `<div class="ficha-banner andamento">Em andamento: ${ui.esc(status || '—')}</div>`;
+    }
+    let docs = '';
+    if (key === 'motoristas' && ficha.documentos) {
+      docs = `<div class="section-title">Documentos</div><div class="ficha-docs">${DOCS.map(([tipo, campo, nome]) => {
+        const rec = ficha.documentos[tipo];
+        const st = item[campo] || (rec ? 'Recebido — conferir' : 'Não enviado');
+        return `<div class="ficha-doc"><span class="nome">${ui.esc(nome)}</span>${ui.badge(st)}
+          ${rec && rec.recebido_em ? `<span class="quando">recebido em ${ui.fmtDateTime(rec.recebido_em)}</span>` : ''}
+          ${rec && ficha.conversa ? `<a class="btn btn-sm btn-ghost" href="#/conversas?c=${ficha.conversa.id}">Ver na conversa</a>` : ''}
+          ${st === 'Recebido — conferir' ? `<button class="btn btn-sm btn-soft" data-conferir="${campo}" type="button">Marcar conferido</button>` : ''}</div>`;
+      }).join('')}</div>`;
+    }
+    const resumo = ficha.resumo_ia && ficha.resumo_ia.texto
+      ? `<div class="section-title">Resumo da conversa (IA)</div><div class="ficha-resumo">${ui.esc(ficha.resumo_ia.texto)}<div class="muted small" style="margin-top:4px">${ui.fmtDateTime(ficha.resumo_ia.em)}</div></div>` : '';
+    const conversa = ficha.conversa
+      ? `<div class="ficha-acoes"><a class="btn btn-sm btn-primary" href="#/conversas?c=${ficha.conversa.id}">${ui.icon('chat', 15)} Abrir conversa no WhatsApp</a></div>`
+      : '<div class="notice" style="margin-bottom:14px">Sem conversa de WhatsApp vinculada a este cadastro.</div>';
+    return banner + docs + conversa + resumo + '<div class="section-title">Dados</div>';
+  }
+
   async function openDetail(id) {
     let data;
     try {
       data = await api.get(`/${key}/${id}`);
     } catch (err) { ui.toast(err.message, 'error'); return; }
     const item = data.item;
+    const ocultos = key === 'motoristas' ? DOCS.map((d) => d[1]) : [];
     const fields = def.fields
-      .filter((f) => !(f.type === 'relation' && !item[f.key]))
+      .filter((f) => !(f.type === 'relation' && !item[f.key]) && !ocultos.includes(f.key))
       .map((f) => `<div class="detail-item ${f.full ? 'full' : ''}"><dt>${ui.esc(f.label)}</dt><dd>${detailValue(f, item)}</dd></div>`)
       .join('');
 
@@ -172,20 +218,54 @@ export async function renderEntity(view, state, key, params) {
       : '';
 
     const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
+    const podeContratar = key === 'motoristas' && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
+    const ficha = fichaHtml(item, data.ficha);
 
     const m = ui.modal({
-      title: `${def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
+      title: `${key === 'motoristas' ? 'Ficha do motorista' : def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
       subtitle: `Registro #${item.id}${item.created_at ? ` · criado em ${ui.fmtDate(item.created_at)}` : ''}`,
       size: 'wide',
-      body: `<dl class="detail-list">${fields}</dl>
-             ${item[def.confirmStatus === 'Parceria confirmada' ? 'confirmado_em' : 'id'] && def.confirmStatus && item.confirmado_em ? `<div class="notice" style="margin-top:14px;background:#e2f7ee;border-color:#c7efdd;color:#0a7651">Parceria confirmada em ${ui.fmtDate(item.confirmado_em)}.</div>` : ''}
+      body: `${ficha}<dl class="detail-list">${fields}</dl>
              ${historico}
              ${data.interacoes.length === 0 && def.interactions ? '<div class="notice" style="margin-top:14px">Nenhum acompanhamento registrado ainda. Use “Registrar acompanhamento” para manter o histórico.</div>' : ''}`,
       footer: `
         ${podeExcluir ? `<button class="btn btn-danger btn-sm" data-detail-del>${ui.icon('trash', 15)} Excluir</button>` : ''}
         ${def.interactions ? `<button class="btn btn-ghost btn-sm" data-detail-hist>${ui.icon('headset', 15)} Registrar acompanhamento</button>` : ''}
         ${podeConfirmar ? `<button class="btn btn-gold btn-sm" data-detail-confirm>${ui.icon('check', 15)} Confirmar parceria</button>` : ''}
+        ${podeContratar ? `<button class="btn btn-gold btn-sm" data-detail-contratar>${ui.icon('check', 15)} Marcar como contratado</button>` : ''}
         <button class="btn btn-primary btn-sm" data-detail-edit>${ui.icon('edit', 15)} Editar</button>`
+    });
+
+    // Links para a conversa fecham a ficha antes de navegar.
+    m.dialog.querySelectorAll('a[href^="#/conversas"]').forEach((a) => a.addEventListener('click', () => m.close()));
+    m.dialog.querySelectorAll('[data-conferir]').forEach((b) => b.addEventListener('click', async () => {
+      const campo = b.dataset.conferir;
+      const estado = { ...item, [campo]: 'Conferido' };
+      const vals = DOCS.map((d) => estado[d[1]] || (data.ficha && data.ficha.documentos && data.ficha.documentos[d[0]] ? 'Recebido — conferir' : 'Não enviado'));
+      const geral = vals.every((v) => v === 'Conferido') ? 'Conferidos' : vals.every((v) => v !== 'Não enviado') ? 'Recebidos — conferir' : vals.some((v) => v !== 'Não enviado') ? 'Incompletos' : 'Não enviados';
+      try {
+        await api.patch(`/motoristas/${item.id}`, { [campo]: 'Conferido', documentos: geral });
+        ui.toast('Documento marcado como conferido.', 'success');
+        m.close();
+        openDetail(item.id);
+        loadList();
+      } catch (err) { ui.toast(err.message, 'error'); }
+    }));
+    const contratarBtn = m.dialog.querySelector('[data-detail-contratar]');
+    if (contratarBtn) contratarBtn.addEventListener('click', async () => {
+      const ok = await ui.confirmDialog({
+        title: 'Marcar como contratado',
+        message: `“${item.nome}” passa para “Contratado” (já trabalhando) e fica em verde, separado dos cadastros em andamento. A data fica registrada.`,
+        confirmLabel: 'Marcar como contratado',
+        requireCheck: 'Confirmo que este motorista foi contratado.'
+      });
+      if (!ok) return;
+      try {
+        await api.post(`/motoristas/${item.id}/contratar`, { confirmo: true });
+        ui.toast('Motorista marcado como contratado.', 'success');
+        m.close();
+        loadList();
+      } catch (err) { ui.toast(err.message, 'error'); }
     });
 
     m.dialog.querySelector('[data-detail-edit]').addEventListener('click', () => { m.close(); openForm(item); });
@@ -486,7 +566,15 @@ export async function renderEntity(view, state, key, params) {
       else b.style.background = '';
     });
     view.querySelector('#toolbar').classList.toggle('hidden', vista !== 'lista');
+    const et = view.querySelector('#etapas');
+    if (et) et.classList.toggle('hidden', vista !== 'lista');
     load();
+  }));
+  view.querySelectorAll('[data-etapa]').forEach((btn) => btn.addEventListener('click', () => {
+    filtros.etapa = btn.dataset.etapa;
+    filtros.page = 1;
+    view.querySelectorAll('[data-etapa]').forEach((b) => b.classList.toggle('ativo', b === btn));
+    loadList();
   }));
 
   const q = view.querySelector('#f-q');

@@ -271,12 +271,13 @@ export function bars(items, color = '#1d4ed8') {
 }
 
 /* -------------------------------- table --------------------------------- */
-export function tableHtml({ columns, rows, emptyHtml = '', responsive = true, rowClick = false }) {
+export function tableHtml({ columns, rows, emptyHtml = '', responsive = true, rowClick = false, rowClass = null }) {
   if (!rows.length) return emptyHtml || '<div class="empty"><p>Nenhum registro encontrado.</p></div>';
   const head = columns.map((c) => `<th${c.cls ? ` class="${c.cls}"` : ''}>${esc(c.label)}</th>`).join('');
   const body = rows.map((row) => {
     const cells = columns.map((c) => `<td data-label="${esc(c.label)}"${c.cls ? ` class="${c.cls}"` : ''}>${c.render ? c.render(row) : esc(row[c.key])}</td>`).join('');
-    return `<tr${rowClick ? ' class="clickable"' : ''} data-id="${row.id}">${cells}</tr>`;
+    const classes = [rowClick ? 'clickable' : '', rowClass ? rowClass(row) || '' : ''].filter(Boolean).join(' ');
+    return `<tr${classes ? ` class="${classes}"` : ''} data-id="${row.id}">${cells}</tr>`;
   }).join('');
   return `<div class="table-wrap"><table class="data${responsive ? ' responsive' : ''}">
     <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
@@ -284,7 +285,9 @@ export function tableHtml({ columns, rows, emptyHtml = '', responsive = true, ro
 
 export function statusTone(status) {
   const s = String(status || '');
-  if (/^(Aprovado|Parceria confirmada|Concluída|Resolvido|Publicada|Usuário cadastrado)$/.test(s)) return 'success';
+  if (/^(Contratado|Parceria confirmada|Usuário cadastrado)$/.test(s)) return 'fechado';
+  if (/^(Aprovado|Concluída|Resolvido|Publicada|Conferido|Conferidos)$/.test(s)) return 'success';
+  if (/^(Recebido — conferir|Recebidos — conferir|Incompletos)$/.test(s)) return 'warn';
   if (/^(Não prosseguiu|Não concretizada|Cancelada|Cancelado)$/.test(s)) return 'danger';
   if (/Aguardando|Pendente/.test(s)) return 'warn';
   if (/^Em |Em negociação|Cadastro em|Primeiro contato|Contato realizado|Interessado|Proposta apresentada|Identificado/.test(s)) return 'info';

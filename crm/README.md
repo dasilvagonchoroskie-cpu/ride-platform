@@ -178,6 +178,20 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Variáveis: `WA_CANAL=fake` (demonstração sem WhatsApp), `WA_DIGITANDO=0` (sem o "digitando…" antes de enviar),
   `WA_PAUSA_MS` (pausa entre envios seguidos).
 
+## Ficha do motorista e cadastros fechados (verde)
+- Cada motorista tem uma **ficha** (clique no nome): situação em destaque, documentos (CNH, CRLV e **comprovante de
+  endereço**) com a data de chegada e o link para a mensagem, botão "Abrir conversa no WhatsApp", resumo da IA, dados e
+  histórico. "Marcar conferido" em cada documento. A IA pede os três documentos no cadastro e, quando o comprovante
+  chega, preenche o campo **Endereço**.
+- O servidor marca cada documento como "Recebido — conferir" quando chega pelo WhatsApp (nunca desfaz "Conferido") e
+  move a etapa: algum documento → "Cadastro em andamento"; os três → "Cadastro em análise" (e transfere para a equipe).
+- **Fechados em verde:** motorista "Contratado", parceiro "Parceria confirmada" e passageiro "Usuário cadastrado". As
+  listas abrem em **Em andamento** (sem os fechados nem os que não prosseguiram) e têm as abas "✅ Fechados" e "Todos"
+  (`GET /api/<módulo>?etapa=andamento|fechados`).
+- `POST /api/motoristas/:id/contratar` (`{ "confirmo": true }`, admin e gestor): passa para "Contratado", grava
+  `contratado_em`, registra no histórico e na auditoria. `GET /api/motoristas/:id` devolve também `ficha`
+  (conversa, documentos recebidos, último resumo da IA).
+
 ## Central de Atendimento Inteligente
 Com a IA no modo automático e "responde sozinha" ligado, o WhatsApp vira uma central: saudação e menu no primeiro contato
 (1 Cadastro de motorista e veículo, 2 Passageiro, 3 Encomendas, 4 Clube de Vantagens, 5 Outros), atendimento por assunto

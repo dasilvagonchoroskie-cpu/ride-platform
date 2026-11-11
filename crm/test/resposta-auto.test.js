@@ -39,13 +39,41 @@ test('sem cadastro: IA recebe os campos do motorista e o cadastro nasce com veí
   assert.equal(m.placa, 'ABC1D23');
   assert.equal(m.cnh_categoria, 'AB');
   assert.equal(m.cidade, 'Goiatuba');
-  assert.equal(m.documentos, 'Recebidos — conferir', 'documento lido pela IA fica para conferência humana');
+  assert.equal(m.doc_cnh, 'Recebido — conferir', 'documento lido pela IA fica para conferência humana');
+  assert.equal(m.documentos, 'Incompletos', 'faltam documentos');
+  assert.equal(m.situacao, 'Cadastro em andamento', 'documento recebido avança a etapa');
   const enviada = db.prepare("SELECT * FROM wa_mensagens WHERE origem = 'ia'").get();
   assert.ok(enviada, 'a IA respondeu sozinha');
   assert.equal(enviada.status, 'pendente');
   assert.match(enviada.texto, /Recebemos o seu documento/, 'confirmação padrão (modelo), não texto livre da IA');
-  assert.match(enviada.texto, /aguardando análise/);
-  assert.equal(db.prepare('SELECT atendimento, atend_motivo FROM wa_conversas').get().atendimento, 'aguardando', 'CNH + CRLV: vai para a equipe analisar');
+  assert.match(enviada.texto, /comprovante de endereço/, 'pede o que falta');
+});
+
+test('motorista: CNH, CRLV e comprovante de endereço → ficha completa, "Cadastro em análise" e passa para a equipe', async () => {
+  const { db, ia, receber, setResposta } = montar();
+  setResposta({ resumo: 'motorista', assunto: 'cadastro_motorista', urgencia: 'media', sentimento: 'positivo', perfil: 'motorista',
+    campos: { nome: 'Evandro da Silva', cidade: 'Goiatuba' }, resposta_sugerida: '', proxima_acao: '', tarefa: null, atendimento: { opcao: 'cadastro', transferir: false } });
+  let r = receber('[imagem] 📎 Tipo: CNH\nNome: Evandro\nCategoria da CNH: AB', 'D1');
+  await ia.executarAutomatico(r.conversaId);
+  r = receber('[documento] 📎 Tipo: CRLV\nPlaca: ABC1D23\nMarca/Modelo: VW Gol\nCor: Prata\nAno modelo: 2015', 'D2');
+  await ia.executarAutomatico(r.conversaId);
+  let m = db.prepare('SELECT * FROM motoristas').get();
+  assert.equal(m.documentos, 'Incompletos');
+  assert.match(db.prepare("SELECT texto FROM wa_mensagens WHERE origem = 'ia' ORDER BY id DESC").get().texto, /envie também um comprovante de endereço/);
+  r = receber('[imagem] 📎 Tipo: Comprovante de endereço\nNome do titular: Evandro\nEndereço: Rua das Flores, 120, Centro\nCidade/UF: Goiatuba - GO', 'D3');
+  await ia.executarAutomatico(r.conversaId);
+  m = db.prepare('SELECT * FROM motoristas').get();
+  assert.equal(m.doc_cnh, 'Recebido — conferir');
+  assert.equal(m.doc_crlv, 'Recebido — conferir');
+  assert.equal(m.doc_endereco, 'Recebido — conferir');
+  assert.equal(m.documentos, 'Recebidos — conferir');
+  assert.equal(m.endereco, 'Rua das Flores, 120, Centro', 'endereço tirado do comprovante');
+  assert.equal(m.situacao, 'Cadastro em análise');
+  assert.notEqual(m.situacao, 'Aprovado', 'aprovar e contratar é sempre da equipe');
+  const ultima = db.prepare("SELECT texto FROM wa_mensagens WHERE origem = 'ia' ORDER BY id DESC").get().texto;
+  assert.match(ultima, /aguardando análise/);
+  assert.equal(db.prepare('SELECT atendimento FROM wa_conversas').get().atendimento, 'aguardando');
+  assert.ok(db.prepare("SELECT 1 FROM interacoes WHERE entity = 'motoristas' AND situacao_nova = 'Cadastro em análise'").get(), 'mudança de etapa registrada no histórico');
 });
 
 test('travas: não responde de novo sem mensagem nova, nem quando a equipe assumiu', async () => {

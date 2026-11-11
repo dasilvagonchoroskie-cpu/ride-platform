@@ -45,6 +45,18 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Ficha do motorista e "fechados" em verde (10/11/2026, pedido do dono)
+- Motorista: situação nova `Contratado` (fechado), documentos por item `doc_cnh`/`doc_crlv`/`doc_endereco` (Não enviado /
+  Recebido — conferir / Conferido) + resumo `documentos` (Não enviados / Incompletos / Recebidos — conferir / Conferidos),
+  `endereco` (a IA preenche pelo comprovante), `contratado_em`. `defs.js`: `fechados`/`perdidos` por módulo (motorista
+  Contratado, parceiro Parceria confirmada, passageiro Usuário cadastrado); listagem aceita `etapa=andamento|fechados`.
+- `marcarDocumentos` (`src/ia/service.js`) marca o que chegou (`tipoDocumento`/`documentosRecebidos` em
+  `src/ia/documentos.js`, pela linha "Tipo:" do 📎) e move a etapa; nunca desfaz "Conferido". A Central pede CNH, CRLV e
+  comprovante de endereço e transfere ("documentos") com os três.
+- `POST /motoristas/:id/contratar` (admin e gestor, `confirmo:true`). `GET /:entity/:id` devolve `ficha`
+  (`fichaDoCadastro` em routes.js). Front: abas Em andamento/✅ Fechados/Todos, linha verde (`linha-fechada`), badge
+  `fechado`, "Ficha do motorista" em `entity.js`. Testado: seguranca.test.js + navegador (celular) com canal/IA falsos.
+
 ## Notificações (10/11/2026, pedido do dono)
 - `src/notificacoes.js`: o store do WhatsApp avisa eventos (`store.ouvir`: mensagem recebida, envio da IA, mudança de
   atendimento) e o notificador gera 3 tipos: 💬 mensagem nova, 🤖 IA respondeu (discreto), 🚨 transferência para a equipe

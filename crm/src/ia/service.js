@@ -12,7 +12,7 @@ const PROVEDOR_PADRAO = 'gemini';
 const tipoParaPerfil = { motoristas: 'motorista', passageiros: 'passageiro', parceiros: 'parceiro' };
 const preenchido = (v) => v !== null && v !== undefined && String(v).trim() !== '';
 
-const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca } = require('./documentos');
+const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos } = require('./documentos');
 const C = require('./central');
 
 // Motivos de a IA não responder, em português (aparecem no painel da conversa e no registro do servidor).
@@ -239,15 +239,13 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
         if (errors[chave] || values[chave] === undefined) continue; // valor inválido para o campo: descarta
         corpo[chave] = values[chave];
       }
-      if (conv.vinculo_tipo === 'motoristas' && ['veiculo', 'placa', 'cnh_categoria'].some((k) => corpo[k]) && (!preenchido(linha.documentos) || linha.documentos === 'Não enviados')) {
-        corpo.documentos = 'Recebidos — conferir';
-      }
       if (Object.keys(corpo).length) {
         const r = entities.updateEntity(def, conv.vinculo_id, corpo, req);
         if (r.errors || r.error) return { erro: 'Não foi possível atualizar o cadastro.', status: 422 };
         saida.preenchidos = Object.keys(corpo);
         audit(req, 'ia_preencher', def.table, conv.vinculo_id, `Assistente de IA preencheu campos vazios: ${saida.preenchidos.join(', ')} (conversa #${conversaId})`);
       }
+      if (conv.vinculo_tipo === 'motoristas') saida.documentos = marcarDocumentos(conversaId, conv.vinculo_id, req);
     } else if (criar) {
       const tipo = P.PERFIL_TIPO[analise.resultado.perfil];
       if (!tipo) return { erro: 'A IA não identificou se é motorista, passageiro ou parceiro.', status: 422 };
@@ -259,7 +257,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       const chaveNome = tipo === 'parceiros' ? 'nome_estabelecimento' : 'nome';
       if (!corpo[chaveNome] && conv.nome) corpo[chaveNome] = conv.nome;
       if (conv.telefone) corpo.telefone = displayPhone(conv.telefone);
-      if (tipo === 'motoristas') corpo.documentos = ['veiculo', 'placa', 'cnh_categoria'].some((k) => corpo[k]) ? 'Recebidos — conferir' : 'Não enviados';
+      if (tipo === 'motoristas') corpo.documentos = 'Não enviados';
       // Padrões seguros dos campos obrigatórios que não dependem de interpretar a conversa.
       for (const f of def.fields) {
         if (!f.required || corpo[f.key] !== undefined) continue;
@@ -277,11 +275,46 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       waStore.definirVinculo(conv.contato_id, tipo, r.item.id);
       saida.criado = { tipo, id: r.item.id };
       audit(req, 'ia_criar_cadastro', def.table, r.item.id, `Assistente de IA criou o cadastro a partir da conversa #${conversaId}`);
+      if (tipo === 'motoristas') saida.documentos = marcarDocumentos(conversaId, r.item.id, req);
     }
 
     const resumo = saida.criado ? `criou ${saida.criado.tipo} #${saida.criado.id}` : (saida.preenchidos.length ? `preencheu: ${saida.preenchidos.join(', ')}` : 'nada a preencher');
     db.prepare('UPDATE ia_analises SET aplicado_em = ?, aplicado_resumo = ? WHERE id = ?').run(nowISO(), resumo, analise.id);
     return saida;
+  }
+
+  // Ficha do motorista: marca cada documento que chegou pela conversa (CNH, CRLV, comprovante de endereço) como
+  // "Recebido — conferir" (nunca desfaz "Conferido"), resume a situação dos documentos e avança a etapa do cadastro:
+  // algum documento → "Cadastro em andamento"; os três → "Cadastro em análise". Aprovar e contratar é sempre da equipe.
+  const CAMPO_DOC = { cnh: 'doc_cnh', crlv: 'doc_crlv', endereco: 'doc_endereco' };
+  const ETAPAS_INICIAIS = ['Novo interessado', 'Primeiro contato realizado', 'Aguardando retorno'];
+  function marcarDocumentos(conversaId, motoristaId, req) {
+    const def = ENTITIES.motoristas;
+    const { linha } = valoresAtuais('motoristas', motoristaId);
+    if (!linha || !linha.id) return null;
+    const rec = documentosRecebidos(waStore.listarMensagens(conversaId, { limite: 500 }));
+    const corpo = {};
+    for (const [tipo, campo] of Object.entries(CAMPO_DOC)) {
+      if (rec[tipo] && (!preenchido(linha[campo]) || linha[campo] === 'Não enviado')) corpo[campo] = 'Recebido — conferir';
+    }
+    const estado = { ...linha, ...corpo };
+    const ok = (v) => v === 'Recebido — conferir' || v === 'Conferido';
+    const recebidos = Object.values(CAMPO_DOC).filter((c) => ok(estado[c])).length;
+    const conferidos = Object.values(CAMPO_DOC).filter((c) => estado[c] === 'Conferido').length;
+    const geral = conferidos === 3 ? 'Conferidos' : recebidos === 3 ? 'Recebidos — conferir' : recebidos > 0 ? 'Incompletos' : 'Não enviados';
+    if (linha.documentos !== 'Conferidos' && linha.documentos !== geral) corpo.documentos = geral;
+    let novaEtapa = null;
+    if (recebidos === 3 && [...ETAPAS_INICIAIS, 'Cadastro em andamento'].includes(linha.situacao)) novaEtapa = 'Cadastro em análise';
+    else if (recebidos > 0 && ETAPAS_INICIAIS.includes(linha.situacao)) novaEtapa = 'Cadastro em andamento';
+    if (novaEtapa) corpo.situacao = novaEtapa;
+    if (!Object.keys(corpo).length) return { recebidos, situacao: linha.situacao };
+    const r = entities.updateEntity(def, motoristaId, corpo, req);
+    if (r.errors || r.error) return null;
+    if (novaEtapa) {
+      entities.logInteraction('motoristas', motoristaId, req, `Etapa atualizada automaticamente: ${recebidos} de 3 documentos recebidos pelo WhatsApp (conferir na ficha).`, linha.situacao, novaEtapa, 'WhatsApp');
+    }
+    audit(req, 'ia_documentos', 'motoristas', motoristaId, `Documentos marcados pelo servidor: ${Object.keys(corpo).join(', ')}`);
+    return { recebidos, situacao: novaEtapa || linha.situacao };
   }
 
   /* ------------------------------------------ automático ------------------------------------------ */
@@ -399,16 +432,20 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (motivoTransf) return transferir(motivoTransf, partes);
 
     // Documento recebido (foto/PDF lido): confirma o RECEBIMENTO uma vez; com CNH e CRLV, o cadastro vai para análise.
-    const ehDocumento = /📎/u.test(textoUlt) && (Object.keys(extrairDadosDocumentos([ultima])).length > 0 || /\b(cnh|habilita[çc][ãa]o|crlv|renavam|documento do ve[ií]culo)\b/i.test(textoUlt));
+    const ehDocumento = /📎/u.test(textoUlt) && (tipoDocumento(textoUlt) !== null || Object.keys(extrairDadosDocumentos([ultima])).length > 0);
     const confirmaDoc = ehDocumento ? central.texto('confirmacao_documentos') : '';
     if (confirmaDoc) {
-      let dados = a.resultado.campos || {};
-      if (conv.vinculo_tipo === 'motoristas') dados = { ...dados, ...valoresAtuais('motoristas', conv.vinculo_id).atual };
+      // O que já chegou: documentos lidos nesta conversa + o que a ficha do motorista já registra.
+      const rec = documentosRecebidos(waStore.listarMensagens(conversaId, { limite: 500 }));
+      const linha = conv.vinculo_tipo === 'motoristas' ? valoresAtuais('motoristas', conv.vinculo_id).linha : {};
+      const tem = (tipo, campo) => !!rec[tipo] || ['Recebido — conferir', 'Conferido'].includes(linha[campo]);
       const falta = [];
-      if (!preenchido(dados.cnh_categoria)) falta.push('a foto da CNH');
-      if (!preenchido(dados.placa)) falta.push('a foto do documento do veículo (CRLV)');
+      if (!tem('cnh', 'doc_cnh')) falta.push('a foto da CNH');
+      if (!tem('crlv', 'doc_crlv')) falta.push('a foto do documento do veículo (CRLV)');
+      if (!tem('endereco', 'doc_endereco')) falta.push('um comprovante de endereço (conta de luz, água ou internet)');
       if (!falta.length) return transferir('documentos', [...partes, `${confirmaDoc} Com isso, seu cadastro está aguardando análise da nossa equipe.`]);
-      return enviar([...partes, `${confirmaDoc} Agora, envie também ${falta.join(' e ')}.`], { tipo: 'confirmação de documento' });
+      const lista = falta.length > 1 ? `${falta.slice(0, -1).join(', ')} e ${falta[falta.length - 1]}` : falta[0];
+      return enviar([...partes, `${confirmaDoc} Agora, envie também ${lista}.`], { tipo: 'confirmação de documento' });
     }
 
     // Menu: no primeiro contato sem assunto claro, ou quando o cliente pede.

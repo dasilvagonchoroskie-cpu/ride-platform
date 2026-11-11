@@ -20,7 +20,9 @@ const INSTRUCAO_DOCUMENTO = 'Você extrai dados de arquivos enviados por WhatsAp
   + 'Se for CNH (carteira de motorista, física ou digital): Nome, CPF, Data de nascimento, Categoria da CNH (só as letras, ex.: B ou AB), '
   + 'Validade, Primeira habilitação, Número do registro, Cidade/UF.\n'
   + 'Se for CRLV / documento do veículo: Placa, Marca/Modelo, Ano fabricação, Ano modelo, Cor, Renavam, Proprietário, Cidade/UF.\n'
-  + 'Se for RG, CPF, comprovante de endereço, boleto, nota, contrato ou outro: os campos principais (nome, números, valores, datas, endereço).\n'
+  + 'Se for comprovante de endereço (conta de luz, água, telefone, internet ou gás, fatura, declaração de residência): '
+  + '"Tipo: Comprovante de endereço", Nome do titular, Endereço (rua, número e bairro, numa linha só), Cidade/UF, CEP, Data de emissão ou vencimento.\n'
+  + 'Se for RG, CPF, boleto, nota, contrato ou outro: os campos principais (nome, números, valores, datas, endereço).\n'
   + 'Se não for documento: "Descrição: <uma frase>" e o texto visível, se houver.\n'
   + 'Copie os valores exatamente como estão. Se não der para ler um campo, não escreva esse campo. Não invente.';
 
