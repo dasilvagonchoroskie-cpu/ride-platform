@@ -5,7 +5,7 @@ name: Central na web
 # serve. Tambem instala como aplicativo no computador e no celular (PWA).
 on:
   push:
-    branches: [main, central-web]
+    branches: [main]
     paths:
       - 'apps/central_app/**'
       - '.github/workflows/central-web.yml'
