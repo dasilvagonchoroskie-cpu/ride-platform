@@ -63,6 +63,23 @@ class AppColors {
   static const Color faixa = Color(0xFF0A1734);
 
   // ---- Mapa ----
+  /// Contorno fino dos cartoes (vidro sobre o marinho).
+  static const Color hairline = Color(0x1AFFFFFF);
+
+  /// Degrade do dourado nos botoes principais.
+  static const LinearGradient degradeOuro = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFF6CF6A), Color(0xFFE9B53D), Color(0xFFD39A28)],
+  );
+
+  /// Fundo de destaque (entrada, cabecalhos): marinho com brilho.
+  static const LinearGradient degradeMarinho = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFF13285A), Color(0xFF0A1838), Color(0xFF060F24)],
+  );
+
   static const Color mapBackground = Color(0xFFE9E7E2);
   static const Color mapRoad = Color(0xFFFFFFFF);
   static const Color mapRoadLight = Color(0xFFF7F6F3);
@@ -88,7 +105,7 @@ class Radii {
   static const double sm = 8;
   static const double md = 12;
   static const double lg = 16;
-  static const double sheet = 16;
+  static const double sheet = 28;
   static const double xl = 24;
   static const double pill = 999;
 }

@@ -87,7 +87,7 @@ class AppButton extends StatelessWidget {
             side: side,
             elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
           ),
           child: child,
         ),
@@ -110,8 +110,8 @@ class AppCard extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(Spacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(Radii.sm),
-        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 6, offset: Offset(0, 1))],
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: AppColors.hairline),
       ),
       child: child,
     );
@@ -141,8 +141,9 @@ class SheetSurface extends StatelessWidget {
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(roundedTop ? Radii.sheet : 0),
         ),
+        border: const Border(top: BorderSide(color: Color(0x40E9B53D))),
         boxShadow: const [
-          BoxShadow(color: Color(0x26000000), blurRadius: 18, offset: Offset(0, -4)),
+          BoxShadow(color: Color(0x80000000), blurRadius: 30, offset: Offset(0, -6)),
         ],
       ),
       // Material transparente: os ListTile e InkWell dentro da folha
