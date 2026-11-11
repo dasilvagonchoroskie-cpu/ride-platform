@@ -1,112 +1,500 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart
-00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/troca_de_conta_test.dart: Sair da conta limpa historico, destinos e lugares recentes
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart: Confirmar viagem: escolhe Moto e o preco e o pedido mudam
-00:01 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:01 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: Cadastro ja vem com o telefone digitado antes
-00:03 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
-00:03 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
-00:03 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
-00:03 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
-00:03 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
-00:03 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
-00:03 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:04 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:05 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Lista: abre marcando como lidas; apagar uma com DESFAZER; apagar sem desfazer
-00:05 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Lista: abre marcando como lidas; apagar uma com DESFAZER; apagar sem desfazer
-00:05 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:06 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:06 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Servidor antigo (sem a caixa): mostra os avisos como antes
-00:06 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Servidor antigo (sem a caixa): mostra os avisos como antes
-00:06 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Servidor antigo (sem a caixa): mostra os avisos como antes
-00:06 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Servidor antigo (sem a caixa): mostra os avisos como antes
-00:06 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Servidor antigo (sem a caixa): mostra os avisos como antes
-00:06 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:07 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:07 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:07 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:07 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~8: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~9: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~10: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~11: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +36 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: Meus cartoes: so "Em breve", sem campo de cartao; pagamento direto ao motorista
-00:08 +37 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Botao Entrega so aparece onde a Central ligou
-00:08 +38 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
-00:09 +39 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
-00:09 +40 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
-00:10 +41 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
-00:10 +42 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
-00:10 +43 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
-00:10 +44 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Inicio: calendario abre o dia e depois a hora
-00:11 +45 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Corridas agendadas: horario, endereco, valor e cancelar sem multa
-00:11 +46 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: Motorista a caminho: botao SOS no alto do mapa
-00:11 +47 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Sem destino: preco ESTIMADO na confirmacao e o pedido vai sem destino
-00:11 +48 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Sem destino: preco ESTIMADO na confirmacao e o pedido vai sem destino
-00:11 +49 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Sem destino: preco ESTIMADO na confirmacao e o pedido vai sem destino
-00:12 +50 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Sem destino: preco ESTIMADO na confirmacao e o pedido vai sem destino
-00:12 +51 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Sem destino: preco ESTIMADO na confirmacao e o pedido vai sem destino
-00:12 +52 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Sem destino: preco ESTIMADO na confirmacao e o pedido vai sem destino
-00:13 +53 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Parada extra: entra no pedido de preco e sai quando tira
-00:13 +54 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Lixeira do destino: apaga no servidor e SO depois muda a lista; sem rede, nao muda
-00:13 +55 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Corrida do servidor: paradas e sem destino
-00:13 +56 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: Busca do destino: atalhos "Escolher no mapa" e "Ir sem destino"
-00:13 +57 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Motorista a caminho: tempo, chat, fotos, nota, viagens, carro, placa e Cancelar
-00:14 +58 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: Central ainda nao mexeu: fica o nome e a cor da montagem
-00:14 +59 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
-00:14 +60 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
-00:14 +61 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Bloquear pede confirmacao e avisa o servidor
-00:15 +62 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: tela de entrada e faixa do Inicio com o que a Central escolheu
-00:15 +63 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: tela de entrada e faixa do Inicio com o que a Central escolheu
-00:15 +64 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: tela de entrada e faixa do Inicio com o que a Central escolheu
-00:15 +65 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: tela de entrada e faixa do Inicio com o que a Central escolheu
-00:15 +66 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: tela de entrada e faixa do Inicio com o que a Central escolheu
-00:15 +67 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Chat: conversa, mensagem lida e resposta pronta
-00:15 +68 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Cupons: lista, desconto, minimo e usar na proxima corrida
-00:15 +69 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Conta: motoristas favoritos e bloqueados
-00:16 +70 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +71 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +72 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +73 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +74 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +75 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +76 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:16 +77 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Sem enquadrar (zoom fixo antigo): o destino longe ficava fora
-00:16 +78 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Confirmar viagem: o mapa ocupa a largura toda da tela
-00:17 +79 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando no embarque: usa o caminho do orcamento (sem rota nova)
-00:17 +80 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando longe do embarque: pede a rota de onde o carro esta
-00:18 +81 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando longe do embarque: pede a rota de onde o carro esta
-00:18 +82 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando longe do embarque: pede a rota de onde o carro esta
-00:18 +83 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando longe do embarque: pede a rota de onde o carro esta
-00:18 +84 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:18 +85 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:18 +86 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:18 +87 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: antes de pedir a corrida, espera o GPS no maximo o tempo dado
-00:18 +88 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Filtro do GPS parou depois de andar: o carro continua apontando para onde ia
-00:18 +89 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: a posicao guardada e da pessoa: some ao sair da conta
-00:18 +90 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: a posicao guardada e da pessoa: some ao sair da conta
-00:18 +91 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: a posicao guardada e da pessoa: some ao sair da conta
-00:18 +92 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Carro no mapa cor pela situacao: livre verde, em corrida laranja, offline cinza; moto tambem
-00:19 +93 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Carro no mapa o carro gira para o lado em que anda (rumo do GPS)
-00:19 +94 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Carro no mapa sem rumo do GPS: gira pela direcao do caminho
-00:19 +95 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Carro no mapa de 350 para 10 graus gira pelo lado curto (passa pelo norte, nao pelo sul)
-00:19 +96 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Carros que vem do servidor carros por perto trazem o rumo (o mapa gira cada um no sentido da rua)
-00:19 +97 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: Carros que vem do servidor carro da corrida traz o rumo do GPS do motorista
-00:19 +98 ~12: All tests passed!
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:00 +0 -1: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:00 +0 -2: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/troca_de_conta_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/troca_de_conta_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/troca_de_conta_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:00 +0 -2: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:00 +0 -3: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:00 +0 -3: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:00 +0 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
+00:00 +1 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
+00:00 +2 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
+00:00 +3 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
+00:00 +4 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
+00:00 +5 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
+00:00 +6 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:00 +6 -4: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:00 +6 -4: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:01 +7 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
+00:01 +8 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:02 +8 -5: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:02 +8 -5: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+00:02 +9 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:02 +10 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:03 +11 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:03 +12 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:03 +13 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:03 +14 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +14 -6: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/etapa4e5_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:03 +15 -6: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
+00:03 +16 -6: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:06 +16 -7: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/fotos_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:06 +16 -7: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:08 +16 -8: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:08 +16 -8: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:10 +16 -9: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/seguranca_agendamento_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:10 +16 -9: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:12 +16 -10: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/destino_etapa3_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:12 +16 -10: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:14 +16 -11: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:14 +16 -11: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:16 +16 -12: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:16 +16 -12: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:18 +16 -13: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:18 +16 -13: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:20 +16 -14: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:20 +16 -14: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:21 +16 -15: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_primeiro_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:21 +16 -15: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+Try calling using ?. instead.
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                    ^^^^^^^^^^
+00:22 +16 -16: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: lib/data/models/models.dart:569:53: Error: Method 'startsWith' cannot be called on 'String?' because it is potentially null.
+  Try calling using ?. instead.
+    bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+                                                      ^^^^^^^^^^
+  .
+00:22 +16 -16: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/cadastro_test.dart
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/carro_no_mapa_test.dart
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/codigo_email_test.dart
+  ... and 12 more
