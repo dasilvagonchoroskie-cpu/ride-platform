@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     // Sessao cortada (aparelho perdido/vendido) ou conta bloqueada: cai na hora.
-    if (!(await this.sessoes.acessoValido(payload.sub, payload.iat))) {
+    if (!(await this.sessoes.acessoValido(payload.sub, payload.iat, payload.deviceId))) {
       throw new UnauthorizedException('Sessao encerrada. Entre de novo.');
     }
     return {

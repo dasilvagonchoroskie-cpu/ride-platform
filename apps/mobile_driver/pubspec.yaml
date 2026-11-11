@@ -15,6 +15,9 @@ dependencies:
   provider: ^6.1.2
   http: ^1.5.0
   shared_preferences: ^2.3.3
+  # Cofre do celular (Requisicao 1). Versao TRAVADA: o lado nativo
+  # (CofreNativo.java) usa a API interna do plugin para ler o mesmo cofre.
+  flutter_secure_storage: 10.0.0
   geolocator: ^13.0.2
   # A versao certa e a que o flutter_localizations exige.
   intl: any

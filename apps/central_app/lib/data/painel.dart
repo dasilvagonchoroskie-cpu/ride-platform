@@ -1538,6 +1538,18 @@ class PainelApi {
     return (r['sessoesEncerradas'] as num?)?.toInt() ?? 0;
   }
 
+  /// Aparelhos que ja entraram na conta (Requisicao 1, 11/11/2026). So o dono.
+  Future<List<AparelhoDaConta>> aparelhos(String id) async {
+    final r = await _c.request('GET', '/admin/usuarios/$id/aparelhos');
+    return [for (final a in (r as List? ?? const []).whereType<Map<String, dynamic>>()) AparelhoDaConta.fromJson(a)];
+  }
+
+  /// Desconecta UM aparelho; os outros da conta continuam. Devolve as sessoes fechadas.
+  Future<int> desconectarAparelho(String id, String aparelhoId) async {
+    final r = await _c.request('POST', '/admin/usuarios/$id/aparelhos/$aparelhoId/desconectar') as Map<String, dynamic>;
+    return (r['sessoesEncerradas'] as num?)?.toInt() ?? 0;
+  }
+
   Future<void> bloquearPassageiro(String id, bool bloquear, String motivo) =>
       _c.request('PATCH', '/admin/passengers/$id/block', body: {'blocked': bloquear, 'reason': motivo});
 
@@ -1873,4 +1885,43 @@ class ContaParaLimpar {
         corridas: _int(j['corridas']),
         teste: j['teste'] == true,
       );
+}
+
+
+/// Um aparelho da conta, como a Central mostra (Requisicao 1, 11/11/2026).
+class AparelhoDaConta {
+  const AparelhoDaConta({
+    required this.id,
+    required this.plataforma,
+    this.modelo,
+    this.sistema,
+    this.instalacao,
+    this.usadoEm,
+    this.sessoesAbertas = 0,
+  });
+
+  factory AparelhoDaConta.fromJson(Map<String, dynamic> j) => AparelhoDaConta(
+        id: j['id'] as String? ?? '',
+        plataforma: j['platform'] as String? ?? '',
+        modelo: j['model'] as String?,
+        sistema: j['osVersion'] as String?,
+        instalacao: j['instalacao'] as String?,
+        usadoEm: DateTime.tryParse(j['lastSeenAt'] as String? ?? '')?.toLocal(),
+        sessoesAbertas: (j['sessoesAbertas'] as num?)?.toInt() ?? 0,
+      );
+
+  final String id;
+  final String plataforma;
+  final String? modelo;
+  final String? sistema;
+  final String? instalacao;
+  final DateTime? usadoEm;
+  final int sessoesAbertas;
+
+  /// Nome para a lista: modelo do celular, ou o tipo quando o app antigo nao mandou.
+  String get nome {
+    final m = modelo?.trim() ?? '';
+    if (m.isNotEmpty) return m;
+    return plataforma == 'WEB' ? 'Navegador' : 'Celular (app antigo, sem nome)';
+  }
 }
