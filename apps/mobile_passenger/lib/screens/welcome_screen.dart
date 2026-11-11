@@ -66,7 +66,8 @@ class WelcomeScreen extends StatelessWidget {
                     Text(
                       Marca.nome,
                       textAlign: TextAlign.center,
-                      style: AppText.display.copyWith(fontSize: 38, color: AppColors.text, letterSpacing: -1),
+                      // Nome na cor que a Central escolheu (dourado por padrao).
+                      style: AppText.display.copyWith(fontSize: 38, color: Marca.cor, letterSpacing: -1),
                     ),
                     const SizedBox(height: Spacing.sm),
                     Text(
