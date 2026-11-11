@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
+import * as notif from '../notificacoes.js';
 
 function kpiCard({ icon, label, value, foot, tone = '' }) {
   return `<div class="kpi ${tone}">
@@ -61,6 +62,8 @@ export async function renderDashboard(view, state) {
         <button class="btn btn-primary" id="dash-new-driver">${ui.icon('plus', 16)} Novo motorista</button>
       </div>
     </div>
+
+    <div id="dash-push" class="hidden"></div>
 
     ${semDados ? `<div class="card" style="margin-bottom:16px;border-left:4px solid #f2b705">
       <div class="card-body">
@@ -139,4 +142,28 @@ export async function renderDashboard(view, state) {
   view.querySelector('#dash-refresh').addEventListener('click', () => renderDashboard(view, state));
   view.querySelector('#dash-new-driver').addEventListener('click', () => { location.hash = '#/motoristas?novo=1'; });
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.go}`; }));
+  avisoPush(view);
+}
+
+// Aviso para ligar as notificações com o CRM fechado (sem inscrição, o servidor não tem para quem mandar o aviso).
+async function avisoPush(view) {
+  const box = view.querySelector('#dash-push');
+  if (!box || !notif.suportaPush() || Notification.permission === 'denied') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if (await reg.pushManager.getSubscription()) return;
+  } catch (e) { return; }
+  box.className = 'card';
+  box.style.cssText = 'margin-bottom:16px;border-left:4px solid #1d4ed8';
+  box.innerHTML = `<div class="card-body"><div class="spread" style="gap:12px;flex-wrap:wrap">
+      <div style="max-width:62ch"><h3 style="font-size:16px;margin-bottom:5px">🔔 Avisos com o CRM fechado</h3>
+        <p class="muted small">Este aparelho ainda não recebe notificações de mensagem nova, da IA e de transferência quando o CRM está fechado ou com a tela bloqueada.</p></div>
+      <button class="btn btn-primary" id="dash-push-ativar" type="button">Ativar agora</button></div></div>`;
+  box.querySelector('#dash-push-ativar').addEventListener('click', async () => {
+    try {
+      await notif.ativarPush({ mensagem: true, ia: true, transferencia: true });
+      ui.toast('Notificações ativadas neste aparelho. Para escolher os tipos, veja Configurações → Notificações.', 'success');
+      box.className = 'hidden';
+    } catch (e) { ui.toast(e.message, 'error'); }
+  });
 }

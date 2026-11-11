@@ -524,7 +524,11 @@ router.post('/push/inscrever', (req, res) => {
     subscription: req.body.subscription, tipos: req.body.tipos, aparelho: auth.nomeAparelhoPublico(req),
     renovar: req.body.renovar === true, anterior: typeof req.body.anterior === 'string' ? req.body.anterior : null
   });
-  if (r.erro) return fail(res, 422, 'invalid', r.erro);
+  if (r.erro) {
+    console.warn(`[notificações] inscrição recusada: ${r.erro}`);
+    return fail(res, 422, 'invalid', r.erro);
+  }
+  if (req.body.renovar !== true) console.log('[notificações] aparelho inscrito para receber push');
   res.json({ ok: true, aparelhos: notificacoes.minhas(req.user.id) });
 });
 router.post('/push/cancelar', (req, res) => {
