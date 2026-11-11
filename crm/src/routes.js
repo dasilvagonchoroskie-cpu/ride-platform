@@ -519,7 +519,10 @@ router.post('/auth/2fa/email/desativar', (req, res) => {
 router.get('/notificacoes', (req, res) => res.json(notificacoes.feed(req.query.desde)));
 router.get('/push/config', (req, res) => res.json({ chave_publica: notificacoes.chavePublica(), aparelhos: notificacoes.minhas(req.user.id) }));
 router.post('/push/inscrever', (req, res) => {
-  const r = notificacoes.inscrever(req.user.id, { subscription: req.body.subscription, tipos: req.body.tipos, aparelho: auth.nomeAparelhoPublico(req) });
+  const r = notificacoes.inscrever(req.user.id, {
+    subscription: req.body.subscription, tipos: req.body.tipos, aparelho: auth.nomeAparelhoPublico(req),
+    renovar: req.body.renovar === true, anterior: typeof req.body.anterior === 'string' ? req.body.anterior : null
+  });
   if (r.erro) return fail(res, 422, 'invalid', r.erro);
   res.json({ ok: true, aparelhos: notificacoes.minhas(req.user.id) });
 });

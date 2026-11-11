@@ -140,12 +140,19 @@ function createNotificacoes({ db, dataDir, waStore, publicUrl, webpush, log = co
   waStore.ouvir((evt) => { processar(evt).catch((err) => log.error('[notificações]', err.message)); });
 
   /* ------------------------------ inscrições ------------------------------ */
-  function inscrever(userId, { subscription, tipos, aparelho } = {}) {
+  function inscrever(userId, { subscription, tipos, aparelho, renovar, anterior } = {}) {
     const s = subscription && typeof subscription === 'object' ? subscription : {};
     const keys = s.keys && typeof s.keys === 'object' ? s.keys : {};
     if (!endpointValido(s.endpoint)) return { erro: 'Endereço de notificação não aceito.' };
     if (!b64url(keys.p256dh, 80, 100) || !b64url(keys.auth, 16, 30)) return { erro: 'Chaves de notificação inválidas.' };
-    const t = tipos && typeof tipos === 'object' ? tipos : {};
+    // Renovação (ao abrir o app ou troca feita pelo serviço de push): mantém as escolhas já salvas do aparelho.
+    let t = tipos && typeof tipos === 'object' ? tipos : {};
+    if (renovar === true) {
+      const velho = db.prepare('SELECT avisar_mensagem, avisar_ia, avisar_transferencia FROM push_inscricoes WHERE endpoint = ? OR (user_id = ? AND endpoint = ?) ORDER BY endpoint = ? DESC LIMIT 1')
+        .get(s.endpoint, userId, String(anterior || ''), s.endpoint);
+      if (velho) t = { mensagem: !!velho.avisar_mensagem, ia: !!velho.avisar_ia, transferencia: !!velho.avisar_transferencia };
+      if (anterior && anterior !== s.endpoint) db.prepare('DELETE FROM push_inscricoes WHERE user_id = ? AND endpoint = ?').run(userId, String(anterior));
+    }
     const flag = (k) => (t[k] === false ? 0 : 1);
     const nome = String(aparelho || '').slice(0, 80);
     db.prepare(`INSERT INTO push_inscricoes (user_id, endpoint, p256dh, auth, aparelho, avisar_mensagem, avisar_ia, avisar_transferencia, criado_em)

@@ -591,11 +591,18 @@ function setupNotificacoes(view) {
       return !!aparelho[{ mensagem: 'avisar_mensagem', ia: 'avisar_ia', transferencia: 'avisar_transferencia' }[t]];
     };
     let push;
-    if (!notif.suportaPush()) {
-      push = `<p class="muted small">Este app (ou navegador) não recebe notificações com a tela fechada. Para receber no celular mesmo com o app fechado,
-        abra <b>${ui.esc(location.origin)}</b> no <b>Chrome</b>, entre e ative aqui. Com o CRM aberto, os sons abaixo funcionam em qualquer lugar.</p>`;
+    const amb = notif.ambiente();
+    if (!notif.suportaPush() && amb === 'app_antigo') {
+      push = `<div class="notice"><b>Este é o aplicativo antigo do CRM</b> (versão 1.x, com navegador embutido). Ele não consegue receber
+        notificações com o app fechado. Instale o aplicativo novo (versão 2.0 ou mais nova): <b>desinstale este primeiro</b>
+        (a assinatura mudou e o Android não deixa instalar por cima), depois instale o novo e entre de novo. Seus dados ficam no servidor.</div>`;
+    } else if (!notif.suportaPush()) {
+      push = `<p class="muted small">Este navegador não recebe notificações com a tela fechada. Use o aplicativo do CRM (versão 2.0 ou mais nova)
+        ou abra <b>${ui.esc(location.origin)}</b> no <b>Chrome</b>. Com o CRM aberto, os sons abaixo funcionam em qualquer lugar.</p>`;
     } else if (Notification.permission === 'denied') {
-      push = '<p class="muted small">As notificações estão bloqueadas neste navegador. Libere em Configurações do navegador → Configurações do site → Notificações e recarregue.</p>';
+      push = amb === 'app'
+        ? '<p class="muted small">As notificações do aplicativo estão bloqueadas. No Android: Configurações → Apps → CRM Fortaleza Move → Notificações → ligar. Depois feche e abra o app.</p>'
+        : '<p class="muted small">As notificações estão bloqueadas neste navegador. Libere em Configurações do navegador → Configurações do site → Notificações e recarregue.</p>';
     } else {
       push = `<p style="margin:0 0 8px">${aparelho ? ui.badge('Ativadas neste aparelho', 'success') : ui.badge('Desativadas neste aparelho', 'warn')}</p>
         <div class="stack" style="gap:6px">${TIPOS.map(([t, d]) => `<label class="check"><input type="checkbox" class="np-tipo" data-tipo="${t}" ${marcado(t) ? 'checked' : ''}><span>${d.icone} ${ui.esc(d.nome)}</span></label>`).join('')}</div>
@@ -604,8 +611,11 @@ function setupNotificacoes(view) {
           ${aparelho ? '<button class="btn btn-ghost" id="np-teste" type="button">Enviar teste</button><button class="btn btn-ghost" id="np-off" type="button">Desativar</button>' : ''}
         </div>`;
     }
+    const diag = `<p class="muted small" style="margin:8px 0 0">Diagnóstico: ${{ app: 'aplicativo novo (Chrome)', app_antigo: 'aplicativo antigo', navegador: 'navegador' }[amb]}
+      · push ${notif.suportaPush() ? 'disponível' : 'indisponível'} · permissão ${'Notification' in window ? ui.esc(Notification.permission) : '—'}
+      · ${sub ? 'inscrito' : 'sem inscrição'} neste aparelho</p>`;
     corpo.innerHTML = `${erroCfg ? `<div class="form-errors">${ui.esc(erroCfg)}</div>` : ''}
-      <h4 style="margin:0 0 6px">Com o app fechado</h4>${push}
+      <h4 style="margin:0 0 6px">Com o app fechado</h4>${push}${diag}
       <h4 style="margin:16px 0 6px">Sons com o CRM aberto</h4>
       <div class="stack" style="gap:6px">${TIPOS.map(([t, d]) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <label class="check" style="margin:0"><input type="checkbox" class="ns-tipo" data-tipo="${t}" ${notif.somLigado(t) ? 'checked' : ''}><span>${d.icone} ${ui.esc(d.nome)}</span></label>

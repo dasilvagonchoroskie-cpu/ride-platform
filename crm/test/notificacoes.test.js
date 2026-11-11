@@ -103,3 +103,20 @@ test('feed sem "desde" devolve só o último id (não toca avisos antigos ao abr
   assert.ok(f.ultimo >= 2);
   assert.equal(notif.feed(f.ultimo).itens.length, 0);
 });
+
+test('renovação da inscrição (ao abrir o app ou troca pelo serviço de push) mantém as escolhas do aparelho', () => {
+  const { notif, uid, db } = montar();
+  notif.inscrever(uid, { subscription: SUB, tipos: { ia: false, mensagem: true, transferencia: true } });
+  // Mesmo endereço, sem tipos: não volta a ligar a IA que estava desligada.
+  assert.equal(notif.inscrever(uid, { subscription: SUB, renovar: true }).ok, true);
+  let linha = db.prepare('SELECT * FROM push_inscricoes WHERE endpoint = ?').get(SUB.endpoint);
+  assert.equal(linha.avisar_ia, 0);
+  assert.equal(linha.avisar_transferencia, 1);
+  // Endereço novo no lugar do antigo: herda as escolhas e o antigo sai.
+  const nova = { ...SUB, endpoint: 'https://fcm.googleapis.com/fcm/send/novo999' };
+  assert.equal(notif.inscrever(uid, { subscription: nova, renovar: true, anterior: SUB.endpoint }).ok, true);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM push_inscricoes WHERE endpoint = ?').get(SUB.endpoint).c, 0);
+  linha = db.prepare('SELECT * FROM push_inscricoes WHERE endpoint = ?').get(nova.endpoint);
+  assert.equal(linha.avisar_ia, 0);
+  assert.equal(linha.user_id, uid);
+});

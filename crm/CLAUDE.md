@@ -69,7 +69,15 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - App Android virou Trusted Web Activity (repo CRM-Fortaleza-move-, `app-twa/`, androidbrowserhelper): abre o CRM pelo
   Chrome, então o push chega com o app fechado; `NotificacoesService` escolhe o canal pelo emoji do título (alarme,
   "plim", silencioso). O servidor publica `/.well-known/assetlinks.json` (`TWA_PACOTE`, `TWA_SHA256`; padrão = assinatura
-  de `app/assinatura/debug.keystore`). Mesmo pacote e assinatura do app Flutter antigo: instala por cima.
+  de `app/assinatura/debug.keystore`). Mesmo pacote do app Flutter antigo, mas **assinatura diferente**: os APKs 1.0.x
+  foram assinados por uma chave gerada a cada montagem no GitHub (1.0.1, 1.0.3 e 2.0.105 têm certificados diferentes),
+  então o Android NÃO instala o 2.0 por cima do 1.0.x: desinstalar o antigo uma vez. Do 2.0.105 em diante a chave é fixa
+  (`app/assinatura/debug.keystore`, SHA256 3B:61:…:1C:99) e as próximas versões instalam por cima.
+- Etapa 1 da ordem de 11/11 (diagnóstico): o dono continuava no app 1.0.3 (WebView: sem PushManager, só a permissão
+  INTERNET, tela mandando abrir no Chrome). Correções: `ambiente()` em `notificacoes.js` (app novo pelo `document.referrer`
+  android-app://, app antigo pelo `; wv)`), aviso do app antigo e da permissão do Android no cartão, linha "Diagnóstico";
+  `sincronizarPush()` ao abrir o CRM e `pushsubscriptionchange` no sw renovam a inscrição (`renovar:true` mantém as
+  escolhas; `anterior` troca o endereço). Teste em aparelho físico: só o dono pode fazer (roteiro no arquivo-mestre).
 
 ## Mudança de conta (09/11/2026)
 - O dono perdeu o acesso às contas da Fortaleza Move (vendeu o celular). O CRM foi montado de novo, do zero, nas contas

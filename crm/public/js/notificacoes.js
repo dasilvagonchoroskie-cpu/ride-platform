@@ -101,6 +101,19 @@ export function pararAvisos() { if (timer) clearInterval(timer); timer = null; u
 /* ------------------------------- push ------------------------------------ */
 export const suportaPush = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
+const PACOTE_APP = 'br.com.fortalezamove.crm_fortaleza_move';
+const ler = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const gravar = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* armazenamento indisponível */ } };
+// O app novo (TWA) abre o CRM pelo Chrome e avisa a origem na 1ª página; guardamos para os avisos da tela.
+try { if (document.referrer.startsWith(`android-app://${PACOTE_APP}`)) gravar('fm_twa', '1'); } catch (e) { /* */ }
+
+/** Onde o CRM está rodando: 'app' (app novo, pelo Chrome), 'app_antigo' (app antigo com navegador embutido), 'navegador'. */
+export function ambiente() {
+  if (/; wv\)/.test(navigator.userAgent) || (/Android/.test(navigator.userAgent) && /Version\/[\d.]+ Chrome/.test(navigator.userAgent) && !suportaPush())) return 'app_antigo';
+  if (ler('fm_twa') === '1') return 'app';
+  return 'navegador';
+}
+
 function chaveParaBytes(b64) {
   const pad = '='.repeat((4 - (b64.length % 4)) % 4);
   const bin = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
@@ -121,11 +134,31 @@ export async function ativarPush(tipos) {
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveParaBytes(chave) });
-  return api.post('/push/inscrever', { subscription: sub.toJSON(), tipos });
+  const r = await api.post('/push/inscrever', { subscription: sub.toJSON(), tipos });
+  gravar('fm_push_ativo', '1');
+  return r;
+}
+
+/**
+ * Ao abrir o CRM: mantém a inscrição deste aparelho em dia (o serviço de push pode trocar ou vencer a inscrição,
+ * e outra pessoa pode ter entrado no mesmo aparelho). Não pede permissão: só age se ela já foi dada.
+ */
+export async function sincronizarPush() {
+  if (!suportaPush() || Notification.permission !== 'granted' || ler('fm_push_ativo') !== '1') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const { chave_publica: chave } = await api.get('/push/config');
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveParaBytes(chave) });
+    }
+    await api.post('/push/inscrever', { subscription: sub.toJSON(), renovar: true });
+  } catch (err) { /* sem rede ou sem sessão: tenta na próxima abertura */ }
 }
 
 export async function desativarPush() {
   const sub = await inscricaoAtual();
+  gravar('fm_push_ativo', null);
   if (!sub) return;
   await api.post('/push/cancelar', { endpoint: sub.endpoint }).catch(() => {});
   await sub.unsubscribe().catch(() => {});

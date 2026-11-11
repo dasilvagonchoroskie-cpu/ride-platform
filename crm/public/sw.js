@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v15';
+const CACHE = 'fm-crm-v16';
 const ASSETS = [
   '/',
   '/index.html',
@@ -71,6 +71,21 @@ self.addEventListener('push', (event) => {
     vibrate: urgente ? [300, 150, 300, 150, 600] : discreto ? [] : [120, 80, 120],
     data: { url: d.url || '/#/conversas' }
   }));
+});
+
+// O serviço de push trocou a inscrição: refaz e avisa o CRM (mantém as escolhas do aparelho).
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    const antiga = event.oldSubscription;
+    const chave = antiga && antiga.options && antiga.options.applicationServerKey;
+    let nova = event.newSubscription;
+    if (!nova && chave) nova = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chave });
+    if (!nova) return;
+    await fetch('/api/push/inscrever', {
+      method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ subscription: nova.toJSON(), renovar: true, anterior: antiga ? antiga.endpoint : null })
+    }).catch(() => null);
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {

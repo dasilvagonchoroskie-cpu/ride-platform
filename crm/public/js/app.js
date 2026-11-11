@@ -6,7 +6,7 @@ import { renderFinance } from './views/finance.js';
 import { renderReports } from './views/reports.js';
 import { renderSettings } from './views/settings.js';
 import { renderConversas } from './views/whatsapp.js';
-import { iniciarAvisos, pararAvisos } from './notificacoes.js';
+import { iniciarAvisos, pararAvisos, sincronizarPush } from './notificacoes.js';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: 'dashboard', title: 'Dashboard', sub: 'Visão geral da operação e do relacionamento' },
@@ -493,6 +493,7 @@ async function enterApp() {
   window.addEventListener('hashchange', route);
   await route();
   iniciarAvisos();
+  sincronizarPush();
   // Lembrete só quando dá para ativar a verificação por e-mail (envio configurado) e ela ainda está desligada.
   if (state.user && state.user.role === 'admin') {
     api.get('/auth/2fa').then((st) => {

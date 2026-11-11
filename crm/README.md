@@ -192,6 +192,13 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   `contratado_em`, registra no histórico e na auditoria. `GET /api/motoristas/:id` devolve também `ficha`
   (conversa, documentos recebidos, último resumo da IA).
 
+## Notificações no Android
+- O app 2.0+ é uma Trusted Web Activity: abre o CRM pelo Chrome do celular e as notificações chegam como notificações do
+  app (canais com som próprio). A permissão de notificação é do app no Android e é pedida ao tocar em "Ativar notificações".
+- O app 1.x (navegador embutido) não recebe push. Para trocar: **desinstalar o 1.x** e instalar o 2.x (assinaturas diferentes).
+- A inscrição é renovada ao abrir o CRM e quando o serviço de push a troca (`POST /api/push/inscrever` com `renovar: true`
+  mantém os tipos escolhidos). Configurações → Notificações mostra uma linha de diagnóstico (ambiente, permissão, inscrição).
+
 ## Central de Atendimento Inteligente
 Com a IA no modo automático e "responde sozinha" ligado, o WhatsApp vira uma central: saudação e menu no primeiro contato
 (1 Cadastro de motorista e veículo, 2 Passageiro, 3 Encomendas, 4 Clube de Vantagens, 5 Outros), atendimento por assunto
