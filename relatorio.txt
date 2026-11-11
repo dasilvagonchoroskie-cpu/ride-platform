@@ -1,0 +1,6 @@
+
+::group::✅ Passing tests
+✅ Fotos das telas da Central
+::endgroup::
+
+🎉 1 test passed.
