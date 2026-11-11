@@ -88,7 +88,7 @@ class ResponsiveShell extends StatelessWidget {
                                 ),
                                 child: Text(
                                   '${destinations[i].badge}',
-                                  style: AppText.caption.copyWith(color: AppColors.onPrimary, fontWeight: FontWeight.w700),
+                                  style: AppText.caption.copyWith(color: AppColors.onStrong, fontWeight: FontWeight.w700),
                                 ),
                               ),
                         selected: i == destinationIndex,
@@ -186,7 +186,7 @@ class _DrawerHeader extends StatelessWidget {
               children: [
                 Text(
                   'Fortaleza',
-                  style: AppText.title.copyWith(color: AppColors.onPrimary, fontSize: 22, height: 1.1),
+                  style: AppText.title.copyWith(color: AppColors.text, fontSize: 22, height: 1.1),
                 ),
                 const SizedBox(height: 2),
                 Text(

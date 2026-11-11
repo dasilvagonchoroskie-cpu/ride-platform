@@ -49,9 +49,9 @@ void avisar(BuildContext context, String texto, {bool erro = false}) {
     ..showSnackBar(SnackBar(
       content: Row(
         children: [
-          Icon(erro ? Icons.error_outline : Icons.check_circle_outline, color: AppColors.onPrimary, size: 20),
+          Icon(erro ? Icons.error_outline : Icons.check_circle_outline, color: AppColors.onStrong, size: 20),
           const SizedBox(width: Spacing.sm),
-          Expanded(child: Text(texto, style: AppText.body.copyWith(color: AppColors.onPrimary))),
+          Expanded(child: Text(texto, style: AppText.body.copyWith(color: AppColors.onStrong))),
         ],
       ),
       backgroundColor: erro ? AppColors.danger : AppColors.text,
