@@ -1,5 +1,2 @@
 Analyzing mobile_passenger...                                   
-
-  error • The method 'startsWith' can't be unconditionally invoked because the receiver can be 'null'. Try making the call conditional (using '?.') or adding a null check to the target ('!') • lib/data/models/models.dart:569:53 • unchecked_use_of_nullable_value
-
-1 issue found. (ran in 8.8s)
+No issues found! (ran in 9.1s)
