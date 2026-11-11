@@ -64,6 +64,9 @@ const perfilSchema = z
     // telefone ATUAL em /auth/otp/request, finalidade PHONE_VERIFICATION).
     codigo: z.string().trim().regex(/^\d{6}$/, 'O codigo tem 6 numeros.').optional(),
     endereco: z.string().trim().min(5, 'Endereco muito curto.').max(200).optional(),
+    // R2: trocar o e-mail pede o codigo que chegou no e-mail NOVO
+    // (/auth/otp/request com o e-mail novo, finalidade EMAIL_VERIFICATION).
+    codigoEmail: z.string().trim().regex(/^\d{6}$/, 'O codigo tem 6 numeros.').optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: 'Nada para atualizar.' });
 
@@ -209,7 +212,17 @@ export class AuthController {
   perfil(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(perfilSchema))
-    body: { name?: string; email?: string; gender?: Genero; city?: string; cpf?: string; phone?: string; codigo?: string; endereco?: string },
+    body: {
+      name?: string;
+      email?: string;
+      gender?: Genero;
+      city?: string;
+      cpf?: string;
+      phone?: string;
+      codigo?: string;
+      endereco?: string;
+      codigoEmail?: string;
+    },
   ) {
     return this.auth.atualizarPerfil(user.id, body);
   }
@@ -363,7 +376,8 @@ export class AuthController {
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(changePasswordSchema)) body: { currentPassword: string; newPassword: string },
   ): Promise<void> {
-    await this.auth.changePassword(user.id, body.currentPassword, body.newPassword);
+    // R1: o aparelho que trocou a senha e o unico que continua conectado.
+    await this.auth.changePassword(user.id, body.currentPassword, body.newPassword, user.deviceId ?? null);
   }
 
   @ApiBearerAuth()

@@ -4,6 +4,7 @@ import { ERROR_CODES, UserRole } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { AppConfigService } from '../../config/app-config.service';
 import { BusinessException } from '../../common/errors/business.exception';
+import { PracasService } from '../pracas/pracas.service';
 
 /**
  * Verificacao em duas etapas da Central (etapa 7, Evandro 29/10/2026:
@@ -142,6 +143,7 @@ export class DoisFatoresService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: AppConfigService,
+    private readonly pracas: PracasService,
   ) {}
 
   private get mestre(): string {
@@ -195,6 +197,9 @@ export class DoisFatoresService {
       const t = base32(randomBytes(5)).slice(0, 8);
       return `${t.slice(0, 4)}-${t.slice(4)}`;
     });
+    // R5: ligou de novo depois do procedimento excepcional: a Central libera.
+    delete meta.refazerDoisFatores;
+    this.pracas?.esquecerEscopo(userId);
     await this.gravar(userId, meta, {
       ativo: true,
       segredo: cifrar(segredo, this.mestre),
@@ -244,20 +249,31 @@ export class DoisFatoresService {
   // Desafio do login (5 minutos, assinado; nao guarda nada)
   // ------------------------------------------------------------------
 
-  criarDesafio(userId: string, agora = Date.now()): string {
-    const corpo = Buffer.from(JSON.stringify({ u: userId, e: agora + 5 * 60_000 })).toString('base64url');
+  /**
+   * [senhaNova]: resumo (bcrypt) da senha nova do "Esqueci a senha" da
+   * Central com as duas etapas ligadas. R5 (11/11/2026): a senha so muda
+   * DEPOIS do codigo do autenticador; recuperar pelo e-mail nunca pula a
+   * segunda etapa. [aparelho]: o aparelho que fica conectado.
+   */
+  criarDesafio(userId: string, agora = Date.now(), extra: { senhaNova?: string; aparelho?: string | null } = {}): string {
+    const dados = { u: userId, e: agora + 5 * 60_000, ...(extra.senhaNova ? { s: extra.senhaNova } : {}), ...(extra.aparelho ? { a: extra.aparelho } : {}) };
+    const corpo = Buffer.from(JSON.stringify(dados)).toString('base64url');
     const assinatura = createHmac('sha256', chaveDe(this.mestre)).update(corpo).digest('base64url');
     return `${corpo}.${assinatura}`;
   }
 
   lerDesafio(desafio: string, agora = Date.now()): string {
+    return this.lerDadosDoDesafio(desafio, agora).userId;
+  }
+
+  lerDadosDoDesafio(desafio: string, agora = Date.now()): { userId: string; senhaNova: string | null; aparelho: string | null } {
     const [corpo, assinatura] = desafio.split('.');
     const certa = corpo ? createHmac('sha256', chaveDe(this.mestre)).update(corpo).digest('base64url') : '';
     if (!corpo || !assinatura || assinatura.length !== certa.length || !timingSafeEqual(Buffer.from(assinatura), Buffer.from(certa))) {
       throw BusinessException.unauthorized('Login expirado. Entre de novo.', ERROR_CODES.INVALID_CREDENTIALS);
     }
-    const d = JSON.parse(Buffer.from(corpo, 'base64url').toString('utf8')) as { u: string; e: number };
+    const d = JSON.parse(Buffer.from(corpo, 'base64url').toString('utf8')) as { u: string; e: number; s?: string; a?: string };
     if (!d.u || agora > d.e) throw BusinessException.unauthorized('Passou o tempo. Entre de novo.', ERROR_CODES.INVALID_CREDENTIALS);
-    return d.u;
+    return { userId: d.u, senhaNova: d.s ?? null, aparelho: d.a ?? null };
   }
 }
