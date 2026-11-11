@@ -7,129 +7,14 @@
 00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
 00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:02 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:02 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-
-Warning: A call to tap() with finder "Found 1 widget with text "O rosto é o mesmo da foto do documento": [
-  Text("O rosto é o mesmo da foto do documento", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(208.0, 538.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderParagraph#3e0eb relayoutBoundary=up30
-The hit test result at that offset is: HitTestResult(RenderPointerListener#c04af@Offset(144.0, 417.0), RenderSemanticsGestureHandler#6366b@Offset(144.0, 417.0), RenderPointerListener#5545c@Offset(144.0, 417.0), _RenderScrollSemantics#b3e8c@Offset(144.0, 417.0), RenderClipRect#e8b49@Offset(144.0, 417.0), RenderConstrainedBox#e4f81@Offset(144.0, 417.0), RenderSemanticsAnnotations#006c8@Offset(144.0, 417.0), RenderPadding#d44d3@Offset(168.0, 433.0), RenderFlex#7c7b5@Offset(168.0, 514.0), RenderIntrinsicWidth#647a6@Offset(168.0, 514.0), RenderSemanticsAnnotations#953d3@Offset(168.0, 514.0), _RenderInkFeatures#edb5d@Offset(168.0, 514.0), RenderCustomPaint#800d0@Offset(168.0, 514.0), RenderPhysicalShape#c6b1c@Offset(168.0, 514.0), RenderConstrainedBox#0633c@Offset(168.0, 514.0), RenderPositionedBox#a0769@Offset(168.0, 514.0), RenderPadding#1e845@Offset(208.0, 538.0), RenderSemanticsAnnotations#b6890@Offset(208.0, 538.0), RenderPadding#5ffa2@Offset(208.0, 538.0), RenderSemanticsAnnotations#a4bb5@Offset(208.0, 538.0), RenderPadding#a32e4@Offset(208.0, 538.0), RenderSemanticsAnnotations#57dcb@Offset(208.0, 538.0), RenderRepaintBoundary#2000e@Offset(208.0, 538.0), RenderIgnorePointer#1e2bc@Offset(208.0, 538.0), RenderAnimatedOpacity#2f3ea@Offset(208.0, 538.0), RenderRepaintBoundary#98b3e@Offset(208.0, 538.0), RenderSemanticsAnnotations#c6bea@Offset(208.0, 538.0), RenderOffstage#5697b@Offset(208.0, 538.0), RenderSemanticsAnnotations#a64ff@Offset(208.0, 538.0), _RenderTheater#c69e8@Offset(208.0, 538.0), RenderAbsorbPointer#be27b@Offset(208.0, 538.0), RenderPointerListener#76c41@Offset(208.0, 538.0), RenderSemanticsAnnotations#99569@Offset(208.0, 538.0), RenderCustomPaint#bc28c@Offset(208.0, 538.0), RenderSemanticsAnnotations#a6dac@Offset(208.0, 538.0), RenderSemanticsAnnotations#4f63b@Offset(208.0, 538.0), RenderSemanticsAnnotations#dcf5c@Offset(208.0, 538.0), RenderTapRegionSurface#bad18@Offset(208.0, 538.0), RenderSemanticsAnnotations#b1009@Offset(208.0, 538.0), RenderSemanticsAnnotations#7b1bd@Offset(208.0, 538.0), HitTestEntry<HitTestTarget>#b6c96(_ReusableRenderView#2b74a), HitTestEntry<HitTestTarget>#2ec89(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:88:20)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-
-Warning: A call to tap() with finder "Found 1 widget with text "O nome é o mesmo do cadastro": [
-  Text("O nome é o mesmo do cadastro", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(208.0, 614.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderParagraph#e4695 relayoutBoundary=up30
-The hit test result at that offset is: HitTestResult(_RenderInkFeatures#edb5d@Offset(168.0, 590.0), RenderCustomPaint#800d0@Offset(168.0, 590.0), RenderPhysicalShape#c6b1c@Offset(168.0, 590.0), RenderConstrainedBox#0633c@Offset(168.0, 590.0), RenderPositionedBox#a0769@Offset(168.0, 590.0), RenderPadding#1e845@Offset(208.0, 614.0), RenderSemanticsAnnotations#b6890@Offset(208.0, 614.0), RenderPadding#5ffa2@Offset(208.0, 614.0), RenderSemanticsAnnotations#a4bb5@Offset(208.0, 614.0), RenderPadding#a32e4@Offset(208.0, 614.0), RenderSemanticsAnnotations#57dcb@Offset(208.0, 614.0), RenderRepaintBoundary#2000e@Offset(208.0, 614.0), RenderIgnorePointer#1e2bc@Offset(208.0, 614.0), RenderAnimatedOpacity#2f3ea@Offset(208.0, 614.0), RenderRepaintBoundary#98b3e@Offset(208.0, 614.0), RenderSemanticsAnnotations#c6bea@Offset(208.0, 614.0), RenderOffstage#5697b@Offset(208.0, 614.0), RenderSemanticsAnnotations#a64ff@Offset(208.0, 614.0), _RenderTheater#c69e8@Offset(208.0, 614.0), RenderAbsorbPointer#be27b@Offset(208.0, 614.0), RenderPointerListener#76c41@Offset(208.0, 614.0), RenderSemanticsAnnotations#99569@Offset(208.0, 614.0), RenderCustomPaint#bc28c@Offset(208.0, 614.0), RenderSemanticsAnnotations#a6dac@Offset(208.0, 614.0), RenderSemanticsAnnotations#4f63b@Offset(208.0, 614.0), RenderSemanticsAnnotations#dcf5c@Offset(208.0, 614.0), RenderTapRegionSurface#bad18@Offset(208.0, 614.0), RenderSemanticsAnnotations#b1009@Offset(208.0, 614.0), RenderSemanticsAnnotations#7b1bd@Offset(208.0, 614.0), HitTestEntry<HitTestTarget>#c37a9(_ReusableRenderView#2b74a), HitTestEntry<HitTestTarget>#3ed17(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:88:20)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-
-Warning: A call to tap() with finder "Found 1 widget with text "O CPF é o mesmo do cadastro": [
-  Text("O CPF é o mesmo do cadastro", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(208.0, 690.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderParagraph#ade92 relayoutBoundary=up30
-The hit test result at that offset is: HitTestResult(RenderPointerListener#c7f1b@Offset(144.0, 5.0), RenderSemanticsAnnotations#70622@Offset(144.0, 5.0), RenderMouseRegion#aba2e@Offset(144.0, 5.0), RenderSemanticsAnnotations#f8940@Offset(144.0, 5.0), _RenderInkFeatures#d75b6@Offset(144.0, 5.0), RenderCustomPaint#f52a0@Offset(144.0, 5.0), RenderPhysicalShape#8bdb6@Offset(144.0, 5.0), RenderConstrainedBox#4d434@Offset(144.0, 5.0), _RenderInputPadding#2f9ac@Offset(144.0, 6.0), RenderSemanticsAnnotations#d09a0@Offset(144.0, 6.0), _RenderOverflowBar#ad057@Offset(144.0, 54.0), RenderPadding#92da7@Offset(168.0, 54.0), RenderFlex#7c7b5@Offset(168.0, 666.0), RenderIntrinsicWidth#647a6@Offset(168.0, 666.0), RenderSemanticsAnnotations#953d3@Offset(168.0, 666.0), _RenderInkFeatures#edb5d@Offset(168.0, 666.0), RenderCustomPaint#800d0@Offset(168.0, 666.0), RenderPhysicalShape#c6b1c@Offset(168.0, 666.0), RenderConstrainedBox#0633c@Offset(168.0, 666.0), RenderPositionedBox#a0769@Offset(168.0, 666.0), RenderPadding#1e845@Offset(208.0, 690.0), RenderSemanticsAnnotations#b6890@Offset(208.0, 690.0), RenderPadding#5ffa2@Offset(208.0, 690.0), RenderSemanticsAnnotations#a4bb5@Offset(208.0, 690.0), RenderPadding#a32e4@Offset(208.0, 690.0), RenderSemanticsAnnotations#57dcb@Offset(208.0, 690.0), RenderRepaintBoundary#2000e@Offset(208.0, 690.0), RenderIgnorePointer#1e2bc@Offset(208.0, 690.0), RenderAnimatedOpacity#2f3ea@Offset(208.0, 690.0), RenderRepaintBoundary#98b3e@Offset(208.0, 690.0), RenderSemanticsAnnotations#c6bea@Offset(208.0, 690.0), RenderOffstage#5697b@Offset(208.0, 690.0), RenderSemanticsAnnotations#a64ff@Offset(208.0, 690.0), _RenderTheater#c69e8@Offset(208.0, 690.0), RenderAbsorbPointer#be27b@Offset(208.0, 690.0), RenderPointerListener#76c41@Offset(208.0, 690.0), RenderSemanticsAnnotations#99569@Offset(208.0, 690.0), RenderCustomPaint#bc28c@Offset(208.0, 690.0), RenderSemanticsAnnotations#a6dac@Offset(208.0, 690.0), RenderSemanticsAnnotations#4f63b@Offset(208.0, 690.0), RenderSemanticsAnnotations#dcf5c@Offset(208.0, 690.0), RenderTapRegionSurface#bad18@Offset(208.0, 690.0), RenderSemanticsAnnotations#b1009@Offset(208.0, 690.0), RenderSemanticsAnnotations#7b1bd@Offset(208.0, 690.0), HitTestEntry<HitTestTarget>#d80c8(_ReusableRenderView#2b74a), HitTestEntry<HitTestTarget>#1cde5(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:88:20)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-
-Warning: A call to tap() with finder "Found 1 widget with text "O número da CNH é o mesmo do cadastro": [
-  Text("O número da CNH é o mesmo do cadastro", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(208.0, 766.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderParagraph#b862a relayoutBoundary=up30
-The hit test result at that offset is: HitTestResult(_RenderColoredBox#513fd@Offset(208.0, 766.0), RenderConstrainedBox#0d3f6@Offset(208.0, 766.0), RenderMouseRegion#ab7fc@Offset(208.0, 766.0), RenderSemanticsAnnotations#08d28@Offset(208.0, 766.0), RenderPointerListener#93b3f@Offset(208.0, 766.0), RenderSemanticsGestureHandler#c7707@Offset(208.0, 766.0), RenderExcludeSemantics#b4ec0@Offset(208.0, 766.0), RenderBlockSemantics#428ef@Offset(208.0, 766.0), RenderIgnorePointer#b588a@Offset(208.0, 766.0), RenderSemanticsAnnotations#b1cc2@Offset(208.0, 766.0), _RenderTheater#c69e8@Offset(208.0, 766.0), RenderAbsorbPointer#be27b@Offset(208.0, 766.0), RenderPointerListener#76c41@Offset(208.0, 766.0), RenderSemanticsAnnotations#99569@Offset(208.0, 766.0), RenderCustomPaint#bc28c@Offset(208.0, 766.0), RenderSemanticsAnnotations#a6dac@Offset(208.0, 766.0), RenderSemanticsAnnotations#4f63b@Offset(208.0, 766.0), RenderSemanticsAnnotations#dcf5c@Offset(208.0, 766.0), RenderTapRegionSurface#bad18@Offset(208.0, 766.0), RenderSemanticsAnnotations#b1009@Offset(208.0, 766.0), RenderSemanticsAnnotations#7b1bd@Offset(208.0, 766.0), HitTestEntry<HitTestTarget>#913a5(_ReusableRenderView#2b74a), HitTestEntry<HitTestTarget>#0033e(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:88:20)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-00:03 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:03 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:03 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:03 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:03 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 50 pixels on the right.
-
-The relevant error-causing widget was:
-  DropdownButtonFormField<String>-[<'recuperar-documento'>]
-  DropdownButtonFormField:file:///home/runner/work/ride-platform/ride-platform/apps/central_app/lib/painel/desconectar.dart:197:15
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#1d0e9 OVERFLOWING:
-  creator: Row ← Padding ← SizedBox ← DefaultTextStyle ← _Decorator ← Semantics ← InputDecorator ←
-    Listener ← _GestureSemantics ← RawGestureDetector ← GestureDetector ← MouseRegion ← ⋯
-  parentData: offset=Offset(0.0, 0.0) (can use size)
-  constraints: BoxConstraints(w=176.0, h=24.0)
-  size: Size(176.0, 24.0)
-  direction: horizontal
-  mainAxisAlignment: spaceBetween
-  mainAxisSize: min
-  crossAxisAlignment: center
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
 ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
 The following TestFailure was thrown running a test:
 Expected: an object with length of <1>
@@ -137,7 +22,7 @@ Expected: an object with length of <1>
    Which: has length of <0>
 
 When the exception was thrown, this was the stack:
-#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:93:5)
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:100:5)
 <asynchronous suspension>
 #5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
 <asynchronous suspension>
@@ -147,74 +32,17 @@ When the exception was thrown, this was the stack:
 (elided one frame from package:stack_trace)
 
 This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart line 93
+  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart line 100
 The test description was:
   motorista: tudo conferido libera e manda so as conferencias (sem documento)
 ════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following message was thrown:
-Multiple exceptions (2) were detected during the running of the current test, and at least one was
-unexpected.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:03 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento) [E]
+00:03 +15 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:03 +15 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento) [E]
   Test failed. See exception logs above.
   The test description was: motorista: tudo conferido libera e manda so as conferencias (sem documento)
   
-00:03 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-
-Warning: A call to tap() with finder "Found 1 widget with text "O rosto é o mesmo da foto do documento": [
-  Text("O rosto é o mesmo da foto do documento", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(208.0, 538.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderParagraph#c0ce7 relayoutBoundary=up30
-The hit test result at that offset is: HitTestResult(RenderPointerListener#e8789@Offset(144.0, 417.0), RenderSemanticsGestureHandler#d9bdb@Offset(144.0, 417.0), RenderPointerListener#92077@Offset(144.0, 417.0), _RenderScrollSemantics#c8c7a@Offset(144.0, 417.0), RenderClipRect#b8e59@Offset(144.0, 417.0), RenderConstrainedBox#fee4b@Offset(144.0, 417.0), RenderSemanticsAnnotations#b8c87@Offset(144.0, 417.0), RenderPadding#d2d71@Offset(168.0, 433.0), RenderFlex#54c35@Offset(168.0, 514.0), RenderIntrinsicWidth#0270c@Offset(168.0, 514.0), RenderSemanticsAnnotations#25389@Offset(168.0, 514.0), _RenderInkFeatures#4e71d@Offset(168.0, 514.0), RenderCustomPaint#4ee9b@Offset(168.0, 514.0), RenderPhysicalShape#033b4@Offset(168.0, 514.0), RenderConstrainedBox#ae1dd@Offset(168.0, 514.0), RenderPositionedBox#5d57e@Offset(168.0, 514.0), RenderPadding#73b5e@Offset(208.0, 538.0), RenderSemanticsAnnotations#86b8b@Offset(208.0, 538.0), RenderPadding#dc697@Offset(208.0, 538.0), RenderSemanticsAnnotations#be8b5@Offset(208.0, 538.0), RenderPadding#a30a7@Offset(208.0, 538.0), RenderSemanticsAnnotations#02c3e@Offset(208.0, 538.0), RenderRepaintBoundary#5f689@Offset(208.0, 538.0), RenderIgnorePointer#0a3d7@Offset(208.0, 538.0), RenderAnimatedOpacity#6ee56@Offset(208.0, 538.0), RenderRepaintBoundary#a76b6@Offset(208.0, 538.0), RenderSemanticsAnnotations#e0a28@Offset(208.0, 538.0), RenderOffstage#c2269@Offset(208.0, 538.0), RenderSemanticsAnnotations#49199@Offset(208.0, 538.0), _RenderTheater#a7809@Offset(208.0, 538.0), RenderAbsorbPointer#3b531@Offset(208.0, 538.0), RenderPointerListener#37799@Offset(208.0, 538.0), RenderSemanticsAnnotations#47ea8@Offset(208.0, 538.0), RenderCustomPaint#27d95@Offset(208.0, 538.0), RenderSemanticsAnnotations#1c8bd@Offset(208.0, 538.0), RenderSemanticsAnnotations#5f3a1@Offset(208.0, 538.0), RenderSemanticsAnnotations#7de1d@Offset(208.0, 538.0), RenderTapRegionSurface#cc0cc@Offset(208.0, 538.0), RenderSemanticsAnnotations#5df9f@Offset(208.0, 538.0), RenderSemanticsAnnotations#a56b5@Offset(208.0, 538.0), HitTestEntry<HitTestTarget>#7acca(_ReusableRenderView#2b74a), HitTestEntry<HitTestTarget>#52118(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:107:18)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 50 pixels on the right.
-
-The relevant error-causing widget was:
-  DropdownButtonFormField<String>-[<'recuperar-documento'>]
-  DropdownButtonFormField:file:///home/runner/work/ride-platform/ride-platform/apps/central_app/lib/painel/desconectar.dart:197:15
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#10076 OVERFLOWING:
-  creator: Row ← Padding ← SizedBox ← DefaultTextStyle ← _Decorator ← Semantics ← InputDecorator ←
-    Listener ← _GestureSemantics ← RawGestureDetector ← GestureDetector ← MouseRegion ← ⋯
-  parentData: offset=Offset(0.0, 0.0) (can use size)
-  constraints: BoxConstraints(w=176.0, h=24.0)
-  size: Size(176.0, 24.0)
-  direction: horizontal
-  mainAxisAlignment: spaceBetween
-  mainAxisSize: min
-  crossAxisAlignment: center
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +16 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
+00:03 +17 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
 ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
 The following TestFailure was thrown running a test:
 Expected: exactly one matching candidate
@@ -222,7 +50,7 @@ Expected: exactly one matching candidate
    Which: means none were found but one was expected
 
 When the exception was thrown, this was the stack:
-#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:110:5)
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart:116:5)
 <asynchronous suspension>
 #5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
 <asynchronous suspension>
@@ -232,70 +60,26 @@ When the exception was thrown, this was the stack:
 (elided one frame from package:stack_trace)
 
 This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart line 110
+  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart line 116
 The test description was:
   faltou conferir: nao libera e mostra o que faltou
 ════════════════════════════════════════════════════════════════════════════════════════════════════
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following message was thrown:
-Multiple exceptions (2) were detected during the running of the current test, and at least one was
-unexpected.
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:03 +14 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +14 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou [E]
+00:04 +17 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou [E]
   Test failed. See exception logs above.
   The test description was: faltou conferir: nao libera e mostra o que faltou
   
-00:04 +15 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
-══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
-The following assertion was thrown during layout:
-A RenderFlex overflowed by 50 pixels on the right.
-
-The relevant error-causing widget was:
-  DropdownButtonFormField<String>-[<'recuperar-documento'>]
-  DropdownButtonFormField:file:///home/runner/work/ride-platform/ride-platform/apps/central_app/lib/painel/desconectar.dart:197:15
-
-The overflowing RenderFlex has an orientation of Axis.horizontal.
-The edge of the RenderFlex that is overflowing has been marked in the rendering with a yellow and
-black striped pattern. This is usually caused by the contents being too big for the RenderFlex.
-Consider applying a flex factor (e.g. using an Expanded widget) to force the children of the
-RenderFlex to fit within the available space instead of being sized to their natural size.
-This is considered an error condition because it indicates that there is content that cannot be
-seen. If the content is legitimately bigger than the available space, consider clipping it with a
-ClipRect widget before putting it in the flex, or using a scrollable container rather than a Flex,
-like a ListView.
-The specific RenderFlex in question is: RenderFlex#25b70 OVERFLOWING:
-  creator: Row ← Padding ← SizedBox ← DefaultTextStyle ← _Decorator ← Semantics ← InputDecorator ←
-    Listener ← _GestureSemantics ← RawGestureDetector ← GestureDetector ← MouseRegion ← ⋯
-  parentData: offset=Offset(0.0, 0.0) (can use size)
-  constraints: BoxConstraints(w=176.0, h=24.0)
-  size: Size(176.0, 24.0)
-  direction: horizontal
-  mainAxisAlignment: spaceBetween
-  mainAxisSize: min
-  crossAxisAlignment: center
-  textDirection: ltr
-  verticalDirection: down
-  spacing: 0.0
-◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:04 +15 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:04 +15 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor [E]
-  Test failed. See exception logs above.
-  The test description was: sem e-mail novo ou motivo curto: nem chama o servidor
-  
-00:04 +16 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
-00:04 +17 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:05 +18 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:06 +19 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:06 +20 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:07 +21 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +22 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
-00:09 +23 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
-00:09 +24 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
-00:10 +25 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:10 +26 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:11 +27 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:04 +17 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
+00:04 +18 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:05 +19 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:06 +20 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:06 +21 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:08 +22 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:09 +23 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:10 +24 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
+00:10 +25 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:11 +26 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
+00:11 +27 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:12 +28 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
 ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
 The following TestFailure was thrown running a test:
 Expected: exactly one matching candidate
@@ -303,7 +87,7 @@ Expected: exactly one matching candidate
    Which: means none were found but one was expected
 
 When the exception was thrown, this was the stack:
-#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart:1062:5)
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart:1064:5)
 <asynchronous suspension>
 #5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
 <asynchronous suspension>
@@ -313,11 +97,11 @@ When the exception was thrown, this was the stack:
 (elided one frame from package:stack_trace)
 
 This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart line 1062
+  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart line 1064
 The test description was:
   Motoristas: lista, detalhe com documento, financeiro e carteira
 ════════════════════════════════════════════════════════════════════════════════════════════════════
-00:12 +27 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira [E]
+00:13 +28 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira [E]
   Test failed. See exception logs above.
   The test description was: Motoristas: lista, detalhe com documento, financeiro e carteira
   
@@ -326,49 +110,48 @@ TestWidgetsFlutterBinding, all HTTP requests will return status code 400, and no
 will actually be made. Any test expecting a real network connection and status code will fail.
 To test code that needs an HttpClient, provide your own HttpClient implementation to the code under
 test, so that your test can consistently provide a testable response to the code under test.
-00:12 +27 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:13 +28 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:13 +29 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
-00:14 +30 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
-00:14 +31 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:15 +32 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
-00:18 +33 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
-00:19 +34 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
-00:19 +35 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
-00:19 +36 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
-00:19 +37 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
-00:19 +38 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
-00:19 +39 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
-00:19 +40 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
-00:19 +41 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
-00:19 +42 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
-00:19 +43 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
-00:19 +44 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
-00:19 +45 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
-00:19 +46 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
-00:19 +47 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
-00:20 +48 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
-00:21 +49 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
-00:21 +50 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:22 +51 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:22 +52 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
-00:22 +53 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:23 +54 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:23 +55 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
-00:24 +56 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
-00:24 +57 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:25 +58 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:25 +59 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:25 +60 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
-00:25 +60 ~1 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
-00:26 +61 ~1 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:26 +62 ~1 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
-00:26 +63 ~1 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
-00:27 +64 ~1 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:27 +65 ~1 -4: Some tests failed.
+00:13 +28 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
+00:13 +29 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
+00:14 +30 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
+00:15 +31 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
+00:15 +32 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:16 +33 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
+00:19 +34 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
+00:20 +35 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
+00:20 +36 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
+00:20 +37 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
+00:20 +38 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
+00:20 +39 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
+00:20 +40 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
+00:20 +41 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
+00:20 +42 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
+00:20 +43 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
+00:20 +44 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
+00:20 +45 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
+00:20 +46 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
+00:20 +47 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
+00:21 +48 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
+00:21 +49 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
+00:22 +50 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
+00:23 +51 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
+00:23 +52 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
+00:23 +53 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
+00:24 +54 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+00:24 +55 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:25 +56 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
+00:25 +57 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
+00:26 +58 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
+00:26 +59 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
+00:27 +60 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
+00:27 +61 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
+00:27 +61 ~1 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
+00:28 +62 ~1 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
+00:28 +63 ~1 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
+00:28 +64 ~1 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+00:29 +65 ~1 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
+00:29 +66 ~1 -3: Some tests failed.
 
 Failing tests:
   /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
   /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
   /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
