@@ -1,11 +1,13 @@
 import {
   CHAVE_ENTREGAS,
+  codigoDaEntrega,
   conferirCodigo,
   ehEntrega,
   entregaNaCidade,
   lerConfigDeEntregas,
   telefoneDeQuemRecebe,
   veiculoServe,
+  veiculosDaCidade,
 } from './entregas.regras';
 import { EntregasService } from './entregas.service';
 
@@ -72,5 +74,18 @@ describe('Entregas (Etapa 5, 30/10/2026)', () => {
     expect(ehEntrega('ENTREGA')).toBe(true);
     expect(ehEntrega('entrega')).toBe(true);
     expect(ehEntrega('CARRO')).toBe(false);
+  });
+
+  it('10/11/2026: cliente escolhe moto ou carro; tarifa propria de cada um', () => {
+    expect(ehEntrega('ENTREGA_MOTO')).toBe(true);
+    expect(ehEntrega('MOTO')).toBe(false);
+    expect(codigoDaEntrega('MOTO')).toBe('ENTREGA_MOTO');
+    expect(codigoDaEntrega('CARRO')).toBe('ENTREGA');
+    expect(veiculosDaCidade('TODOS')).toEqual(['MOTO', 'CARRO']);
+    expect(veiculosDaCidade('MOTO')).toEqual(['MOTO']);
+    // A moto escolhida so chama moto; o carro so carro.
+    expect(veiculoServe('MOTO', 'MOTO')).toBe(true);
+    expect(veiculoServe('MOTO', 'CARRO')).toBe(false);
+    expect(veiculoServe('CARRO', 'MOTO')).toBe(false);
   });
 });

@@ -19,7 +19,49 @@ export const CHAVE_VERSAO = 'tarifas.categorias.versao';
  * 3 (30/10/2026): a Central 256, aberta desde antes da semente, gravou o nome
  * antigo "Carro" por cima do "Popular". A versao 3 so volta o nome (uma vez).
  */
-export const VERSAO_ATUAL = 3;
+export const VERSAO_ATUAL = 4;
+
+/**
+ * 4 (10/11/2026, Evandro: "nos vamos implementar cadastro para moto"):
+ * categoria MOTO (mototaxi, 1 passageiro) DESLIGADA, com tarifa sugerida de
+ * 70% do Popular. O motorista de moto ja escolhe "Moto" no cadastro; a
+ * Central aprova e liga a categoria por cidade quando houver moto aprovada.
+ */
+export const MOTO: Categoria = {
+  codigo: 'MOTO',
+  nome: 'Moto',
+  ativa: false,
+  icone: 'moto',
+  descricao: 'Mototáxi: rápido e econômico, 1 passageiro',
+  capacidade: 1,
+  multiplicador: 1,
+};
+export const FATOR_MOTO = 0.7;
+
+/** Ja existe categoria de moto (MOTO, MOTOTAXI...)? A de entrega nao conta. */
+export function temMoto(categorias: Categoria[]): boolean {
+  return categorias.some((c) => c.codigo.toUpperCase().includes('MOTO') && !c.codigo.toUpperCase().startsWith('ENTREGA'));
+}
+
+/** Tabelas (diurna e noturna) da moto a partir das do Popular. */
+export function tabelasDaMoto(tabelasDoCarro: FareConfig[]): ResultadoDaSemente['tabelasNovas'] {
+  return tabelasDoCarro.map((t) => ({
+    flag: t.flag,
+    category: MOTO.codigo,
+    perMinuteCents: dez(t.perMinuteCents * FATOR_MOTO),
+    startHour: t.startHour,
+    endHour: t.endHour,
+    baseFareCents: dez(t.baseFareCents * FATOR_MOTO),
+    perKmCents: dez(t.perKmCents * FATOR_MOTO),
+    waitingPerMinuteCents: dez(t.waitingPerMinuteCents * FATOR_MOTO),
+    freeDistanceMeters: t.freeDistanceMeters,
+    freeWaitingSeconds: t.freeWaitingSeconds,
+    minFareCents: dez(t.minFareCents * FATOR_MOTO),
+    cancellationFeeCents: dez(t.cancellationFeeCents * FATOR_MOTO),
+    commissionPercent: t.commissionPercent,
+    isActive: true,
+  }));
+}
 
 /** "Carro" (nome antigo, ou vazio) volta a ser "Popular". Outro nome fica. */
 export function popularDeVolta(categorias: Categoria[]): Categoria[] {
@@ -103,11 +145,23 @@ export async function aplicarSemente(
     }
     lista = r.categorias;
   }
+  if (versao < 4 && !temMoto(lista)) {
+    const carro = await db.fareConfig.findMany({ where: { category: 'CARRO' } });
+    if (carro.length === 0) return false;
+    for (const t of tabelasDaMoto(carro)) {
+      await db.fareConfig.upsert({
+        where: { category_flag: { category: t.category, flag: t.flag as FareFlag } },
+        create: t,
+        update: {},
+      });
+    }
+    lista = [...lista, MOTO];
+  }
   await gravar(db, popularDeVolta(lista));
   await db.setting.upsert({
     where: { key: CHAVE_VERSAO },
     update: { value: VERSAO_ATUAL },
-    create: { key: CHAVE_VERSAO, value: VERSAO_ATUAL, description: 'Versao da semente de categorias (Popular, Conforto, Premium)' },
+    create: { key: CHAVE_VERSAO, value: VERSAO_ATUAL, description: 'Versao da semente de categorias (Popular, Conforto, Premium, Moto)' },
   });
   return true;
 }

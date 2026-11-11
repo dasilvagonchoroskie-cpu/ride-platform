@@ -15,6 +15,8 @@ import type { Prisma } from '@prisma/client';
 type Db = Pick<Prisma.TransactionClient, 'setting'>;
 
 export const CODIGO_ENTREGA = 'ENTREGA';
+/** Entrega de moto (10/11/2026): tarifa propria, o cliente escolhe moto ou carro. */
+export const CODIGO_ENTREGA_MOTO = 'ENTREGA_MOTO';
 export const CHAVE_ENTREGAS = 'entregas.config';
 export const VEICULOS = ['CARRO', 'MOTO', 'TODOS'] as const;
 export type VeiculosDaEntrega = (typeof VEICULOS)[number];
@@ -32,7 +34,18 @@ export interface ConfigDeEntregas {
 export const DESLIGADA: EntregaNaCidade = { ligada: false, veiculos: 'TODOS' };
 
 export function ehEntrega(categoria: string | null | undefined): boolean {
-  return (categoria ?? '').toUpperCase() === CODIGO_ENTREGA;
+  const c = (categoria ?? '').toUpperCase();
+  return c === CODIGO_ENTREGA || c === CODIGO_ENTREGA_MOTO;
+}
+
+/** Tarifa da entrega pelo veiculo escolhido pelo cliente. */
+export function codigoDaEntrega(veiculo: 'CARRO' | 'MOTO'): string {
+  return veiculo === 'MOTO' ? CODIGO_ENTREGA_MOTO : CODIGO_ENTREGA;
+}
+
+/** Veiculos que o cliente pode escolher na cidade (a Central liga carro, moto ou os dois). */
+export function veiculosDaCidade(v: VeiculosDaEntrega): Array<'CARRO' | 'MOTO'> {
+  return v === 'TODOS' ? ['MOTO', 'CARRO'] : [v];
 }
 
 export async function lerConfigDeEntregas(db: Db): Promise<ConfigDeEntregas> {

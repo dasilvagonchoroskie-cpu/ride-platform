@@ -2,7 +2,7 @@ import { FareFlag, Prisma } from '@prisma/client';
 import type { FareConfig } from '@prisma/client';
 import { CHAVE_CATEGORIAS, normalizarCategoria, lerCategorias, gravarCategorias } from './categorias';
 import type { Categoria } from './categorias';
-import { aplicarSemente, CHAVE_VERSAO, popularDeVolta, semente, VERSAO_ATUAL } from './semente-categorias';
+import { aplicarSemente, CHAVE_VERSAO, popularDeVolta, semente, tabelasDaMoto, temMoto, VERSAO_ATUAL } from './semente-categorias';
 import { CHAVE_POR_CIDADE, categoriasDaCidade, lerAjustesDe } from './tarifas-da-cidade';
 import { FareService } from './fare.service';
 import { chegadaEmMinutos } from './rides.service';
@@ -102,11 +102,11 @@ describe('Categorias Popular, Conforto e Premium (semente)', () => {
     const db = bancoFalso(settings, tabelas);
     expect(await aplicarSemente(db as never, (d) => lerCategorias(d as never), (d, l) => gravarCategorias(d as never, l))).toBe(true);
     expect(settings[CHAVE_VERSAO]).toBe(VERSAO_ATUAL);
-    expect(tabelas.map((t) => t.category).sort()).toEqual(['CARRO', 'CARRO', 'CONFORTO', 'CONFORTO', 'PREMIUM', 'PREMIUM']);
+    expect(tabelas.map((t) => t.category).sort()).toEqual(['CARRO', 'CARRO', 'CONFORTO', 'CONFORTO', 'MOTO', 'MOTO', 'PREMIUM', 'PREMIUM']);
     // O Evandro apaga o Premium depois: a semente nao traz de volta.
     settings[CHAVE_CATEGORIAS] = (settings[CHAVE_CATEGORIAS] as Categoria[]).filter((c) => c.codigo !== 'PREMIUM');
     expect(await aplicarSemente(db as never, (d) => lerCategorias(d as never), (d, l) => gravarCategorias(d as never, l))).toBe(false);
-    expect((settings[CHAVE_CATEGORIAS] as Categoria[]).map((c) => c.codigo)).toEqual(['CARRO', 'CONFORTO']);
+    expect((settings[CHAVE_CATEGORIAS] as Categoria[]).map((c) => c.codigo)).toEqual(['CARRO', 'CONFORTO', 'MOTO']);
   });
 
   it('versao 3: "Carro" volta a "Popular" uma vez; Premium apagado nao volta; nome escolhido fica', async () => {
@@ -124,12 +124,34 @@ describe('Categorias Popular, Conforto e Premium (semente)', () => {
     expect((settings[CHAVE_CATEGORIAS] as Categoria[]).map((c) => [c.codigo, c.nome])).toEqual([
       ['CARRO', 'Popular'],
       ['CONFORTO', 'Conforto'],
+      ['MOTO', 'Moto'],
     ]);
-    expect(settings[CHAVE_VERSAO]).toBe(3);
+    expect(settings[CHAVE_VERSAO]).toBe(VERSAO_ATUAL);
     // Depois o Evandro escolhe "Comum": a semente nao mexe mais.
     settings[CHAVE_CATEGORIAS] = [{ codigo: 'CARRO', nome: 'Comum', ativa: true }];
     expect(await rodar()).toBe(false);
     expect(popularDeVolta([normalizarCategoria({ codigo: 'CARRO', nome: 'Executivo' })])[0].nome).toBe('Executivo');
+  });
+
+  it('versao 4 (10/11/2026): Moto entra DESLIGADA, 1 lugar, tarifa 70% do Popular; nao duplica MOTOTAXI', async () => {
+    const settings: Record<string, unknown> = {
+      [CHAVE_VERSAO]: 3,
+      [CHAVE_CATEGORIAS]: [{ codigo: 'CARRO', nome: 'Popular', ativa: true }],
+    };
+    const tabelas = [...carro];
+    const db = bancoFalso(settings, tabelas);
+    expect(await aplicarSemente(db as never, (d) => lerCategorias(d as never), (d, l) => gravarCategorias(d as never, l))).toBe(true);
+    const moto = (settings[CHAVE_CATEGORIAS] as Categoria[]).find((c) => c.codigo === 'MOTO')!;
+    expect([moto.ativa, moto.icone, moto.capacidade]).toEqual([false, 'moto', 1]);
+    const diurna = tabelas.find((t) => t.category === 'MOTO' && t.flag === FareFlag.DIURNA)!;
+    expect([diurna.baseFareCents, diurna.perKmCents, diurna.minFareCents]).toEqual([700, 140, 700]);
+    expect(tabelasDaMoto(carro)).toHaveLength(2);
+    // Ja tinha mototaxi criado pela Central: nao cria outro; entrega de moto nao conta.
+    expect(temMoto([normalizarCategoria({ codigo: 'MOTOTAXI', nome: 'Mototaxi' })])).toBe(true);
+    expect(temMoto([normalizarCategoria({ codigo: 'ENTREGA_MOTO', nome: 'Entrega de moto' })])).toBe(false);
+    // Roda uma vez so: o Evandro apaga a Moto e ela nao volta.
+    settings[CHAVE_CATEGORIAS] = [{ codigo: 'CARRO', nome: 'Popular', ativa: true }];
+    expect(await aplicarSemente(db as never, (d) => lerCategorias(d as never), (d, l) => gravarCategorias(d as never, l))).toBe(false);
   });
 
   it('categoria gravada antes (sem figura, texto e lugares) continua valendo', () => {

@@ -186,7 +186,7 @@ class _TarifasTelaState extends State<TarifasTela> {
             for (final cat in t.categorias)
               ChoiceChip(
                 avatar: Icon(iconeDaCategoria(cat.icone), size: 18),
-                label: Text(cat.ativa || cat.codigo == 'ENTREGA' ? cat.nome : '${cat.nome} (desligada)'),
+                label: Text(cat.ativa || cat.codigo.startsWith('ENTREGA') ? cat.nome : '${cat.nome} (desligada)'),
                 selected: _nova == null && _codigo == cat.codigo,
                 onSelected: (_) => setState(() {
                   _codigo = cat.codigo;
@@ -271,7 +271,7 @@ class _TarifasTelaState extends State<TarifasTela> {
                 aoMudar: (v) => c.multiplicador = v.clamp(0.5, 5).toDouble(),
               ),
               // Etapa 5: a "Entrega" e tarifa (liga e desliga no menu Entregas).
-              if (c.codigo == 'ENTREGA')
+              if (c.codigo.startsWith('ENTREGA'))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
                   child: Text(

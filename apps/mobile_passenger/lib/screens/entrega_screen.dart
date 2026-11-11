@@ -39,6 +39,15 @@ class _EntregaScreenState extends State<EntregaScreen> {
   RideQuote? _preco;
   String? _erro;
 
+  /// Moto ou carro escolhido (10/11/2026). null = servidor sem a escolha.
+  String? _veiculo;
+
+  OpcaoEntrega? get _opcao {
+    final ops = _preco?.opcoesEntrega ?? const <OpcaoEntrega>[];
+    if (ops.isEmpty) return null;
+    return ops.firstWhere((o) => o.veiculo == _veiculo, orElse: () => ops.first);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,6 +109,9 @@ class _EntregaScreenState extends State<EntregaScreen> {
     setState(() {
       _calculando = false;
       _preco = q;
+      // Primeira opcao (a moto, mais barata, quando a cidade aceita as duas).
+      final ops = q?.opcoesEntrega ?? const <OpcaoEntrega>[];
+      if (ops.isNotEmpty && !ops.any((o) => o.veiculo == _veiculo)) _veiculo = ops.first.veiculo;
     });
   }
 
@@ -120,6 +132,7 @@ class _EntregaScreenState extends State<EntregaScreen> {
               'descricao': _descricao.text.trim(),
               'destinatarioNome': _nome.text.trim(),
               'destinatarioTelefone': _telefone.text.replaceAll(RegExp(r'\D'), ''),
+              if (_opcao != null) 'veiculo': _opcao!.veiculo,
             },
           );
     } on ApiException catch (e) {
@@ -170,6 +183,13 @@ class _EntregaScreenState extends State<EntregaScreen> {
         ),
       ),
     );
+  }
+
+  /// " de moto" / " de carro" quando ha escolha.
+  String _rotulo() {
+    final o = _opcao;
+    if (o == null) return '';
+    return o.moto ? ' de moto' : ' de carro';
   }
 
   @override
@@ -248,19 +268,33 @@ class _EntregaScreenState extends State<EntregaScreen> {
               padding: const EdgeInsets.only(bottom: Spacing.sm),
               child: Text(_erro!, style: AppText.body.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600)),
             ),
+          if (preco != null && preco.opcoesEntrega.length > 1) ...[
+            Text('LEVAR DE', style: AppText.label.copyWith(color: AppColors.textMuted)),
+            const SizedBox(height: Spacing.xs),
+            Row(
+              children: [
+                for (final o in preco.opcoesEntrega) ...[
+                  Expanded(child: _CartaoVeiculo(opcao: o, escolhido: o.veiculo == _opcao?.veiculo, aoTocar: () => setState(() => _veiculo = o.veiculo))),
+                  if (o != preco.opcoesEntrega.last) const SizedBox(width: Spacing.sm),
+                ],
+              ],
+            ),
+            const SizedBox(height: Spacing.md),
+          ],
           if (preco != null) ...[
             Container(
               padding: const EdgeInsets.all(Spacing.md),
               decoration: BoxDecoration(color: AppColors.brandSoft, borderRadius: BorderRadius.circular(Radii.md)),
               child: Row(
                 children: [
-                  const Icon(Icons.local_shipping_outlined, color: AppColors.brand),
+                  Icon(_opcao?.moto == true ? Icons.two_wheeler : Icons.local_shipping_outlined, color: AppColors.brand),
                   const SizedBox(width: Spacing.md),
                   Expanded(
                     child: Text(
                       preco.taximetro
-                          ? 'Entrega: cerca de ${formatMoney(preco.priceCents)} (o valor final sai do trajeto feito).'
-                          : 'Entrega: ${formatMoney(preco.priceCents)}.',
+                          ? 'Entrega${_rotulo()}: cerca de ${formatMoney(_opcao?.precoCents ?? preco.priceCents)} (o valor final sai do trajeto feito).'
+                          : 'Entrega${_rotulo()}: ${formatMoney(_opcao?.precoCents ?? preco.priceCents)}.',
+                      key: const ValueKey('preco-entrega'),
                       style: AppText.bodyStrong,
                     ),
                   ),
@@ -273,6 +307,43 @@ class _EntregaScreenState extends State<EntregaScreen> {
             AppButton(label: _calculando ? 'Calculando…' : 'Ver o preço', loading: _calculando, onPressed: _verPreco),
           const SizedBox(height: Spacing.xl),
         ],
+      ),
+    );
+  }
+}
+
+/// Moto ou carro, com o preco: o cliente toca para escolher.
+class _CartaoVeiculo extends StatelessWidget {
+  const _CartaoVeiculo({required this.opcao, required this.escolhido, required this.aoTocar});
+
+  final OpcaoEntrega opcao;
+  final bool escolhido;
+  final VoidCallback aoTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: ValueKey('entrega-${opcao.veiculo}'),
+      color: escolhido ? AppColors.brandSoft : AppColors.surfaceElevated,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.md),
+        side: BorderSide(color: escolhido ? AppColors.brand : Colors.transparent, width: 2),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.md),
+        onTap: aoTocar,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Spacing.md, horizontal: Spacing.sm),
+          child: Column(
+            children: [
+              Icon(opcao.moto ? Icons.two_wheeler : Icons.directions_car, color: AppColors.brand, size: 30),
+              const SizedBox(height: Spacing.xs),
+              Text(opcao.nome, style: AppText.bodyStrong),
+              Text(formatMoney(opcao.precoCents), style: AppText.body),
+              Text(opcao.moto ? 'Itens pequenos' : 'Itens maiores', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+            ],
+          ),
+        ),
       ),
     );
   }

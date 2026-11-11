@@ -1,0 +1,36 @@
+name: Testes do servidor
+
+# Roda os testes do servidor (jest) a cada pedido de mudanca e a cada envio
+# no main que mexe no servidor. Relatorio em logs/testes-servidor.txt (main).
+on:
+  pull_request:
+    paths:
+      - 'apps/backend/**'
+      - 'packages/shared/**'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'packages/shared/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Montar e testar
+        run: |
+          set -o pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @ride/shared build
+          pnpm --filter @ride/backend exec prisma generate
+          pnpm --filter @ride/backend exec tsc --noEmit -p tsconfig.json
+          pnpm --filter @ride/backend exec jest --config jest.config.js --ci 2>&1 | tee /tmp/testes.txt

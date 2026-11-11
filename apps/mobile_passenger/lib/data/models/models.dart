@@ -285,6 +285,7 @@ class RideQuote {
     this.category = 'CARRO',
     this.moto = false,
     this.opcoes = const [],
+    this.opcoesEntrega = const [],
     this.semDestino = false,
     this.paradas = 0,
     this.cotacao,
@@ -316,6 +317,9 @@ class RideQuote {
 
   /// Preco em cada categoria ativa: o passageiro escolhe (Carro ou Moto).
   final List<OpcaoCategoria> opcoes;
+
+  /// Entrega (10/11/2026): moto e/ou carro que a cidade aceita, com o preco.
+  final List<OpcaoEntrega> opcoesEntrega;
 
   final FareFlag flag;
   final int priceCents;
@@ -365,6 +369,9 @@ class RideQuote {
         opcoes: [
           for (final o in (json['opcoes'] as List? ?? const []).whereType<Map<String, dynamic>>()) OpcaoCategoria.fromJson(o),
         ],
+        opcoesEntrega: [
+          for (final o in (json['opcoesEntrega'] as List? ?? const []).whereType<Map<String, dynamic>>()) OpcaoEntrega.fromJson(o),
+        ],
         semDestino: json['semDestino'] == true,
         paradas: (json['paradas'] as num?)?.toInt() ?? 0,
         cotacao: json['cotacao'] is String ? json['cotacao'] as String : null,
@@ -382,6 +389,27 @@ class RideQuote {
         'chargedDistanceMeters': chargedDistanceMeters,
         'minFareApplied': minFareApplied,
       };
+}
+
+/// Entrega de moto ou de carro, com o preco de cada (o cliente escolhe).
+class OpcaoEntrega {
+  const OpcaoEntrega({required this.veiculo, required this.nome, required this.precoCents});
+
+  /// MOTO ou CARRO.
+  final String veiculo;
+  final String nome;
+  final int precoCents;
+
+  bool get moto => veiculo == 'MOTO';
+
+  factory OpcaoEntrega.fromJson(Map<String, dynamic> j) {
+    final veiculo = (j['veiculo'] as String? ?? 'CARRO').toUpperCase();
+    return OpcaoEntrega(
+      veiculo: veiculo,
+      nome: j['nome'] as String? ?? (veiculo == 'MOTO' ? 'Moto' : 'Carro'),
+      precoCents: (j['estimatedFareCents'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 /// Uma categoria para escolher na confirmacao (ex.: Popular R\$ 18,00 /
@@ -538,7 +566,7 @@ class Ride {
 
   /// Etapa 5 (30/10/2026): entrega de encomenda (null = corrida de passageiro).
   final EntregaDaCorrida? entrega;
-  bool get ehEntrega => entrega != null || category == 'ENTREGA';
+  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
 
   /// Etapa 3 (29/10/2026): corrida sem destino — vai pelo taximetro e o valor
   /// mostrado e so estimado.
