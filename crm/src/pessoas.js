@@ -20,6 +20,12 @@ class ErroPessoa extends Error {
   constructor(status, mensagem, extra = {}) { super(mensagem); this.status = status; Object.assign(this, extra); }
 }
 
+// Pessoa e empresa usam a mesma lógica; só mudam a tabela e os campos.
+const TIPOS = {
+  pessoa: { tabela: 'pessoas', nome: 'nome', rotulo: 'Pessoa', campoNomeFuncao: 'nome', completar: ['telefone', 'email', 'cidade'] },
+  empresa: { tabela: 'empresas', nome: 'nome_fantasia', rotulo: 'Empresa', campoNomeFuncao: 'nome_estabelecimento', completar: ['telefone', 'email', 'cidade', 'endereco', 'razao_social'] }
+};
+
 function createPessoas({ db, entities, ENTITIES, audit }) {
   const agora = () => new Date().toISOString();
   const temTabela = (t) => !!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(t);
@@ -49,6 +55,7 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
       fechado: (def.fechados || []).includes(situacao),
       perdido: (def.perdidos || []).includes(situacao),
       documentos: row.documentos || null,
+      criado_em: row.created_at || null,
       atualizado_em: row.updated_at || null,
       contratado_em: row.contratado_em || null,
       confirmado_em: row.confirmado_em || null
@@ -65,63 +72,88 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
     }));
   }
 
-  const publica = (p) => ({
-    id: p.id, uid: p.uid, nome: p.nome, telefone: p.telefone, telefone_final: finalTelefone(p.telefone), email: p.email,
-    cidade: p.cidade, situacao: p.situacao, mesclada_em_id: p.mesclada_em_id, tem_cpf: !!p.cpf_indice,
+  const publica = (p, tipo = 'pessoa') => ({
+    id: p.id, uid: p.uid, tipo, nome: p[TIPOS[tipo].nome], telefone: p.telefone, telefone_final: finalTelefone(p.telefone), email: p.email,
+    cidade: p.cidade, situacao: p.situacao, mesclada_em_id: p.mesclada_em_id,
+    ...(tipo === 'pessoa' ? { tem_cpf: !!p.cpf_indice } : { razao_social: p.razao_social || null, endereco: p.endereco || null, tem_cnpj: !!p.cnpj_indice }),
     criado_em: p.criado_em, atualizado_em: p.atualizado_em
   });
 
-  function obterPessoa(id) {
-    const p = db.prepare('SELECT * FROM pessoas WHERE id = ?').get(Number(id));
-    if (!p) throw new ErroPessoa(404, 'Pessoa não encontrada.');
+  function obterTitular(tipo, id) {
+    const p = db.prepare(`SELECT * FROM ${TIPOS[tipo].tabela} WHERE id = ?`).get(Number(id));
+    if (!p) throw new ErroPessoa(404, tipo === 'pessoa' ? 'Pessoa não encontrada.' : 'Empresa não encontrada.');
     return p;
+  }
+  const obterPessoa = (id) => obterTitular('pessoa', id);
+
+  /**
+   * Históricos ORIGINAIS de cada função (nada é copiado nem substituído: lê direto de onde sempre esteve, pela
+   * tabela + número da ficha, que nunca mudam): acompanhamentos (`interacoes`), tarefas ligadas, conversas do
+   * WhatsApp do contato ligado à ficha (com contagem de mensagens) e, só para o administrador, a auditoria.
+   * Vale também para fichas ENCERRADAS (ex.: a ficha repetida de uma junção).
+   */
+  function historicoFuncoes(vinculos, { admin = false } = {}) {
+    return vinculos.map((v) => {
+      const t = v.registro_tabela;
+      const id = v.registro_id;
+      const interacoes = db.prepare('SELECT id, data, canal, resumo, situacao_anterior, situacao_nova, created_by_nome AS autor FROM interacoes WHERE entity = ? AND entity_id = ? ORDER BY data DESC, id DESC LIMIT 200').all(t, id);
+      const tarefas = db.prepare('SELECT id, titulo, situacao, data_vencimento, prioridade FROM tarefas WHERE entidade_tipo = ? AND entidade_id = ? ORDER BY data_vencimento DESC, id DESC LIMIT 100').all(t, id);
+      const conversas = temTabela('wa_contatos') ? db.prepare(`SELECT c.id, c.situacao, c.ultima_em, c.created_at AS desde,
+          (SELECT COUNT(*) FROM wa_mensagens m WHERE m.conversa_id = c.id) AS mensagens
+        FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id WHERE k.vinculo_tipo = ? AND k.vinculo_id = ? ORDER BY c.id`).all(t, id) : [];
+      const auditoria = admin ? db.prepare('SELECT id, action, detail, user_nome, created_at FROM audit_log WHERE entity = ? AND entity_id = ? ORDER BY id DESC LIMIT 100').all(t, id) : null;
+      return { funcao: v.funcao, rotulo: v.rotulo, registro_tabela: t, registro_id: id, ativo: v.ativo, criado_em_registro: v.registro.criado_em || null, interacoes, tarefas, conversas, auditoria };
+    });
   }
 
   /* ------------------------------- consultas ------------------------------- */
-  function listar({ q = '', page = 1, limite = 30 } = {}) {
-    const termo = String(q || '').trim().slice(0, 80);
+  function listar(opcoes = {}) { return listarTitulares('pessoa', opcoes); }
+  function listarTitulares(tipo, { q = '', page = 1, limite = 30 } = {}) {
+    const T = TIPOS[tipo];
+    const termo = nomeNormal(String(q || '').slice(0, 80));
+    const dig = String(q || '').replace(/\D/g, '');
     const pg = Math.max(1, parseInt(page, 10) || 1);
-    const where = ["situacao = 'ativa'"];
-    const params = [];
-    if (termo) {
-      const dig = termo.replace(/\D/g, '');
-      const cond = ['nome LIKE ? ESCAPE \'\\\''];
-      params.push(`%${entities.likeEscape(termo)}%`);
-      if (dig.length >= 4) { cond.push('telefone LIKE ?'); params.push(`%${dig}%`); }
-      where.push(`(${cond.join(' OR ')})`);
+    // Busca sem acento e sem maiúscula ("joao" acha "João"), por nome ou por parte do telefone.
+    // O volume é o de uma operação interna (milhares de cadastros): filtrar aqui é simples e rápido.
+    let rows = db.prepare(`SELECT * FROM ${T.tabela} WHERE situacao = 'ativa' ORDER BY ${T.nome} COLLATE NOCASE`).all();
+    if (termo || dig.length >= 4) {
+      rows = rows.filter((p) => (termo && nomeNormal(p[T.nome]).includes(termo)) || (dig.length >= 4 && String(p.telefone || '').includes(dig)));
     }
-    const total = db.prepare(`SELECT COUNT(*) c FROM pessoas WHERE ${where.join(' AND ')}`).get(...params).c;
-    const rows = db.prepare(`SELECT * FROM pessoas WHERE ${where.join(' AND ')} ORDER BY nome COLLATE NOCASE LIMIT ? OFFSET ?`).all(...params, limite, (pg - 1) * limite);
-    return { total, page: pg, pages: Math.max(1, Math.ceil(total / limite)), items: rows.map((p) => ({ ...publica(p), funcoes: vinculosDe('pessoa', p.id) })) };
+    const total = rows.length;
+    const pagina = rows.slice((pg - 1) * limite, pg * limite);
+    return { total, page: pg, pages: Math.max(1, Math.ceil(total / limite)), items: pagina.map((p) => ({ ...publica(p, tipo), funcoes: vinculosDe(tipo, p.id) })) };
   }
 
-  function ficha(id) {
-    const p = obterPessoa(id);
-    if (p.situacao === 'mesclada') return { mesclada: true, mesclada_em_id: p.mesclada_em_id, pessoa: publica(p) };
-    // Histórico: eventos desta pessoa e das que foram juntadas nela.
-    const juntadas = db.prepare("SELECT id FROM pessoas WHERE mesclada_em_id = ?").all(p.id).map((r) => r.id);
+  function ficha(id, opcoes = {}) { return fichaTitular('pessoa', id, opcoes); }
+  function fichaTitular(tipo, id, { admin = false } = {}) {
+    const p = obterTitular(tipo, id);
+    if (p.situacao === 'mesclada') return { mesclada: true, mesclada_em_id: p.mesclada_em_id, [tipo]: publica(p, tipo) };
+    // Histórico do cadastro: eventos deste titular e dos que foram juntados nele.
+    const juntadas = db.prepare(`SELECT id FROM ${TIPOS[tipo].tabela} WHERE mesclada_em_id = ?`).all(p.id).map((r) => r.id);
     const ids = [p.id, ...juntadas];
     const eventos = db.prepare(`SELECT e.id, e.titular_id, e.evento, e.detalhe, e.criado_em, u.nome AS usuario FROM titulares_eventos e
-      LEFT JOIN users u ON u.id = e.usuario_id WHERE e.titular_tipo = 'pessoa' AND e.titular_id IN (${ids.map(() => '?').join(',')}) ORDER BY e.id DESC LIMIT 100`).all(...ids);
-    const todos = vinculosDe('pessoa', p.id, { incluirEncerrados: true });
+      LEFT JOIN users u ON u.id = e.usuario_id WHERE e.titular_tipo = ? AND e.titular_id IN (${ids.map(() => '?').join(',')}) ORDER BY e.id DESC LIMIT 100`).all(tipo, ...ids);
+    const todos = vinculosDe(tipo, p.id, { incluirEncerrados: true });
     return {
-      pessoa: publica(p),
+      [tipo]: publica(p, tipo),
       funcoes: todos.filter((v) => v.ativo),
       funcoes_encerradas: todos.filter((v) => !v.ativo),
       eventos,
-      possiveis_duplicados: p.telefone_chave ? verificarTelefone(p.telefone, { exceto: p.id }) : [],
-      funcoes_disponiveis: catalogo().filter((f) => f.titular === 'pessoa')
+      historico_funcoes: historicoFuncoes(todos, { admin }),
+      possiveis_duplicados: p.telefone_chave ? verificarTelefoneTitular(tipo, p.telefone, { exceto: p.id }) : [],
+      funcoes_disponiveis: catalogo().filter((f) => f.titular === tipo)
         .map((f) => ({ ...f, ja_tem: todos.some((v) => v.ativo && v.funcao === f.funcao) }))
     };
   }
 
   /** Possíveis cadastros da mesma pessoa pelo telefone (só AVISO: nunca associa sozinho). */
-  function verificarTelefone(telefone, { exceto = null } = {}) {
+  function verificarTelefone(telefone, opcoes = {}) { return verificarTelefoneTitular('pessoa', telefone, opcoes); }
+  function verificarTelefoneTitular(tipo, telefone, { exceto = null } = {}) {
     const chave = chaveTelefone(telefone);
     if (!chave) return [];
-    return db.prepare("SELECT * FROM pessoas WHERE telefone_chave = ? AND situacao = 'ativa' AND id IS NOT ? ORDER BY id LIMIT 10").all(chave, exceto)
-      .map((p) => ({ id: p.id, nome: p.nome, cidade: p.cidade, telefone_final: finalTelefone(p.telefone),
-        funcoes: vinculosDe('pessoa', p.id).map((v) => ({ funcao: v.funcao, rotulo: v.rotulo, situacao: v.registro.situacao })) }));
+    return db.prepare(`SELECT * FROM ${TIPOS[tipo].tabela} WHERE telefone_chave = ? AND situacao = 'ativa' AND id IS NOT ? ORDER BY id LIMIT 10`).all(chave, exceto)
+      .map((p) => ({ id: p.id, nome: p[TIPOS[tipo].nome], cidade: p.cidade, telefone_final: finalTelefone(p.telefone),
+        funcoes: vinculosDe(tipo, p.id).map((v) => ({ funcao: v.funcao, rotulo: v.rotulo, situacao: v.registro.situacao })) }));
   }
 
   /* --------------------- criar registro funcional + vínculo --------------------- */
@@ -163,18 +195,20 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
     return resultado;
   }
 
-  /** "Adicionar função": a ficha nova nasce com nome, telefone e cidade da pessoa (o resto vem do formulário). */
-  function adicionarFuncao(pessoaId, funcao, dados, req) {
-    const p = obterPessoa(pessoaId);
+  /** "Adicionar função": a ficha nova nasce com nome, telefone e cidade do titular (o resto vem do formulário). */
+  function adicionarFuncao(pessoaId, funcao, dados, req) { return adicionarFuncaoTitular('pessoa', pessoaId, funcao, dados, req); }
+  function adicionarFuncaoTitular(tipo, titularId, funcao, dados, req) {
+    const T = TIPOS[tipo];
+    const p = obterTitular(tipo, titularId);
     if (p.situacao !== 'ativa') throw new ErroPessoa(409, 'Este cadastro foi juntado a outro. Abra o cadastro principal.');
-    if (!FUNCOES[funcao] || FUNCOES[funcao].titular !== 'pessoa') throw new ErroPessoa(422, 'Função incompatível com pessoa.');
+    if (!FUNCOES[funcao] || FUNCOES[funcao].titular !== tipo) throw new ErroPessoa(422, `Função incompatível com ${T.rotulo.toLowerCase()}.`);
     if (!disponivel(funcao)) throw new ErroPessoa(422, `A função ${FUNCOES[funcao].rotulo} ainda não está disponível.`);
     const body = { ...(dados && typeof dados === 'object' ? dados : {}) };
-    if (!body.nome) body.nome = p.nome;
+    if (!body[T.campoNomeFuncao]) body[T.campoNomeFuncao] = p[T.nome];
     if (!body.telefone) body.telefone = p.telefone || '';
     if (!body.cidade && p.cidade) body.cidade = p.cidade;
     const r = criarRegistro(FUNCOES[funcao].tabela, body, req, { titularId: p.id });
-    audit(req, 'adicionar_funcao', 'pessoas', p.id, `Função ${FUNCOES[funcao].rotulo} adicionada (registro #${r.item.id})`);
+    audit(req, 'adicionar_funcao', T.tabela, p.id, `Função ${FUNCOES[funcao].rotulo} adicionada (registro #${r.item.id})`);
     return r;
   }
 
@@ -187,8 +221,10 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
   }
 
   /* ------------------------------ duplicados ------------------------------ */
-  function duplicados() {
-    const ativas = db.prepare("SELECT * FROM pessoas WHERE situacao = 'ativa'").all();
+  function duplicados() { return duplicadosTitulares('pessoa'); }
+  function duplicadosTitulares(tipo) {
+    const T = TIPOS[tipo];
+    const ativas = db.prepare(`SELECT * FROM ${T.tabela} WHERE situacao = 'ativa'`).all();
     const grupos = [];
     const vistos = new Set();
     const porTel = new Map();
@@ -196,20 +232,20 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
     for (const lista of porTel.values()) {
       if (lista.length < 2) continue;
       lista.forEach((p) => vistos.add(p.id));
-      grupos.push({ motivo: 'mesmo_telefone', mesmo_nome: new Set(lista.map((p) => nomeNormal(p.nome))).size === 1, pessoas: lista.map(resumoPessoa) });
+      grupos.push({ motivo: 'mesmo_telefone', mesmo_nome: new Set(lista.map((p) => nomeNormal(p[T.nome]))).size === 1, [tipo === 'pessoa' ? 'pessoas' : 'empresas']: lista.map((p) => resumoTitular(tipo, p)) });
     }
     const porNome = new Map();
-    for (const p of ativas) { const n = nomeNormal(p.nome); if (n.length >= 5) { if (!porNome.has(n)) porNome.set(n, []); porNome.get(n).push(p); } }
+    for (const p of ativas) { const n = nomeNormal(p[T.nome]); if (n.length >= 5) { if (!porNome.has(n)) porNome.set(n, []); porNome.get(n).push(p); } }
     for (const lista of porNome.values()) {
       const novos = lista.filter((p) => !vistos.has(p.id));
       if (lista.length < 2 || !novos.length) continue;
-      grupos.push({ motivo: 'mesmo_nome', mesmo_nome: true, pessoas: lista.map(resumoPessoa) });
+      grupos.push({ motivo: 'mesmo_nome', mesmo_nome: true, [tipo === 'pessoa' ? 'pessoas' : 'empresas']: lista.map((p) => resumoTitular(tipo, p)) });
     }
     return { total_grupos: grupos.length, grupos };
   }
-  function resumoPessoa(p) {
-    return { id: p.id, nome: p.nome, cidade: p.cidade, telefone_final: finalTelefone(p.telefone), email: p.email ? '(informado)' : null,
-      criado_em: p.criado_em, funcoes: vinculosDe('pessoa', p.id).map((v) => ({ funcao: v.funcao, rotulo: v.rotulo, registro_id: v.registro_id, situacao: v.registro.situacao, titulo: v.registro.titulo })) };
+  function resumoTitular(tipo, p) {
+    return { id: p.id, nome: p[TIPOS[tipo].nome], cidade: p.cidade, telefone_final: finalTelefone(p.telefone), email: p.email ? '(informado)' : null,
+      criado_em: p.criado_em, funcoes: vinculosDe(tipo, p.id).map((v) => ({ funcao: v.funcao, rotulo: v.rotulo, registro_id: v.registro_id, situacao: v.registro.situacao, titulo: v.registro.titulo })) };
   }
 
   /**
@@ -220,14 +256,16 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
    * - campos vazios da que fica são completados com os da outra (só os vazios);
    * - a juntada vira "mesclada" e aponta para a que ficou.
    */
-  function juntar({ manterId, juntarId, principais = {}, confirmo }, req) {
+  function juntar(dados, req) { return juntarTitulares('pessoa', dados, req); }
+  function juntarTitulares(tipo, { manterId, juntarId, principais = {}, confirmo }, req) {
+    const T = TIPOS[tipo];
     if (confirmo !== true) throw new ErroPessoa(422, 'Confirme explicitamente a junção dos cadastros.');
-    const a = obterPessoa(manterId);
-    const b = obterPessoa(juntarId);
+    const a = obterTitular(tipo, manterId);
+    const b = obterTitular(tipo, juntarId);
     if (a.id === b.id) throw new ErroPessoa(422, 'Escolha dois cadastros diferentes.');
     if (a.situacao !== 'ativa' || b.situacao !== 'ativa') throw new ErroPessoa(409, 'Só cadastros ativos podem ser juntados.');
-    const va = vinculosDe('pessoa', a.id);
-    const vb = vinculosDe('pessoa', b.id);
+    const va = vinculosDe(tipo, a.id);
+    const vb = vinculosDe(tipo, b.id);
     const conflitos = va.filter((x) => vb.some((y) => y.funcao === x.funcao)).map((x) => x.funcao);
     for (const f of conflitos) {
       const escolhido = Number(principais && principais[f]);
@@ -246,21 +284,27 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
           .run(t, `duplicado — juntado ao registro #${escolhido}`, descartado.vinculo_id);
       }
       // Todos os vínculos (ativos e encerrados) da juntada passam para a que fica: o histórico de funções vai junto.
-      db.prepare("UPDATE vinculos SET titular_id = ? WHERE titular_tipo = 'pessoa' AND titular_id = ?").run(a.id, b.id);
-      for (const campo of ['telefone', 'email', 'cidade']) {
-        if (!a[campo] && b[campo]) { db.prepare(`UPDATE pessoas SET ${campo} = ? WHERE id = ?`).run(b[campo], a.id); preenchidos.push(campo); }
+      db.prepare('UPDATE vinculos SET titular_id = ? WHERE titular_tipo = ? AND titular_id = ?').run(a.id, tipo, b.id);
+      for (const campo of T.completar) {
+        if (!a[campo] && b[campo]) { db.prepare(`UPDATE ${T.tabela} SET ${campo} = ? WHERE id = ?`).run(b[campo], a.id); preenchidos.push(campo); }
       }
-      if (!a.telefone_chave && b.telefone_chave) db.prepare('UPDATE pessoas SET telefone_chave = ? WHERE id = ?').run(b.telefone_chave, a.id);
-      db.prepare("UPDATE pessoas SET situacao = 'mesclada', mesclada_em_id = ?, atualizado_em = ? WHERE id = ?").run(a.id, t, b.id);
-      db.prepare('UPDATE pessoas SET atualizado_em = ? WHERE id = ?').run(t, a.id);
-      evento('pessoa', a.id, 'juntada', `Recebeu o cadastro #${b.id}${conflitos.length ? `; registros principais escolhidos para: ${conflitos.map((f) => FUNCOES[f].rotulo).join(', ')}` : ''}${preenchidos.length ? `; campos completados: ${preenchidos.join(', ')}` : ''}`, req);
-      evento('pessoa', b.id, 'mesclada', `Juntado ao cadastro #${a.id}`, req);
+      if (!a.telefone_chave && b.telefone_chave) db.prepare(`UPDATE ${T.tabela} SET telefone_chave = ? WHERE id = ?`).run(b.telefone_chave, a.id);
+      db.prepare(`UPDATE ${T.tabela} SET situacao = 'mesclada', mesclada_em_id = ?, atualizado_em = ? WHERE id = ?`).run(a.id, t, b.id);
+      db.prepare(`UPDATE ${T.tabela} SET atualizado_em = ? WHERE id = ?`).run(t, a.id);
+      evento(tipo, a.id, 'juntada', `Recebeu o cadastro #${b.id}${conflitos.length ? `; registros principais escolhidos para: ${conflitos.map((f) => FUNCOES[f].rotulo).join(', ')}` : ''}${preenchidos.length ? `; campos completados: ${preenchidos.join(', ')}` : ''}`, req);
+      evento(tipo, b.id, 'mesclada', `Juntado ao cadastro #${a.id}`, req);
     })();
-    audit(req, 'juntar', 'pessoas', a.id, `Cadastros de pessoa juntados: #${b.id} → #${a.id}${conflitos.length ? ` (funções repetidas: ${conflitos.join(', ')})` : ''}`);
-    return ficha(a.id);
+    audit(req, 'juntar', T.tabela, a.id, `Cadastros de ${T.rotulo.toLowerCase()} juntados: #${b.id} → #${a.id}${conflitos.length ? ` (funções repetidas: ${conflitos.join(', ')})` : ''}`);
+    return fichaTitular(tipo, a.id, { admin: true });
   }
 
-  return { ativa, catalogo, listar, ficha, verificarTelefone, criarRegistro, adicionarFuncao, aoExcluirRegistro, duplicados, juntar, FUNCAO_DA_TABELA };
+  return {
+    ativa, catalogo, criarRegistro, aoExcluirRegistro, FUNCAO_DA_TABELA,
+    // pessoas (M1)
+    listar, ficha, verificarTelefone, adicionarFuncao, duplicados, juntar,
+    // genéricos (pessoa | empresa)
+    listarTitulares, fichaTitular, verificarTelefoneTitular, adicionarFuncaoTitular, duplicadosTitulares, juntarTitulares
+  };
 }
 
 module.exports = { createPessoas, ErroPessoa };

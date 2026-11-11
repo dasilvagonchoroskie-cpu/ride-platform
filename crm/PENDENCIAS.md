@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (19h, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 11/11/2026 (19h30, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -38,7 +38,9 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       - [ ] Próximos (aguardando conferência do dono): M2 entregadores/motociclistas · M3 comércios · M4 documentos e
             armazenamento seguro (sem documentos reais). Depois: IA/WhatsApp ligados à pessoa (hoje o cadastro criado
             pela IA ainda não ganha pessoa).
-      - [ ] Ficha central da EMPRESA (parceiros/comércios): hoje a empresa é criada e ligada, mas não há tela própria.
+      - [x] Ficha central da EMPRESA (parceiro do Clube; comércio entra no M3) e preservação dos históricos antigos
+            (ficha central mostra os históricos originais de cada ficha; testado que migração e junção não alteram
+            nenhum) — 11/11, desenvolvimento, dados fictícios.
       - [ ] Política de retenção e descarte por tipo de dado (decisão da empresa; não usar prazo fixo sem avaliar).
       - [ ] **Migração dos dados reais e deploy da Etapa 2: só depois do teste das notificações + autorização.**
 - [ ] Etapa 3 — PDF de cada fichário concluído (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de

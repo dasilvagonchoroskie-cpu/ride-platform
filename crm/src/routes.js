@@ -1212,9 +1212,31 @@ router.post('/pessoas/juntar', etapa2, requireAdmin, (req, res) => respostaPesso
   const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
   res.json(pessoas.juntar({ manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
 }));
-router.get('/pessoas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(pessoas.ficha(Number(req.params.id)))));
+router.get('/pessoas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(pessoas.ficha(Number(req.params.id), { admin: req.user.role === 'admin' }))));
 router.post('/pessoas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
   const r = pessoas.adicionarFuncao(Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
+  res.status(201).json({ item: r.item, titular: r.titular });
+}));
+
+// Ficha central da EMPRESA (parceiro do Clube de Vantagens e comércio): mesma lógica e mesmas permissões das pessoas.
+router.get('/empresas', etapa2, (req, res) => res.json(pessoas.listarTitulares('empresa', { q: req.query.q, page: req.query.page })));
+router.get('/empresas/duplicados', etapa2, requireAdmin, (req, res) => {
+  const r = pessoas.duplicadosTitulares('empresa');
+  audit(req, 'consultar', 'duplicados', null, `Possíveis duplicados de empresas (${r.total_grupos} grupo(s))`);
+  res.json(r);
+});
+router.post('/empresas/verificar-telefone', etapa2, (req, res) => {
+  const exceto = Number.isInteger(req.body.exceto) ? req.body.exceto : null;
+  res.json({ possiveis: pessoas.verificarTelefoneTitular('empresa', String(req.body.telefone || '').slice(0, 30), { exceto }) });
+});
+router.post('/empresas/juntar', etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+  const b = req.body || {};
+  const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
+  res.json(pessoas.juntarTitulares('empresa', { manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
+}));
+router.get('/empresas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(pessoas.fichaTitular('empresa', Number(req.params.id), { admin: req.user.role === 'admin' }))));
+router.post('/empresas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
+  const r = pessoas.adicionarFuncaoTitular('empresa', Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
   res.status(201).json({ item: r.item, titular: r.titular });
 }));
 
@@ -1289,7 +1311,9 @@ router.post('/:entity', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
   if (pessoas.ativa() && Object.prototype.hasOwnProperty.call(pessoas.FUNCAO_DA_TABELA, def.table)) {
-    const pid = Number(req.body.pessoa_id);
+    // O usuário pode escolher o titular já existente (pessoa_id para pessoa, empresa_id para empresa); sem escolha = novo.
+    const ehEmpresa = pessoas.FUNCAO_DA_TABELA[def.table] === 'parceiro_clube' || pessoas.FUNCAO_DA_TABELA[def.table] === 'comercio';
+    const pid = Number(ehEmpresa ? req.body.empresa_id : req.body.pessoa_id);
     return respostaPessoa(res, () => {
       const r = pessoas.criarRegistro(def.table, req.body, req, { titularId: Number.isInteger(pid) && pid > 0 ? pid : null });
       res.status(201).json({ item: r.item, titular: r.titular });

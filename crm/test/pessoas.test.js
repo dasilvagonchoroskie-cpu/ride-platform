@@ -88,6 +88,7 @@ test('ficha central: pessoa com uma e com várias funções, aviso de telefone, 
 
   // Busca por nome e por telefone.
   assert.equal((await ges('GET', '/pessoas?q=teste silva')).j.total, 1);
+  assert.equal((await ges('GET', '/pessoas?q=JOAO teste')).j.total, 1, 'busca sem acento e sem maiúscula');
   assert.equal((await ges('GET', '/pessoas?q=9999-0000')).j.total, 2);
   void outro;
 });
@@ -147,4 +148,67 @@ test('produção protegida: sem FM_ETAPA2 as rotas de pessoas não existem e o c
   const m = await adm('POST', '/motoristas', { ...MOT, nome: 'Sem Etapa', telefone: '85 91111-2222' });
   assert.equal(m.s, 201);
   assert.equal(m.j.titular, undefined);
+});
+
+const PAR = { categoria: 'Farmácia', cidade: 'Fortaleza', data_contato: '2026-11-01', situacao: 'Identificado' };
+
+test('ficha central da empresa: cadastro único, funções, aviso de telefone, junção só do admin, histórico e auditoria', async (t) => {
+  const { proc, adm, ges } = await subir(true);
+  t.after(() => proc.kill());
+  // Parceiro novo → nasce com a sua empresa.
+  const p1 = await ges('POST', '/parceiros', { ...PAR, nome_estabelecimento: 'Farmácia Exemplo', telefone: '(85) 3333-4444' });
+  assert.equal(p1.s, 201, JSON.stringify(p1.j));
+  assert.equal(p1.j.titular.tipo, 'empresa');
+  const E1 = p1.j.titular.id;
+  assert.equal((await ges('POST', `/parceiros/${p1.j.item.id}/interacoes`, { resumo: 'Reunião sobre desconto de 10%', canal: 'Presencial' })).s, 201);
+  let f = await ges('GET', `/empresas/${E1}`);
+  assert.equal(f.s, 200);
+  assert.equal(f.j.empresa.nome, 'Farmácia Exemplo');
+  assert.match(f.j.empresa.uid, /^[0-9a-f-]{36}$/);
+  assert.deepEqual(f.j.funcoes.map((x) => x.funcao), ['parceiro_clube']);
+  assert.equal(f.j.historico_funcoes[0].interacoes[0].resumo, 'Reunião sobre desconto de 10%');
+  assert.equal(f.j.historico_funcoes[0].auditoria, null, 'gestor não vê a auditoria');
+  assert.ok((await adm('GET', `/empresas/${E1}`)).j.historico_funcoes[0].auditoria.length >= 1, 'admin vê a auditoria da ficha');
+  const comercio = f.j.funcoes_disponiveis.find((x) => x.funcao === 'comercio');
+  assert.equal(comercio.disponivel, false, 'comércio só no M3');
+  assert.equal((await ges('POST', `/empresas/${E1}/funcoes`, { funcao: 'comercio', dados: {} })).s, 422);
+  assert.equal((await ges('POST', `/empresas/${E1}/funcoes`, { funcao: 'motorista', dados: {} })).s, 422, 'função de pessoa não cabe em empresa');
+  // Empresa não aparece entre pessoas (e vice-versa).
+  assert.equal((await ges('GET', '/pessoas')).j.total, 0);
+  assert.equal((await ges('GET', '/empresas?q=exemplo')).j.total, 1);
+
+  // Aviso de telefone e escolha: a mesma empresa não ganha dois registros da mesma função.
+  const v = await ges('POST', '/empresas/verificar-telefone', { telefone: '558533334444' });
+  assert.equal(v.j.possiveis[0].nome, 'Farmácia Exemplo');
+  assert.equal((await ges('POST', '/parceiros', { ...PAR, nome_estabelecimento: 'Farmácia Exemplo', telefone: '85 3333-4444', empresa_id: E1 })).s, 409);
+  const p2 = await ges('POST', '/parceiros', { ...PAR, nome_estabelecimento: 'Farmacia Exemplo Centro', telefone: '85 3333-4444' });
+  assert.equal(p2.s, 201);
+  const E2 = p2.j.titular.id;
+  assert.notEqual(E2, E1, 'sem escolha do usuário, não associa sozinho');
+
+  // Duplicados e junção (só admin).
+  assert.equal((await ges('GET', '/empresas/duplicados')).s, 403);
+  assert.equal((await ges('POST', '/empresas/juntar', { manter_id: E1, juntar_id: E2, confirmo: true, principais: { parceiro_clube: p1.j.item.id } })).s, 403);
+  const dup = await adm('GET', '/empresas/duplicados');
+  assert.ok(dup.j.grupos.some((g) => g.empresas.some((e) => e.id === E1) && g.empresas.some((e) => e.id === E2)));
+  assert.equal((await adm('POST', '/empresas/juntar', { manter_id: E1, juntar_id: E2, confirmo: true })).s, 422, 'as duas são parceiras: escolher a ficha principal');
+  const j = await adm('POST', '/empresas/juntar', { manter_id: E1, juntar_id: E2, confirmo: true, principais: { parceiro_clube: p1.j.item.id } });
+  assert.equal(j.s, 200, JSON.stringify(j.j));
+  assert.ok(j.j.funcoes_encerradas.some((x) => x.registro_id === p2.j.item.id && /duplicado/.test(x.motivo_encerramento)));
+  assert.equal((await adm('GET', `/parceiros/${p2.j.item.id}`)).s, 200, 'ficha repetida continua existindo');
+  assert.equal((await adm('GET', `/empresas/${E2}`)).j.mesclada_em_id, E1);
+  const aud = await adm('GET', '/audit');
+  assert.ok(aud.j.items.some((x) => x.action === 'juntar' && x.entity === 'empresas'));
+  // Situação independente: confirmar a parceria muda só a ficha de parceiro.
+  assert.equal((await adm('POST', `/parceiros/${p1.j.item.id}/confirmar`, { confirmo: true })).s, 200);
+  f = await adm('GET', `/empresas/${E1}`);
+  assert.equal(f.j.funcoes[0].registro.situacao, 'Parceria confirmada');
+  assert.equal(f.j.funcoes[0].registro.fechado, true);
+});
+
+test('sem a Etapa 2 ligada, as rotas de empresas também não existem', async (t) => {
+  const { proc, adm } = await subir(false);
+  t.after(() => proc.kill());
+  assert.equal((await adm('GET', '/empresas')).s, 404);
+  assert.equal((await adm('POST', '/empresas/juntar', { confirmo: true })).s, 404);
 });

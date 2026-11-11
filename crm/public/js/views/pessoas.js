@@ -1,11 +1,19 @@
-// Etapa 2 — Pessoas: ficha central de cada pessoa e as suas funções (motorista, passageiro, entregador…).
-// Cada função continua com a sua própria ficha, situação e histórico; esta tela só reúne e liga.
+// Etapa 2 — ficha central de PESSOAS (motorista, passageiro, entregador…) e de EMPRESAS (parceiro do Clube, comércio).
+// Cada função continua com a sua própria ficha, situação e histórico; esta tela só reúne, liga e mostra os históricos
+// originais de cada ficha (sem copiar nem substituir nada).
 import { api } from '../api.js';
 import * as ui from '../ui.js';
 
 const NAV_DA_TABELA = { motoristas: 'motoristas', passageiros: 'passageiros', parceiros: 'parceiros', entregadores: 'entregadores', comercios: 'comercios' };
 const ICONE = { motorista: 'steering', passageiro: 'users', entregador: 'send', parceiro_clube: 'store', comercio: 'building' };
 const ROTULO_EVENTO = { criado: 'Cadastro criado', funcao_adicionada: 'Função adicionada', funcao_encerrada: 'Função encerrada', juntada: 'Recebeu cadastro duplicado', mesclada: 'Juntado a outro cadastro' };
+
+const CFG = {
+  pessoa: { base: 'pessoas', api: '/pessoas', titulo: 'Pessoas', um: 'pessoa', Um: 'Pessoa', artigo: 'a', vazio: 'Ao cadastrar um motorista ou passageiro, a pessoa aparece aqui.',
+    sub: 'Cada pessoa aparece uma vez, com todas as suas funções. Abra a pessoa para ver cada ficha funcional.', icone: 'users', campoNome: 'nome' },
+  empresa: { base: 'empresas', api: '/empresas', titulo: 'Empresas', um: 'empresa', Um: 'Empresa', artigo: 'a', vazio: 'Ao cadastrar um parceiro do Clube de Vantagens, a empresa aparece aqui.',
+    sub: 'Cada empresa aparece uma vez, com todas as suas funções (parceiro do Clube de Vantagens, comércio). Abra a empresa para ver cada ficha.', icone: 'store', campoNome: 'nome_estabelecimento' }
+};
 
 const tomRegistro = (r) => (r.removido ? 'danger' : r.fechado ? 'fechado' : r.perdido ? 'neutral' : ui.statusTone(r.situacao));
 const iniciais = (nome) => String(nome || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
@@ -21,46 +29,50 @@ function chipsFuncoes(funcoes) {
   return funcoes.map((f) => `<span class="pessoa-chip ${tomRegistro(f.registro)}">${ui.icon(ICONE[f.funcao] || 'users', 13)} ${ui.esc(f.rotulo)} · ${ui.esc(f.registro.situacao || '—')}</span>`).join('');
 }
 
-export async function renderPessoas(view, state, params) {
+export async function renderPessoas(view, state, params) { return renderTitulares(view, state, params, 'pessoa'); }
+export async function renderEmpresas(view, state, params) { return renderTitulares(view, state, params, 'empresa'); }
+
+async function renderTitulares(view, state, params, tipo) {
   const admin = state.user && state.user.role === 'admin';
-  if (/^\d+$/.test(params.get('id') || '')) return renderFicha(view, state, Number(params.get('id')));
-  if (params.get('duplicados') === '1' && admin) return renderDuplicados(view, state);
-  return renderLista(view, state, admin);
+  const c = CFG[tipo];
+  if (/^\d+$/.test(params.get('id') || '')) return renderFicha(view, state, Number(params.get('id')), c, tipo);
+  if (params.get('duplicados') === '1' && admin) return renderDuplicados(view, state, c, tipo);
+  return renderLista(view, state, admin, c);
 }
 
 /* --------------------------------- lista --------------------------------- */
-async function renderLista(view, state, admin) {
+async function renderLista(view, state, admin, c) {
   let q = '';
   let page = 1;
   let seq = 0;
   view.innerHTML = `
     <div class="page-head">
-      <div><div class="eyebrow">Ficha central</div><h2>Pessoas</h2>
-        <p class="sub">Cada pessoa aparece uma vez, com todas as suas funções. Abra a pessoa para ver cada ficha funcional.</p></div>
-      <div class="page-actions">${admin ? `<a class="btn btn-ghost" href="#/pessoas?duplicados=1">${ui.icon('alert', 16)} Possíveis duplicados</a>` : ''}</div>
+      <div><div class="eyebrow">Ficha central</div><h2>${c.titulo}</h2>
+        <p class="sub">${c.sub}</p></div>
+      <div class="page-actions">${admin ? `<a class="btn btn-ghost" href="#/${c.base}?duplicados=1">${ui.icon('alert', 16)} Possíveis duplicados</a>` : ''}</div>
     </div>
     <div class="toolbar"><div class="search">${ui.icon('search', 16)}<input id="p-busca" type="search" placeholder="Buscar por nome ou telefone" maxlength="80"></div></div>
     <div id="p-lista">Carregando…</div>`;
   const lista = view.querySelector('#p-lista');
   async function carregar() {
     const meu = ++seq;
-    const d = await api.get(`/pessoas?q=${encodeURIComponent(q)}&page=${page}`);
+    const d = await api.get(`${c.api}?q=${encodeURIComponent(q)}&page=${page}`);
     if (meu !== seq) return;
     if (!d.items.length) {
-      lista.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">${ui.icon('users', 22)}</div><h4>${q ? 'Ninguém encontrado' : 'Nenhuma pessoa cadastrada'}</h4>
-        <p>${q ? 'Confira o nome ou os números digitados.' : 'Ao cadastrar um motorista ou passageiro, a pessoa aparece aqui.'}</p></div></div>`;
+      lista.innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">${ui.icon(c.icone, 22)}</div><h4>${q ? 'Nada encontrado' : `Nenhuma ${c.um} cadastrada`}</h4>
+        <p>${q ? 'Confira o nome ou os números digitados.' : c.vazio}</p></div></div>`;
       return;
     }
     lista.innerHTML = `<div class="pessoa-grid">${d.items.map((p) => `
-      <a class="card pessoa-card" href="#/pessoas?id=${p.id}">
+      <a class="card pessoa-card" href="#/${c.base}?id=${p.id}">
         <div class="pessoa-avatar">${ui.esc(iniciais(p.nome))}</div>
         <div class="pessoa-info"><b>${ui.esc(p.nome)}</b>
           <span class="muted small">${ui.esc(p.cidade || 'Cidade não informada')} · ${ui.esc(telefoneVisivel(p.telefone))}</span>
           <div class="pessoa-chips">${chipsFuncoes(p.funcoes)}</div></div>
       </a>`).join('')}</div>
       ${d.pages > 1 ? `<div class="pager"><button class="btn btn-sm btn-ghost" data-pg="-1" ${page <= 1 ? 'disabled' : ''}>Anterior</button>
-        <span class="muted small">Página ${d.page} de ${d.pages} · ${ui.fmtInt(d.total)} pessoa(s)</span>
-        <button class="btn btn-sm btn-ghost" data-pg="1" ${page >= d.pages ? 'disabled' : ''}>Próxima</button></div>` : `<p class="muted small" style="margin-top:8px">${ui.fmtInt(d.total)} pessoa(s)</p>`}`;
+        <span class="muted small">Página ${d.page} de ${d.pages} · ${ui.fmtInt(d.total)} ${c.um}(s)</span>
+        <button class="btn btn-sm btn-ghost" data-pg="1" ${page >= d.pages ? 'disabled' : ''}>Próxima</button></div>` : `<p class="muted small" style="margin-top:8px">${ui.fmtInt(d.total)} ${c.um}(s)</p>`}`;
     lista.querySelectorAll('[data-pg]').forEach((b) => b.addEventListener('click', () => { page += Number(b.dataset.pg); carregar(); }));
   }
   let timer = null;
@@ -69,16 +81,16 @@ async function renderLista(view, state, admin) {
 }
 
 /* ------------------------------ ficha central ------------------------------ */
-async function renderFicha(view, state, id) {
+async function renderFicha(view, state, id, c, tipo) {
   const admin = state.user && state.user.role === 'admin';
-  const d = await api.get(`/pessoas/${id}`);
-  if (d.mesclada) { location.hash = `#/pessoas?id=${d.mesclada_em_id}`; return; }
-  const p = d.pessoa;
+  const d = await api.get(`${c.api}/${id}`);
+  if (d.mesclada) { location.hash = `#/${c.base}?id=${d.mesclada_em_id}`; return; }
+  const p = d[tipo];
   const disponiveis = d.funcoes_disponiveis.filter((f) => f.disponivel && !f.ja_tem);
 
   view.innerHTML = `
     <div class="page-head">
-      <div><a class="muted small" href="#/pessoas">← Todas as pessoas</a><div class="eyebrow" style="margin-top:6px">Ficha central da pessoa</div></div>
+      <div><a class="muted small" href="#/${c.base}">← Todas as ${c.um}s</a><div class="eyebrow" style="margin-top:6px">Ficha central da ${c.um}</div></div>
       <div class="page-actions"><button class="btn btn-primary" id="p-add" ${disponiveis.length ? '' : 'disabled'}>${ui.icon('plus', 16)} Adicionar função</button></div>
     </div>
 
@@ -90,6 +102,8 @@ async function renderFicha(view, state, id) {
           <span>${ui.icon('phone', 14)} ${ui.esc(telefoneVisivel(p.telefone))}</span>
           <span>${ui.icon('building', 14)} ${ui.esc(p.cidade || 'Cidade não informada')}</span>
           ${p.email ? `<span>${ui.esc(p.email)}</span>` : ''}
+          ${p.razao_social ? `<span>${ui.esc(p.razao_social)}</span>` : ''}
+          ${p.endereco ? `<span>${ui.esc(p.endereco)}</span>` : ''}
           <span class="muted">Cadastro desde ${ui.fmtDate(p.criado_em)}</span>
           <span class="muted" title="Identificador permanente">ID ${ui.esc(p.uid.slice(0, 8))}</span>
         </div>
@@ -98,7 +112,7 @@ async function renderFicha(view, state, id) {
 
     ${d.possiveis_duplicados.length ? `<div class="notice warn" style="margin:14px 0">${ui.icon('alert', 15)}
       <span><b>Possível cadastro repetido:</b> ${d.possiveis_duplicados.map((x) => `${ui.esc(x.nome)} (telefone terminado em ${ui.esc(x.telefone_final)})`).join(', ')}.
-      ${admin ? '<a href="#/pessoas?duplicados=1">Comparar e decidir</a>' : 'Avise o administrador para conferir.'}</span></div>` : ''}
+      ${admin ? `<a href="#/${c.base}?duplicados=1">Comparar e decidir</a>` : 'Avise o administrador para conferir.'}</span></div>` : ''}
 
     <div class="section-title">Funções na Fortaleza Move</div>
     <div class="funcao-grid">
@@ -108,13 +122,16 @@ async function renderFicha(view, state, id) {
     ${d.funcoes_encerradas.length ? `<div class="section-title">Funções encerradas (o histórico continua guardado)</div>
       <div class="funcao-grid">${d.funcoes_encerradas.map((f) => cartaoFuncao(f, true)).join('')}</div>` : ''}
 
-    <div class="section-title">Histórico do cadastro</div>
+    <div class="section-title">Histórico de cada função (registros originais de cada ficha)</div>
+    ${historicoFuncoesHtml(d.historico_funcoes, admin)}
+
+    <div class="section-title">Histórico do cadastro central (a partir da Etapa 2)</div>
     <div class="card"><div class="card-body">${d.eventos.length ? `<div class="timeline">${d.eventos.map((e) => `
       <div class="tl-item"><div class="tl-dot"></div><div><p><b>${ui.esc(ROTULO_EVENTO[e.evento] || e.evento)}</b>${e.detalhe ? ` — ${ui.esc(e.detalhe)}` : ''}</p>
       <div class="tl-meta">${ui.fmtDateTime(e.criado_em)}${e.usuario ? ` · ${ui.esc(e.usuario)}` : ''}</div></div></div>`).join('')}</div>`
       : '<p class="muted small">Sem eventos registrados.</p>'}</div></div>`;
 
-  view.querySelector('#p-add').addEventListener('click', () => adicionarFuncao(state, p, disponiveis, () => renderFicha(view, state, id)));
+  view.querySelector('#p-add').addEventListener('click', () => adicionarFuncao(state, p, disponiveis, c, () => renderFicha(view, state, id, c, tipo)));
 }
 
 function cartaoFuncao(f, encerrada = false) {
@@ -132,7 +149,7 @@ function cartaoFuncao(f, encerrada = false) {
 }
 
 // "Adicionar função": escolhe a função compatível e preenche a ficha nova (nome, telefone e cidade já vêm da pessoa).
-function adicionarFuncao(state, pessoa, disponiveis, depois) {
+function adicionarFuncao(state, pessoa, disponiveis, c, depois) {
   if (!disponiveis.length) return;
   const corpo = document.createElement('div');
   corpo.innerHTML = `<div class="form-errors" id="af-erro" hidden></div>
@@ -145,7 +162,7 @@ function adicionarFuncao(state, pessoa, disponiveis, depois) {
   const montar = () => {
     const f = disponiveis.find((x) => x.funcao === corpo.querySelector('#af-funcao').value);
     const def = state.meta.entities[f.tabela];
-    const valores = { nome: pessoa.nome, telefone: pessoa.telefone ? telefoneVisivel(pessoa.telefone) : '', cidade: pessoa.cidade || '' };
+    const valores = { [c.campoNome]: pessoa.nome, telefone: pessoa.telefone ? telefoneVisivel(pessoa.telefone) : '', cidade: pessoa.cidade || '' };
     for (const campo of def.fields) {
       if (campo.key === def.statusField) valores[campo.key] = def.statuses[0];
       if (campo.type === 'date' && campo.required && !valores[campo.key]) valores[campo.key] = state.meta.hoje;
@@ -161,7 +178,7 @@ function adicionarFuncao(state, pessoa, disponiveis, depois) {
     const erro = corpo.querySelector('#af-erro');
     erro.hidden = true;
     try {
-      await api.post(`/pessoas/${pessoa.id}/funcoes`, { funcao: corpo.querySelector('#af-funcao').value, dados: form.getValues() });
+      await api.post(`${c.api}/${pessoa.id}/funcoes`, { funcao: corpo.querySelector('#af-funcao').value, dados: form.getValues() });
       ui.toast('Função adicionada.', 'success');
       m.close();
       depois();
@@ -174,17 +191,18 @@ function adicionarFuncao(state, pessoa, disponiveis, depois) {
 }
 
 /* --------------------------- possíveis duplicados --------------------------- */
-async function renderDuplicados(view, state) {
-  const d = await api.get('/pessoas/duplicados');
+async function renderDuplicados(view, state, c, tipo) {
+  const d = await api.get(`${c.api}/duplicados`);
+  const lista = (g) => g[tipo === 'pessoa' ? 'pessoas' : 'empresas'];
   view.innerHTML = `
-    <div class="page-head"><div><a class="muted small" href="#/pessoas">← Todas as pessoas</a>
+    <div class="page-head"><div><a class="muted small" href="#/${c.base}">← Todas as ${c.um}s</a>
       <div class="eyebrow" style="margin-top:6px">Somente administrador</div><h2>Possíveis cadastros duplicados</h2>
-      <p class="sub">Nada é juntado sozinho. Compare os dois cadastros e só junte quando tiver certeza de que são a mesma pessoa.</p></div></div>
+      <p class="sub">Nada é juntado sozinho. Compare os dois cadastros e só junte quando tiver certeza de que são a mesma ${c.um}.</p></div></div>
     ${d.grupos.length ? d.grupos.map((g, i) => `
       <div class="card" style="margin-bottom:14px"><div class="card-head"><div>
         <h3>${g.motivo === 'mesmo_telefone' ? 'Mesmo telefone' : 'Mesmo nome'}${g.mesmo_nome ? '' : ' · nomes diferentes'}</h3>
-        <p class="sub">${g.pessoas.length} cadastros</p></div></div>
-        <div class="card-body"><div class="dup-lista">${g.pessoas.map((p) => `
+        <p class="sub">${lista(g).length} cadastros</p></div></div>
+        <div class="card-body"><div class="dup-lista">${lista(g).map((p) => `
           <label class="dup-item"><input type="checkbox" data-grupo="${i}" value="${p.id}">
             <div><b>${ui.esc(p.nome)}</b> <span class="muted small">#${p.id} · ${ui.esc(p.cidade || 'sem cidade')} · tel. ${ui.esc(p.telefone_final || '—')} · desde ${ui.fmtDate(p.criado_em)}</span>
             <div class="pessoa-chips">${p.funcoes.map((f) => `<span class="pessoa-chip">${ui.esc(f.rotulo)} #${f.registro_id} · ${ui.esc(f.situacao || '—')}</span>`).join('') || '<span class="muted small">Sem funções</span>'}</div></div>
@@ -194,17 +212,19 @@ async function renderDuplicados(view, state) {
   view.querySelectorAll('[data-comparar]').forEach((b) => b.addEventListener('click', async () => {
     const marcados = [...view.querySelectorAll(`input[data-grupo="${b.dataset.comparar}"]:checked`)].map((x) => Number(x.value));
     if (marcados.length !== 2) { ui.toast('Marque exatamente dois cadastros para comparar.', 'error'); return; }
-    const [a, c] = await Promise.all(marcados.map((id) => api.get(`/pessoas/${id}`)));
-    comparar(a, c, () => renderDuplicados(view, state));
+    const [a, b2] = await Promise.all(marcados.map((id) => api.get(`${c.api}/${id}`)));
+    comparar(a, b2, c, tipo);
   }));
 }
 
-function comparar(a, b, depois) {
+function comparar(a, b, c, tipo) {
+  a = { ...a, pessoa: a[tipo] }; b = { ...b, pessoa: b[tipo] };
   const linhas = [
     ['Nome', (x) => x.pessoa.nome],
     ['Telefone', (x) => telefoneVisivel(x.pessoa.telefone)],
     ['Cidade', (x) => x.pessoa.cidade || '—'],
     ['E-mail', (x) => x.pessoa.email || '—'],
+    ...(tipo === 'empresa' ? [['Razão social', (x) => x.pessoa.razao_social || '—'], ['Endereço', (x) => x.pessoa.endereco || '—']] : []),
     ['Cadastro desde', (x) => ui.fmtDate(x.pessoa.criado_em)],
     ['Funções ativas', (x) => x.funcoes.map((f) => `${f.rotulo} #${f.registro_id} (${f.registro.situacao || '—'})`).join('; ') || '—']
   ];
@@ -223,7 +243,7 @@ function comparar(a, b, depois) {
         <label class="check-line"><input type="radio" name="j-principal-${fn}" value="${fa.registro_id}"> Ficha #${fa.registro_id} (${ui.esc(fa.registro.situacao || '—')})</label>
         <label class="check-line"><input type="radio" name="j-principal-${fn}" value="${fb.registro_id}"> Ficha #${fb.registro_id} (${ui.esc(fb.registro.situacao || '—')})</label>
         <div class="form-hint">A outra ficha é encerrada (continua existindo, com o histórico), não excluída.</div></div>`; }).join('')}
-    <label class="check-line" style="margin-top:8px"><input type="checkbox" id="j-confirmo"> Conferi os dados e confirmo que os dois cadastros são da mesma pessoa.</label>`;
+    <label class="check-line" style="margin-top:8px"><input type="checkbox" id="j-confirmo"> Conferi os dados e confirmo que os dois cadastros são da mesma ${c.um}.</label>`;
   const m = ui.modal({ title: 'Comparar cadastros', body: corpo, size: 'wide',
     footer: '<button class="btn btn-ghost" data-cancel type="button">Cancelar</button><button class="btn btn-danger" data-juntar type="button">Juntar cadastros</button>' });
   m.dialog.querySelector('[data-cancel]').addEventListener('click', () => m.close());
@@ -240,10 +260,31 @@ function comparar(a, b, depois) {
     }
     if (!corpo.querySelector('#j-confirmo').checked) { erro.hidden = false; erro.textContent = 'Marque a confirmação para juntar.'; return; }
     try {
-      await api.post('/pessoas/juntar', { manter_id: manter, juntar_id: juntar, principais, confirmo: true });
+      await api.post(`${c.api}/juntar`, { manter_id: manter, juntar_id: juntar, principais, confirmo: true });
       ui.toast('Cadastros juntados. Nada foi apagado.', 'success');
       m.close();
-      location.hash = `#/pessoas?id=${manter}`;
-    } catch (err) { erro.hidden = false; erro.textContent = err.message; void depois; }
+      location.hash = `#/${c.base}?id=${manter}`;
+    } catch (err) { erro.hidden = false; erro.textContent = err.message; }
   });
+}
+
+// Históricos originais de cada ficha funcional, lidos de onde sempre estiveram (nada copiado): acompanhamentos,
+// tarefas, conversas do WhatsApp e (só administrador) auditoria. Fichas encerradas também aparecem.
+function historicoFuncoesHtml(lista, admin) {
+  if (!lista || !lista.length) return '<div class="card"><div class="card-body"><p class="muted small">Sem funções.</p></div></div>';
+  return lista.map((h) => {
+    const total = h.interacoes.length + h.tarefas.length + h.conversas.length + (h.auditoria ? h.auditoria.length : 0);
+    return `<details class="card hist-funcao" ${h.ativo && total ? 'open' : ''}>
+      <summary><span>${ui.icon(ICONE[h.funcao] || 'users', 15)} <b>${ui.esc(h.rotulo)}</b> · ficha #${h.registro_id}${h.ativo ? '' : ' <span class="badge neutral">encerrada</span>'}</span>
+        <span class="muted small">${ui.fmtInt(h.interacoes.length)} acompanhamento(s) · ${ui.fmtInt(h.tarefas.length)} tarefa(s) · ${ui.fmtInt(h.conversas.length)} conversa(s)</span></summary>
+      <div class="hist-corpo">
+        ${h.interacoes.length ? `<div class="timeline">${h.interacoes.map((i) => `
+          <div class="tl-item"><div class="tl-dot"></div><div><p>${ui.esc(i.resumo)}</p>
+          <div class="tl-meta">${ui.fmtDateTime(i.data)} · ${ui.esc(i.canal || 'Interno')}${i.autor ? ` · ${ui.esc(i.autor)}` : ''}${i.situacao_nova && i.situacao_anterior !== i.situacao_nova ? ` · ${ui.esc(i.situacao_anterior || '—')} → ${ui.esc(i.situacao_nova)}` : ''}</div></div></div>`).join('')}</div>`
+          : '<p class="muted small">Sem acompanhamentos registrados nesta ficha.</p>'}
+        ${h.tarefas.length ? `<div class="hist-sub">Tarefas</div>${h.tarefas.map((t) => `<div class="hist-linha">${ui.badge(t.situacao)} ${ui.esc(t.titulo)} <span class="muted small">· vence ${ui.fmtDate(t.data_vencimento)}</span></div>`).join('')}` : ''}
+        ${h.conversas.length ? `<div class="hist-sub">WhatsApp</div>${h.conversas.map((c) => `<div class="hist-linha"><a href="#/conversas?c=${c.id}">Conversa #${c.id}</a> ${ui.badge(c.situacao)} <span class="muted small">· ${ui.fmtInt(c.mensagens)} mensagem(ns) · última em ${ui.fmtDateTime(c.ultima_em)}</span></div>`).join('')}` : ''}
+        ${admin && h.auditoria && h.auditoria.length ? `<div class="hist-sub">Auditoria (administrador)</div>${h.auditoria.map((a) => `<div class="hist-linha"><span class="muted small">${ui.fmtDateTime(a.created_at)} · ${ui.esc(a.user_nome || 'Sistema')}</span> ${ui.esc(a.detail || a.action)}</div>`).join('')}` : ''}
+      </div></details>`;
+  }).join('');
 }

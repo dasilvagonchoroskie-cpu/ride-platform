@@ -211,3 +211,65 @@ test('campos protegidos (CPF/CNPJ): só cifrados, com finalidade; índice acha r
   assert.throws(() => p.abrir('cpf', a.cifrado), 'outra chave não abre');
   delete process.env.FM_DADOS_KEY;
 });
+
+test('históricos preservados: migração e junção não mexem nos históricos antigos e a ficha central mostra todos', () => {
+  const { db } = bancoFicticio();
+  const antigo = '2026-10-05T13:00:00.000Z';
+  const agora = new Date().toISOString();
+  // Históricos fictícios em todos os lugares onde eles existem hoje.
+  const inter = db.prepare('INSERT INTO interacoes (entity, entity_id, data, canal, resumo, situacao_anterior, situacao_nova, created_by_nome, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  inter.run('motoristas', 1, antigo, 'WhatsApp', 'Primeiro contato do João (antigo)', 'Novo interessado', 'Primeiro contato realizado', 'Atendente', antigo);
+  inter.run('passageiros', 1, antigo, 'Telefone', 'João pediu informação de preço (antigo)', null, null, 'Atendente', antigo);
+  inter.run('motoristas', 4, antigo, 'Interno', 'Cadastro repetido do Pedro (antigo)', null, null, 'Atendente', antigo);
+  db.prepare("INSERT INTO tarefas (titulo, prioridade, data_vencimento, situacao, entidade_tipo, entidade_id, created_at, updated_at) VALUES ('Conferir CNH do João', 'Média', '2026-10-10', 'Concluída', 'motoristas', 1, ?, ?)").run(antigo, antigo);
+  const contato = db.prepare("INSERT INTO wa_contatos (jid, telefone, nome, vinculo_tipo, vinculo_id, created_at, updated_at) VALUES ('5585988887777@s.whatsapp.net', '5585988887777', 'João', 'motoristas', 1, ?, ?)").run(antigo, antigo).lastInsertRowid;
+  const conv = db.prepare("INSERT INTO wa_conversas (contato_id, situacao, ultima_em, created_at, updated_at) VALUES (?, 'Resolvida', ?, ?, ?)").run(contato, antigo, antigo, antigo).lastInsertRowid;
+  for (const t of ['oi, quero ser motorista', 'segue minha CNH']) db.prepare("INSERT INTO wa_mensagens (conversa_id, direcao, texto, ocorrida_em, created_at) VALUES (?, 'in', ?, ?, ?)").run(conv, t, antigo, antigo);
+  db.prepare("INSERT INTO wa_eventos (conversa_id, tipo, detalhe, criado_em) VALUES (?, 'transferida', 'documentos', ?)").run(conv, antigo);
+  db.prepare("INSERT INTO audit_log (user_nome, action, entity, entity_id, detail, ip, created_at) VALUES ('Atendente', 'editar', 'motoristas', 1, 'Campos alterados: situacao', '', ?)").run(antigo);
+
+  const { digitalTabelas } = require('../src/migracoes/simular');
+  const digital = (d) => { const x = digitalTabelas(d); delete x.audit_log; delete x.users; return x; };
+  const antesHist = digital(db);
+  const auditAntigo = db.prepare('SELECT * FROM audit_log ORDER BY id').all();
+
+  require('../src/migracoes').migrar(db, { log: { log() {} } });
+  assert.deepEqual(digital(db), antesHist, 'migração não alterou nenhum histórico antigo');
+
+  const entities = require('../src/entities');
+  const { createPessoas } = require('../src/pessoas');
+  const auditar = (req, action, entity, id, detail) => db.prepare("INSERT INTO audit_log (user_id, user_nome, action, entity, entity_id, detail, ip, created_at) VALUES (?, 'Adm', ?, ?, ?, ?, '', ?)").run(req.user.id, action, entity, id, detail, agora);
+  process.env.FM_ETAPA2 = '1';
+  const svc = createPessoas({ db, entities, ENTITIES: entities.ENTITIES, audit: auditar });
+  const req = { user: { id: null, role: 'admin' } };
+  const idDe = (tabela, id) => db.prepare('SELECT titular_id FROM vinculos WHERE registro_tabela = ? AND registro_id = ? AND ativo = 1').get(tabela, id).titular_id;
+
+  // Ficha central do João: histórico das DUAS funções, com as datas e os textos originais.
+  const f = svc.ficha(idDe('motoristas', 1), { admin: true });
+  const mot = f.historico_funcoes.find((h) => h.funcao === 'motorista');
+  const pas = f.historico_funcoes.find((h) => h.funcao === 'passageiro');
+  const antiga = mot.interacoes.find((i) => i.resumo === 'Primeiro contato do João (antigo)');
+  assert.ok(antiga, 'acompanhamento antigo aparece');
+  assert.equal(antiga.data, antigo, 'data original preservada');
+  assert.equal(antiga.situacao_nova, 'Primeiro contato realizado');
+  assert.equal(mot.interacoes.length, 2, 'os dois acompanhamentos do motorista (o antigo e o da base fictícia)');
+  assert.equal(mot.tarefas[0].titulo, 'Conferir CNH do João');
+  assert.equal(mot.conversas[0].mensagens, 2);
+  assert.equal(mot.auditoria[0].detail, 'Campos alterados: situacao');
+  assert.equal(pas.interacoes[0].resumo, 'João pediu informação de preço (antigo)');
+  assert.equal(f.eventos.length, 0, 'o histórico central começa vazio: não substitui nem copia os antigos');
+  assert.equal(svc.ficha(idDe('motoristas', 1), { admin: false }).historico_funcoes[0].auditoria, null, 'auditoria só para administrador');
+
+  // Junção dos dois Pedros (mesma função): a ficha repetida é encerrada e o histórico dela continua na ficha central.
+  const p3 = idDe('motoristas', 3); const p4 = idDe('motoristas', 4);
+  const r = svc.juntar({ manterId: p3, juntarId: p4, principais: { motorista: 3 }, confirmo: true }, req);
+  const encerrada = r.historico_funcoes.find((h) => h.registro_id === 4);
+  assert.equal(encerrada.ativo, false);
+  assert.equal(encerrada.interacoes[0].resumo, 'Cadastro repetido do Pedro (antigo)');
+  assert.deepEqual(digital(db).interacoes, antesHist.interacoes, 'junção não mexe nos acompanhamentos');
+  assert.deepEqual(digital(db).tarefas, antesHist.tarefas);
+  assert.deepEqual(digital(db).wa_mensagens, antesHist.wa_mensagens);
+  assert.deepEqual(db.prepare('SELECT * FROM audit_log ORDER BY id').all().slice(0, auditAntigo.length), auditAntigo, 'auditoria antiga intacta (só ganha linhas novas)');
+  assert.ok(r.eventos.some((e) => e.evento === 'juntada'), 'o histórico central registra o acontecimento novo');
+  delete process.env.FM_ETAPA2;
+});

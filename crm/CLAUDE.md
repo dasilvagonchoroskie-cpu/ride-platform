@@ -91,6 +91,14 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   `titular`. `/meta` traz `etapa2` (catálogo de funções). Front: `public/js/views/pessoas.js` (#/pessoas, ?id=, ?duplicados=1),
   aviso de telefone no formulário de motorista/passageiro (`escolherPessoa` em entity.js), `?abrir=ID` abre uma ficha,
   `ui.modal({ onClose })`. Testes: `test/pessoas.test.js`.
+- Complemento do M1 (11/11 noite): `pessoas.js` é genérico por titular (`TIPOS.pessoa|empresa`; funções `*Titular`); as
+  funções antigas (`listar`, `ficha`… de pessoa) continuam. Rotas `/empresas*` iguais às de pessoas (gestor consulta,
+  cria e adiciona função; duplicados/juntar só admin, auditado com entity `empresas`); `POST /parceiros` aceita
+  `empresa_id`. Ficha central (pessoa e empresa) traz `historico_funcoes`: lê os históricos ORIGINAIS de cada ficha
+  (interacoes, tarefas, conversas do WhatsApp do contato ligado, auditoria só para admin) direto das tabelas de sempre,
+  inclusive de fichas encerradas; o histórico central (`titulares_eventos`) só registra o que acontece a partir da
+  Etapa 2. Busca de pessoas/empresas ignora acento e maiúscula. Menu "Empresas". Teste de preservação em
+  `test/migracoes.test.js` (impressão digital das tabelas de histórico igual antes/depois da migração e da junção).
 
 ## Ordem de serviço de 11/11 tarde (dashboard, push, financeiro, APK)
 - Dashboard: `motoristas_interessados` agora é só 'Novo interessado' (antes era o TOTAL e incluía contratados);

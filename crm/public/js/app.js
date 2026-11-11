@@ -6,7 +6,7 @@ import { renderFinance } from './views/finance.js';
 import { renderReports } from './views/reports.js';
 import { renderSettings } from './views/settings.js';
 import { renderConversas } from './views/whatsapp.js';
-import { renderPessoas } from './views/pessoas.js';
+import { renderPessoas, renderEmpresas } from './views/pessoas.js';
 import { iniciarAvisos, pararAvisos, sincronizarPush } from './notificacoes.js';
 
 const NAV = [
@@ -22,7 +22,8 @@ const NAV = [
   { key: 'relatorios', label: 'Relatórios', icon: 'file', title: 'Relatórios', sub: 'Histórico, filtros por período e exportação' },
   { key: 'configuracoes', label: 'Configurações', icon: 'settings', title: 'Configurações', sub: 'Organização, usuários, segurança e auditoria' },
   // Etapa 2 (só aparece com a Etapa 2 ligada no servidor): ficha central de cada pessoa e as suas funções.
-  { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true }
+  { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true },
+  { key: 'empresas', label: 'Empresas', icon: 'building', title: 'Empresas', sub: 'Ficha central: cada empresa e as suas funções (Clube de Vantagens, comércio)', etapa2: true }
 ];
 
 const state = {
@@ -450,7 +451,7 @@ async function enterApp() {
         <nav class="nav" id="nav">
           <div class="nav-label">Gestão</div>
           ${NAV.slice(0, 1).map((i) => navItem(i, state.meta.pendentes)).join('')}
-          ${state.meta.etapa2 ? navItem(NAV.find((n) => n.key === 'pessoas'), state.meta.pendentes) : ''}
+          ${state.meta.etapa2 ? ['pessoas', 'empresas'].map((k) => navItem(NAV.find((n) => n.key === k), state.meta.pendentes)).join('') : ''}
           ${NAV.slice(1, 8).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Análise</div>
           ${NAV.slice(8, 10).map((i) => navItem(i, state.meta.pendentes)).join('')}
@@ -572,7 +573,8 @@ async function route() {
     else if (key === 'conversas') await renderConversas(view, state);
     else if (key === 'configuracoes') await renderSettings(view, state);
     else if (key === 'pessoas' && state.meta.etapa2) await renderPessoas(view, state, params);
-    else if (key === 'pessoas') location.hash = '#/dashboard';
+    else if (key === 'empresas' && state.meta.etapa2) await renderEmpresas(view, state, params);
+    else if (key === 'pessoas' || key === 'empresas') location.hash = '#/dashboard';
     else if (item.entity) await renderEntity(view, state, item.entity, params);
     state.refreshMeta();
   } catch (err) {
