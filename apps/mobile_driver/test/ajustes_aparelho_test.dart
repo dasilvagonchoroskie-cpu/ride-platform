@@ -30,7 +30,7 @@ Future<DriverState> _abrir(WidgetTester tester, Map<String, dynamic> perfil, {Ma
   d.permissoesOk = CorridasNativo.essenciaisOk(d.permissoes, perfil);
   await tester.pumpWidget(ChangeNotifierProvider<DriverState>.value(
     value: d,
-    child: const MaterialApp(home: PermissionsScreen()),
+    child: MaterialApp(key: UniqueKey(), home: const PermissionsScreen()),
   ));
   await tester.pump();
   return d;
