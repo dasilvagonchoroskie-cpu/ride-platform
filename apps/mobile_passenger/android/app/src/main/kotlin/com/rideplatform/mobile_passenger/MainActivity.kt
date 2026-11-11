@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -67,6 +68,16 @@ class MainActivity : FlutterActivity() {
                         }
                         "posicao" -> result.success(posicao())
                         "abrirLink" -> result.success(abrirLink(call.argument<String>("url") ?: ""))
+                        // Celular onde o app esta e os ajustes do fabricante.
+                        "aparelho" -> result.success(Aparelho.perfil(this))
+                        "abrirAjuste" -> {
+                            Aparelho.abrir(this, call.argument<String>("chave") ?: "")
+                            result.success(true)
+                        }
+                        "confirmarAjuste" -> {
+                            Aparelho.confirmar(this, call.argument<String>("chave") ?: "", call.argument<Boolean>("sim") == true)
+                            result.success(true)
+                        }
                         else -> result.notImplemented()
                     }
                 } catch (e: Exception) {
@@ -85,13 +96,18 @@ class MainActivity : FlutterActivity() {
             lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
     }
 
-    private fun estado(): Map<String, Boolean> = mapOf(
-        "localizacao" to temLocalizacao(),
-        "gps" to gpsLigado(),
-        "notificacao" to (Build.VERSION.SDK_INT < 33 ||
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED)
-    )
+    private fun estado(): Map<String, Boolean> {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        return mapOf(
+            "localizacao" to temLocalizacao(),
+            "gps" to gpsLigado(),
+            "notificacao" to (Build.VERSION.SDK_INT < 33 ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED),
+            // Bateria sem restricao (recomendada): o aviso da corrida chega com o app minimizado.
+            "bateria" to (Build.VERSION.SDK_INT < 23 || pm.isIgnoringBatteryOptimizations(packageName))
+        ) + Aparelho.extras().associate { "x_$it" to Aparelho.confirmado(this, it) }
+    }
 
     private fun pedir(qual: String) {
         when (qual) {
@@ -106,6 +122,8 @@ class MainActivity : FlutterActivity() {
                 abrirAjustes()
             }
             "gps" -> startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            // Ajustes do app: Bateria > Sem restricoes (a Play nao deixa pedir direto).
+            "bateria" -> abrirAjustes()
             else -> abrirAjustes()
         }
     }
