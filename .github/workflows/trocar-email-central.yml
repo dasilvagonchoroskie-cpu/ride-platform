@@ -1,0 +1,29 @@
+name: Trocar e-mail da Central
+
+# Troca o e-mail de entrada da conta do dono da Central. Depois de rodar,
+# atualize o segredo ADMIN_EMAIL do GitHub com o e-mail novo.
+on:
+  workflow_dispatch:
+    inputs:
+      novo_email:
+        description: 'E-mail novo da Central'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servidor-real
+  cancel-in-progress: false
+
+jobs:
+  trocar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trocar
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          OTP_CHAVE_TESTE: ${{ secrets.OTP_CHAVE_TESTE }}
+          NOVO_EMAIL: ${{ inputs.novo_email }}
+        run: bash scripts/trocar-email-central.sh

@@ -14,7 +14,7 @@ export const LEGAL_VERSION = '1.0.0';
 // Evandro (11/10/2026): marca Fortaleza Move; quem desenvolve e opera e a
 // Fortaleza Digital Security. CNPJ ainda nao existe: entra aqui quando sair.
 const OPERADORA = 'Fortaleza Digital Security (Goiatuba – GO, CNPJ em registro)';
-const EMAIL_CONTATO = 'fortalezadigitalsecurity@gmail.com';
+const EMAIL_CONTATO = 'fortalezamovegtba@gmail.com';
 const WHATSAPP_CONTATO = '(64) 99647-2794';
 
 // Texto com acentos e parágrafos inteiros (revisão de 11/10/2026): os apps
