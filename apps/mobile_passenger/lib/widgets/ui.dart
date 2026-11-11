@@ -186,7 +186,6 @@ class AppField extends StatelessWidget {
     final labelColor = onLight ? AppColors.sheetMuted : AppColors.textMuted;
     final textColor = onLight ? AppColors.sheetText : AppColors.text;
     final fill = onLight ? AppColors.sheetField : AppColors.surfaceElevated;
-    final borderColor = onLight ? AppColors.sheetBorder : AppColors.border;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,16 +212,16 @@ class AppField extends StatelessWidget {
             hintStyle: AppText.body.copyWith(color: labelColor),
             contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: BorderSide(color: borderColor),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.hairline),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: BorderSide(color: borderColor),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.hairline),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.brand, width: 1.4),
             ),
           ),
         ),
@@ -316,9 +315,17 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.md),
-      child: Text(
-        text,
-        style: AppText.heading.copyWith(color: onLight ? AppColors.sheetText : AppColors.text),
+      child: Row(
+        children: [
+          Container(width: 4, height: 18, decoration: BoxDecoration(gradient: AppColors.degradeOuro, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: AppText.heading.copyWith(color: onLight ? AppColors.sheetText : AppColors.text),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -351,6 +358,17 @@ class EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Spacing.xxl),
       child: Column(
         children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surfaceElevated,
+              border: Border.all(color: AppColors.hairline),
+            ),
+            child: const Icon(Icons.inbox_outlined, color: AppColors.gold, size: 32),
+          ),
+          const SizedBox(height: Spacing.lg),
           Text(title, style: AppText.heading.copyWith(color: AppColors.text)),
           const SizedBox(height: Spacing.sm),
           Text(

@@ -84,13 +84,13 @@ class RotuloCampo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.sm),
-      child: Text(texto, style: AppText.bodyStrong.copyWith(fontSize: 17, color: AppColors.text)),
+      child: Text(texto, style: AppText.bodyStrong.copyWith(fontSize: 14, color: AppColors.textMuted, letterSpacing: 0.2)),
     );
   }
 }
 
 OutlineInputBorder _borda(Color cor, [double largura = 1]) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(Radii.sm),
+      borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(color: cor, width: largura),
     );
 
@@ -101,14 +101,14 @@ InputDecoration _decoracao({String? dica, String? erro, Widget? prefixo, Widget?
     errorText: erro,
     errorMaxLines: 3,
     filled: true,
-    fillColor: leitura ? AppColors.surfaceElevated : AppColors.surface,
+    fillColor: leitura ? AppColors.surface : AppColors.surfaceElevated,
     contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: 18),
     prefixIcon: prefixo,
     suffixIcon: sufixo,
-    border: _borda(AppColors.campoBorda),
-    enabledBorder: _borda(AppColors.campoBorda),
+    border: _borda(AppColors.hairline),
+    enabledBorder: _borda(AppColors.hairline),
     disabledBorder: _borda(AppColors.border),
-    focusedBorder: _borda(AppColors.brand, 1.6),
+    focusedBorder: _borda(AppColors.brand, 1.4),
     errorBorder: _borda(AppColors.danger),
     focusedErrorBorder: _borda(AppColors.danger, 1.6),
   );
@@ -232,7 +232,7 @@ class CampoSelecao extends StatelessWidget {
       children: [
         if (rotulo != null) RotuloCampo(rotulo!),
         InkWell(
-          borderRadius: BorderRadius.circular(Radii.sm),
+          borderRadius: BorderRadius.circular(14),
           onTap: aoTocar,
           child: InputDecorator(
             decoration: _decoracao(
