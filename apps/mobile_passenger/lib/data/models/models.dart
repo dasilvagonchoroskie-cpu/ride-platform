@@ -566,7 +566,7 @@ class Ride {
 
   /// Etapa 5 (30/10/2026): entrega de encomenda (null = corrida de passageiro).
   final EntregaDaCorrida? entrega;
-  bool get ehEntrega => entrega != null || category.startsWith('ENTREGA');
+  bool get ehEntrega => entrega != null || (category?.startsWith('ENTREGA') ?? false);
 
   /// Etapa 3 (29/10/2026): corrida sem destino — vai pelo taximetro e o valor
   /// mostrado e so estimado.
