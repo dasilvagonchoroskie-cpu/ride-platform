@@ -85,7 +85,7 @@ export function pagina(titulo: string, corpo: string): string {
 <header><strong>Fortaleza Move</strong></header>
 <main>
 ${corpo}
-<p class="fraco">Fortaleza Move — Goiatuba (GO). Contato: fortalezadigitalsecurity@gmail.com</p>
+<p class="fraco">Fortaleza Move — Goiatuba (GO). Contato: fortalezamovegtba@gmail.com</p>
 </main>
 </body>
 </html>`;

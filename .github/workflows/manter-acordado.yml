@@ -1,39 +1,26 @@
 name: Manter o servidor acordado
 
-# O plano gratuito do Render dorme apos 15 minutos sem visita e leva cerca
-# de 1 minuto para acordar — inaceitavel para corrida. Esta visita a cada
-# 5 minutos impede o sono. Cabe no gratuito: 750 h/mes contra no maximo
-# 744 h de um mes de 31 dias.
-#
-# De brinde: /api/health consulta o banco (Supabase) e o Redis. Assim o
-# banco tambem nao entra em pausa por inatividade, e se algo cair esta
-# tarefa falha e o GitHub avisa o dono da conta por e-mail.
-
-# 29/10/2026: quem mantem o servidor acordado e o pg_cron do Supabase (a
-# cada 4 minutos; conferido no registro do Render). Aqui fica so o alarme:
-# 2 visitas por dia, e o GitHub avisa por e-mail se o servidor cair.
-# (Antes: a cada 5 min, ~170 minutos de esteira por mes.)
+# O plano gratis do Render dorme o servidor depois de 15 min sem uso, e a
+# primeira abertura (app ou Central na web) demora minutos para acordar
+# (Evandro, 11/11/2026: "demorou quase 5 minutos para abrir"). Um toque a cada 14 min
+# mantem acordado (repositorio publico: minutos gratis sem limite). So o servidor da plataforma (750 h gratis
+# por mes cobrem um servico ligado o mes todo).
 on:
   schedule:
-    - cron: '41 9,21 * * *'   # 06:41 e 18:41 em Brasilia
+    - cron: '*/14 * * * *'
   workflow_dispatch: {}
 
+permissions: {}
+
 jobs:
-  visitar:
+  tocar:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Visitar o servidor
+      - name: Tocar o servidor e o site da Central
         run: |
-          URL="https://fortaleza-mov-backend.onrender.com/api/health"
-          for t in 1 2 3; do
-            RESP=$(curl -s --max-time 90 "$URL" || true)
-            echo "tentativa $t: $RESP"
-            if echo "$RESP" | grep -q '"status":"ok"'; then
-              echo "Servidor acordado, banco e Redis no ar."
-              exit 0
-            fi
+          for i in 1 2 3; do
+            C=$(curl -s -o /dev/null -w '%{http_code} %{time_total}s' -m 120 https://fortaleza-mov-backend.onrender.com/api/health) && echo "servidor: $C" && break
             sleep 10
           done
-          echo "O servidor nao respondeu 'ok' em 3 tentativas."
-          exit 1
+          curl -s -o /dev/null -w 'site: %{http_code} %{time_total}s\n' -m 60 https://fortaleza-move-central.onrender.com/ || true

@@ -85,7 +85,7 @@ export class ContaService {
     // A Central ve e alarma o pedido (Visao geral / aviso de aprovacao); o
     // e-mail continua como reserva.
     if (teste) return;
-    const destino = this.config.mail.remetente || 'fortalezadigitalsecurity@gmail.com';
+    const destino = this.config.mail.remetente || 'fortalezamovegtba@gmail.com';
     await this.avisos
       .send({
         userId: 'sistema',

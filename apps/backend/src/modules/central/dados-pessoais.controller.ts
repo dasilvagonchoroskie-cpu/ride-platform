@@ -4,8 +4,11 @@ import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@ride/shared';
 import { z } from 'zod';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { PrismaService } from '../../database/prisma.service';
+import { PracasService } from '../pracas/pracas.service';
 import { DadosPessoaisService } from './dados-pessoais.service';
 import type { DadosDoMotorista, DadosPelaCentral } from './dados-pessoais.service';
 
@@ -73,7 +76,11 @@ export class MeusDadosMotoristaController {
 @Roles(UserRole.ADMIN)
 @Controller('admin/dados')
 export class DadosPessoaisCentralController {
-  constructor(private readonly dados: DadosPessoaisService) {}
+  constructor(
+    private readonly dados: DadosPessoaisService,
+    private readonly pracas: PracasService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get('alteracoes')
   @ApiOperation({ summary: 'Pedidos de mudanca de dados dos motoristas' })
@@ -105,11 +112,15 @@ export class DadosPessoaisCentralController {
 
   @Patch('pessoas/:userId')
   @ApiOperation({ summary: 'Central muda os dados (passageiro ou motorista)' })
-  editar(
-    @CurrentUser('id') adminId: string,
+  async editar(
+    @CurrentUser() admin: AuthenticatedUser,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body(new ZodValidationPipe(centralSchema)) body: DadosPelaCentral,
   ) {
-    return this.dados.editarPelaCentral(adminId, userId, body);
+    // Conta da Central (e-mail de entrada, telefone): so o dono muda. Um
+    // operador de cidade nunca troca o e-mail do dono (tomaria a Central).
+    const alvo = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (alvo?.role === UserRole.ADMIN) await this.pracas.exigirDono(admin);
+    return this.dados.editarPelaCentral(admin.id, userId, body);
   }
 }
