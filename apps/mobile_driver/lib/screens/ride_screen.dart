@@ -387,7 +387,7 @@ class _BotoesNavegar extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: () => _navegar(destino),
             icon: const Icon(Icons.navigation_outlined),
-            label: const Text('Google Maps'),
+            label: const Text('Google Maps', maxLines: 1, softWrap: false, overflow: TextOverflow.fade),
           ),
         ),
         const SizedBox(width: Spacing.sm),

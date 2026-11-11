@@ -320,6 +320,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.text,
           minimumSize: const Size(64, 50),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           side: const BorderSide(color: AppColors.border),
           textStyle: AppText.bodyStrong,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.lg)),
