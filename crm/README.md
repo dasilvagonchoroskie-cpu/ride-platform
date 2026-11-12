@@ -221,6 +221,20 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   **Baixar PDF**, **Abrir para imprimir** (nova aba, por causa da CSP), **Compartilhar** (Web Share, quando o aparelho permite) e, para o
   administrador, **Baixar CSV**.
 
+### Revisão dos Relatórios e exportação PDF/CSV em todos os blocos (12/11/2026, ramo `etapa2`)
+- Auditoria: todos os pontos de exportação (listas de cada módulo, Relatórios, Financeiro, Documentos) já usam o mesmo componente
+  (`public/js/exportar.js`) e o mesmo gerador (`src/relatorios-pdf.js`). Não existe mais ponto só-CSV. A tela de produção (`main`) ainda
+  só tem CSV: o PDF só existe no ramo `etapa2`.
+- Em Relatórios, cada cartão tem um botão **PDF / CSV** (administrador) ou **PDF** (gestor, nos blocos permitidos). O PDF sai com a lista do
+  período e totais; o CSV, os mesmos registros. Tela, PDF e CSV usam o mesmo critério de data por módulo (campanhas: data de publicação ou,
+  na falta, a planejada) e o fuso de Fortaleza.
+- Corrigido: datas de simulações nos PDFs resumo/financeiro (usavam o dia em UTC; passam a usar o dia de Fortaleza); período do bloco
+  Documentos passa a valer no PDF e no CSV (pela data de inclusão, UTC-3); resumo em PDF ganhou Comércios e Documentos; relatórios
+  financeiros dizem "estimado/estimada" nos títulos de colunas (PDF e CSV); nomes de arquivo levam o período
+  (`fortaleza-move_motoristas_2026-11-01_a_2026-11-30.pdf`, `motoristas_2026-11-01_a_2026-11-30.csv`).
+- Testes: `test/relatorios-exportacao.test.js` (6 testes contra o servidor real: tela × PDF × CSV por módulo e período, vazio,
+  financeiro/UTC-3, permissões por HTTP, relatório de 140 linhas em várias páginas, documentos por período).
+
 ## M3 — Comércios parceiros que pedem entregas (12/11/2026, ramo `etapa2`, só desenvolvimento)
 - Módulo **Comércios** (só com `FM_ETAPA2=1`, migração 004, tabela `comercios`): loja que usa a plataforma para pedir entregas.
   É uma função **independente** do "Parceiro do Clube" (estabelecimento que dá desconto aos motoristas): a mesma empresa pode ter

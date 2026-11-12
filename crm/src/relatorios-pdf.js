@@ -128,7 +128,9 @@ const TOM_SITUACAO = (def, situacao) => {
   return null;
 };
 
-function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario, docs = null }) {
+function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, localDate, reportSummary, cenarioCompleto, computeCenario, docs = null }) {
+  // Data civil de Fortaleza (UTC-3) a partir de um timestamp gravado em UTC: nunca cortar o texto do timestamp (regra 10).
+  const dataLocal = (iso) => fmtData(localDate(iso));
   const org = () => ({ nome: getSetting('org_nome', 'Fortaleza Move'), slogan: getSetting('slogan', '') });
   const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -227,6 +229,20 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
       ...(s.entregadores ? [grupo('Entregadores por situação', s.entregadores.por_situacao), grupo('Entregadores por modalidade', s.entregadores.por_modalidade)] : []),
       grupo('Passageiros por situação', s.passageiros.por_situacao)
     ] });
+    if (s.comercios) {
+      blocos.push({ tipo: 'indicadores', titulo: 'Comércios parceiros (entregas)', itens: [
+        { rotulo: 'Cadastros no período', valor: fmtInt(s.comercios.total) }, { rotulo: 'Ativos na plataforma', valor: fmtInt(s.comercios.ativos), tom: 'verde' }
+      ] });
+      blocos.push({ tipo: 'distribuicoes', colunas: 2, itens: [grupo('Comércios por situação', s.comercios.por_situacao), grupo('Comércios por categoria', s.comercios.por_categoria)] });
+    }
+    if (s.documentos) {
+      const ds = s.documentos.por_situacao || {};
+      blocos.push({ tipo: 'indicadores', titulo: 'Documentos (arquivo digital)', itens: [
+        { rotulo: 'Documentos guardados', valor: fmtInt(s.documentos.total) }, { rotulo: 'Enviados no período', valor: fmtInt(s.documentos.enviados_no_periodo) },
+        { rotulo: 'Pendentes de conferência', valor: fmtInt(ds.pendente), tom: 'dourado' }, { rotulo: 'Conferidos', valor: fmtInt(ds.conferido), tom: 'verde' },
+        { rotulo: 'Rejeitados / a atualizar', valor: fmtInt((ds.rejeitado || 0) + (ds.necessita_atualizacao || 0)), tom: 'vermelho' }
+      ] });
+    }
     blocos.push({ tipo: 'distribuicoes', titulo: 'Parceiros, atendimento e tarefas', colunas: 3, itens: [
       grupo('Parceiros por categoria', s.parceiros.por_categoria), grupo('Atendimentos por tipo', s.atendimentos.por_tipo),
       grupo('Atendimentos por prioridade', s.atendimentos.por_prioridade), grupo('Tarefas por situação', s.tarefas.por_situacao)
@@ -238,7 +254,7 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
     blocos.push({
       tipo: 'tabela', titulo: 'Simulações financeiras registradas',
       colunas: [{ titulo: 'Data', peso: 1 }, { titulo: 'Cenário', peso: 2.5 }, { titulo: 'Corridas/mês', peso: 1.2, alinhar: 'direita' }, { titulo: 'Receita estimada', peso: 1.4, alinhar: 'direita' }, { titulo: 'Resultado estimado', peso: 1.4, alinhar: 'direita' }, { titulo: 'Responsável', peso: 1.5 }],
-      linhas: s.simulacoes.items.map((i) => ({ celulas: [fmtData(String(i.created_at).slice(0, 10)), i.cenario, fmtInt(i.corridas), fmtMoeda(i.receita), fmtMoeda(i.resultado), i.autor || ''], tom: i.resultado < 0 ? 'vermelho' : null })),
+      linhas: s.simulacoes.items.map((i) => ({ celulas: [dataLocal(i.created_at), i.cenario, fmtInt(i.corridas), fmtMoeda(i.receita), fmtMoeda(i.resultado), i.autor || ''], tom: i.resultado < 0 ? 'vermelho' : null })),
       totais: s.simulacoes.items.length ? [`Total: ${fmtInt(s.simulacoes.total)}`, '', '', fmtMoeda(s.simulacoes.receita_total), '', ''] : null,
       vazio: 'Nenhuma simulação salva no período.',
       observacao: 'Valores de simulação são estimativas baseadas em premissas configuráveis; não representam receita realizada.'
@@ -264,8 +280,8 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
     blocos.push({
       tipo: 'tabela', titulo: '1. Cenários (premissas, receita, custos e resultado)',
       colunas: [{ titulo: 'Cenário', peso: 2.2 }, { titulo: 'Motoristas', peso: 1, alinhar: 'direita' }, { titulo: 'Corridas/dia', peso: 1, alinhar: 'direita' }, { titulo: 'Dias', peso: 0.7, alinhar: 'direita' },
-        { titulo: 'Valor médio', peso: 1.1, alinhar: 'direita' }, { titulo: 'Comissão', peso: 0.9, alinhar: 'direita' }, { titulo: 'Receita/mês', peso: 1.3, alinhar: 'direita' },
-        { titulo: 'Custos/mês', peso: 1.3, alinhar: 'direita' }, { titulo: 'Resultado', peso: 1.3, alinhar: 'direita' }, { titulo: 'Situação', peso: 1.4 }],
+        { titulo: 'Valor médio', peso: 1.1, alinhar: 'direita' }, { titulo: 'Comissão', peso: 0.9, alinhar: 'direita' }, { titulo: 'Receita estimada/mês', peso: 1.4, alinhar: 'direita' },
+        { titulo: 'Custos/mês', peso: 1.3, alinhar: 'direita' }, { titulo: 'Resultado estimado', peso: 1.4, alinhar: 'direita' }, { titulo: 'Situação', peso: 1.4 }],
       linhas: cenarios.map((c) => ({
         celulas: [c.nome, fmtInt(c.motoristas_ativos), String(c.corridas_motorista_dia).replace('.', ','), fmtInt(c.dias_operacao), fmtMoeda(c.valor_medio_corrida), fmtPct(c.comissao_pct),
           fmtMoeda(c.resultado.receita_plataforma), fmtMoeda(c.resultado.custos_total), incompleto(c) ? 'incompleto' : fmtMoeda(c.resultado.resultado_operacional), incompleto(c) ? 'Simulação incompleta (sem custos)' : 'Completa'],
@@ -276,11 +292,12 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
     });
     blocos.push({
       tipo: 'tabela', titulo: '2. Simulações registradas no período',
-      colunas: [{ titulo: 'Data', peso: 1 }, { titulo: 'Cenário', peso: 2.2 }, { titulo: 'Corridas/mês', peso: 1.1, alinhar: 'direita' }, { titulo: 'Faturamento bruto', peso: 1.3, alinhar: 'direita' },
-        { titulo: 'Receita', peso: 1.2, alinhar: 'direita' }, { titulo: 'Repasse motoristas', peso: 1.3, alinhar: 'direita' }, { titulo: 'Custos', peso: 1.1, alinhar: 'direita' }, { titulo: 'Resultado', peso: 1.2, alinhar: 'direita' }, { titulo: 'Responsável', peso: 1.4 }],
-      linhas: sims.map((s) => { const r = parse(s.resultados); return { celulas: [fmtData(String(s.created_at).slice(0, 10)), s.cenario_nome, fmtInt(r.corridas_mes), fmtMoeda(r.faturamento_bruto), fmtMoeda(r.receita_plataforma), fmtMoeda(r.repasse_motoristas), fmtMoeda(r.custos_total), fmtMoeda(r.resultado_operacional), s.created_by_nome || ''], tom: r.resultado_operacional < 0 ? 'vermelho' : null }; }),
+      colunas: [{ titulo: 'Data', peso: 1 }, { titulo: 'Cenário', peso: 2.2 }, { titulo: 'Corridas/mês', peso: 1.1, alinhar: 'direita' }, { titulo: 'Faturamento bruto estimado', peso: 1.4, alinhar: 'direita' },
+        { titulo: 'Receita estimada', peso: 1.2, alinhar: 'direita' }, { titulo: 'Repasse estimado', peso: 1.2, alinhar: 'direita' }, { titulo: 'Custos', peso: 1.1, alinhar: 'direita' }, { titulo: 'Resultado estimado', peso: 1.2, alinhar: 'direita' }, { titulo: 'Responsável', peso: 1.4 }],
+      linhas: sims.map((s) => { const r = parse(s.resultados); return { celulas: [dataLocal(s.created_at), s.cenario_nome, fmtInt(r.corridas_mes), fmtMoeda(r.faturamento_bruto), fmtMoeda(r.receita_plataforma), fmtMoeda(r.repasse_motoristas), fmtMoeda(r.custos_total), fmtMoeda(r.resultado_operacional), s.created_by_nome || ''], tom: r.resultado_operacional < 0 ? 'vermelho' : null }; }),
       totais: sims.length ? [`Total: ${fmtInt(sims.length)}`, '', '', fmtMoeda(sims.reduce((a, s) => a + (parse(s.resultados).faturamento_bruto || 0), 0)), fmtMoeda(sims.reduce((a, s) => a + (parse(s.resultados).receita_plataforma || 0), 0)), fmtMoeda(sims.reduce((a, s) => a + (parse(s.resultados).repasse_motoristas || 0), 0)), fmtMoeda(sims.reduce((a, s) => a + (parse(s.resultados).custos_total || 0), 0)), fmtMoeda(sims.reduce((a, s) => a + (parse(s.resultados).resultado_operacional || 0), 0)), ''] : null,
-      vazio: 'Nenhuma simulação salva no período.'
+      vazio: 'Nenhuma simulação salva no período.',
+      observacao: 'Simulações são estimativas baseadas em premissas configuráveis; não representam receita efetivamente realizada.'
     });
     return {
       relatorio: { titulo: 'Planejamento financeiro', subtitulo: 'Cenários e simulações de receita e resultado da plataforma', paisagem: true, filtros: [['Período das simulações', `${fmtData(q.de)} a ${fmtData(q.ate)}`]], blocos },
@@ -310,12 +327,14 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
 
   /** Documentos (M4): só metadados e situação. Nunca CPF/CNPJ, nunca o conteúdo dos arquivos. Administrador apenas (policy). */
   function documentos(q, usuario) {
-    const r = docs.consultar({ user: usuario }, { situacao: String(q.situacao || ''), funcao: String(q.funcao || ''), categoria: String(q.categoria || ''), q: q.q, tudo: true });
+    const r = docs.consultar({ user: usuario }, { situacao: String(q.situacao || ''), funcao: String(q.funcao || ''), categoria: String(q.categoria || ''), q: q.q, de: q.de, ate: q.ate, tudo: true });
     const itens = r.items;
     const conta = (s) => itens.filter((i) => i.situacao === s).length;
     const filtros = [];
+    if (q.de || q.ate) filtros.push(['Período (data de inclusão do documento)', `${q.de ? fmtData(q.de) : 'início'} a ${q.ate ? fmtData(q.ate) : 'hoje'}`]);
     for (const [rot, v] of [['Situação', q.situacao && docs.SITUACOES[q.situacao]], ['Função', q.funcao], ['Categoria', q.categoria], ['Busca', String(q.q || '').trim() && `“${String(q.q).trim().slice(0, 60)}”`]]) if (v) filtros.push([rot, String(v)]);
     if (!filtros.length) filtros.push(['Filtros', 'sem filtros: todos os documentos']);
+    else if (!q.de && !q.ate) filtros.unshift(['Período', 'todo o histórico']);
     const tom = (s) => (s === 'conferido' ? 'verde' : s === 'rejeitado' || s === 'necessita_atualizacao' ? 'vermelho' : null);
     const blocos = [
       { tipo: 'indicadores', itens: [
@@ -350,7 +369,9 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
     const agora = new Date();
     const buffer = gerarRelatorio({ ...r.relatorio, org: org(), logo: logo(), rodape: { gerado_por: usuario && usuario.nome, gerado_em: agora } });
     const carimbo = new Date(agora.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10);
-    return { buffer, arquivo: `fortaleza-move_${r.arquivo}_${carimbo}.pdf`, linhas: r.linhas, resumo: r.resumo };
+    // Relatório com período leva o período no nome (igual ao CSV: motoristas_2026-11-01_a_2026-11-30); sem período, a data de emissão.
+    const periodo = q.de || q.ate ? `${q.de || 'inicio'}_a_${q.ate || carimbo}` : carimbo;
+    return { buffer, arquivo: `fortaleza-move_${r.arquivo}_${periodo}.pdf`, linhas: r.linhas, resumo: r.resumo };
   }
 
   return { gerar, tiposValidos, ErroRelatorio };

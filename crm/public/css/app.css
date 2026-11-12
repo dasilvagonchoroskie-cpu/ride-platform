@@ -745,3 +745,10 @@ dialog.modal::backdrop { background: rgba(6, 26, 51, .55); backdrop-filter: blur
 .check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .check input { width: 18px; height: 18px; flex: none; }
 @media (max-width: 640px) { .doc-acoes { width: 100%; } .doc-acoes .btn { flex: 1; min-height: 40px; } }
+
+/* Relatórios: botões de exportação (PDF / CSV) com área de toque confortável no celular; cabeçalho do cartão sem aperto. */
+@media (max-width: 720px) {
+  .card-head .btn[data-export] { min-height: 40px; padding: 8px 14px; font-size: 13.5px; }
+  #exp-corpo .btn { min-height: 44px; }
+  .page-head .page-actions .btn { min-height: 42px; }
+}

@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
-import { abrirExportacao, podeExportar, podePdf } from '../exportar.js';
+import { abrirExportacao, podeCsv, podeExportar, podePdf } from '../exportar.js';
 
 const MODULOS = [
   { key: 'motoristas', label: 'Motoristas', icon: 'steering' },
@@ -24,7 +24,7 @@ export async function renderReports(view, state) {
   // PDF é o formato principal e o CSV é complementar; as permissões são validadas também no servidor.
   // `tipo` = módulo do CSV; `pdfTipo` = modelo do PDF (as simulações saem no modelo "financeiro").
   const exportBtn = (tipo, pdfTipo = tipo) => podeExportar(state, pdfTipo) || podeExportar(state, tipo)
-    ? `<button class="btn btn-sm btn-ghost no-print" data-export="${tipo}" data-pdf="${pdfTipo}">${ui.icon('download', 14)} Exportar</button>`
+    ? `<button class="btn btn-sm btn-primary no-print" data-export="${tipo}" data-pdf="${pdfTipo}" aria-label="Exportar em ${podeCsv(state) ? 'PDF ou CSV' : 'PDF'}">${ui.icon('download', 14)} ${podePdf(state, pdfTipo) ? (podeCsv(state) ? 'PDF / CSV' : 'PDF') : 'CSV'}</button>`
     : '';
   const hoje = ui.todayISO();
   let de = `${hoje.slice(0, 7)}-01`;
@@ -184,7 +184,7 @@ export async function renderReports(view, state) {
       <div class="report-section">
         <div class="card">
           <div class="card-head">
-            <div><h3>Simulações financeiras registradas</h3><p class="sub">${ui.fmtInt(s.simulacoes.total)} simulações · receita estimada somada ${ui.fmtMoney(s.simulacoes.receita_total)}</p></div>
+            <div><h3>Simulações financeiras registradas</h3><p class="sub">${ui.fmtInt(s.simulacoes.total)} ${s.simulacoes.total === 1 ? 'simulação' : 'simulações'} · receita estimada somada ${ui.fmtMoney(s.simulacoes.receita_total)}</p></div>
             ${exportBtn('simulacoes', 'financeiro')}
           </div>
           <div class="card-body" style="padding-top:8px">

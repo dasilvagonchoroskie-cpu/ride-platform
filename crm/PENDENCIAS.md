@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (19h30, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 12/11/2026 (horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -62,6 +62,14 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] Etapa 3 — PDF de cada fichário concluído (o gerador central de PDF já existe desde 12/11) (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
       usuário autorizado, com nova versão sem apagar o histórico.
 - [ ] Etapa 4 — status reais e independentes para entregadores, parceiros e comércios (verde só para concluído).
+
+### Revisão da exportação PDF/CSV nos Relatórios (12/11/2026, ramo `etapa2`)
+- [x] 12/11 PDF + CSV em todos os blocos de Relatórios, Financeiro, listas e Documentos; datas em UTC-3; período em Documentos; resumo com
+      Comércios/Documentos; "estimado" nos financeiros; nomes de arquivo com período; botões maiores no celular. 159/159 testes.
+- [ ] **Dono:** testar no celular real (APK) baixar, abrir e compartilhar o PDF (a verificação feita foi em Chrome emulando celular).
+- [ ] **Dono (decisão):** atendimentos continuam só para o administrador (têm nome e assunto de pessoas); liberar ao gestor só se ele decidir.
+- Fora do escopo, só anotado: o filtro de período do cartão "Documentos" da tela de Relatórios considera TODOS os documentos no total e só
+  os enviados no período no subtítulo (comportamento do M4, mantido); sem antivírus nos arquivos (M4); app 1.0.x sem Web Share.
 
 ## 3. Riscos e avisos em aberto
 

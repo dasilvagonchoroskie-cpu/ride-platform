@@ -220,8 +220,9 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     }
     if (funcao) { exigirFuncao(funcao); where.push('d.funcao = ?'); params.push(funcao); }
     if (categoria) { if (!todasCategorias().includes(categoria)) throw new ErroDoc(422, 'invalido', 'Categoria inválida.'); where.push('d.categoria = ?'); params.push(categoria); }
-    if (de) { where.push('d.criado_em >= ?'); params.push(`${de}T00:00:00.000Z`); }
-    if (ate) { where.push('d.criado_em <= ?'); params.push(`${ate}T23:59:59.999Z`); }
+    // Período pela data CIVIL de Fortaleza (UTC-3), a mesma do cartão "enviados no período" (regra 10: nada de cortar UTC).
+    if (de && /^\d{4}-\d{2}-\d{2}$/.test(String(de))) { where.push("date(d.criado_em, '-3 hours') >= ?"); params.push(String(de)); }
+    if (ate && /^\d{4}-\d{2}-\d{2}$/.test(String(ate))) { where.push("date(d.criado_em, '-3 hours') <= ?"); params.push(String(ate)); }
     const termo = String(q || '').trim().slice(0, 60);
     if (termo) {
       const padrao = `%${entities.likeEscape(termo)}%`;

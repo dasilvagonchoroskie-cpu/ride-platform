@@ -899,7 +899,7 @@ router.get('/reports/summary', (req, res) => {
 /* ------------------------- relatórios em PDF (todos os setores) ------------------------- */
 // PDF é o formato principal de exportação; o CSV abaixo continua como opção complementar.
 const { criarRelatoriosPdf, ErroRelatorio } = require('./relatorios-pdf');
-const relatoriosPdf = criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario,
+const relatoriosPdf = criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, localDate, reportSummary, cenarioCompleto, computeCenario,
   // `docs` é criado mais abaixo (depois de pessoas): o relatório acessa por função, só quando é chamado.
   docs: { ativo: () => docs.ativo(), consultar: (...a) => docs.consultar(...a), get SITUACOES() { return docs.SITUACOES; } } });
 
@@ -929,7 +929,8 @@ router.get('/reports/export', requireAdmin, (req, res) => {
 
   if (type === 'simulacoes') {
     const rows = db.prepare("SELECT * FROM simulacoes WHERE date(created_at, '-3 hours') BETWEEN ? AND ? ORDER BY id").all(de, ate);
-    const header = ['ID', 'Data', 'Cenário', 'Corridas/mês', 'Faturamento bruto', 'Receita plataforma', 'Repasse motoristas', 'Custos', 'Resultado', 'Observação', 'Responsável'];
+    // Cabeçalhos dizem "estimado": são simulações, não receita realizada.
+    const header = ['ID', 'Data', 'Cenário', 'Corridas/mês', 'Faturamento bruto estimado', 'Receita estimada (plataforma)', 'Repasse estimado aos motoristas', 'Custos mensais', 'Resultado estimado', 'Observação', 'Responsável'];
     // Valores numéricos seguem como número (inclusive negativos): sendCsv cuida do formato com vírgula.
     const body = rows.map((s) => {
       const r = safeJson(s.resultados);
@@ -941,11 +942,12 @@ router.get('/reports/export', requireAdmin, (req, res) => {
 
   if (type === 'documentos' && docs.ativo()) {
     // Só metadados e situação da conferência (nada de CPF/CNPJ nem arquivo). Administrador (a rota já exige).
-    const lista = docs.consultar(req, { situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, tudo: true }).items;
+    // Mesmo critério do PDF e do cartão da tela: período pela data de inclusão (só quando de/ate vêm na consulta).
+    const lista = docs.consultar(req, { situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, de: req.query.de, ate: req.query.ate, tudo: true }).items;
     const header = ['ID', 'Função', 'Cadastro', 'Documento', 'Situação', 'Versões', 'Enviado em', 'Conferido por', 'Conferido em'];
     const body = lista.map((i) => [i.id, i.funcao_rotulo, i.registro_titulo || '', i.titulo || i.categoria_rotulo, i.situacao_rotulo, i.total_versoes, i.versao_atual ? localDate(i.versao_atual.data_envio) || i.versao_atual.data_envio : '', i.conferido_por_nome || '', i.conferido_em ? localDate(i.conferido_em) : '']);
     audit(req, 'exportar', 'documentos', null, `Exportação CSV de documentos (${lista.length} linhas)`);
-    return sendCsv(res, 'documentos.csv', header, body);
+    return sendCsv(res, req.query.de || req.query.ate ? `documentos_${stamp}.csv` : 'documentos.csv', header, body);
   }
 
   const def = Object.prototype.hasOwnProperty.call(ENTITIES, type) ? ENTITIES[type] : null;

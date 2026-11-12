@@ -60,6 +60,15 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   Cache do app `fm-crm-v21` (etapa2; v22 no M3).
 - "Simulação incompleta" = `custos_total` não maior que zero (mesma regra da tela do financeiro).
 
+## Revisão da exportação nos Relatórios (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- Um só caminho de exportação: `abrirExportacao` (front) → `GET /reports/pdf` (`relatorios-pdf.js`) e `GET /reports/export` (CSV, só admin).
+  Nenhum relatório novo cria PDF por fora: novo bloco = modelo em `relatorios-pdf.js` + `policy.canExportPdf` + teste em
+  `test/relatorios-exportacao.test.js`. Tela (`reportSummary`), PDF e CSV precisam do mesmo critério de data e dos mesmos totais.
+- Datas de timestamp em PDF/CSV: `localDate` (UTC-3), nunca `slice(0, 10)`. Documentos: período pela data de inclusão local.
+- PDF de período leva o período no nome do arquivo; simulações e cenários sempre como "estimado/estimada"; aviso de que não é receita realizada.
+- Gestor: PDF só de tarefas, campanhas, resumo, financeiro e cenário; atendimentos e listas de pessoas/documentos ficam só com o admin; CSV só admin.
+  Cache do app `fm-crm-v24` (etapa2).
+
 ## M3 comércios (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
 - `comercios`: módulo funcional como entregadores, só em `ENTITIES` com `FM_ETAPA2=1` (migração 004, congelada). Titular = EMPRESA central
   (`FUNCOES.comercio` em `src/titulares.js`, nome do titular vem de `nome_estabelecimento`). Independente de `parceiros` (Clube): decisão
