@@ -2,6 +2,8 @@
 
 Requisição de continuidade, item 5 (11/11/2026).
 
+> **ADIADO (decisão do Evandro, 11/11/2026 23:19):** não aplicar este filtro agora e não criar serviços separados. O Render fica como servidor temporário de testes; a Hostinger será tratada depois. Guardado aqui para quando for a hora.
+
 ## O problema
 
 O serviço `fortaleza-mov-backend` do Render está com **Auto-Deploy: On
