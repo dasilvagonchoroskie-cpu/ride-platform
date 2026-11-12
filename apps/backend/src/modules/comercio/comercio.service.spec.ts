@@ -9,6 +9,8 @@ import { ROLES_KEY } from '../../common/constants/metadata.constants';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { AdminComercioController, ComercioController } from './comercio.controller';
 import { ComercioService } from './comercio.service';
+import { ComercioAvisosService } from './comercio.avisos';
+import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import { encerrarComercios } from './comercio.conta';
 
 /**
@@ -30,6 +32,7 @@ const cadastro = {
   cep: '75600000',
   latitude: -18.01,
   longitude: -49.36,
+  aceiteTermos: true as const,
 };
 const pedido = (chave = 'chave-numero-0000001') => ({
   chave,
@@ -50,6 +53,13 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
   const pedidos: any[] = [];
   const corridas: Record<string, any> = {};
   const auditoria: any[] = [];
+  /** O que foi para o sino (CaixaDeEntradaService falsa): cada item leva a conta dona. */
+  const avisosGravados: Array<{ userId: string; titulo: string; texto: string; tipo: string; dados?: Record<string, string> }> = [];
+  const caixa = {
+    avisar: jest.fn(async (userId: string, titulo: string, texto: string, extra: { tipo: string; dados?: Record<string, string> }) => {
+      avisosGravados.push({ userId, titulo, texto, tipo: extra.tipo, dados: extra.dados });
+    }),
+  };
   const config: Record<string, unknown> = opcoes.desligado ? {} : { 'comercio.config': { ativo: true } };
   let n = 0;
 
@@ -95,6 +105,9 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
       }),
     },
     auditLog: { create: jest.fn(async ({ data }: any) => void auditoria.push(data)) },
+    notification: {
+      findFirst: async ({ where }: any) => avisosGravados.find((a) => a.userId === where.userId && a.dados?.chave === where.data.equals) ?? null,
+    },
     $executeRawUnsafe: jest.fn(),
     withTransaction: async (fn: any) => fn(prisma),
   };
@@ -120,6 +133,9 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
         finalFareCents: null,
         pickupAddress: input.pickup.address,
         dropoffAddress: input.dropoff.address,
+        pickupLat: input.pickup.latitude,
+        pickupLng: input.pickup.longitude,
+        driverId: null,
         dropoffLat: input.dropoff.latitude,
         dropoffLng: input.dropoff.longitude,
         commissionCents: 0,
@@ -130,13 +146,14 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
       };
       return { ride: { id } }; // como o RidesService de verdade: { ride: {...} }
     }),
-    acompanharDoPassageiro: jest.fn(async () => ({ motorista: { lat: -18, lng: -49 } })),
+    posicaoDoMotorista: jest.fn(async () => ({ latitude: -18.011, longitude: -49.361, heading: null, updatedAt: new Date().toISOString() })),
     cancelar: jest.fn(async (_u: string, _p: string, id: string) => {
       corridas[id].status = 'CANCELLED_BY_PASSENGER';
     }),
   };
   const pracas = { listar: jest.fn(async () => opcoes.pracas ?? []) };
-  return { s: new ComercioService(prisma, rides as never, pracas as never), prisma, rides, comercios, pedidos, corridas, auditoria, usuarios, pracas };
+  const avisos = new ComercioAvisosService(prisma, caixa as never);
+  return { s: new ComercioService(prisma, rides as never, pracas as never, avisos), avisos, caixa, avisosGravados, prisma, rides, comercios, pedidos, corridas, auditoria, usuarios, pracas };
 }
 
 async function aprovado(ctx: ReturnType<typeof montar>, userId = 'u1', dados: Record<string, unknown> = cadastro) {
@@ -184,7 +201,7 @@ describe('Comercio: cadastro e autenticacao (testes 1 e 3)', () => {
 
   it('quem nao cadastrou nada nao enxerga nem pede nada', async () => {
     const ctx = montar();
-    expect(await ctx.s.meu('u2')).toEqual({ cadastrado: false, comercio: null, entregasLiberadas: true });
+    expect(await ctx.s.meu('u2')).toMatchObject({ cadastrado: false, comercio: null, entregasLiberadas: true });
     await expect(ctx.s.historico('u2')).rejects.toThrow('ainda não cadastrou');
     await expect(ctx.s.pedir('u2', pedido())).rejects.toThrow('ainda não cadastrou');
   });
@@ -320,9 +337,10 @@ describe('Comercio: duplicidade e falha de rede (testes 22 e 23)', () => {
     const ctx = montar();
     await aprovado(ctx);
     const e = await ctx.s.pedir('u1', pedido());
-    ctx.rides.acompanharDoPassageiro.mockRejectedValueOnce(new Error('sem posicao'));
     const d = await ctx.s.detalhe('u1', e.id);
-    expect(d.aoVivo).toBeNull();
+    // sem motorista ainda: o mapa so tem coleta e entrega, nunca um ponto inventado
+    expect(d.mapa).toEqual({ coleta: { latitude: -18.01, longitude: -49.36 }, entrega: { latitude: -18.02, longitude: -49.35 }, motorista: null });
+    expect((d as any).aoVivo).toBeUndefined();
     expect(d.etapa).toBe('AGUARDANDO_MOTORISTA');
     // o servidor andou: motorista coletou e depois entregou
     ctx.corridas[e.id].status = 'IN_PROGRESS';
@@ -335,7 +353,7 @@ describe('Comercio: duplicidade e falha de rede (testes 22 e 23)', () => {
     expect(fim.final).toBe(true);
     expect(fim.valorCobradoCents).toBe(750);
     expect(fim.codigoDeEntrega).toBeNull(); // depois de entregue o codigo some
-    expect(fim.aoVivo).toBeNull();
+    expect(fim.mapa).toBeNull();
   });
 });
 
@@ -638,5 +656,149 @@ describe('Comercio: e-mail confirmado vale a cada consulta e a cada pedido, nao 
     await ctx.s.adminDecidir('dono', c.id, 'REATIVAR');
     expect((await ctx.s.pedir('u1', pedido() as never)).repetido).toBe(false);
     expect(ctx.rides.pedir).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Comercio: termos de uso (13/11/2026)', () => {
+  it('sem aceitar os termos o servidor recusa o cadastro; aceitando, grava a versao e a data', async () => {
+    const ctx = montar();
+    await expect(ctx.s.cadastrar('u1', { ...cadastro, aceiteTermos: false })).rejects.toThrow('aceite os termos');
+    await expect(ctx.s.cadastrar('u1', { ...cadastro, aceiteTermos: undefined })).rejects.toThrow('aceite os termos');
+    expect(ctx.comercios).toHaveLength(0);
+    const c = await ctx.s.cadastrar('u1', cadastro);
+    expect(c.termosVersao).toBe(COMERCIO_TERMS_VERSION);
+    expect(ctx.comercios[0].termosAceitosEm).toBeInstanceOf(Date);
+    const meu = await ctx.s.meu('u1');
+    expect(meu.termos).toEqual({ versaoAtual: COMERCIO_TERMS_VERSION, revisadoPorAdvogado: false });
+  });
+});
+
+describe('Comercio: avisos no sino (13/11/2026)', () => {
+  it('cadastro e decisoes da Central avisam so a conta da loja, com motivo quando houver', async () => {
+    const ctx = montar();
+    const c = await ctx.s.cadastrar('u1', cadastro);
+    expect(ctx.avisosGravados.map((a) => a.titulo)).toEqual(['Cadastro recebido']);
+    await ctx.s.adminDecidir('dono', c.id, 'APROVAR');
+    await ctx.s.adminDecidir('dono', c.id, 'SUSPENDER', 'Documento vencido');
+    await ctx.s.adminDecidir('dono', c.id, 'REATIVAR');
+    await ctx.s.adminDecidir('dono', c.id, 'SUSPENDER', 'Outro motivo');
+    const titulos = ctx.avisosGravados.map((a) => a.titulo);
+    expect(titulos).toEqual(['Cadastro recebido', 'Cadastro aprovado', 'Estabelecimento suspenso', 'Estabelecimento reativado', 'Estabelecimento suspenso']);
+    expect(ctx.avisosGravados[2].texto).toContain('Documento vencido');
+    expect(ctx.avisosGravados.every((a) => a.userId === 'u1')).toBe(true);
+    // nenhum dado sensivel nos avisos
+    const tudo = JSON.stringify(ctx.avisosGravados);
+    expect(tudo).not.toContain('11222333000181');
+    expect(tudo).not.toContain('99999');
+  });
+
+  it('rejeicao tambem avisa, com o motivo', async () => {
+    const ctx = montar();
+    const c = await ctx.s.cadastrar('u1', cadastro);
+    await ctx.s.adminDecidir('dono', c.id, 'REJEITAR', 'CNPJ não confere');
+    const a = ctx.avisosGravados.at(-1)!;
+    expect(a.titulo).toBe('Cadastro não aprovado');
+    expect(a.texto).toContain('CNPJ não confere');
+  });
+
+  it('cada marco da entrega avisa uma vez so e sempre a loja dona (outra loja nao recebe nada)', async () => {
+    const ctx = montar();
+    await aprovado(ctx, 'u1');
+    await aprovado(ctx, 'u2', { ...cadastro, cnpj: '45723174000110', email: 'joao@loja.com.br' });
+    const e = await ctx.s.pedir('u1', pedido());
+    const antes = ctx.avisosGravados.length;
+    // buscando motorista: ainda nao ha marco
+    expect(await ctx.avisos.sincronizar()).toBe(0);
+    const passos: Array<[string, any, string]> = [
+      ['DRIVER_ASSIGNED', null, 'Entrega aceita'],
+      ['DRIVER_ARRIVING', null, 'Motorista a caminho'],
+      ['DRIVER_WAITING', null, 'Motorista chegou à loja'],
+      ['IN_PROGRESS', new Date(), 'Encomenda coletada'],
+      ['COMPLETED', new Date(), 'Entrega concluída'],
+    ];
+    ctx.corridas[e.id].driver = { user: { name: 'João Pedro da Silva' } };
+    for (const [status, coletada, titulo] of passos) {
+      ctx.corridas[e.id].status = status;
+      ctx.corridas[e.id].entrega.coletadaEm = coletada;
+      if (status === 'COMPLETED') ctx.corridas[e.id].entrega.entregueEm = new Date();
+      expect(await ctx.avisos.sincronizar()).toBe(1);
+      expect(ctx.avisosGravados.at(-1)!.titulo).toBe(titulo);
+      // repetir a conferencia nao repete o aviso
+      expect(await ctx.avisos.sincronizar()).toBe(0);
+    }
+    const dosPedidos = ctx.avisosGravados.slice(antes);
+    expect(dosPedidos).toHaveLength(5);
+    expect(dosPedidos.every((a) => a.userId === 'u1')).toBe(true);
+    expect(ctx.avisosGravados.filter((a) => a.userId === 'u2').map((a) => a.titulo)).toEqual(['Cadastro recebido', 'Cadastro aprovado']);
+    // so o primeiro nome do motorista, sem telefone
+    expect(dosPedidos[0].texto).toBe('João aceitou a entrega.');
+    expect(JSON.stringify(dosPedidos)).not.toContain('Silva');
+  });
+
+  it('cancelada pelo sistema e "ninguem aceitou" (sem passar por tela) tambem avisam; a mesma entrega nao repete', async () => {
+    const ctx = montar();
+    await aprovado(ctx, 'u1');
+    const a = await ctx.s.pedir('u1', pedido('chave-numero-0000001'));
+    const b = await ctx.s.pedir('u1', pedido('chave-numero-0000002'));
+    ctx.corridas[a.id].status = 'EXPIRED';
+    ctx.corridas[b.id].status = 'CANCELLED_BY_SYSTEM';
+    expect(await ctx.avisos.sincronizar()).toBe(2);
+    const t = ctx.avisosGravados.map((x) => x.titulo);
+    expect(t).toContain('Nenhum motorista aceitou');
+    expect(t).toContain('Entrega cancelada');
+  });
+
+  it('a falha de gravar o aviso nunca derruba o cadastro nem a decisao (ja gravados)', async () => {
+    const ctx = montar();
+    ctx.caixa.avisar.mockRejectedValue(new Error('banco fora'));
+    const c = await ctx.s.cadastrar('u1', cadastro);
+    expect(c.situacao).toBe('AGUARDANDO');
+    const d = await ctx.s.adminDecidir('dono', c.id, 'APROVAR');
+    expect(d.situacao).toBe('APROVADO');
+  });
+});
+
+describe('Comercio: mapa do acompanhamento (13/11/2026)', () => {
+  it('com motorista a caminho, devolve so a posicao dele (nada de telefone ou corrida inteira)', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const e = await ctx.s.pedir('u1', pedido());
+    ctx.corridas[e.id].status = 'DRIVER_ARRIVING';
+    ctx.corridas[e.id].driverId = 'm1';
+    const d = await ctx.s.detalhe('u1', e.id);
+    expect(d.mapa!.motorista).toMatchObject({ latitude: -18.011, longitude: -49.361, desatualizada: false });
+    expect(Object.keys(d.mapa!.motorista!).sort()).toEqual(['atualizadaEm', 'desatualizada', 'latitude', 'longitude']);
+    expect(JSON.stringify(d)).not.toMatch(/phone|telefoneDoMotorista|passenger/i);
+  });
+
+  it('sinal velho (mais de 2 minutos) e marcado desatualizado; sem sinal ou com erro, motorista fica null', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const e = await ctx.s.pedir('u1', pedido());
+    ctx.corridas[e.id].status = 'IN_PROGRESS';
+    ctx.corridas[e.id].driverId = 'm1';
+    ctx.rides.posicaoDoMotorista.mockResolvedValueOnce({ latitude: -18, longitude: -49, heading: null, updatedAt: new Date(Date.now() - 5 * 60_000).toISOString() });
+    expect((await ctx.s.detalhe('u1', e.id)).mapa!.motorista!.desatualizada).toBe(true);
+    ctx.rides.posicaoDoMotorista.mockResolvedValueOnce(null as never);
+    expect((await ctx.s.detalhe('u1', e.id)).mapa!.motorista).toBeNull();
+    ctx.rides.posicaoDoMotorista.mockRejectedValueOnce(new Error('gps fora'));
+    expect((await ctx.s.detalhe('u1', e.id)).mapa!.motorista).toBeNull();
+  });
+
+  it('motorista que ainda nao aceitou, ou entrega encerrada, nao mostra posicao', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const e = await ctx.s.pedir('u1', pedido());
+    ctx.corridas[e.id].driverId = 'm1';
+    expect((await ctx.s.detalhe('u1', e.id)).mapa!.motorista).toBeNull(); // SEARCHING
+    expect(ctx.rides.posicaoDoMotorista).not.toHaveBeenCalled();
+  });
+
+  it('outra loja nao ve o mapa nem os avisos desta entrega', async () => {
+    const ctx = montar();
+    await aprovado(ctx, 'u1');
+    await aprovado(ctx, 'u2', { ...cadastro, cnpj: '45723174000110', email: 'joao@loja.com.br' });
+    const e = await ctx.s.pedir('u1', pedido());
+    await expect(ctx.s.detalhe('u2', e.id)).rejects.toThrow('não encontrada');
   });
 });

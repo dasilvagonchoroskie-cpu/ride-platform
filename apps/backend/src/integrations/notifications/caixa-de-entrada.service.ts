@@ -58,7 +58,7 @@ export class CaixaDeEntradaService {
     userId: string,
     titulo: string,
     texto: string,
-    extra: { tipo: string; abrir?: DestinoDaNotificacao | null },
+    extra: { tipo: string; abrir?: DestinoDaNotificacao | null; dados?: Record<string, string> },
   ): Promise<void> {
     try {
       const n = await this.db.notification.create({
@@ -68,7 +68,7 @@ export class CaixaDeEntradaService {
           status: 'SENT',
           title: titulo.slice(0, 160),
           body: texto.slice(0, 500),
-          data: { tipo: extra.tipo, ...(extra.abrir ? { abrir: extra.abrir } : {}) },
+          data: { ...(extra.dados ?? {}), tipo: extra.tipo, ...(extra.abrir ? { abrir: extra.abrir } : {}) },
           sentAt: new Date(),
         },
         select: { id: true },

@@ -8,6 +8,8 @@ import { PracasService } from '../pracas/pracas.service';
 import { pracaDoPonto } from '../pracas/pracas.store';
 import { RidesService } from '../rides/rides.service';
 import { telefoneDeQuemRecebe } from '../entregas/entregas.regras';
+import { ComercioAvisosService } from './comercio.avisos';
+import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import {
   ROTULOS,
   decidir,
@@ -22,6 +24,7 @@ import {
   somarGastos,
   valorCobrado,
   type Acao,
+  type Etapa,
   type EntregaInput,
   type CotarInput,
 } from './comercio.regras';
@@ -79,6 +82,9 @@ const CRIAR_TABELAS = [
 )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "comercio_pedidos_comercio_id_chave_key" ON "comercio_pedidos"("comercio_id", "chave")`,
   `CREATE INDEX IF NOT EXISTS "comercio_pedidos_comercio_id_created_at_idx" ON "comercio_pedidos"("comercio_id", "created_at")`,
+  // Termos de uso do Comercio (13/11/2026): so colunas novas na tabela NOVA do Comercio.
+  `ALTER TABLE "comercios" ADD COLUMN IF NOT EXISTS "termos_versao" VARCHAR(30)`,
+  `ALTER TABLE "comercios" ADD COLUMN IF NOT EXISTS "termos_aceitos_em" TIMESTAMP(3)`,
 ];
 
 const POR_PAGINA = 20;
@@ -122,6 +128,7 @@ export function comercioPublico(c: Linha) {
     situacaoRotulo: rotuloDaSituacao(c.status),
     motivo: c.motivo,
     decididoEm: c.decididoEm?.toISOString() ?? null,
+    termosVersao: c.termosVersao ?? null,
     criadoEm: c.createdAt.toISOString(),
   };
 }
@@ -136,6 +143,7 @@ export class ComercioService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly rides: RidesService,
     private readonly pracas: PracasService,
+    private readonly avisos: ComercioAvisosService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -170,6 +178,9 @@ export class ComercioService implements OnModuleInit {
     if (input.senha && user.passwordHash) {
       throw BusinessException.validation('Esta conta já tem senha. Para trocar, use "Esqueci minha senha".');
     }
+    if (input.aceiteTermos !== true) {
+      throw BusinessException.validation('Leia e aceite os termos de uso do Comércio para cadastrar o estabelecimento.');
+    }
     const comercio = await this.prisma.withTransaction(async (tx) => {
       const criado = await tx.comercio.create({
         data: {
@@ -191,6 +202,8 @@ export class ComercioService implements OnModuleInit {
           latitude: input.latitude ?? null,
           longitude: input.longitude ?? null,
           status: 'AGUARDANDO',
+          termosVersao: COMERCIO_TERMS_VERSION,
+          termosAceitosEm: new Date(),
         },
       });
       if (input.senha && !user.passwordHash) {
@@ -204,18 +217,20 @@ export class ComercioService implements OnModuleInit {
           entity: 'comercio',
           entityId: criado.id,
           // Sem CNPJ/CPF/telefone no registro: so o que a Central precisa para achar.
-          after: { nomeFantasia: criado.nomeFantasia, cidade: criado.cidade, uf: criado.uf, situacao: 'AGUARDANDO' } as never,
+          after: { nomeFantasia: criado.nomeFantasia, cidade: criado.cidade, uf: criado.uf, situacao: 'AGUARDANDO', termos: COMERCIO_TERMS_VERSION } as never,
         },
       });
       return criado;
     });
+    await this.avisos.cadastroRecebido(userId, comercio.nomeFantasia);
     return comercioPublico(comercio);
   }
 
   async meu(userId: string) {
     const c = await this.prisma.comercio.findUnique({ where: { userId } });
     const entregasLiberadas = await this.ativo();
-    return c ? { cadastrado: true as const, comercio: comercioPublico(c), entregasLiberadas } : { cadastrado: false as const, comercio: null, entregasLiberadas };
+    const termos = { versaoAtual: COMERCIO_TERMS_VERSION, revisadoPorAdvogado: false };
+    return c ? { cadastrado: true as const, comercio: comercioPublico(c), entregasLiberadas, termos } : { cadastrado: false as const, comercio: null, entregasLiberadas, termos };
   }
 
   async atualizar(userId: string, input: Record<string, any>) {
@@ -500,15 +515,39 @@ export class ComercioService implements OnModuleInit {
     // O codigo de 4 numeros e de quem recebe: o comerciante repassa a ele.
     // (O motorista nunca ve; ele pede a quem recebe.)
     const codigo = p.ride.entrega && !base.final ? p.ride.entrega.codigo : null;
-    let ao_vivo: unknown = null;
-    if (!base.final) {
+    // So o que o mapa precisa (nunca a corrida inteira: telefone do motorista etc.).
+    const mapa = base.final ? null : await this.mapaDaEntrega(p.ride);
+    await this.avisos.deEntrega(c.userId, rideId, base.etapa as Etapa, p.ride.driver?.user?.name?.split(' ')[0] ?? null);
+    return { ...base, codigoDeEntrega: codigo, mapa };
+  }
+
+  /**
+   * Pontos do mapa do acompanhamento: coleta, entrega e, SO enquanto o motorista
+   * esta com a entrega, a ultima posicao que o aparelho dele mandou (o mesmo
+   * dado que o passageiro ve nas corridas). Sem posicao, vem null — o app nao
+   * inventa ponto. `desatualizada` = ha mais de 2 minutos sem sinal.
+   */
+  private async mapaDaEntrega(r: any) {
+    const ponto = (lat: unknown, lng: unknown) =>
+      typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng) ? { latitude: lat, longitude: lng } : null;
+    const comCarro = ['DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'];
+    let motorista: { latitude: number; longitude: number; atualizadaEm: string; desatualizada: boolean } | null = null;
+    if (r.driverId && comCarro.includes(r.status)) {
       try {
-        ao_vivo = await this.rides.acompanharDoPassageiro(userId, UserRole.PASSENGER, rideId);
+        const pos = await this.rides.posicaoDoMotorista(r.driverId);
+        if (pos) {
+          motorista = {
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            atualizadaEm: pos.updatedAt,
+            desatualizada: Date.now() - Date.parse(pos.updatedAt) > 120_000,
+          };
+        }
       } catch {
-        ao_vivo = null; // sem localizacao agora: a tela mostra so o estado
+        motorista = null; // sem localizacao agora: a tela segue so com o estado
       }
     }
-    return { ...base, codigoDeEntrega: codigo, aoVivo: ao_vivo };
+    return { coleta: ponto(r.pickupLat, r.pickupLng), entrega: ponto(r.dropoffLat, r.dropoffLng), motorista };
   }
 
   async historico(userId: string, pagina = 1) {
@@ -667,6 +706,7 @@ export class ComercioService implements OnModuleInit {
         after: { situacao: r.para, motivo: motivo?.trim() || null } as never,
       },
     });
+    await this.avisos.decisao(novo.userId, acao, novo.nomeFantasia, novo.motivo);
     return comercioPublico(novo);
   }
 

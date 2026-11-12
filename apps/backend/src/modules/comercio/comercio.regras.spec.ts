@@ -21,6 +21,7 @@ const cadastro = {
   responsavelNome: 'Maria Souza',
   telefone: '(64) 99999-1234',
   email: 'Maria@Padaria.com.br',
+  aceiteTermos: true,
 };
 const pedido = {
   chave: 'abcdefghij0123456789',
@@ -29,6 +30,15 @@ const pedido = {
   destino: { ...endereco, numero: '55', latitude: -18.0, longitude: -49.3 },
   veiculo: 'MOTO' as const,
 };
+
+describe('Comercio: aceite dos termos no cadastro', () => {
+  it('sem aceite (ausente ou falso) o cadastro e recusado', () => {
+    const { aceiteTermos: _a, ...semAceite } = cadastro;
+    expect(cadastroSchema.safeParse(semAceite).success).toBe(false);
+    expect(cadastroSchema.safeParse({ ...cadastro, aceiteTermos: false }).success).toBe(false);
+    expect(cadastroSchema.safeParse(cadastro).success).toBe(true);
+  });
+});
 
 describe('Comercio: cadastro e validacao (testes 1 e 2)', () => {
   it('aceita um cadastro valido e normaliza CNPJ, CEP, UF, e-mail e telefone', () => {
