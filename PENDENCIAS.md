@@ -7,6 +7,21 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 00000001. Fortaleza Move Comércio — 4º aplicativo (12/11/2026, PR #59 em rascunho)
+Legenda desta seção: **Implementado e testado** · **Implementado** (sem teste) · **Parcial** · **Simulado** (só com dados de mentira) · **Pendente** · **Bloqueado por autorização**. Detalhes em docs/COMERCIO.md.
+- [REAL] Teste de ponta a ponta antecipado (execução 87, a pedido do Evandro): 386 OK, 3 falhas (as 3 da carteira, intencionais), 4 pulados. Nenhuma falha causada pelo Render nessa rodada.
+- **Etapa A — Fundação:** Implementado e testado. Tabelas `comercios` e `comercio_pedidos` (criadas no boot), cadastro com CNPJ/CPF/endereço, situação AGUARDANDO/APROVADO/SUSPENSO/REJEITADO, login (código ou senha), app novo `apps/comercio_app`. Servidor: 48 de 48 testes. App: análise limpa e 51 de 51 testes.
+- **Etapa B — Operação:** Implementado e testado (com o pedido simulado). Nova entrega em 6 passos, coleta já com o endereço da loja, Moto/Carro só onde a Central ligou, preço oficial antes de confirmar, resumo, confirmação, chave anti-duplicidade (queda de rede não confirma entrega que não existe), histórico e "Repetir" (só preenche), tela Gastos sem carteira/crédito/mensalidade.
+- **Etapa C — Integração:** Parcial. Usa o mesmo `RidesService.pedir`, a mesma busca de endereço, as mesmas rotas de auth. Identificação comercial vai ao motorista na descrição (app do motorista não foi alterado). Acompanhamento com estados reais e atualização a cada 8 s; **mapa ao vivo ainda não** (mostra a posição em texto).
+- **Etapa D — Gestão:** Implementado e testado. Central → Comércios (lista, filtros, detalhe, aprovar/rejeitar/suspender/reativar só pelo dono, motivo obrigatório, auditoria no servidor) e origem "Comércio: loja" em Entregas. Central: análise limpa, 71 testes.
+- **Etapa E — Testes:** `scripts/conferir-rotas.py` confere 257 chamadas e todas existem. Esteira própria `android-comercio.yml` (análise e testes a cada envio; APK só por disparo manual).
+- [AUTO] Itens 12 a 16 da requisição (chegada ao motorista, aceite/recusa, atualização de status, conclusão): **só no serviço, com o `pedir` simulado no formato real**. Com a entrega desligada em todas as cidades, nenhum motorista real recebe pedido do Comércio.
+- [BLOQUEADO POR AUTORIZAÇÃO] Ponta a ponta do Comércio com motorista de verdade: exige ligar a entrega numa cidade de teste. Não foi feito. Moto, tarifas, comissões, repasses e carteiras não foram tocados; a configuração de teste de Goiatuba continua como estava.
+- [SEM TESTE] APK do Comércio ainda não gerado (disparo manual da esteira; pode exigir o arquivo da esteira estar na branch principal). Nenhuma instalação em celular real.
+- [NÃO EXISTE] Mapa ao vivo no acompanhamento · ícone próprio do app · texto de termos de uso para lojas (precisa revisão jurídica) · aviso por notificação ao comerciante quando a Central decide · outras formas de pagamento além de dinheiro direto ao motorista (decisão do dono) · mostrar a identificação comercial em campos próprios no app do motorista.
+- Decisão do dono pendente: juntar o PR #59 (é só acréscimo; o servidor reinicia no Render e cria as 2 tabelas; a entrega continua desligada). Não juntar durante um ponta a ponta em andamento.
+- Adiado pelo Evandro (23:19): separação do Render / filtros / serviços separados do CRM. Nada foi mexido.
+
 ## 00000000. Requisição de continuidade — recuperação de contas R1–R5 (11/11/2026, PR #56)
 - [REAL] Ponta a ponta no servidor de verdade (execução 86, 11/11 18:54, autorizada pelo Evandro porque a plataforma ainda não opera): 385 OK, 4 falhas, 4 pulados. Todos os 23 cenários novos de R1, R2, R3 e abuso de códigos passaram. Falhas: as 3 da carteira (intencionais) + 1 "Central carrega cadastros pendentes" que recebeu a página do Render no lugar da resposta: o Render estava trocando de versão naquele minuto por causa de um envio só de documentos de outra sessão (21:53–21:54 UTC). Não é defeito do código; é exatamente o problema que o Build Filter resolve.
 - [REAL] R1: trocar/recuperar a senha derruba na hora os outros aparelhos (acesso de 15 min já aberto também cai); só o aparelho que trocou continua.
