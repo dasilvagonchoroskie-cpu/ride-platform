@@ -55,6 +55,9 @@ class PedidoDeEntrega {
   int get tentativas => _int(detalhe['tentativas']);
   String? get motorista => (j['motorista'] as Map?)?['nome'] as String?;
   String get cliente => (j['cliente'] as Map?)?['nome'] as String? ?? '';
+
+  /// Quando a entrega veio do aplicativo Comercio: nome da loja (senao vazio).
+  String get comercio => j['origem'] == 'COMERCIO' ? (j['comercio'] as String? ?? 'Comércio') : '';
   DateTime? get pedidaEm => DateTime.tryParse(j['pedidaEm'] as String? ?? '')?.toLocal();
 
   String get situacao => switch (status) {
@@ -306,7 +309,7 @@ class _CartaoDoPedido extends StatelessWidget {
               Text('Item: ${p.descricao}', style: AppText.body),
               Text('Coleta: ${p.coleta}', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
               Text('Entrega: ${p.entrega}', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
-              Text('Quem pediu: ${p.cliente} · Quem recebe: ${p.quemRecebe} ${telefoneBonito(p.telefoneDeQuemRecebe)}', style: AppText.caption),
+              Text('${p.comercio.isEmpty ? 'Quem pediu: ${p.cliente}' : 'Comércio: ${p.comercio}'} · Quem recebe: ${p.quemRecebe} ${telefoneBonito(p.telefoneDeQuemRecebe)}', style: AppText.caption),
               Text(
                 '${p.motorista == null ? 'Sem motorista ainda' : 'Motorista: ${p.motorista}'} · ${reais(p.valorCents)} · código ${p.codigo}',
                 style: AppText.caption.copyWith(color: AppColors.textMuted),

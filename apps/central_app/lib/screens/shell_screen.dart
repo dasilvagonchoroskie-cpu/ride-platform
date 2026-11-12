@@ -18,6 +18,7 @@ import '../painel/dados_pessoais.dart';
 import '../painel/pedidos_categoria.dart';
 import '../painel/pedidos_exclusao.dart';
 import '../painel/despacho.dart';
+import '../painel/comercios.dart';
 import '../painel/entregas.dart';
 import '../painel/financeiro.dart';
 import '../painel/motoristas.dart';
@@ -64,6 +65,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _Aba('despacho', 'Despacho', Icons.support_agent),
     // Etapa 5 (30/10/2026): entregas de encomendas (desligadas ate o dono ligar).
     _Aba('entregas', 'Entregas', Icons.inventory_2_outlined),
+    // 4o aplicativo (Comercio): lojas que pedem entregas; so o dono decide.
+    _Aba('comercios', 'Comércios', Icons.storefront_outlined),
     _Aba('motoristas', 'Motoristas', Icons.badge_outlined),
     _Aba('passageiros', 'Passageiros', Icons.people_outline, soDono: true),
     _Aba('categorias', 'Categorias', Icons.category_outlined),
@@ -398,6 +401,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         return const CarteirasTela();
       case 'entregas':
         return const EntregasTela();
+      case 'comercios':
+        return const ComerciosTela();
       case 'cidades':
         return const CidadesEquipeTela();
       case 'limpeza':
