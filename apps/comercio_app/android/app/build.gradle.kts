@@ -1,0 +1,97 @@
+import java.io.FileInputStream
+import java.util.Properties
+
+// Assinatura de producao (Google Play): as credenciais nunca ficam no
+// codigo. O CI decodifica o segredo do GitHub num arquivo temporario e
+// escreve este key.properties antes de compilar. Sem ele (por exemplo,
+// no `flutter run` de um desenvolvedor sem as credenciais), o build cai
+// de volta para a chave de depuracao — e continua funcionando local.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+val temAssinaturaDeProducao = keystorePropertiesFile.exists()
+if (temAssinaturaDeProducao) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+plugins {
+    id("com.android.application")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
+android {
+    namespace = "br.com.fortalezamov.comercio"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "br.com.fortalezamov.comercio"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
+        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
+        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
+        // flag during build.
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        create("release") {
+            if (temAssinaturaDeProducao) {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Assina com a chave de producao quando ela existe; sem ela,
+            // volta para a chave de depuracao (para nao travar builds
+            // locais de quem nao tem as credenciais).
+            signingConfig = if (temAssinaturaDeProducao) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+
+            // Producao: reduz o tamanho do APK e dificulta engenharia
+            // reversa. As regras ficam em proguard-rules.pro; o segundo
+            // arquivo (proguard-android-optimize.txt) e o padrao que o
+            // proprio Android Studio gera, com as otimizacoes seguras
+            // que o SDK ja testa a cada versao.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    // ContextCompat/ActivityCompat das autorizacoes pedidas na primeira abertura.
+    implementation("androidx.core:core-ktx:1.13.1")
+}
