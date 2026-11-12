@@ -171,10 +171,10 @@ legado, redondo, adaptativa (zona segura) e monocromática, mais o ícone 512 px
 
 | Camada | Arquivo / esteira | Resultado |
 |---|---|---|
-| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts`, `comercio.portas.spec.ts` | Esteira "Testes do servidor" no commit `7c524ab`: compilação limpa, 28 arquivos de teste e **253 testes passam** (72 são do Comércio) |
-| App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, 53 de 53 passam (última rodada no commit `58a6f29`; a pasta do app é idêntica à do commit atual) |
-| Central | `apps/central_app/test/painel_test.dart` (esteira "Android APKs") | análise sem problemas, 71 passam, 1 pulado de antes (última rodada no commit `419b5ee`; a pasta do app é idêntica à do commit atual) |
-| Rotas | `scripts/conferir-rotas.py` | 263 chamadas conferidas, todas existem no servidor |
+| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts`, `comercio.portas.spec.ts` | Esteira "Testes do servidor" no commit `588f49b`: 28 arquivos de teste e **264 testes passam** (inclui avisos, mapa, termos/aceite e as cinco portas com o `RidesService.pedir` real). Tudo com dados simulados |
+| App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, **77 testes passam** no commit `588f49b` (inclui sino, mapa, termos e modelos novos) |
+| Central | `apps/central_app/test/painel_test.dart` (esteira "Android APKs") | análise sem problemas, 71 passam, 1 pulado de antes (commit `588f49b`) |
+| Rotas | `scripts/conferir-rotas.py` | 268 chamadas conferidas contra 260 rotas, todas existem no servidor |
 
 As esteiras do Android só rodam quando uma pasta de app muda; por isso, depois de commits só
 de servidor ou de documentos, vale conferir se a pasta do app continua idêntica à da rodada
