@@ -118,7 +118,7 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number } = {}) {
         vehicle: null,
         _passageiro: uid,
       };
-      return { id };
+      return { ride: { id } }; // como o RidesService de verdade: { ride: {...} }
     }),
     acompanharDoPassageiro: jest.fn(async () => ({ motorista: { lat: -18, lng: -49 } })),
     cancelar: jest.fn(async (_u: string, _p: string, id: string) => {

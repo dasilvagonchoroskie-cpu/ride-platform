@@ -357,7 +357,7 @@ export class ComercioService implements OnModuleInit {
             },
           },
         );
-        rideId = (corrida as { id: string }).id;
+        rideId = (corrida as unknown as { ride: { id: string } }).ride.id;
       } catch (e) {
         // Dois toques ao mesmo tempo em instancias diferentes: o banco recusou o segundo
         // (e a corrida dele foi desfeita junto). Devolve a entrega que ja existe.
