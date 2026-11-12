@@ -5,7 +5,7 @@ const { ErroIA, ehProvedor } = require('./provider');
 const STATUS_HTTP = {
   desativada: 409, sem_chave: 422, limite_diario: 429, em_andamento: 409, sem_mensagens: 409, nao_encontrada: 404,
   chave_invalida: 502, sem_saldo: 502, url_invalida: 422, modelo_invalido: 502, limite_provedor: 503, indisponivel: 503, timeout: 504, rede: 502,
-  resposta_invalida: 502, resposta_vazia: 502, requisicao_invalida: 502, invalido: 422
+  resposta_invalida: 502, resposta_vazia: 502, requisicao_invalida: 502, invalido: 422, nao_ia: 409, ja_respondida: 409
 };
 
 function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
@@ -86,6 +86,17 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
     try {
       const a = await ia.analisar(id, { forcar: req.body && req.body.forcar === true, usuarioId: req.user.id });
       res.json({ item: a });
+    } catch (err) { erroIA(res, err); }
+  });
+
+  // Tratar de novo a última mensagem do cliente (falhou, ficou pendente). Admin e gestor, como "Assumir"/"Devolver".
+  router.post('/wa/conversas/:id/ia/reprocessar', async (req, res) => {
+    const id = idDe(req);
+    if (!Number.isInteger(id)) return ID_INVALIDO(res);
+    try {
+      const conversa = await ia.reprocessar(id);
+      audit(req, 'ia_reprocessar', 'wa_conversas', id, `IA reprocessou a última mensagem: ${conversa && conversa.ia_estado ? conversa.ia_estado : 'sem estado'}`);
+      res.json({ ok: true, ia_estado: conversa.ia_estado, ia_erro: conversa.ia_erro, atendimento: conversa.atendimento });
     } catch (err) { erroIA(res, err); }
   });
 

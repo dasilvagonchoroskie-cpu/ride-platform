@@ -19,6 +19,7 @@ const CAMPO = { razao_social: 'Razão social', nome: 'Nome', cidade: 'Cidade', p
 const PERFIL_TIPO = { motorista: 'motoristas', passageiro: 'passageiros', parceiro: 'parceiros' };
 // Central de Atendimento: estados da conversa e assuntos do menu.
 const ESTADO = { ia: ['IA atendendo', 'info'], aguardando: ['Aguardando atendimento humano', 'danger'], humano: ['Atendimento humano', 'success'], concluido: ['Concluído', 'neutral'] };
+const IA_ERRO = { indisponivel: 'serviço de IA fora do ar', timeout: 'a IA demorou demais', limite_provedor: 'limite de uso do provedor', rede: 'sem conexão com a IA', resposta_invalida: 'resposta inesperada da IA', falha_redacao: 'a IA não conseguiu redigir', chave_invalida: 'chave da IA recusada', sem_saldo: 'conta da IA sem saldo', modelo_invalido: 'modelo de IA inválido', sem_chave: 'chave da IA não configurada', limite_diario: 'limite diário de análises', em_andamento: 'outra análise em andamento' };
 const ESTADO_CURTO = { ia: 'IA', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' };
 const ASSUNTO_MENU = { cadastro: 'Cadastro de motorista', passageiro: 'Passageiro', encomendas: 'Encomendas', clube: 'Clube de Vantagens', outros: 'Outros assuntos' };
 const EVENTO = { transferida: 'Transferida para a equipe', assumida: 'Assumida', devolvida: 'Devolvida para a IA', concluida: 'Concluída', reaberta: 'Reaberta' };
@@ -186,10 +187,19 @@ export async function renderConversas(view, state) {
     if (c.atendimento === 'humano' || c.atendimento === 'aguardando') botoes.push('<button class="btn btn-sm btn-soft" data-at="devolver" type="button" title="Devolver para a IA">Devolver<span class="so-desk">à IA</span></button>');
     if (c.atendimento !== 'concluido') botoes.push('<button class="btn btn-sm btn-ghost" data-at="concluir" type="button">Concluir</button>');
     else botoes.push('<button class="btn btn-sm btn-soft" data-at="assumir" type="button">Reabrir</button>');
-    const curto = { ia: 'IA atendendo', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' }[c.atendimento] || 'IA atendendo';
-    const detalhe = c.atendimento === 'aguardando' && c.atend_motivo ? c.atend_motivo : (c.atend_assunto ? ASSUNTO_MENU[c.atend_assunto] || '' : '');
+    // Estado REAL do processamento da IA (12/11): não mostra "IA atendendo" quando a IA está desligada, falhou ou tenta de novo.
+    const iaLigada = !!iaSt.responder;
+    let curto = { ia: iaLigada ? 'IA atendendo' : 'IA (resposta automática desligada)', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' }[c.atendimento] || 'IA atendendo';
+    let alertaIA = '';
+    if (c.atendimento === 'ia' && iaLigada) {
+      if (c.ia_estado === 'processando') curto = 'IA respondendo…';
+      else if (c.ia_estado === 'tentando') { curto = 'IA tentando de novo'; alertaIA = `Falha do serviço de IA (${IA_ERRO[c.ia_erro] || c.ia_erro || 'erro'}). Nova tentativa ${c.ia_proxima ? `às ${ui.fmtDateTime(c.ia_proxima).split(' ').pop()}` : 'em instantes'}.`; }
+      else if (c.ia_estado === 'falhou' || c.ia_estado === 'sem_chave') { curto = 'IA não respondeu'; alertaIA = `Falha: ${IA_ERRO[c.ia_erro] || c.ia_erro || 'erro'}. Assuma ou tente de novo.`; }
+    }
+    if (c.atendimento === 'ia' && iaLigada && ['tentando', 'falhou', 'sem_chave'].includes(c.ia_estado) && c.ultima_direcao === 'in') botoes.unshift('<button class="btn btn-sm btn-soft" data-at="reprocessar" type="button" title="Pedir à IA para responder de novo">Tentar<span class="so-desk"> de novo</span></button>');
+    const detalhe = alertaIA || (c.atendimento === 'aguardando' && c.atend_motivo ? c.atend_motivo : (c.atend_assunto ? ASSUNTO_MENU[c.atend_assunto] || '' : ''));
     const dica = c.atendimento === 'humano' ? 'A IA não responde enquanto a equipe atende.' : est[0];
-    $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}" title="${ui.esc(dica)}">
+    $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}${alertaIA ? ' ia-alerta' : ''}" title="${ui.esc(alertaIA || dica)}">
         <button class="wa-atend-est" data-at="historico" type="button" title="Ver histórico e motivo"><i class="wa-dot"></i>${ui.esc(curto)}</button>
         ${detalhe ? `<span class="wa-atend-det">${ui.esc(detalhe)}</span>` : '<span class="wa-atend-det"></span>'}
         <span class="wa-atend-acoes">${botoes.join('')}</span>
@@ -231,6 +241,14 @@ export async function renderConversas(view, state) {
     if (!atual) return;
     if (nome === 'historico') { modalHistorico(); return; }
     const id = atual.id;
+    if (nome === 'reprocessar') {
+      try {
+        const r = await api.post(`/wa/conversas/${id}/ia/reprocessar`, {});
+        ui.toast(r.ia_estado === 'respondida' ? 'A IA respondeu.' : (r.atendimento === 'aguardando' ? 'A IA não conseguiu responder: a conversa foi passada para a equipe.' : 'Pedido enviado à IA.'), r.ia_estado === 'respondida' ? 'success' : 'info');
+      } catch (err) { ui.toast(err.message, 'error'); }
+      atualizarAtual().catch(() => {}); carregarMensagens(true).catch(() => {});
+      return;
+    }
     let corpo = { acao: nome };
     if (nome === 'concluir') {
       const escolha = await new Promise((resolve) => {
@@ -284,7 +302,7 @@ export async function renderConversas(view, state) {
     atual = data.item;
     eventos = data.eventos || [];
     assinatura = '';
-    assinaturaAtual = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}`;
+    assinaturaAtual = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}|${atual.ia_estado}|${atual.ia_tentativas}`;
     $('#wa-empty').classList.add('hidden');
     $('#wa-inner').classList.remove('hidden');
     wa.classList.add('open-thread');
@@ -399,7 +417,7 @@ export async function renderConversas(view, state) {
     atual = data.item;
     eventos = data.eventos || [];
     // Só redesenha quando o atendimento mudou (não fecha o histórico aberto à toa).
-    const assin = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}`;
+    const assin = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}|${atual.ia_estado}|${atual.ia_tentativas}`;
     if (assin === assinaturaAtual) return;
     assinaturaAtual = assin;
     desenharCabecalho();

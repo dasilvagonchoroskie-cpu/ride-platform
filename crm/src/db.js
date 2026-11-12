@@ -28,7 +28,10 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
   if (conversas.size) {
     const novaCentral = !conversas.has('atendimento');
     for (const [col, tipo] of [['atendimento', "TEXT NOT NULL DEFAULT 'ia'"], ['atend_assunto', 'TEXT'], ['atend_motivo', 'TEXT'], ['atend_em', 'TEXT'],
-      ['atend_por', 'INTEGER'], ['saudado_em', 'TEXT'], ['espera_em', 'TEXT']]) {
+      ['atend_por', 'INTEGER'], ['saudado_em', 'TEXT'], ['espera_em', 'TEXT'],
+      // Processamento da IA por conversa (12/11): estado real (processando, tentando, respondida, falhou...), última mensagem
+      // tratada, próxima tentativa e o código do erro (nunca texto do cliente). Permite recuperar mensagens pendentes.
+      ['ia_estado', 'TEXT'], ['ia_estado_em', 'TEXT'], ['ia_erro', 'TEXT'], ['ia_tentativas', 'INTEGER NOT NULL DEFAULT 0'], ['ia_msg_id', 'INTEGER'], ['ia_proxima', 'TEXT']]) {
       if (!conversas.has(col)) db.exec(`ALTER TABLE wa_conversas ADD COLUMN ${col} ${tipo}`);
     }
     if (novaCentral) {

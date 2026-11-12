@@ -320,17 +320,85 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   /* ------------------------------------------ automático ------------------------------------------ */
   const reqIA = () => ({ app: { locals: { db } }, user: { id: null, nome: 'Assistente IA' }, headers: {}, ip: '', socket: {} });
 
-  async function executarAutomatico(conversaId, { forcar = false } = {}) {
+  /* ------------------------- estado do processamento e recuperação (12/11) ------------------------- */
+  // Problema real observado em produção (12/11, 12:27): o provedor de IA devolveu erro 5xx, a falha só foi para o log e a
+  // conversa ficou como "IA atendendo" sem resposta. Agora cada mensagem do cliente é acompanhada até a resposta ou a falha:
+  //  - erro passageiro do provedor (fora do ar, tempo esgotado, sem cota, rede, resposta estranha) → nova tentativa com espera;
+  //  - esgotadas as tentativas, ou quando a IA não pode responder (limites, filtro de segurança) → transfere para a equipe
+  //    com o modelo de transferência e o motivo "A IA não conseguiu responder" (notificação urgente);
+  //  - mensagens que ficaram sem tratamento (reinício do servidor, temporizador perdido) são recuperadas pela varredura.
+  // Nada de texto do cliente no estado: só códigos.
+  const PASSAGEIROS = new Set(['indisponivel', 'timeout', 'rede', 'limite_provedor', 'resposta_invalida', 'falha_redacao', 'em_andamento', 'erro']);
+  // Motivos em que a IA fica quieta de propósito (não é falha).
+  const QUIETOS = new Set(['atendimento_humano', 'concluida', 'ja_respondida', 'aguardando_humano', 'analise_desatualizada', 'humano_assumiu', 'em_andamento']);
+  const esperasRepetir = () => String(process.env.IA_REPETIR_MS !== undefined ? process.env.IA_REPETIR_MS : '30000,120000,300000').split(',').filter((x) => x.trim() !== '').map(Number).filter((n) => Number.isFinite(n) && n >= 0);
+  const RECUPERAR_HORAS = Number(process.env.IA_RECUPERAR_HORAS) || 12;
+  const processando = new Set();
+
+  function marcarEstado(conversaId, estado, { erro = null, msgId, tentativas, proxima = null } = {}) {
+    const sets = ['ia_estado = ?', 'ia_estado_em = ?', 'ia_erro = ?', 'ia_proxima = ?'];
+    const params = [estado, nowISO(), erro ? String(erro).slice(0, 60) : null, proxima];
+    if (msgId !== undefined) { sets.push('ia_msg_id = ?'); params.push(msgId); }
+    if (tentativas !== undefined) { sets.push('ia_tentativas = ?'); params.push(tentativas); }
+    try { db.prepare(`UPDATE wa_conversas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conversaId); } catch (err) { log.error(`[ia] estado da conversa ${conversaId}: ${err.message}`); }
+  }
+  const ultimaDoCliente = (conversaId) => db.prepare("SELECT id, direcao FROM wa_mensagens WHERE conversa_id = ? ORDER BY id DESC LIMIT 1").get(conversaId);
+
+  // A IA não vai responder esta mensagem: passa para a equipe (só se ninguém respondeu e a conversa ainda está com a IA).
+  function transferirPorFalha(conversaId, codigo) {
+    const conv = waStore.obterConversa(conversaId);
+    const ult = ultimaDoCliente(conversaId);
+    if (!conv || conv.atendimento !== 'ia' || !ult || ult.direcao !== 'in') return false;
+    const rotulo = C.MOTIVOS_TRANSFERENCIA.falha_ia;
+    waStore.mudarAtendimento(conversaId, 'aguardando', { motivo: rotulo, detalhe: `${rotulo} [${codigo}]` });
+    audit(reqIA(), 'wa_transferir', 'wa_conversas', conversaId, `IA transferiu para atendimento humano: falha da IA (${codigo})`);
+    const aviso = central.texto('transferencia');
+    if (aviso) { const r = waStore.enfileirar({ conversaId, texto: aviso, usuarioId: null, origem: 'ia' }); if (r && r.erro) log.error(`[ia] conversa ${conversaId}: aviso de transferência não enfileirado (${r.erro})`); }
+    marcarEstado(conversaId, 'transferida_falha', { erro: codigo });
+    log.log(`[ia] conversa ${conversaId}: transferida para a equipe por falha da IA (${codigo})`);
+    return true;
+  }
+
+  function agendarTentativa(conversaId, tentativa, codigo, opcoes) {
+    const esperas = esperasRepetir();
+    if (tentativa >= esperas.length) return false;
+    const ms = esperas[tentativa];
+    marcarEstado(conversaId, 'tentando', { erro: codigo, tentativas: tentativa + 1, proxima: new Date(Date.now() + ms).toISOString() });
+    clearTimeout(timers.get(conversaId));
+    const t = setTimeout(() => { timers.delete(conversaId); executarAutomatico(conversaId, { ...opcoes, tentativa: tentativa + 1 }); }, ms);
+    if (t.unref) t.unref();
+    timers.set(conversaId, t);
+    log.log(`[ia] conversa ${conversaId}: nova tentativa ${tentativa + 1}/${esperas.length} em ${Math.round(ms / 1000)} s (${codigo})`);
+    return true;
+  }
+
+  const deNovoDepois = new Set();
+  async function executarAutomatico(conversaId, { forcar = false, tentativa = 0 } = {}) {
+    // Mensagem nova chegou enquanto a anterior ainda era tratada: trata de novo logo depois (não perde a mensagem).
+    if (processando.has(conversaId)) { deNovoDepois.add(conversaId); return; }
+    const cfg = config();
+    if (!cfg.ativo || cfg.modo !== 'automatico') return;
+    const ult = ultimaDoCliente(conversaId);
+    if (!cfg.chaveConfigurada) {
+      if (ult && ult.direcao === 'in' && !(cfg.responder && transferirPorFalha(conversaId, 'sem_chave'))) marcarEstado(conversaId, 'sem_chave', { erro: 'sem_chave', msgId: ult.id });
+      return;
+    }
+    processando.add(conversaId);
+    const msgId = ult ? ult.id : null;
+    marcarEstado(conversaId, 'processando', { msgId, ...(tentativa === 0 ? { tentativas: 0 } : {}) });
     try {
-      const cfg = config();
-      if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return;
       // Um contato sozinho não esgota a cota de todos: no máximo ANALISES_CONVERSA_DIA análises automáticas por conversa/dia.
       const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const feitas = db.prepare("SELECT COUNT(*) n FROM ia_analises WHERE conversa_id = ? AND origem = 'automatica' AND criado_em >= ?").get(conversaId, desde).n;
-      if (feitas >= ANALISES_CONVERSA_DIA) { log.log(`[ia] conversa ${conversaId}: limite de análises automáticas do dia para este contato`); return; }
-      const a = await analisar(conversaId, { origem: 'automatica', forcar });
+      if (feitas >= ANALISES_CONVERSA_DIA) {
+        log.log(`[ia] conversa ${conversaId}: limite de análises automáticas do dia para este contato`);
+        if (!(cfg.responder && transferirPorFalha(conversaId, 'limite_analises_conversa'))) marcarEstado(conversaId, 'limite', { erro: 'limite_analises_conversa' });
+        return;
+      }
+      const a = await analisar(conversaId, { origem: 'automatica', forcar: forcar || tentativa > 0 });
       const ap = aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
       let resp = 'resposta automática desligada';
+      let estadoFinal = 'analisada';
       if (cfg.responder) {
         const r = await responderAutomatico(conversaId, { aplicacao: ap });
         resp = r.enviada ? `respondeu${r.tipo ? ` (${r.tipo})` : ''}${r.transferida ? `; transferida: ${r.transferida}` : ''}` : `não respondeu: ${MOTIVOS[r.motivo] || r.motivo}`;
@@ -338,14 +406,86 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
           const atual = ultimaAnalise(conversaId);
           if (atual) db.prepare('UPDATE ia_analises SET aplicado_resumo = ? WHERE id = ?').run(`${atual.aplicado_resumo || ''}; ${resp}`.replace(/^; /, '').slice(0, 200), atual.id);
         }
+        if (r.enviada) estadoFinal = r.transferida ? 'transferida' : 'respondida';
+        else if (r.transferida) estadoFinal = 'transferida';
+        else if (r.motivo === 'falha_redacao') { const e = new ErroIA('falha_redacao', 'A IA não conseguiu redigir a resposta.'); throw e; }
+        else if (QUIETOS.has(r.motivo)) estadoFinal = 'sem_acao';
+        else {
+          // limites, filtro de segurança, resposta vazia ou repetida: a IA não vai responder esta mensagem → equipe.
+          transferirPorFalha(conversaId, r.motivo);
+          estadoFinal = null;
+        }
       }
+      if (estadoFinal) marcarEstado(conversaId, estadoFinal);
       // Registro sem dados pessoais: só nomes de campos e decisões.
       log.log(`[ia] conversa ${conversaId}: perfil=${a.resultado.perfil} campos=[${Object.keys(a.resultado.campos || {}).join(',')}] `
         + `${ap.erro ? `cadastro: ${ap.erro}` : (ap.criado ? `criou ${ap.criado.tipo}` : `preencheu=[${(ap.preenchidos || []).join(',')}]`)}; ${resp}`);
     } catch (err) {
-      // Falha da IA nunca atrapalha o atendimento: só fica no log.
-      log.error(`[ia] análise automática da conversa ${conversaId}: ${err.message}`);
+      const codigo = (err && err.codigo) || 'erro';
+      // Falha da IA nunca atrapalha o recebimento: registra, tenta de novo quando é passageira e, no fim, passa para a equipe.
+      log.error(`[ia] análise automática da conversa ${conversaId}: ${err.message}${tentativa ? ` (tentativa ${tentativa})` : ''}`);
+      if (PASSAGEIROS.has(codigo) && agendarTentativa(conversaId, tentativa, codigo, { forcar })) return;
+      if (cfg.responder && transferirPorFalha(conversaId, codigo)) return;
+      marcarEstado(conversaId, 'falhou', { erro: codigo });
+    } finally {
+      processando.delete(conversaId);
+      if (deNovoDepois.delete(conversaId)) {
+        const u = ultimaDoCliente(conversaId);
+        if (u && u.direcao === 'in' && u.id !== msgId) setImmediate(() => executarAutomatico(conversaId));
+      }
     }
+  }
+
+  // Varredura: mensagens do cliente em conversas com a IA que ficaram sem tratamento (servidor reiniciou, temporizador perdido,
+  // tentativa vencida). Idempotente: só pega a conversa cuja ÚLTIMA mensagem é do cliente e ainda não foi tratada.
+  function recuperarPendentes() {
+    const cfg = config();
+    if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return [];
+    const atraso = process.env.IA_ATRASO_MS !== undefined ? Number(process.env.IA_ATRASO_MS) : 15000;
+    const agora = Date.now();
+    const limiteAntigo = new Date(agora - RECUPERAR_HORAS * 3600 * 1000).toISOString();
+    const maduro = new Date(agora - atraso - 5000).toISOString();
+    const travado = new Date(agora - 5 * 60 * 1000).toISOString();
+    const linhas = db.prepare(`
+      SELECT c.id, c.ia_estado, c.ia_msg_id, c.ia_proxima, c.ia_estado_em, c.ia_tentativas, m.id AS ult_id, m.direcao, m.created_at
+        FROM wa_conversas c JOIN wa_mensagens m ON m.id = (SELECT MAX(id) FROM wa_mensagens WHERE conversa_id = c.id)
+       WHERE c.atendimento = 'ia' AND m.direcao = 'in' AND m.created_at >= ? AND m.created_at <= ?`).all(limiteAntigo, maduro);
+    const feitas = [];
+    for (const l of linhas) {
+      if (processando.has(l.id) || timers.has(l.id)) continue;
+      const nova = !l.ia_msg_id || l.ia_msg_id < l.ult_id;
+      const tentativaVencida = l.ia_estado === 'tentando' && l.ia_proxima && l.ia_proxima <= new Date(agora).toISOString();
+      const presa = l.ia_estado === 'processando' && l.ia_estado_em && l.ia_estado_em <= travado;
+      if (!(nova || tentativaVencida || presa)) continue;
+      feitas.push(l.id);
+      executarAutomatico(l.id, nova ? {} : { tentativa: Math.max(1, Number(l.ia_tentativas) || 1), forcar: true });
+    }
+    if (feitas.length) log.log(`[ia] recuperação: ${feitas.length} conversa(s) com mensagem pendente`);
+    return feitas;
+  }
+  let varredura = null;
+  function iniciarRecuperacao(intervaloMs = Number(process.env.IA_VARREDURA_MS) || 60000) {
+    if (varredura) return;
+    const rodar = () => { try { recuperarPendentes(); } catch (err) { log.error(`[ia] recuperação: ${err.message}`); } };
+    const primeira = setTimeout(rodar, Math.min(intervaloMs, 20000));
+    if (primeira.unref) primeira.unref();
+    varredura = setInterval(rodar, intervaloMs);
+    if (varredura.unref) varredura.unref();
+  }
+  function pararRecuperacao() { clearInterval(varredura); varredura = null; for (const t of timers.values()) clearTimeout(t); timers.clear(); }
+
+  // Reprocessar pela tela (equipe): trata de novo a última mensagem do cliente.
+  async function reprocessar(conversaId) {
+    const conv = waStore.obterConversa(conversaId);
+    if (!conv) throw new ErroIA('nao_encontrada', 'Conversa não encontrada.', 404);
+    const cfg = config();
+    if (!cfg.ativo || cfg.modo !== 'automatico') throw new ErroIA('desativada', 'A IA automática está desligada. Um administrador pode ligar em Configurações.');
+    if (conv.atendimento !== 'ia') throw new ErroIA('nao_ia', 'Devolva a conversa para a IA antes de reprocessar.', 409);
+    const ult = ultimaDoCliente(conversaId);
+    if (!ult || ult.direcao !== 'in') throw new ErroIA('ja_respondida', 'A última mensagem já foi respondida.', 409);
+    clearTimeout(timers.get(conversaId)); timers.delete(conversaId);
+    await executarAutomatico(conversaId, { forcar: true });
+    return waStore.obterConversa(conversaId);
   }
 
   // Resposta automática (só se o administrador ligar). Travas de segurança:
@@ -506,7 +646,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   const usarProvedor = (novo) => { provedor = novo; };
 
-  return { central, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual };
+  return { central, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
+    recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar };
 }
 
 module.exports = { createIaService, MODELO_PADRAO, PROVEDOR_PADRAO };

@@ -148,8 +148,16 @@ test('A1: resposta com anotação interna não é enviada (motivo no painel)', a
   receber('o que anotaram sobre mim?', 'F2');
   setResposta({ resumo: 'y', perfil: 'motorista', campos: {}, resposta_sugerida: 'Anotamos: suspeita de fraude não aprovar ainda.' });
   await ia.executarAutomatico(r1.conversaId, { forcar: true });
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 1, 'só a primeira resposta saiu');
+  const saidas = db.prepare("SELECT texto FROM wa_mensagens WHERE origem = 'ia' ORDER BY id").all().map((m) => m.texto);
+  assert.ok(!saidas.some((t) => /fraude/.test(t)), 'a anotação interna nunca sai');
   assert.match(ia.ultimaAnalise(r1.conversaId).aplicado_resumo, /repetia anotação interna/);
+  // Desde 12/11: a IA não fica parada — a conversa vai para a equipe com o modelo fixo de transferência.
+  const c = db.prepare('SELECT atendimento, atend_motivo, ia_estado, ia_erro FROM wa_conversas WHERE id = ?').get(r1.conversaId);
+  assert.equal(c.atendimento, 'aguardando');
+  assert.match(c.atend_motivo, /A IA não conseguiu responder/);
+  assert.equal(c.ia_estado, 'transferida_falha');
+  assert.equal(c.ia_erro, 'filtro_dado_interno');
+  assert.equal(saidas.length, 2, 'primeira resposta + aviso fixo de transferência');
 });
 
 test('motorista já contratado que manda documento: o documento é marcado, mas a contratação não muda', async () => {

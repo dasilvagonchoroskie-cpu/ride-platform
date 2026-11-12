@@ -35,7 +35,8 @@ const MOTIVOS_TRANSFERENCIA = {
   documentos: 'Documentos para análise',
   reclamacao: 'Reclamação que precisa de providência',
   valores: 'Negociação ou definição de valores',
-  sem_informacao: 'A IA não tem informação suficiente para responder com segurança'
+  sem_informacao: 'A IA não tem informação suficiente para responder com segurança',
+  falha_ia: 'A IA não conseguiu responder (falha ou limite do serviço de IA)'
 };
 
 const MODELOS_PADRAO = {

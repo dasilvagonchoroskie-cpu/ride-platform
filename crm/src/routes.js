@@ -38,6 +38,8 @@ const ia = createIaService({
 });
 ia.usarProvedor(criarProvedorMulti({ resolver: ia.resolverProvedor }));
 wa.definirGancho((conversaId, opcoes) => ia.agendarAutomatico(conversaId, opcoes));
+// Recupera mensagens de cliente que ficaram sem tratamento da IA (reinício, temporizador perdido, nova tentativa vencida).
+if (process.env.IA_VARREDURA !== '0') ia.iniciarRecuperacao();
 
 // Notificações (mensagem nova, IA respondeu, IA transferiu): feed do CRM + push nos aparelhos inscritos.
 const notificacoes = createNotificacoes({
