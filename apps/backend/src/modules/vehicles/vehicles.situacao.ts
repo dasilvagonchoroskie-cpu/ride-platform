@@ -8,13 +8,16 @@
  * - PENDENTE: carro novo de motorista ja aprovado — a Central confere a
  *   foto e o documento (CRLV) antes de ele poder usar.
  * - RECUSADO: a Central recusou (motivo aparece para o motorista).
+ * - SUSPENSO: a Central suspendeu o carro (nao roda ate ser reativado; o
+ *   motivo aparece para o motorista). A suspensao e do VEICULO: nao mexe na
+ *   autorizacao da cidade para a categoria nem para entregas.
  * - REMOVIDO: o motorista tirou o carro, mas ele tem corridas no historico
  *   (fica guardado no banco, escondido das listas).
  *
  * Guardado na tabela settings (chave "veiculos"), sem mudar o banco: um
  * mapa id do carro -> situacao, fotos e data. Carro fora do mapa = aprovado.
  */
-export type SituacaoGuardada = 'PENDENTE' | 'RECUSADO' | 'REMOVIDO';
+export type SituacaoGuardada = 'PENDENTE' | 'RECUSADO' | 'SUSPENSO' | 'REMOVIDO';
 
 export interface FichaDoCarro {
   situacao?: SituacaoGuardada;
@@ -45,7 +48,8 @@ export function lerMapaDeCarros(valor: unknown): MapaDeCarros {
   for (const [id, v] of Object.entries(valor as Record<string, unknown>)) {
     if (!v || typeof v !== 'object') continue;
     const f = v as Record<string, unknown>;
-    const situacao = f.situacao === 'PENDENTE' || f.situacao === 'RECUSADO' || f.situacao === 'REMOVIDO' ? f.situacao : undefined;
+    const situacao =
+      f.situacao === 'PENDENTE' || f.situacao === 'RECUSADO' || f.situacao === 'SUSPENSO' || f.situacao === 'REMOVIDO' ? f.situacao : undefined;
     mapa[id] = {
       ...(situacao ? { situacao } : {}),
       motivo: typeof f.motivo === 'string' ? f.motivo : null,
