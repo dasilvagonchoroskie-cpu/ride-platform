@@ -187,6 +187,8 @@ model User {
   notifications Notification[]
   safetyEvents  SafetyEvent[]
   auditLogs     AuditLog[]
+  /// Quarto aplicativo (Fortaleza Move Comercio): o estabelecimento desta conta.
+  comercio      Comercio?
 
   @@index([role, status])
   @@index([createdAt])
@@ -478,6 +480,8 @@ model Ride {
   walletTransactions WalletTransaction[]
   /// Etapa 5 (30/10/2026): a corrida e uma entrega de encomenda.
   entrega       Entrega?
+  /// Pedido feito pelo aplicativo Comercio (origem da entrega).
+  comercioPedido ComercioPedido?
 
   @@index([passengerId, status])
   @@index([driverId, status])
@@ -913,4 +917,70 @@ model ClubeBeneficio {
 
   @@index([parceiroId])
   @@map("clube_beneficios")
+}
+
+
+/// Estabelecimento do aplicativo Fortaleza Move Comercio (12/11/2026). A
+/// conta de acesso e um User; aqui ficam os dados da loja e a situacao
+/// administrativa (AGUARDANDO, APROVADO, SUSPENSO, REJEITADO). As tabelas
+/// sao criadas pelo proprio servidor ao subir (CREATE TABLE IF NOT EXISTS em
+/// ComercioService), do mesmo jeito que as entregas.
+model Comercio {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @unique @map("user_id") @db.Uuid
+  nomeFantasia     String    @map("nome_fantasia") @db.VarChar(120)
+  razaoSocial      String?   @map("razao_social") @db.VarChar(160)
+  cnpj             String    @unique @db.VarChar(14)
+  responsavelNome  String    @map("responsavel_nome") @db.VarChar(120)
+  responsavelCpf   String?   @map("responsavel_cpf") @db.VarChar(11)
+  telefone         String    @db.VarChar(20)
+  email            String    @db.VarChar(160)
+  logradouro       String    @db.VarChar(200)
+  numero           String    @db.VarChar(20)
+  complemento      String?   @db.VarChar(80)
+  bairro           String    @db.VarChar(80)
+  cidade           String    @db.VarChar(80)
+  uf               String    @db.VarChar(2)
+  cep              String    @db.VarChar(8)
+  latitude         Float?
+  longitude        Float?
+  status           String    @default("AGUARDANDO") @db.VarChar(12)
+  motivo           String?   @db.VarChar(300)
+  decididoPor      String?   @map("decidido_por") @db.Uuid
+  decididoEm       DateTime? @map("decidido_em")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id])
+  pedidos ComercioPedido[]
+
+  @@map("comercios")
+}
+
+/// Liga uma corrida de entrega ao estabelecimento que pediu. Existir aqui =
+/// a entrega nasceu no aplicativo Comercio. "chave" e a chave de
+/// idempotencia do app: o mesmo toque repetido (falha de rede) nao cria duas
+/// entregas.
+model ComercioPedido {
+  rideId           String    @id @map("ride_id") @db.Uuid
+  comercioId       String    @map("comercio_id") @db.Uuid
+  chave            String    @db.VarChar(64)
+  encomenda        String    @db.VarChar(120)
+  observacoes      String?   @db.VarChar(300)
+  destNumero       String    @map("dest_numero") @db.VarChar(20)
+  destComplemento  String?   @map("dest_complemento") @db.VarChar(80)
+  destBairro       String    @map("dest_bairro") @db.VarChar(80)
+  destCidade       String    @map("dest_cidade") @db.VarChar(80)
+  destUf           String    @map("dest_uf") @db.VarChar(2)
+  destCep          String    @map("dest_cep") @db.VarChar(8)
+  destReferencia   String?   @map("dest_referencia") @db.VarChar(160)
+  coletaAlternativa Boolean  @default(false) @map("coleta_alternativa")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  ride     Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  comercio Comercio @relation(fields: [comercioId], references: [id])
+
+  @@unique([comercioId, chave])
+  @@index([comercioId, createdAt])
+  @@map("comercio_pedidos")
 }

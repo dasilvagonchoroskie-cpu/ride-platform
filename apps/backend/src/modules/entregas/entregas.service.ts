@@ -257,6 +257,8 @@ export class EntregasService implements OnModuleInit {
       take: 200,
       include: {
         entrega: true,
+        // Origem: entregas pedidas pelo aplicativo Comercio trazem o estabelecimento.
+        comercioPedido: { select: { comercio: { select: { nomeFantasia: true } } } },
         passenger: { select: { name: true, phone: true } },
         driver: { select: { user: { select: { name: true, phone: true } } } },
         vehicle: { select: { plate: true, model: true, category: true } },
@@ -275,6 +277,8 @@ export class EntregasService implements OnModuleInit {
         entrega: r.dropoffAddress,
         valorCents: r.finalFareCents ?? r.estimatedFareCents,
         comissaoCents: r.commissionCents,
+        origem: r.comercioPedido ? 'COMERCIO' : 'PASSAGEIRO',
+        comercio: r.comercioPedido?.comercio.nomeFantasia ?? null,
         cliente: { nome: r.passenger.name, telefone: r.passenger.phone },
         motorista: r.driver ? { nome: r.driver.user.name, telefone: r.driver.user.phone } : null,
         veiculo: r.vehicle ? `${r.vehicle.model} · ${r.vehicle.plate}` : null,
