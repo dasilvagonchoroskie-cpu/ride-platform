@@ -217,7 +217,7 @@ class _ComerciosTelaState extends State<ComerciosTela> {
         if (mounted) _recarregar();
       });
     }
-    return FutureBuilder<(List<Comercio>, List<PedidoDoComercio>)>(
+    return FutureBuilder<(List<Comercio>, List<PedidoDoComercio>, bool)>(
       future: _dados,
       builder: (context, s) {
         if (s.hasError) return Aviso(texto: 'Não foi possível carregar os comércios: ${mensagemDe(s.error!)}', tentarDeNovo: _recarregar);
