@@ -18,6 +18,11 @@ on:
         default: 'release'
         type: choice
         options: ['release', 'debug']
+      publicar:
+        description: 'Publicar o APK no Release? (desmarque para so conferir o build: nada e publicado)'
+        required: false
+        default: true
+        type: boolean
   push:
     branches: ['**']
     paths:
@@ -153,7 +158,26 @@ jobs:
           grep -q "application-icon-" "$RUNNER_TEMP/badging.txt" || { echo "::error::APK sem icone"; exit 1; }
           echo "OK: nome, pacote e icone"
 
+      # Conferencias de seguranca do pacote: so o que o app realmente usa.
+      # Se alguem adicionar uma permissao (ou o build sair depuravel), a
+      # esteira falha antes de publicar qualquer coisa.
+      - name: Conferir permissoes, depuracao e versao do Android
+        run: |
+          set -euo pipefail
+          B="$RUNNER_TEMP/badging.txt"
+          PERMITIDAS="android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE br.com.fortalezamov.comercio.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+          for P in $(grep -o "^uses-permission: name='[^']*'" "$B" | sed "s/.*name='//; s/'$//"); do
+            case " $PERMITIDAS " in *" $P "*) ;; *) echo "::error::Permissao nao prevista no app: $P"; exit 1;; esac
+          done
+          TARGET="$(grep -o "targetSdkVersion:'[0-9]*'" "$B" | grep -o '[0-9]*')"
+          test "${TARGET:-0}" -ge 35 || { echo "::error::targetSdk $TARGET abaixo de 35 (exigencia da Play)"; exit 1; }
+          if [ "${{ inputs.build_type || 'release' }}" = release ]; then
+            if grep -q "application-debuggable" "$B"; then echo "::error::Build de release esta marcado como depuravel"; exit 1; fi
+          fi
+          echo "OK: permissoes dentro da lista, targetSdk $TARGET"
+
       - name: Publicar no Release
+        if: ${{ inputs.publicar }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -171,9 +195,10 @@ jobs:
           gh release upload "$TAG" "${{ steps.apk.outputs.path }}" --repo "${{ github.repository }}" --clobber
 
       - name: Resumo do build
+        if: ${{ always() && steps.apk.outputs.path != '' }}
         run: |
           {
-            echo "### APK Comercio gerado"
+            echo "### APK Comercio conferido (publicado: ${{ inputs.publicar }})"
             echo "| Item | Valor |"
             echo "|---|---|"
             echo "| Arquivo | \`$(basename "${{ steps.apk.outputs.path }}")\` |"
