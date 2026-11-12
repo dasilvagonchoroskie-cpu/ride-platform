@@ -608,3 +608,36 @@ describe('Comercio: apagar a conta de um estabelecimento nao trava nem guarda da
     await expect(encerrarComercios(db, [])).resolves.toEqual({ apagados: 0, anonimizados: 0 });
   });
 });
+
+describe('Comercio: e-mail confirmado vale a cada consulta e a cada pedido, nao so no cadastro', () => {
+  it.each([
+    ['e-mail deixou de estar confirmado', { emailVerifiedAt: null }],
+    ['conta sem e-mail', { email: null }],
+    ['conta que nao e de passageiro', { role: UserRole.DRIVER }],
+  ])('%s: nem preco nem pedido, e o motor de corridas nem e chamado', async (_nome, mudanca) => {
+    const ctx = montar();
+    await aprovado(ctx);
+    Object.assign(ctx.usuarios.u1, mudanca);
+    await expect(ctx.s.cotar('u1', { destino: pedido().destino } as never)).rejects.toThrow(/Confirme seu e-mail/);
+    await expect(ctx.s.pedir('u1', pedido() as never)).rejects.toThrow(/Confirme seu e-mail/);
+    expect(ctx.rides.estimar).not.toHaveBeenCalled();
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    expect(ctx.pedidos).toHaveLength(0);
+  });
+
+  it('com e-mail e chave em ordem, ainda assim AGUARDANDO, REJEITADO ou SUSPENSO nao pedem; so APROVADO passa', async () => {
+    const ctx = montar();
+    const c = await ctx.s.cadastrar('u1', { ...cadastro, email: ctx.usuarios.u1.email });
+    await expect(ctx.s.pedir('u1', pedido() as never)).rejects.toThrow();
+    await ctx.s.adminDecidir('dono', c.id, 'REJEITAR', 'dados incompletos');
+    await expect(ctx.s.pedir('u1', pedido() as never)).rejects.toThrow();
+    await ctx.s.adminDecidir('dono', c.id, 'APROVAR');
+    await ctx.s.adminDecidir('dono', c.id, 'SUSPENDER', 'teste de porta');
+    await expect(ctx.s.pedir('u1', pedido() as never)).rejects.toThrow();
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    await ctx.s.adminDecidir('dono', c.id, 'REATIVAR');
+    expect((await ctx.s.pedir('u1', pedido() as never)).repetido).toBe(false);
+    expect(ctx.rides.pedir).toHaveBeenCalledTimes(1);
+  });
+});
+});

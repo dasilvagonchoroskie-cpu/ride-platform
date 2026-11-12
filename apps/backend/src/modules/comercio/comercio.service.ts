@@ -265,6 +265,22 @@ export class ComercioService implements OnModuleInit {
     if (!(await this.ativo())) throw BusinessException.forbidden(MENSAGEM_DESLIGADO);
   }
 
+  /**
+   * Portas do Comercio, nesta ordem, antes de qualquer consulta ou pedido:
+   * (1) e-mail da conta confirmado, (2) estabelecimento APROVADO pelo dono,
+   * (3) chave geral ligada. As outras duas (Entrega ligada na cidade da coleta e
+   * veiculo aceito na cidade) ficam dentro do pedido oficial (`RidesService`).
+   */
+  private async podePedir(userId: string): Promise<Linha> {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { emailVerifiedAt: true, email: true, role: true } });
+    if (!u || u.role !== UserRole.PASSENGER || !u.emailVerifiedAt || !u.email) {
+      throw BusinessException.forbidden('Confirme seu e-mail (código enviado por e-mail) antes de pedir entregas.');
+    }
+    const c = await this.aprovado(userId);
+    await this.exigirAtivo();
+    return c;
+  }
+
   async lerConfig() {
     return { ativo: await this.ativo() };
   }
@@ -328,8 +344,7 @@ export class ComercioService implements OnModuleInit {
 
   /** Consulta o preco ANTES de confirmar (nao cria nada). */
   async cotar(userId: string, input: CotarInput) {
-    const c = await this.aprovado(userId);
-    await this.exigirAtivo();
+    const c = await this.podePedir(userId);
     const pickup = this.coleta(c, input.coletaAlternativa);
     const orc = await this.rides.estimar(
       { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
@@ -348,8 +363,7 @@ export class ComercioService implements OnModuleInit {
   }
 
   async pedir(userId: string, input: EntregaInput) {
-    const c = await this.aprovado(userId);
-    await this.exigirAtivo();
+    const c = await this.podePedir(userId);
     const ja = await this.prisma.comercioPedido.findUnique({ where: { comercioId_chave: { comercioId: c.id, chave: input.chave } } });
     if (ja) return { ...(await this.detalhe(userId, ja.rideId)), repetido: true };
 
