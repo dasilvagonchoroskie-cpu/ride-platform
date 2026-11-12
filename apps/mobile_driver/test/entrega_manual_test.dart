@@ -178,8 +178,11 @@ Future<void> _abrir(WidgetTester tester) async {
 }
 
 Future<void> _tocar(WidgetTester tester, Finder alvo) async {
+  // O campo em foco rola a tela sozinho para mostrar o cursor: deixa isso acabar antes de tocar.
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pumpAndSettle();
   await tester.ensureVisible(alvo);
-  await tester.pump();
+  await tester.pumpAndSettle();
   await tester.tap(alvo);
   await _esperar(tester);
 }
