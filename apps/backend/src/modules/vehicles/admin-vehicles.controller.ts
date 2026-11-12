@@ -18,6 +18,7 @@ const suspenderSchema = z.object({
 });
 
 const frotaSchema = z.object({
+  praca: z.string().trim().max(60).optional(),
   tipo: z.enum(['MOTO', 'CARRO']).optional(),
   busca: z.string().trim().max(60).optional(),
   situacao: z.enum(['EM_USO', 'GUARDADO', 'PENDENTE', 'RECUSADO', 'SUSPENSO']).optional(),
@@ -53,7 +54,8 @@ export class AdminVehiclesController {
     @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(frotaSchema)) query: z.infer<typeof frotaSchema>,
   ) {
-    const ids = await this.pracas.idsDeMotoristas(await this.pracas.escopoDe(user.id));
+    // Operador: sempre a cidade dele. Dono: a cidade escolhida no topo (ou todas).
+    const ids = await this.pracas.idsDeMotoristas(await this.pracas.filtro(user, query.praca));
     return this.vehicles.adminFrota(ids, query);
   }
 

@@ -693,6 +693,8 @@ export class ComercioService implements OnModuleInit {
       situacao: ROTULOS[etapa],
       final: ehFinal(etapa),
       criadaEm: r.requestedAt.toISOString(),
+      /** APP = a loja pediu pelo aplicativo; MOTORISTA = lancada manualmente pelo motorista (12/11/2026). */
+      lancamento: p.origem === 'MOTORISTA' ? ('MOTORISTA' as const) : ('APP' as const),
       encomenda: p.encomenda,
       observacoes: p.observacoes,
       destinatario: { nome: e?.destinatarioNome ?? null, telefone: e?.destinatarioTelefone ?? null },
@@ -931,10 +933,24 @@ export class ComercioService implements OnModuleInit {
       include: { ...this.include(), comercio: { select: { nomeFantasia: true, latitude: true, longitude: true } } },
     });
     const todas = await this.pracas.listar();
+    // Quem lancou manualmente (motorista) e quando: para a auditoria na Central.
+    const lancadores = [...new Set(lista.map((p) => p.lancadoPor).filter((x): x is string => !!x))];
+    const nomes = new Map<string, string>();
+    if (lancadores.length) {
+      const motoristas = await this.prisma.driver.findMany({ where: { id: { in: lancadores } }, select: { id: true, user: { select: { name: true } } } });
+      for (const m of motoristas) nomes.set(m.id, m.user?.name ?? 'Motorista');
+    }
     const itens = lista
       .map((p) => ({ p, praca: pracaDoPonto(todas, { latitude: p.ride.pickupLat, longitude: p.ride.pickupLng })?.id ?? null }))
       .filter(({ praca: pr }) => !praca || pr === praca)
-      .map(({ p, praca: pr }) => ({ ...this.item(p), comercio: p.comercio.nomeFantasia, praca: pr, comissaoCents: p.ride.commissionCents }))
+      .map(({ p, praca: pr }) => ({
+        ...this.item(p),
+        comercio: p.comercio.nomeFantasia,
+        praca: pr,
+        comissaoCents: p.ride.commissionCents,
+        lancadoPor: p.lancadoPor ? (nomes.get(p.lancadoPor) ?? 'Motorista') : null,
+        lancadoEm: p.lancadoEm ? new Date(p.lancadoEm).toISOString() : null,
+      }))
       .filter((i) => (f.status === 'abertas' ? !i.final : true));
     return { itens };
   }
