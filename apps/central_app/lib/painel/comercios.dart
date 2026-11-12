@@ -260,10 +260,9 @@ class _CartaoDoPedido extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
-                Expanded(child: Text('${p.codigo} · ${dataHora(p.criadaEm)}', style: AppText.bodyStrong)),
-                AppBadge(text: p.situacao, tone: p.tom),
-              ]),
+              Text('${p.codigo} · ${dataHora(p.criadaEm)}', style: AppText.bodyStrong),
+              const SizedBox(height: Spacing.xs),
+              Wrap(children: [AppBadge(text: p.situacao, tone: p.tom)]),
               const SizedBox(height: Spacing.xs),
               Text('Comércio: ${p.comercio}', style: AppText.body),
               Text('Item: ${p.encomenda}', style: AppText.caption),
