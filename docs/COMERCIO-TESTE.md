@@ -18,7 +18,7 @@ sem mexer em tarifa, comissão, carteira nem Moto.
    ("Acesso especial a apps") → Install unknown apps ("Instalar apps desconhecidos") → escolha o
    navegador ou o gerenciador de arquivos que você usou → ative Allow from this source ("Permitir desta fonte").
    (Os nomes mudam um pouco conforme a marca do celular.)
-3. Abra **Fortaleza Move Comércio**. Ele só pede acesso à internet.
+3. Abra **Fortaleza Move Comércio**. Ele pede só internet e estado da rede (no pacote aparece também a permissão DUMP, que vem de uma biblioteca padrão do Android e não do app).
 
 ## Teste 1 — cadastro e aprovação (pode fazer já; não aciona motorista)
 

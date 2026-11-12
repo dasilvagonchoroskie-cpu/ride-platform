@@ -44,7 +44,7 @@ continuam. Quem liga: **só o dono**, em Central → Comércios → "Entregas do
 **não** liga a Entrega em cidade nenhuma: o pedido ainda precisa de Entrega ligada na cidade da coleta
 (`exigirLigada`, checado dentro do pedido oficial) e de o veículo estar permitido ali.
 
-Portas que o pedido precisa atravessar, todas no servidor: (1) conta com e-mail confirmado,
+Portas que o pedido precisa atravessar, todas no servidor e conferidas **a cada consulta de preço e a cada pedido** (não só no cadastro): (1) conta de passageiro com e-mail confirmado,
 (2) estabelecimento APROVADO pelo dono, (3) chave geral do Comércio ligada, (4) Entrega ligada na
 cidade da coleta, (5) veículo aceito na cidade.
 
@@ -90,12 +90,30 @@ pelo Comércio e, no menu Entregas, a origem "Comércio: nome da loja".
 
 ## Testes e esteiras
 
-| Camada | Arquivo / esteira | Resultado (12/11/2026) |
+| Camada | Arquivo / esteira | Resultado |
 |---|---|---|
-| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts` | 63 de 63 passam localmente (esteira "Testes do servidor") |
-| App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, 51 de 51 passam |
-| Central | `apps/central_app/test/painel_test.dart` (esteira "Android APKs") | análise sem problemas, 71 passam, 1 pulado de antes |
-| Rotas | `scripts/conferir-rotas.py` | 257 chamadas conferidas, todas existem no servidor |
+| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts`, `comercio.portas.spec.ts` | Esteira "Testes do servidor" no commit `7c524ab`: compilação limpa, 28 arquivos de teste e **253 testes passam** (72 são do Comércio) |
+| App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, 53 de 53 passam (última rodada no commit `58a6f29`; a pasta do app é idêntica à do commit atual) |
+| Central | `apps/central_app/test/painel_test.dart` (esteira "Android APKs") | análise sem problemas, 71 passam, 1 pulado de antes (última rodada no commit `419b5ee`; a pasta do app é idêntica à do commit atual) |
+| Rotas | `scripts/conferir-rotas.py` | 263 chamadas conferidas, todas existem no servidor |
+
+As esteiras do Android só rodam quando uma pasta de app muda; por isso, depois de commits só
+de servidor ou de documentos, vale conferir se a pasta do app continua idêntica à da rodada
+verde (`git rev-parse <commit>:apps/central_app`).
+
+### Cobertura das cinco portas (12/11/2026)
+
+| Porta | Onde fica | Como é testado |
+|---|---|---|
+| 1. E-mail confirmado | `ComercioService.podePedir` | automático, a cada consulta e pedido (e-mail não confirmado, sem e-mail, conta que não é de passageiro) |
+| 2. Loja aprovada | `ComercioService.aprovado` | automático (AGUARDANDO, REJEITADO e SUSPENDO barram; só APROVADO passa) |
+| 3. Chave geral ligada | `ComercioService.exigirAtivo` | automático (bloqueada: nem preço nem pedido, e o motor de corridas não é chamado) |
+| 4. Entrega ligada na cidade | `RidesService.pedir` / `EntregasService.exigirLigada` (código já existente) | automático com o **pedido oficial de verdade** (`comercio.portas.spec.ts`): sem configuração, cidade desligada e outra cidade barram |
+| 5. Veículo aceito na cidade | `RidesService.pedir` (código já existente) | automático com o pedido oficial de verdade: moto em cidade só-carro e carro em cidade só-moto barram |
+
+Nada disso foi testado contra o servidor de produção: as rotas do Comércio só passam a existir lá
+depois do merge e da publicação. Depois disso, o teste mais seguro no servidor de verdade é o
+"Comércio bloqueado" (chave desligada: consultar preço e pedir devem ser recusados).
 
 ## O que NÃO foi (nem pode ser) testado ainda
 
