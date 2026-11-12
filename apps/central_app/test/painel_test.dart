@@ -1705,6 +1705,8 @@ void main() {
     _zerarComercios();
     await _abrir(tester, const ComerciosTela());
     await _carregar(tester);
+    // ignore: avoid_print
+    print('DIAG ${find.byType(Text).evaluate().map((e) => (e.widget as Text).data).join(' | ')}');
     expect(find.text('Pizzaria Boa'), findsWidgets);
     expect(find.text('Padaria Central'), findsOneWidget);
     expect(find.text('Aguardando aprovação'), findsOneWidget);
