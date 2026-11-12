@@ -12,7 +12,12 @@ import { ComercioAvisosService } from './comercio.avisos';
 import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import {
   ROTULOS,
+  cnpjParcial,
   decidir,
+  finalDoTelefone,
+  motivoParaMotorista,
+  tipoDeBusca,
+  veiculoDaCategoria,
   descricaoParaMotorista,
   digitos,
   ehFinal,
@@ -27,6 +32,7 @@ import {
   type Etapa,
   type EntregaInput,
   type CotarInput,
+  type CotarManualInput,
 } from './comercio.regras';
 
 /** Tabelas do Comercio: so cria se faltar (como as entregas; nao mexe nas outras). */
@@ -85,6 +91,10 @@ const CRIAR_TABELAS = [
   // Termos de uso do Comercio (13/11/2026): so colunas novas na tabela NOVA do Comercio.
   `ALTER TABLE "comercios" ADD COLUMN IF NOT EXISTS "termos_versao" VARCHAR(30)`,
   `ALTER TABLE "comercios" ADD COLUMN IF NOT EXISTS "termos_aceitos_em" TIMESTAMP(3)`,
+  // Lancamento manual pelo motorista (12/11/2026): so colunas novas na tabela NOVA do Comercio.
+  `ALTER TABLE "comercio_pedidos" ADD COLUMN IF NOT EXISTS "origem" VARCHAR(10) NOT NULL DEFAULT 'APP'`,
+  `ALTER TABLE "comercio_pedidos" ADD COLUMN IF NOT EXISTS "lancado_por" UUID`,
+  `ALTER TABLE "comercio_pedidos" ADD COLUMN IF NOT EXISTS "lancado_em" TIMESTAMP(3)`,
 ];
 
 const POR_PAGINA = 20;
@@ -304,6 +314,20 @@ export class ComercioService implements OnModuleInit {
     return c;
   }
 
+  /**
+   * As mesmas tres portas, na mesma ordem, para um estabelecimento ja escolhido:
+   * usado no lancamento manual pelo motorista. Nao existe caminho mais curto.
+   */
+  async portasDe(c: Linha): Promise<void> {
+    const u = await this.prisma.user.findUnique({ where: { id: c.userId }, select: { emailVerifiedAt: true, email: true, role: true } });
+    if (!u || u.role !== UserRole.PASSENGER || !u.emailVerifiedAt || !u.email) {
+      throw BusinessException.forbidden('O e-mail deste estabelecimento ainda não foi confirmado. Ele precisa confirmar pelo aplicativo Comércio.');
+    }
+    const porque = motivoDeNaoPoderPedir(c.status);
+    if (porque) throw BusinessException.forbidden(porque);
+    await this.exigirAtivo();
+  }
+
   async lerConfig() {
     return { ativo: await this.ativo() };
   }
@@ -408,11 +432,16 @@ export class ComercioService implements OnModuleInit {
   /** Consulta o preco ANTES de confirmar (nao cria nada). */
   async cotar(userId: string, input: CotarInput) {
     const c = await this.podePedir(userId);
+    return this.cotarDe(c, input);
+  }
+
+  /** O preco oficial para o estabelecimento [c] (a conta dele e quem "pede" no motor de corridas). */
+  private async cotarDe(c: Linha, input: CotarInput) {
     await this.exigirColetaNaCidade(c, input.coletaAlternativa);
     const pickup = this.coleta(c, input.coletaAlternativa);
     const orc = await this.rides.estimar(
       { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
-      userId,
+      c.userId,
     );
     const opcoes = (orc.opcoesEntrega ?? []).map((o) => ({ veiculo: o.veiculo, nome: o.nome, valorCents: o.estimatedFareCents }));
     return {
@@ -426,13 +455,134 @@ export class ComercioService implements OnModuleInit {
     };
   }
 
+  // ------------------------------------------------------------------
+  // Lancamento manual pelo motorista: so leitura e preco aqui; o pedido sai
+  // pelo mesmo `criarEntrega` da loja (EntregaManualService, modulo da Central).
+  // ------------------------------------------------------------------
+
+  /** O motorista precisa estar aprovado; devolve o cadastro e a praca dele. */
+  async motoristaAprovado(userId: string) {
+    const m = await this.prisma.driver.findFirst({
+      where: { userId, user: { deletedAt: null } },
+      select: { id: true, status: true, userId: true, isOnline: true },
+    });
+    if (!m) throw BusinessException.forbidden('Esta conta não tem cadastro de motorista.');
+    if (m.status !== 'APPROVED') throw BusinessException.forbidden('Seu cadastro de motorista ainda não foi aprovado.');
+    return { ...m, praca: await this.pracas.pracaDoMotorista(m.id) };
+  }
+
+  /** O veiculo em uso do motorista decide se a entrega e de moto ou de carro. */
+  async veiculoDoMotorista(driverId: string): Promise<'MOTO' | 'CARRO'> {
+    const v = await this.prisma.vehicle.findFirst({ where: { driverId, isActive: true }, select: { category: true } });
+    if (!v) throw BusinessException.validation('Você não tem veículo em uso. Confira o cadastro do seu veículo.');
+    return veiculoDaCategoria(v.category);
+  }
+
+  /** Estabelecimento visto pelo motorista: so os da cidade dele (de outra cidade responde como se nao existisse). */
+  async comercioParaMotorista(praca: string | null, comercioId: string): Promise<Linha> {
+    const c = await this.prisma.comercio.findUnique({ where: { id: comercioId } });
+    if (!c || (await this.pracaDe(c)) !== praca) throw BusinessException.notFound('Estabelecimento não encontrado.');
+    return c;
+  }
+
+  async buscarParaMotorista(userId: string, busca: string) {
+    const m = await this.motoristaAprovado(userId);
+    const q = tipoDeBusca(busca);
+    const onde: Prisma.ComercioWhereInput =
+      q.tipo === 'EMAIL'
+        ? { OR: [{ email: q.valor }, { user: { email: q.valor } }] }
+        : q.tipo === 'TELEFONE'
+          ? { OR: [{ telefone: { endsWith: q.valor } }, { user: { phone: { endsWith: q.valor } } }] }
+          : { nomeFantasia: { contains: q.valor, mode: 'insensitive' } };
+    const achados = await this.prisma.comercio.findMany({ where: onde, orderBy: { nomeFantasia: 'asc' }, take: 25 });
+    const itens = [];
+    for (const c of achados) {
+      if ((await this.pracaDe(c)) !== m.praca) continue;
+      const motivo = motivoParaMotorista(c.status);
+      itens.push({
+        id: c.id,
+        nomeFantasia: c.nomeFantasia,
+        endereco: `${c.logradouro}, ${c.numero}, ${c.bairro}`,
+        cidade: c.cidade,
+        telefoneFinal: finalDoTelefone(c.telefone),
+        situacao: c.status,
+        situacaoRotulo: rotuloDaSituacao(c.status),
+        podeLancar: motivo === null,
+        motivo,
+      });
+      if (itens.length >= 8) break;
+    }
+    return { itens, liberado: await this.ativo() };
+  }
+
+  async perfilParaMotorista(userId: string, comercioId: string) {
+    const m = await this.motoristaAprovado(userId);
+    const c = await this.comercioParaMotorista(m.praca, comercioId);
+    const [concluidas, recentes] = await Promise.all([
+      // Concluida = a corrida terminou como COMPLETED (nunca pedido iniciado ou cancelado).
+      this.prisma.comercioPedido.count({ where: { comercioId: c.id, ride: { status: 'COMPLETED' } } }),
+      this.prisma.comercioPedido.findMany({
+        where: { comercioId: c.id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: this.include(),
+      }),
+    ]);
+    const motivo = motivoParaMotorista(c.status);
+    return {
+      id: c.id,
+      nomeFantasia: c.nomeFantasia,
+      razaoSocial: c.razaoSocial,
+      cnpj: cnpjParcial(c.cnpj),
+      telefone: c.telefone,
+      enderecoDeRetirada: enderecoPorExtenso(c),
+      situacao: c.status,
+      situacaoRotulo: rotuloDaSituacao(c.status),
+      podeLancar: motivo === null,
+      motivo,
+      entregasConcluidas: concluidas,
+      // Sem telefone de quem recebe nem endereco completo: so o que identifica a entrega.
+      historico: recentes.map((p) => {
+        const i = this.item(p);
+        return { codigo: i.codigo, em: i.criadaEm, situacao: i.situacao, final: i.final, origem: p.origem, bairro: p.destBairro };
+      }),
+    };
+  }
+
+  async cotarParaMotorista(userId: string, input: CotarManualInput) {
+    const m = await this.motoristaAprovado(userId);
+    const c = await this.comercioParaMotorista(m.praca, input.comercioId);
+    await this.portasDe(c);
+    const veiculo = await this.veiculoDoMotorista(m.id);
+    const r = await this.cotarDe(c, { ...input, veiculo });
+    // Entrega pelo veiculo do proprio motorista: so a opcao dele conta.
+    const opcoes = r.opcoes.filter((o) => o.veiculo === veiculo);
+    return { ...r, opcoes, veiculo };
+  }
+
   async pedir(userId: string, input: EntregaInput) {
     const c = await this.podePedir(userId);
+    const r = await this.criarEntrega(c, input, { atorId: userId, atorRole: UserRole.PASSENGER, origem: 'APP' });
+    return { ...(await this.detalhe(userId, r.rideId)), repetido: r.repetido };
+  }
+
+  /**
+   * O pedido oficial, igual para as duas origens (a loja pelo aplicativo ou o
+   * motorista lancando manualmente): chave anti-duplicidade, coleta na cidade da
+   * loja, teto de entregas abertas, preco confirmado = preco do servidor, e o
+   * pedido gravado na MESMA transacao da corrida. As portas (e-mail, aprovacao,
+   * chave geral) sao conferidas por quem chama, antes.
+   */
+  async criarEntrega(
+    c: Linha,
+    input: EntregaInput,
+    quem: { atorId: string; atorRole: UserRole; origem: 'APP' | 'MOTORISTA'; motoristaId?: string },
+  ): Promise<{ rideId: string; repetido: boolean }> {
     const ja = await this.prisma.comercioPedido.findUnique({ where: { comercioId_chave: { comercioId: c.id, chave: input.chave } } });
-    if (ja) return { ...(await this.detalhe(userId, ja.rideId)), repetido: true };
+    if (ja) return { rideId: ja.rideId, repetido: true };
     await this.exigirColetaNaCidade(c, input.coletaAlternativa);
     await this.exigirLimiteDeAbertas(c.id);
-    if (input.valorEsperadoCents != null) await this.exigirMesmoPreco(userId, c, input);
+    if (input.valorEsperadoCents != null) await this.exigirMesmoPreco(c.userId, c, input);
 
     const trava = `${c.id}:${input.chave}`;
     if (this.emAndamento.has(trava)) {
@@ -451,7 +601,7 @@ export class ComercioService implements OnModuleInit {
       let rideId: string;
       try {
         const corrida = await this.rides.pedir(
-          userId,
+          c.userId,
           {
             pickup,
             dropoff: this.destino(input.destino),
@@ -482,6 +632,8 @@ export class ComercioService implements OnModuleInit {
                   destCep: input.destino.cep,
                   destReferencia: input.destino.referencia ?? null,
                   coletaAlternativa: !!input.coletaAlternativa,
+                  origem: quem.origem,
+                  ...(quem.origem === 'MOTORISTA' ? { lancadoPor: quem.motoristaId ?? null, lancadoEm: new Date() } : {}),
                 },
               });
             },
@@ -493,21 +645,21 @@ export class ComercioService implements OnModuleInit {
         // (e a corrida dele foi desfeita junto). Devolve a entrega que ja existe.
         if ((e as { code?: string }).code === 'P2002') {
           const existente = await this.prisma.comercioPedido.findUnique({ where: { comercioId_chave: { comercioId: c.id, chave: input.chave } } });
-          if (existente) return { ...(await this.detalhe(userId, existente.rideId)), repetido: true };
+          if (existente) return { rideId: existente.rideId, repetido: true };
         }
         throw e;
       }
       await this.prisma.auditLog.create({
         data: {
-          actorId: userId,
-          actorRole: UserRole.PASSENGER,
-          action: 'COMERCIO_PEDIU_ENTREGA',
+          actorId: quem.atorId,
+          actorRole: quem.atorRole,
+          action: quem.origem === 'MOTORISTA' ? 'COMERCIO_ENTREGA_LANCADA_PELO_MOTORISTA' : 'COMERCIO_PEDIU_ENTREGA',
           entity: 'ride',
           entityId: rideId,
-          after: { comercioId: c.id, veiculo: input.veiculo, coletaAlternativa: !!input.coletaAlternativa } as never,
+          after: { comercioId: c.id, origem: quem.origem, veiculo: input.veiculo, coletaAlternativa: !!input.coletaAlternativa } as never,
         },
       });
-      return { ...(await this.detalhe(userId, rideId)), repetido: false };
+      return { rideId, repetido: false };
     } finally {
       this.emAndamento.delete(trava);
     }

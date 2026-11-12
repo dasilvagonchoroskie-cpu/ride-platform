@@ -978,6 +978,11 @@ model ComercioPedido {
   destCep          String    @map("dest_cep") @db.VarChar(8)
   destReferencia   String?   @map("dest_referencia") @db.VarChar(160)
   coletaAlternativa Boolean  @default(false) @map("coleta_alternativa")
+  /// Quem iniciou o pedido: APP (a propria loja, pelo aplicativo) ou MOTORISTA (lancamento manual).
+  origem           String    @default("APP") @db.VarChar(10)
+  /// Motorista que lancou (so quando origem = MOTORISTA) e quando.
+  lancadoPor       String?   @map("lancado_por") @db.Uuid
+  lancadoEm        DateTime? @map("lancado_em")
   createdAt        DateTime  @default(now()) @map("created_at")
 
   ride     Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)

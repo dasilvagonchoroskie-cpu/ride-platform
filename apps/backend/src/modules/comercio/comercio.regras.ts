@@ -187,6 +187,67 @@ export type EntregaInput = z.infer<typeof entregaSchema>;
 export const cotarSchema = entregaSchema.omit({ chave: true, valorEsperadoCents: true }).partial({ encomenda: true });
 export type CotarInput = z.infer<typeof cotarSchema>;
 
+// ---------------------------------------------------------------------------
+// Lancamento manual de entrega pelo motorista (12/11/2026)
+// ---------------------------------------------------------------------------
+
+/** O motorista procura o estabelecimento por telefone, e-mail ou nome. */
+export const buscarEstabelecimentoSchema = z.object({ busca: z.string().trim().min(3, 'Digite ao menos 3 letras ou números.').max(120) });
+
+/**
+ * Pedido lancado pelo motorista: igual ao da loja, mas o veiculo NAO vem do
+ * aplicativo (e o veiculo em uso do proprio motorista) e a loja e escolhida pelo id.
+ */
+export const entregaManualSchema = entregaSchema.omit({ veiculo: true }).extend({ comercioId: z.string().uuid() });
+export type EntregaManualInput = z.infer<typeof entregaManualSchema>;
+
+export const cotarManualSchema = cotarSchema.omit({ veiculo: true }).extend({ comercioId: z.string().uuid() });
+export type CotarManualInput = z.infer<typeof cotarManualSchema>;
+
+export type TipoDeBusca = { tipo: 'EMAIL' | 'TELEFONE' | 'NOME'; valor: string };
+
+/** E-mail se tem "@"; telefone se so tem numeros e simbolos de telefone (8+ numeros); senao, nome. */
+export function tipoDeBusca(busca: string): TipoDeBusca {
+  const q = busca.trim();
+  if (q.includes('@')) return { tipo: 'EMAIL', valor: q.toLowerCase() };
+  const d = digitos(q);
+  if (d.length >= 8 && /^[\d\s()+.-]+$/.test(q)) return { tipo: 'TELEFONE', valor: d.replace(/^55(?=\d{10,11}$)/, '') };
+  return { tipo: 'NOME', valor: q };
+}
+
+/** O veiculo em uso do motorista: categoria com "MOTO" = moto; o resto = carro. */
+export function veiculoDaCategoria(categoria: string | null | undefined): 'MOTO' | 'CARRO' {
+  return (categoria ?? '').toUpperCase().includes('MOTO') ? 'MOTO' : 'CARRO';
+}
+
+/** Por que o motorista NAO pode lancar para este estabelecimento (null = pode, quanto ao cadastro). */
+export function motivoParaMotorista(situacao: string): string | null {
+  switch (situacao) {
+    case 'APROVADO':
+      return null;
+    case 'AGUARDANDO':
+      return 'Este estabelecimento ainda está aguardando aprovação da Central.';
+    case 'SUSPENSO':
+      return 'Este estabelecimento está suspenso. Fale com a Central.';
+    case 'REJEITADO':
+      return 'O cadastro deste estabelecimento não foi aprovado. Fale com a Central.';
+    default:
+      return 'Cadastro indisponível.';
+  }
+}
+
+/** CNPJ para o motorista conferir sem expor tudo: so os 2 ultimos numeros. */
+export function cnpjParcial(cnpj: string): string {
+  const d = digitos(cnpj);
+  return d.length >= 4 ? `**.***.***/****-${d.slice(-2)}` : '';
+}
+
+/** Final do telefone (para distinguir lojas de mesmo nome sem mostrar o numero inteiro). */
+export function finalDoTelefone(tel: string): string {
+  const d = digitos(tel);
+  return d.length >= 4 ? `…${d.slice(-4)}` : '';
+}
+
 export const decisaoSchema = z.object({
   acao: z.enum(ACOES),
   motivo: z.string().trim().max(300).optional(),
