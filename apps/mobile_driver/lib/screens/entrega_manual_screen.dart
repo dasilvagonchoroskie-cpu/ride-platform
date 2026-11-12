@@ -34,6 +34,10 @@ class _EntregaManualScreenState extends State<EntregaManualScreen> {
   bool _ocupado = false;
   String? _erro;
 
+  /// O erro aparece embaixo do botao: rola ate ele para a pessoa ver.
+  final GlobalKey _chaveDoErro = GlobalKey(debugLabel: 'erro-entrega-manual');
+  String? _erroRolado;
+
   // 1) busca
   final _busca = TextEditingController();
   ResultadoDaBusca? _resultado;
@@ -306,6 +310,15 @@ class _EntregaManualScreenState extends State<EntregaManualScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_erro != null && _erro != _erroRolado) {
+      _erroRolado = _erro;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final alvo = _chaveDoErro.currentContext;
+        if (mounted && alvo != null) Scrollable.ensureVisible(alvo, duration: const Duration(milliseconds: 200));
+      });
+    } else if (_erro == null) {
+      _erroRolado = null;
+    }
     return PopScope(
       canPop: _etapa == _Etapa.buscar,
       onPopInvokedWithResult: (didPop, _) {
@@ -318,20 +331,26 @@ class _EntregaManualScreenState extends State<EntregaManualScreen> {
           leading: BackButton(onPressed: _ocupado ? null : _voltar),
         ),
         body: SafeArea(
-          child: ListView(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(Spacing.lg),
-            children: [
-              ...switch (_etapa) {
-                _Etapa.buscar => _telaBuscar(),
-                _Etapa.perfil => _telaPerfil(),
-                _Etapa.dados => _telaDados(),
-                _Etapa.conferir => _telaConferir(),
-              },
-              if (_erro != null) ...[
-                const SizedBox(height: Spacing.md),
-                Text(_erro!, key: const Key('erro-entrega-manual'), style: AppText.body.copyWith(color: AppColors.danger)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...switch (_etapa) {
+                  _Etapa.buscar => _telaBuscar(),
+                  _Etapa.perfil => _telaPerfil(),
+                  _Etapa.dados => _telaDados(),
+                  _Etapa.conferir => _telaConferir(),
+                },
+                if (_erro != null) ...[
+                  const SizedBox(height: Spacing.md),
+                  Container(
+                    key: _chaveDoErro,
+                    child: Text(_erro!, key: const Key('erro-entrega-manual'), style: AppText.body.copyWith(color: AppColors.danger)),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -392,6 +411,11 @@ class _EntregaManualScreenState extends State<EntregaManualScreen> {
     return [
       Text('Confira se é este estabelecimento', style: AppText.heading),
       const SizedBox(height: Spacing.md),
+      // O motivo de nao poder lancar vem primeiro (nao fica escondido embaixo do historico).
+      if (!p.podeLancar)
+        _Aviso(icone: Icons.block, texto: p.motivo ?? 'Este estabelecimento não pode receber entregas agora.', cor: AppColors.danger)
+      else if (!liberado)
+        _Aviso(icone: Icons.lock_outline, texto: 'O Comércio ainda não está liberado pela Central.', cor: AppColors.warning),
       AppCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,11 +450,7 @@ class _EntregaManualScreenState extends State<EntregaManualScreen> {
             ),
           ),
       const SizedBox(height: Spacing.lg),
-      if (!p.podeLancar)
-        _Aviso(icone: Icons.block, texto: p.motivo ?? 'Este estabelecimento não pode receber entregas agora.', cor: AppColors.danger)
-      else if (!liberado)
-        _Aviso(icone: Icons.lock_outline, texto: 'O Comércio ainda não está liberado pela Central.', cor: AppColors.warning)
-      else
+      if (p.podeLancar && liberado)
         AppButton(
           label: 'Confirmar este estabelecimento',
           onPressed: () => setState(() {

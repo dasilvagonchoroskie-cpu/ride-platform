@@ -1086,7 +1086,7 @@ void main() {
     expect(find.textContaining('1.234,56'), findsOneWidget);
     expect(find.textContaining('mensalidades R\$'), findsOneWidget);
     expect(find.text('Parte dos motoristas'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
+    Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
     await tester.pumpAndSettle();
     // Online (verde) e offline (cinza, na ultima posicao).
     expect(find.byIcon(Icons.local_taxi), findsNWidgets(2));
@@ -1097,14 +1097,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Joao Batista da Silva'), findsOneWidget);
     expect(find.text('Livre'), findsWidgets);
-    await tester.tapAt(const Offset(10, 10));
+    Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.local_taxi).last);
     await tester.pumpAndSettle();
     expect(find.text('Carla Offline'), findsOneWidget);
     expect(find.textContaining('Offline · visto há 7 min'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
+    Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.person_pin_circle));

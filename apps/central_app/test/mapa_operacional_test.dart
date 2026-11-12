@@ -285,6 +285,12 @@ Future<void> _carregar(WidgetTester tester) async {
   }
 }
 
+/// Fecha a folha de baixo aberta (sem depender de onde cai o toque na tela).
+Future<void> _fecharFolha(WidgetTester tester) async {
+  Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
+  await tester.pumpAndSettle();
+}
+
 Finder _pinoDe(String nome) => find.byWidgetPredicate((w) => w is PinoDoVeiculo && w.veiculo.nome == nome);
 
 /// Existe, dentro do pino, a bolinha principal nesta cor?
@@ -297,13 +303,12 @@ Finder _bolinhaDe(String nome, Color cor) => find.descendant(
       }),
     );
 
-/// A barra de filtros desliza de lado: rola ate a ficha aparecer.
-Future<void> _mostrarFicha(WidgetTester tester, String texto, {bool paraTras = false}) async {
-  await tester.scrollUntilVisible(
-    find.text(texto),
-    paraTras ? -80 : 80,
-    scrollable: find.descendant(of: find.byType(BarraDeFiltrosDoMapa), matching: find.byType(Scrollable)).first,
-  );
+/// A barra de filtros desliza de lado: volta ao comeco e rola ate a ficha aparecer.
+Future<void> _mostrarFicha(WidgetTester tester, String texto) async {
+  final barra = find.descendant(of: find.byType(BarraDeFiltrosDoMapa), matching: find.byType(Scrollable)).first;
+  await tester.fling(barra, const Offset(3000, 0), 3000);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(find.text(texto), 80, scrollable: barra);
   await tester.pumpAndSettle();
 }
 
@@ -491,8 +496,8 @@ void main() {
       final painel = await _abrir(tester, VisaoGeral(abrirDespacho: () {}));
       await _carregar(tester);
 
-      Future<void> escolher(String ficha, {bool paraTras = false}) async {
-        await _mostrarFicha(tester, ficha, paraTras: paraTras);
+      Future<void> escolher(String ficha) async {
+        await _mostrarFicha(tester, ficha);
         await tester.tap(find.text(ficha));
         await tester.pumpAndSettle();
       }
@@ -518,7 +523,7 @@ void main() {
       expect(find.byType(PinoDoVeiculo), findsNWidgets(1));
       expect(_pinoDe('Sonia Carro SOS'), findsOneWidget);
 
-      await escolher('Todos', paraTras: true);
+      await escolher('Todos');
       expect(find.byType(PinoDoVeiculo), findsNWidgets(7));
 
       // O filtro nao mexeu nos dados que o despacho, a localizacao e o SOS usam.
@@ -573,8 +578,7 @@ void main() {
       expect(find.text('Transporte de passageiro'), findsOneWidget);
       expect(find.text('Em corrida'), findsOneWidget);
       expect(find.text('Estabelecimento'), findsNothing);
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
+      await _fecharFolha(tester);
 
       await tester.tap(_pinoDe('Otto Moto Offline'));
       await tester.pumpAndSettle();

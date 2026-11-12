@@ -39,6 +39,7 @@ bool _precoMudaNoLancamento = false;
 String? _recusa;
 
 final List<String> _chamadas = [];
+final List<String> _buscas = [];
 final List<Map<String, dynamic>> _lancamentos = [];
 final List<Map<String, dynamic>> _cotacoes = [];
 
@@ -70,6 +71,7 @@ MockClient _servidor() => MockClient((http.Request r) async {
       final p = r.url.path;
       _chamadas.add('${r.method} $p');
       if (p == '/api/driver/manual-deliveries/buscar') {
+        _buscas.add('${(jsonDecode(r.body) as Map)['busca']}');
         if (_semResultado) return _json({'itens': <dynamic>[], 'liberado': _liberado});
         return _json({
           'itens': [
@@ -182,7 +184,7 @@ Future<void> _tocar(WidgetTester tester, Finder alvo) async {
   await _esperar(tester);
 }
 
-Future<void> _procurar(WidgetTester tester, [String busca = '64999991234']) async {
+Future<void> _procurar(WidgetTester tester, [String busca = 'pizzaria boa']) async {
   await tester.enterText(find.byType(TextField).first, busca);
   await _tocar(tester, find.text('Procurar estabelecimento'));
 }
@@ -224,6 +226,7 @@ void main() {
     _precoMudaNoLancamento = false;
     _recusa = null;
     _chamadas.clear();
+    _buscas.clear();
     _lancamentos.clear();
     _cotacoes.clear();
   });
@@ -246,6 +249,13 @@ void main() {
     expect(_chamadas, contains('POST /api/driver/manual-deliveries/buscar'));
     // So buscou: nada foi cotado nem lancado.
     expect(_lancamentos, isEmpty);
+  });
+
+  testWidgets('busca por telefone, e-mail ou nome vai como o motorista digitou (o servidor decide o tipo)', (tester) async {
+    await _abrir(tester);
+    await _procurar(tester, '(64) 99999-1234');
+    expect(_buscas.single, '(64) 99999-1234');
+    expect(find.text('Pizzaria Boa Massa'), findsOneWidget);
   });
 
   testWidgets('busca curta pede mais letras e nao chama o servidor', (tester) async {
