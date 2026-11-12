@@ -640,4 +640,3 @@ describe('Comercio: e-mail confirmado vale a cada consulta e a cada pedido, nao 
     expect(ctx.rides.pedir).toHaveBeenCalledTimes(1);
   });
 });
-});
