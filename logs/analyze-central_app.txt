@@ -1,2 +1,12 @@
 Analyzing central_app...                                        
-No issues found! (ran in 10.9s)
+
+  error • The argument type 'Future<(List<Comercio>, List<PedidoDoComercio>, bool)>' can't be assigned to the parameter type 'Future<(List<Comercio>, List<PedidoDoComercio>)>?'.  • lib/painel/comercios.dart:221:15 • argument_type_not_assignable
+  error • The matched value of type '(List<Comercio>, List<PedidoDoComercio>)' isn't assignable to the required type '(Object?, Object?, Object?)'. Try changing the required type of the pattern, or the matched value type • lib/painel/comercios.dart:225:15 • pattern_type_mismatch_in_irrefutable_context
+  error • The argument type 'Object?' can't be assigned to the parameter type 'bool'.  • lib/painel/comercios.dart:236:38 • argument_type_not_assignable
+  error • The property 'isEmpty' can't be unconditionally accessed because the receiver can be 'null'. Try making the access conditional (using '?.') or adding a null check to the target ('!') • lib/painel/comercios.dart:254:25 • unchecked_use_of_nullable_value
+  error • A nullable expression can't be used as an iterator in a for-in loop. Try checking that the value isn't 'null' before using it as an iterator • lib/painel/comercios.dart:255:31 • unchecked_use_of_nullable_value
+  error • The property 'length' can't be unconditionally accessed because the receiver can be 'null'. Try making the access conditional (using '?.') or adding a null check to the target ('!') • lib/painel/comercios.dart:269:53 • unchecked_use_of_nullable_value
+  error • The property 'isEmpty' can't be unconditionally accessed because the receiver can be 'null'. Try making the access conditional (using '?.') or adding a null check to the target ('!') • lib/painel/comercios.dart:271:27 • unchecked_use_of_nullable_value
+  error • A nullable expression can't be used as an iterator in a for-in loop. Try checking that the value isn't 'null' before using it as an iterator • lib/painel/comercios.dart:272:31 • unchecked_use_of_nullable_value
+
+8 issues found. (ran in 10.5s)

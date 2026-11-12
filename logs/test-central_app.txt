@@ -2,73 +2,119 @@
 00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
 00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
 00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
-00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
-00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
-00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
-00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
+00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
 00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:02 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:02 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:02 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
 00:03 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-00:04 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-00:04 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
+00:03 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:04 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:04 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
 00:04 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
 00:05 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
 00:06 +22: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:06 +23: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:08 +24: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:09 +25: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
-00:10 +26: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
-00:11 +27: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
-00:11 +28: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:11 +29: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:12 +30: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:13 +31: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:14 +32: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:14 +33: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
-00:15 +34: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
-00:15 +35: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:16 +36: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
-00:19 +37: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
-00:20 +38: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
-00:20 +39: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
-00:20 +40: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
-00:20 +41: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
-00:20 +42: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
-00:20 +43: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
-00:20 +44: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
-00:20 +45: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
-00:20 +46: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
-00:21 +47: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
-00:21 +48: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
-00:21 +49: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: comercios sem estourar
-00:21 +50: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
-00:21 +51: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
-00:21 +52: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
-00:22 +53: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
-00:22 +54: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
-00:23 +55: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:23 +56: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:24 +57: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
-00:24 +58: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:25 +59: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:25 +60: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem
-00:26 +61: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
-00:27 +62: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
-00:27 +63: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:28 +64: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:28 +65: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:28 +66: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
-00:28 +66 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
-00:29 +67 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:29 +68 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
-00:30 +69 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
-00:30 +70 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:30 +71 ~1: All tests passed!
+lib/painel/comercios.dart:225:15: Error: The matched value of type '(List<Comercio>, List<PedidoDoComercio>)' isn't assignable to the required type '(Object?, Object?, Object?)'.
+ - 'List' is from 'dart:core'.
+ - 'Comercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+ - 'PedidoDoComercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+ - 'Object' is from 'dart:core'.
+Try changing the required type of the pattern, or the matched value type.
+        final (lista, pedidos, liberadas) = s.data!;
+              ^
+lib/painel/comercios.dart:236:38: Error: The argument type 'Object?' can't be assigned to the parameter type 'bool'.
+ - 'Object' is from 'dart:core'.
+              _ChaveGeral(liberadas: liberadas, dono: Provider.of<PainelState>(context, listen: false).dono, aoMudar: _mudarChave),
+                                     ^
+lib/painel/comercios.dart:254:25: Error: The getter 'isEmpty' isn't defined for the type 'Object?'.
+ - 'Object' is from 'dart:core'.
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'isEmpty'.
+              if (lista.isEmpty) const Aviso(texto: 'Nenhum estabelecimento neste filtro.'),
+                        ^^^^^^^
+lib/painel/comercios.dart:255:31: Error: The type 'Object?' used in the 'for' loop must implement 'Iterable<dynamic>'.
+ - 'Object' is from 'dart:core'.
+ - 'Iterable' is from 'dart:core'.
+              for (final c in lista)
+                              ^
+lib/painel/comercios.dart:269:53: Error: The getter 'length' isn't defined for the type 'Object?'.
+ - 'Object' is from 'dart:core'.
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'length'.
+              Text('Entregas do Comércio (${pedidos.length})', style: AppText.heading),
+                                                    ^^^^^^
+lib/painel/comercios.dart:271:27: Error: The getter 'isEmpty' isn't defined for the type 'Object?'.
+ - 'Object' is from 'dart:core'.
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'isEmpty'.
+              if (pedidos.isEmpty) const Aviso(texto: 'Nenhuma entrega pedida pelo aplicativo Comércio.'),
+                          ^^^^^^^
+lib/painel/comercios.dart:272:31: Error: The type 'Object?' used in the 'for' loop must implement 'Iterable<dynamic>'.
+ - 'Object' is from 'dart:core'.
+ - 'Iterable' is from 'dart:core'.
+              for (final p in pedidos) _CartaoDoPedido(p: p),
+                              ^
+lib/painel/comercios.dart:221:15: Error: The argument type 'Future<(List<Comercio>, List<PedidoDoComercio>, bool)>' can't be assigned to the parameter type 'Future<(List<Comercio>, List<PedidoDoComercio>)>?'.
+ - 'Future' is from 'dart:async'.
+ - 'List' is from 'dart:core'.
+ - 'Comercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+ - 'PedidoDoComercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+      future: _dados,
+              ^
+00:08 +23 -1: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart [E]
+  Failed to load "/home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart":
+  Compilation failed for testPath=/home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: lib/painel/comercios.dart:225:15: Error: The matched value of type '(List<Comercio>, List<PedidoDoComercio>)' isn't assignable to the required type '(Object?, Object?, Object?)'.
+   - 'List' is from 'dart:core'.
+   - 'Comercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+   - 'PedidoDoComercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+   - 'Object' is from 'dart:core'.
+  Try changing the required type of the pattern, or the matched value type.
+          final (lista, pedidos, liberadas) = s.data!;
+                ^
+  lib/painel/comercios.dart:236:38: Error: The argument type 'Object?' can't be assigned to the parameter type 'bool'.
+   - 'Object' is from 'dart:core'.
+                _ChaveGeral(liberadas: liberadas, dono: Provider.of<PainelState>(context, listen: false).dono, aoMudar: _mudarChave),
+                                       ^
+  lib/painel/comercios.dart:254:25: Error: The getter 'isEmpty' isn't defined for the type 'Object?'.
+   - 'Object' is from 'dart:core'.
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'isEmpty'.
+                if (lista.isEmpty) const Aviso(texto: 'Nenhum estabelecimento neste filtro.'),
+                          ^^^^^^^
+  lib/painel/comercios.dart:255:31: Error: The type 'Object?' used in the 'for' loop must implement 'Iterable<dynamic>'.
+   - 'Object' is from 'dart:core'.
+   - 'Iterable' is from 'dart:core'.
+                for (final c in lista)
+                                ^
+  lib/painel/comercios.dart:269:53: Error: The getter 'length' isn't defined for the type 'Object?'.
+   - 'Object' is from 'dart:core'.
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'length'.
+                Text('Entregas do Comércio (${pedidos.length})', style: AppText.heading),
+                                                      ^^^^^^
+  lib/painel/comercios.dart:271:27: Error: The getter 'isEmpty' isn't defined for the type 'Object?'.
+   - 'Object' is from 'dart:core'.
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'isEmpty'.
+                if (pedidos.isEmpty) const Aviso(texto: 'Nenhuma entrega pedida pelo aplicativo Comércio.'),
+                            ^^^^^^^
+  lib/painel/comercios.dart:272:31: Error: The type 'Object?' used in the 'for' loop must implement 'Iterable<dynamic>'.
+   - 'Object' is from 'dart:core'.
+   - 'Iterable' is from 'dart:core'.
+                for (final p in pedidos) _CartaoDoPedido(p: p),
+                                ^
+  lib/painel/comercios.dart:221:15: Error: The argument type 'Future<(List<Comercio>, List<PedidoDoComercio>, bool)>' can't be assigned to the parameter type 'Future<(List<Comercio>, List<PedidoDoComercio>)>?'.
+   - 'Future' is from 'dart:async'.
+   - 'List' is from 'dart:core'.
+   - 'Comercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+   - 'PedidoDoComercio' is from 'package:central_app/painel/comercios.dart' ('lib/painel/comercios.dart').
+        future: _dados,
+                ^
+  .
+00:08 +24 -1: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart
