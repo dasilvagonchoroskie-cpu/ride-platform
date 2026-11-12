@@ -81,6 +81,16 @@ const MODELOS = {
     ],
     distribuicoes: [['Por situação', 'situacao'], ['Por categoria', 'categoria'], ['Por cidade', 'cidade']]
   },
+  comercios: {
+    titulo: 'Relatório de Comércios Parceiros (entregas)',
+    colunas: [
+      { titulo: 'Comércio', peso: 2.2, v: (r) => r.nome_estabelecimento + (r.razao_social ? ` (${r.razao_social})` : '') }, { titulo: 'Categoria', peso: 1.6, v: (r) => r.categoria },
+      { titulo: 'Responsável', peso: 1.5, v: (r) => r.responsavel }, { titulo: 'Telefone', peso: 1.3, v: (r) => r.telefone }, { titulo: 'Cidade', peso: 1.1, v: (r) => r.cidade },
+      { titulo: 'Situação', peso: 1.6, v: (r) => r.situacao }, { titulo: 'Volume de entregas', peso: 1.4, v: (r) => r.volume_entregas },
+      { titulo: '1º contato', peso: 1, v: (r) => fmtData(r.data_primeiro_contato) }, { titulo: 'Ativo desde', peso: 1, v: (r) => fmtData(r.ativado_em) }
+    ],
+    distribuicoes: [['Por situação', 'situacao'], ['Por categoria', 'categoria'], ['Por volume de entregas', 'volume_entregas']]
+  },
   atendimentos: {
     titulo: 'Relatório de Atendimento',
     colunas: [

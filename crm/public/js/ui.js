@@ -286,10 +286,10 @@ export function tableHtml({ columns, rows, emptyHtml = '', responsive = true, ro
 
 export function statusTone(status) {
   const s = String(status || '');
-  if (/^(Contratado|Parceria confirmada|Usuário cadastrado)$/.test(s)) return 'fechado';
+  if (/^(Contratado|Parceria confirmada|Usuário cadastrado|Ativo na plataforma)$/.test(s)) return 'fechado';
   if (/^(Aprovado|Concluída|Resolvido|Publicada|Conferido|Conferidos)$/.test(s)) return 'success';
   if (/^(Recebido — conferir|Recebidos — conferir|Incompletos)$/.test(s)) return 'warn';
-  if (/^(Não prosseguiu|Não concretizada|Cancelada|Cancelado)$/.test(s)) return 'danger';
+  if (/^(Não prosseguiu|Não concretizada|Não concretizado|Cancelada|Cancelado)$/.test(s)) return 'danger';
   if (/Aguardando|Pendente/.test(s)) return 'warn';
   if (/^Em |Em negociação|Cadastro em|Primeiro contato|Contato realizado|Interessado|Proposta apresentada|Identificado/.test(s)) return 'info';
   return 'neutral';

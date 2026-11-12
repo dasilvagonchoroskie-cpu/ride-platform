@@ -17,7 +17,9 @@ const CAMPOS_IA = {
   motoristas: ['nome', 'cidade', 'endereco', 'veiculo', 'placa', 'cnh_categoria', 'proxima_acao', 'observacoes'],
   entregadores: ['nome', 'cidade', 'endereco', 'modalidade', 'veiculo', 'placa', 'cnh_categoria', 'proxima_acao', 'observacoes'],
   passageiros: ['nome', 'cidade', 'proxima_acao', 'observacoes'],
-  parceiros: ['nome_estabelecimento', 'categoria', 'responsavel', 'cidade', 'beneficio', 'proxima_acao', 'observacoes']
+  parceiros: ['nome_estabelecimento', 'categoria', 'responsavel', 'cidade', 'beneficio', 'proxima_acao', 'observacoes'],
+  // Etapa 2 (M3): comércio parceiro ligado à mão na conversa (a IA não cria comércios); só campos descritivos.
+  comercios: ['nome_estabelecimento', 'categoria', 'responsavel', 'cidade', 'endereco', 'proxima_acao', 'observacoes']
 };
 
 const MAX_MENSAGENS = 30;

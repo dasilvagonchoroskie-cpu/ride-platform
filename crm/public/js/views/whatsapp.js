@@ -4,7 +4,7 @@ import * as ui from '../ui.js';
 // Tela "Conversas": caixa de entrada do WhatsApp dentro do CRM.
 // Todo texto que vem de fora (nome, mensagem) passa por ui.esc(); não há scripts nem handlers inline (CSP).
 
-const TIPOS = { motoristas: 'Motorista', entregadores: 'Entregador', passageiros: 'Passageiro', parceiros: 'Parceiro' };
+const TIPOS = { motoristas: 'Motorista', entregadores: 'Entregador', passageiros: 'Passageiro', parceiros: 'Parceiro', comercios: 'Comércio' };
 const STATUS_MSG = {
   pendente: ['enviando…', 'pend'], enviando: ['enviando…', 'pend'], enviada: ['✓', 'ok'],
   entregue: ['✓✓', 'ok'], lida: ['✓✓', 'read'], falhou: ['não enviada', 'fail']
@@ -14,7 +14,7 @@ const ASSUNTO = { cadastro_motorista: 'Cadastro de motorista', duvida_corrida: '
   pagamento: 'Pagamento', suporte_app: 'Suporte do app', elogio: 'Elogio', outro: 'Outro' };
 const URGENCIA = { baixa: ['Urgência baixa', 'neutral'], media: ['Urgência média', 'info'], alta: ['Urgência alta', 'danger'] };
 const SENTIMENTO = { positivo: ['Positivo', 'success'], neutro: ['Neutro', 'neutral'], negativo: ['Negativo', 'warn'] };
-const CAMPO = { nome: 'Nome', cidade: 'Cidade', proxima_acao: 'Próxima ação', observacoes: 'Observações', nome_estabelecimento: 'Estabelecimento',
+const CAMPO = { razao_social: 'Razão social', nome: 'Nome', cidade: 'Cidade', proxima_acao: 'Próxima ação', observacoes: 'Observações', nome_estabelecimento: 'Estabelecimento',
   modalidade: 'Modalidade', endereco: 'Endereço', categoria: 'Categoria', responsavel: 'Responsável', beneficio: 'Benefício', veiculo: 'Veículo', placa: 'Placa', cnh_categoria: 'Categoria da CNH' };
 const PERFIL_TIPO = { motorista: 'motoristas', passageiro: 'passageiros', parceiro: 'parceiros' };
 // Central de Atendimento: estados da conversa e assuntos do menu.
@@ -434,7 +434,7 @@ export async function renderConversas(view, state) {
     const corpo = document.createElement('div');
     corpo.innerHTML = `
       <div class="field"><label for="vc-tipo">Tipo de cadastro</label>
-        <select id="vc-tipo"><option value="motoristas">Motorista</option>${state.meta.entities.entregadores ? '<option value="entregadores">Entregador</option>' : ''}<option value="passageiros">Passageiro</option><option value="parceiros">Parceiro</option></select></div>
+        <select id="vc-tipo"><option value="motoristas">Motorista</option>${state.meta.entities.entregadores ? '<option value="entregadores">Entregador</option>' : ''}<option value="passageiros">Passageiro</option><option value="parceiros">Parceiro</option>${state.meta.entities.comercios ? '<option value="comercios">Comércio</option>' : ''}</select></div>
       <div class="field"><label for="vc-q">Buscar pelo nome</label><input id="vc-q" type="search" maxlength="80" autocomplete="off"></div>
       <div class="wa-results" id="vc-res"></div>`;
     const m = ui.modal({

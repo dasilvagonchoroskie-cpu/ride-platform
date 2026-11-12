@@ -40,7 +40,11 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
             WhatsApp. Limitação: a IA ainda não marca os documentos do entregador (só do motorista); marcar manualmente na ficha.
       - [x] Relatórios em PDF em todos os setores, com CSV complementar (12/11, ramo etapa2): ver README "Relatórios em PDF".
             Ainda sem PDF: Conversas, Pessoas, Empresas e ficha individual (Etapa 3); Dashboard (o "Relatório geral" cobre o período).
-      - [ ] Próximos (aguardando conferência do dono): M3 comércios · M4 documentos e
+      - [x] M3 comércios parceiros que pedem entregas (12/11, ramo etapa2, dados fictícios): função independente do Parceiro do
+            Clube, empresa central reaproveitada (sem duplicar), situações, histórico, "Ativo na plataforma" em verde, dashboard,
+            relatórios (PDF só admin + CSV), WhatsApp, tarefas. Limitações: sem CNPJ/documentos (M4); telefone e WhatsApp são um
+            campo só; a IA não cria comércio nem marca documentos; gestor não exporta PDF/CSV de comércios (confirmar com o dono).
+      - [ ] Próximo (aguardando avaliação e autorização do dono): M4 documentos e
             armazenamento seguro (sem documentos reais). Depois: IA/WhatsApp ligados à pessoa (hoje o cadastro criado
             pela IA ainda não ganha pessoa).
       - [x] Ficha central da EMPRESA (parceiro do Clube; comércio entra no M3) e preservação dos históricos antigos

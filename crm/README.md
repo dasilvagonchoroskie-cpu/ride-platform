@@ -221,6 +221,21 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   **Baixar PDF**, **Abrir para imprimir** (nova aba, por causa da CSP), **Compartilhar** (Web Share, quando o aparelho permite) e, para o
   administrador, **Baixar CSV**.
 
+## M3 — Comércios parceiros que pedem entregas (12/11/2026, ramo `etapa2`, só desenvolvimento)
+- Módulo **Comércios** (só com `FM_ETAPA2=1`, migração 004, tabela `comercios`): loja que usa a plataforma para pedir entregas.
+  É uma função **independente** do "Parceiro do Clube" (estabelecimento que dá desconto aos motoristas): a mesma empresa pode ter
+  as duas, cada uma com a própria situação, e mudar uma nunca altera a outra.
+- Titular é a **empresa central** (M1): ao cadastrar, o aviso de telefone repetido deixa escolher a empresa existente
+  (`empresa_id`) em vez de criar outra; repetir a função na mesma empresa devolve 409. Razão social e endereço são copiados para a
+  empresa quando ela ainda não os tem. Não há campo de CNPJ (documentos só no M4).
+- Situações: Identificado → Primeiro contato → Aguardando resposta → Em negociação → Proposta apresentada → Cadastro em andamento →
+  **Ativo na plataforma** (verde, "fechado") · Não concretizado. Acompanhamentos (histórico), tarefas, WhatsApp, busca e filtros
+  funcionam como nos demais módulos. `POST /api/comercios/:id/ativar` (admin e gestor, `confirmo:true`) marca como ativo.
+- Excluir encerra só o vínculo da função; a empresa, as outras funções e o histórico permanecem.
+- Dashboard: cartões de comércios (total, novos, em negociação, ativos); Relatórios: cartão "Comércios parceiros (entregas)".
+  PDF (`type=comercios`) e CSV só para administrador (dados pessoais; LGPD); gestor consulta e gerencia, sem auditoria e sem junção.
+- A IA não cria comércios nem marca documentos; o vínculo da conversa com um comércio é manual.
+
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados
   (aprovados + contratados, com o detalhe) e contratados. Documento pendente não muda a etapa (aparece à parte).

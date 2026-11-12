@@ -57,8 +57,20 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Permissão: `policy.canExportPdf` (admin tudo; gestor só tarefas/campanhas/resumo/financeiro/cenario). CSV segue só admin. Toda
   exportação é auditada. Novo relatório = novo modelo em `relatorios-pdf.js` + permissão em `policy.js` + teste em `test/m2-pdf.test.js`.
 - Front: `public/js/exportar.js` (`abrirExportacao`: baixar, abrir/imprimir em nova aba, compartilhar, CSV). Sem iframe (CSP).
-  Cache do app `fm-crm-v21` (etapa2).
+  Cache do app `fm-crm-v21` (etapa2; v22 no M3).
 - "Simulação incompleta" = `custos_total` não maior que zero (mesma regra da tela do financeiro).
+
+## M3 comércios (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- `comercios`: módulo funcional como entregadores, só em `ENTITIES` com `FM_ETAPA2=1` (migração 004, congelada). Titular = EMPRESA central
+  (`FUNCOES.comercio` em `src/titulares.js`, nome do titular vem de `nome_estabelecimento`). Independente de `parceiros` (Clube): decisão
+  do dono em 12/11 ("dois cadastros diferentes"); mesma empresa pode ter as duas funções, 409 se repetir a mesma.
+- `pessoas.criarRegistro` copia `razao_social` e `endereco` do registro para a empresa quando vazios. Sem campo de CNPJ (M4).
+- Situações em `STATUS_COMERCIO`; fechado = 'Ativo na plataforma' (verde), perdido = 'Não concretizado'. `POST /comercios/:id/ativar`
+  (admin e gestor, `confirmo:true`). `fichaDoCadastro` e `/relations` conhecem 'comercios'; dashboard `comercios_*`; `reportSummary.comercios`.
+- PDF `type=comercios` em `relatorios-pdf.js`; `policy.canExportPdf`: só admin (gestor não exporta lista com dados pessoais); CSV só admin.
+- IA: `CAMPOS_IA.comercios` (pode preencher campos vazios de comércio vinculado), nunca cria comércio. WhatsApp: `VINCULOS.comercios`.
+- Front: menu Comércios, banner "comércio pedindo entregas", botão "Marcar como ativo na plataforma", cartões no dashboard e em Relatórios.
+  Cache do app `fm-crm-v22` (etapa2). Testes: `test/m3-comercios.test.js`.
 
 ## Ficha do motorista e "fechados" em verde (10/11/2026, pedido do dono)
 - Motorista: situação nova `Contratado` (fechado), documentos por item `doc_cnh`/`doc_crlv`/`doc_endereco` (Não enviado /

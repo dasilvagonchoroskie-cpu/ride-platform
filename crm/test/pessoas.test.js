@@ -171,7 +171,7 @@ test('ficha central da empresa: cadastro único, funções, aviso de telefone, j
   assert.equal(f.j.historico_funcoes[0].auditoria, null, 'gestor não vê a auditoria');
   assert.ok((await adm('GET', `/empresas/${E1}`)).j.historico_funcoes[0].auditoria.length >= 1, 'admin vê a auditoria da ficha');
   const comercio = f.j.funcoes_disponiveis.find((x) => x.funcao === 'comercio');
-  assert.equal(comercio.disponivel, false, 'comércio só no M3');
+  assert.equal(comercio.disponivel, true, 'comércio disponível desde o M3');
   assert.equal((await ges('POST', `/empresas/${E1}/funcoes`, { funcao: 'comercio', dados: {} })).s, 422);
   assert.equal((await ges('POST', `/empresas/${E1}/funcoes`, { funcao: 'motorista', dados: {} })).s, 422, 'função de pessoa não cabe em empresa');
   // Empresa não aparece entre pessoas (e vice-versa).

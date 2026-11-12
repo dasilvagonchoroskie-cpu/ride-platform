@@ -187,6 +187,12 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
         titular = Number(ins.run(crypto.randomUUID(), nome, tel, chaveTelefone(r.item.telefone), r.item.cidade || null, agora(), agora()).lastInsertRowid);
         evento(tipo, titular, 'criado', `Cadastro criado junto com a função ${FUNCOES[funcao].rotulo}`, req);
       }
+      // Empresa: endereço e razão social informados na função completam a ficha central, sem sobrescrever o que já existe.
+      if (tipo === 'empresa') {
+        for (const campo of ['endereco', 'razao_social']) {
+          if (r.item[campo]) db.prepare(`UPDATE empresas SET ${campo} = ?, atualizado_em = ? WHERE id = ? AND COALESCE(${campo}, '') = ''`).run(r.item[campo], agora(), titular);
+        }
+      }
       db.prepare('INSERT INTO vinculos (titular_tipo, titular_id, funcao, registro_tabela, registro_id, ativo, criado_em) VALUES (?, ?, ?, ?, ?, 1, ?)')
         .run(tipo, titular, funcao, tabela, r.item.id, agora());
       evento(tipo, titular, 'funcao_adicionada', `${FUNCOES[funcao].rotulo} (registro #${r.item.id})`, req);

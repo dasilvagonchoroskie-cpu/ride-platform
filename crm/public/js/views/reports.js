@@ -108,6 +108,16 @@ export async function renderReports(view, state) {
         </div>
       </div>
 
+      ${s.comercios ? `<div class="report-section">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Comércios parceiros (entregas) por situação</h3><p class="sub">${ui.fmtInt(s.comercios.total)} cadastros no período · ${ui.fmtInt(s.comercios.ativos)} ativo(s) na plataforma</p></div>
+            ${exportBtn('comercios')}
+          </div>
+          <div class="card-body">${breakdown(s.comercios.por_situacao)}</div>
+        </div>
+      </div>` : ''}
+
       ${s.entregadores ? `<div class="report-section">
         <div class="card">
           <div class="card-head">

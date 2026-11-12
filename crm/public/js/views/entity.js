@@ -15,7 +15,7 @@ export async function renderEntity(view, state, key, params) {
   const fechados = def.fechados || [];
   const filtros = { q: '', situacao: '', categoria: '', page: 1, etapa: fechados.length ? 'andamento' : '' };
   const ehFechado = (row) => fechados.includes(row[def.statusField]);
-  const ROTULO_FECHADO = { motoristas: 'Contratados', entregadores: 'Contratados', parceiros: 'Parcerias fechadas', passageiros: 'Cadastrados' }[key] || 'Fechados';
+  const ROTULO_FECHADO = { motoristas: 'Contratados', entregadores: 'Contratados', parceiros: 'Parcerias fechadas', comercios: 'Ativos', passageiros: 'Cadastrados' }[key] || 'Fechados';
   let listSeq = 0; // descarta respostas antigas (a busca dispara várias requisições; a mais lenta não pode vencer a mais nova)
   let calRef = null;
   let calMes = ui.todayISO().slice(0, 7);
@@ -111,7 +111,7 @@ export async function renderEntity(view, state, key, params) {
       return {
         label: field ? field.label : colKey,
         render: (row) => first
-          ? `<b>${ui.esc(row[colKey] || '—')}</b>${key === 'parceiros' && row.responsavel ? `<span class="sub">${ui.esc(row.responsavel)}</span>` : ''}`
+          ? `<b>${ui.esc(row[colKey] || '—')}</b>${(key === 'parceiros' || key === 'comercios') && row.responsavel ? `<span class="sub">${ui.esc(row.responsavel)}</span>` : ''}`
           : cell(field, row)
       };
     });
@@ -175,8 +175,8 @@ export async function renderEntity(view, state, key, params) {
     const status = item[def.statusField];
     let banner = '';
     if (fechados.includes(status)) {
-      const quando = item.contratado_em || item.confirmado_em;
-      banner = `<div class="ficha-banner fechado">✅ ${ui.esc(status)}${quando ? ` em ${ui.fmtDate(quando)}` : ''}${key === 'motoristas' ? ' — motorista trabalhando' : key === 'entregadores' ? ' — entregador trabalhando' : key === 'parceiros' ? ' — parceria fechada' : ''}</div>`;
+      const quando = item.contratado_em || item.confirmado_em || item.ativado_em;
+      banner = `<div class="ficha-banner fechado">✅ ${ui.esc(status)}${quando ? ` em ${ui.fmtDate(quando)}` : ''}${key === 'motoristas' ? ' — motorista trabalhando' : key === 'entregadores' ? ' — entregador trabalhando' : key === 'parceiros' ? ' — parceria fechada' : key === 'comercios' ? ' — comércio pedindo entregas' : ''}</div>`;
     } else if (ehCondutor && status === 'Aprovado') {
       banner = '<div class="ficha-banner quase">Cadastro aprovado. Falta marcar como contratado quando ele começar a trabalhar.</div>';
     } else if (!(def.perdidos || []).includes(status)) {
@@ -223,6 +223,7 @@ export async function renderEntity(view, state, key, params) {
 
     const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
     const podeContratar = ehCondutor && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
+    const podeAtivar = key === 'comercios' && item.situacao !== 'Ativo na plataforma' && item.situacao !== 'Não concretizado';
     const ficha = (data.titular
       ? (data.titular.tipo === 'pessoa'
         ? `<div class="ficha-acoes"><a class="btn btn-sm btn-soft" href="#/pessoas?id=${Number(data.titular.id)}">${ui.icon('users', 15)} Ficha central da pessoa (todas as funções)</a></div>`
@@ -241,6 +242,7 @@ export async function renderEntity(view, state, key, params) {
         ${def.interactions ? `<button class="btn btn-ghost btn-sm" data-detail-hist>${ui.icon('headset', 15)} Registrar acompanhamento</button>` : ''}
         ${podeConfirmar ? `<button class="btn btn-gold btn-sm" data-detail-confirm>${ui.icon('check', 15)} Confirmar parceria</button>` : ''}
         ${podeContratar ? `<button class="btn btn-gold btn-sm" data-detail-contratar>${ui.icon('check', 15)} Marcar como contratado</button>` : ''}
+        ${podeAtivar ? `<button class="btn btn-gold btn-sm" data-detail-ativar>${ui.icon('check', 15)} Marcar como ativo na plataforma</button>` : ''}
         <button class="btn btn-primary btn-sm" data-detail-edit>${ui.icon('edit', 15)} Editar</button>`
     });
 
@@ -271,6 +273,23 @@ export async function renderEntity(view, state, key, params) {
       try {
         await api.post(`/${key}/${item.id}/contratar`, { confirmo: true });
         ui.toast(key === 'entregadores' ? 'Entregador marcado como contratado.' : 'Motorista marcado como contratado.', 'success');
+        m.close();
+        loadList();
+      } catch (err) { ui.toast(err.message, 'error'); }
+    });
+
+    const ativarBtn = m.dialog.querySelector('[data-detail-ativar]');
+    if (ativarBtn) ativarBtn.addEventListener('click', async () => {
+      const ok = await ui.confirmDialog({
+        title: 'Marcar como ativo na plataforma',
+        message: `“${item.nome_estabelecimento}” passa para “Ativo na plataforma” (já pedindo entregas) e fica em verde. A data fica registrada. Isso não altera a situação da mesma empresa no Clube de Vantagens.`,
+        confirmLabel: 'Marcar como ativo',
+        requireCheck: 'Confirmo que este comércio já está ativo na plataforma.'
+      });
+      if (!ok) return;
+      try {
+        await api.post(`/comercios/${item.id}/ativar`, { confirmo: true });
+        ui.toast('Comércio marcado como ativo na plataforma.', 'success');
         m.close();
         loadList();
       } catch (err) { ui.toast(err.message, 'error'); }
@@ -335,7 +354,7 @@ export async function renderEntity(view, state, key, params) {
       try {
         if (isNew) {
           // Etapa 2: antes de criar, avisa se o telefone já pertence a alguém. Nunca associa sozinho: o usuário escolhe.
-          const titular = { motoristas: 'pessoa', entregadores: 'pessoa', passageiros: 'pessoa', parceiros: 'empresa' }[key];
+          const titular = { motoristas: 'pessoa', entregadores: 'pessoa', passageiros: 'pessoa', parceiros: 'empresa', comercios: 'empresa' }[key];
           if (state.meta.etapa2 && titular && payload.telefone) {
             const v = await api.post(titular === 'pessoa' ? '/pessoas/verificar-telefone' : '/empresas/verificar-telefone', { telefone: payload.telefone });
             if (v.possiveis.length) {

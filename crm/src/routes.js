@@ -635,6 +635,7 @@ router.get('/meta', (req, res) => {
     parceiros: db.prepare("SELECT COUNT(*) c FROM parceiros WHERE situacao NOT IN ('Parceria confirmada','Não concretizada')").get().c,
     wa: wa.store.contarNaoLidas()
   };
+  if (hasOwn(ENTITIES, 'comercios')) pendentes.comercios = db.prepare("SELECT COUNT(*) c FROM comercios WHERE situacao NOT IN ('Ativo na plataforma','Não concretizado')").get().c;
   if (hasOwn(ENTITIES, 'entregadores')) pendentes.entregadores = db.prepare("SELECT COUNT(*) c FROM entregadores WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c;
 
   res.json({
@@ -658,7 +659,7 @@ router.get('/relations', (req, res) => {
   const type = String(req.query.type || '');
   const def = Object.prototype.hasOwnProperty.call(ENTITIES, type) ? ENTITIES[type] : null;
   if (!def) return res.json({ items: [] });
-  const labelField = { motoristas: 'nome', passageiros: 'nome', parceiros: 'nome_estabelecimento', campanhas: 'titulo', atendimentos: 'assunto' }[type] || 'nome';
+  const labelField = { motoristas: 'nome', passageiros: 'nome', parceiros: 'nome_estabelecimento', comercios: 'nome_estabelecimento', campanhas: 'titulo', atendimentos: 'assunto' }[type] || 'nome';
   const q = String(req.query.q || '').trim();
   const rows = q
     ? db.prepare(`SELECT id, ${labelField} AS label FROM ${def.table} WHERE ${labelField} LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT 50`).all(`%${entities.likeEscape(q)}%`)
@@ -712,6 +713,14 @@ router.get('/dashboard', (req, res) => {
     kpis.entregadores_docs_a_conferir = n("SELECT COUNT(*) c FROM entregadores WHERE situacao IN ('Aprovado','Contratado') AND COALESCE(documentos,'') <> 'Conferidos'");
   }
 
+  // Etapa 2 (M3): comércios parceiros (entregas). A empresa que também é Parceiro do Clube conta em cada função, separadamente.
+  if (hasOwn(ENTITIES, 'comercios')) {
+    kpis.comercios_total = n('SELECT COUNT(*) c FROM comercios');
+    kpis.comercios_novos = n("SELECT COUNT(*) c FROM comercios WHERE situacao IN ('Identificado','Primeiro contato','Aguardando resposta')");
+    kpis.comercios_negociacao = n("SELECT COUNT(*) c FROM comercios WHERE situacao IN ('Em negociação','Proposta apresentada','Cadastro em andamento')");
+    kpis.comercios_ativos = n("SELECT COUNT(*) c FROM comercios WHERE situacao = 'Ativo na plataforma'");
+  }
+
   const months = [];
   const base = new Date(`${hoje}T12:00:00Z`);
   base.setUTCDate(1);
@@ -753,6 +762,7 @@ router.get('/dashboard', (req, res) => {
     ...db.prepare("SELECT id, nome AS titulo, 'Motorista' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM motoristas WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite),
     ...(hasOwn(ENTITIES, 'entregadores') ? db.prepare("SELECT id, nome AS titulo, 'Entregador' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM entregadores WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite) : []),
     ...db.prepare("SELECT id, nome AS titulo, 'Passageiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM passageiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Usuário cadastrado','Não prosseguiu')").all(limite),
+    ...(hasOwn(ENTITIES, 'comercios') ? db.prepare("SELECT id, nome_estabelecimento AS titulo, 'Comércio' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM comercios WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Ativo na plataforma','Não concretizado')").all(limite) : []),
     ...db.prepare("SELECT id, nome_estabelecimento AS titulo, 'Parceiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM parceiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Parceria confirmada','Não concretizada')").all(limite),
     ...db.prepare("SELECT id, titulo, 'Tarefa' AS modulo, data_vencimento AS data, situacao, descricao AS acao FROM tarefas WHERE data_vencimento <= ? AND situacao NOT IN ('Concluída','Cancelada')").all(limite)
   ]
@@ -817,6 +827,15 @@ function reportSummary(de, ate) {
         por_situacao: porSituacao('entregadores', 'situacao'),
         por_modalidade: porCampo('entregadores', 'modalidade'),
         por_origem: porCampo('entregadores', 'origem')
+      }
+    } : {}),
+    ...(hasOwn(defs, 'comercios') ? {
+      comercios: {
+        total: db.prepare(`SELECT COUNT(*) c FROM comercios WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
+        ativos: db.prepare(`SELECT COUNT(*) c FROM comercios WHERE data_primeiro_contato BETWEEN ? AND ? AND situacao = 'Ativo na plataforma'`).get(de, ate).c,
+        por_situacao: porSituacao('comercios', 'situacao'),
+        por_categoria: porCampo('comercios', 'categoria'),
+        por_origem: porCampo('comercios', 'origem')
       }
     } : {}),
     passageiros: {
@@ -1343,6 +1362,22 @@ function contratar(tabela, rotulo) {
 router.post('/motoristas/:id/contratar', contratar('motoristas', 'Motorista'));
 if (hasOwn(ENTITIES, 'entregadores')) router.post('/entregadores/:id/contratar', contratar('entregadores', 'Entregador'));
 
+// Comércio parceiro (Etapa 2, M3): marcar como "Ativo na plataforma" (já pedindo entregas) é manual, datado e com confirmação.
+// Não mexe em NENHUM outro cadastro da mesma empresa (o Parceiro do Clube, por exemplo, tem situação própria).
+if (hasOwn(ENTITIES, 'comercios')) {
+  router.post('/comercios/:id/ativar', (req, res) => {
+    const id = Number(req.params.id);
+    const row = db.prepare('SELECT * FROM comercios WHERE id = ?').get(id);
+    if (!row) return fail(res, 404, 'not_found', 'Comércio não encontrado.');
+    if (row.situacao === 'Ativo na plataforma') return fail(res, 409, 'already', 'Este comércio já está ativo na plataforma.');
+    if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+    db.prepare('UPDATE comercios SET situacao = ?, ativado_em = ?, updated_at = ? WHERE id = ?').run('Ativo na plataforma', todayISO(), nowISO(), id);
+    entities.logInteraction('comercios', id, req, `Comércio ativado na plataforma (marcado por ${req.user.nome})`, row.situacao, 'Ativo na plataforma', 'Confirmação');
+    audit(req, 'ativar', 'comercios', id, 'Comércio marcado como ativo na plataforma');
+    res.json({ item: db.prepare('SELECT * FROM comercios WHERE id = ?').get(id) });
+  });
+}
+
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".
 whatsappRoutes.registrar(router, { service: wa, fail, audit, requireAdmin, ENTITIES, entities, db, central: ia.central });
@@ -1381,7 +1416,7 @@ router.post('/:entity', (req, res) => {
 
 // Ficha: conversa do WhatsApp vinculada, documentos recebidos (motorista) e o último resumo da IA.
 function fichaDoCadastro(tipo, id) {
-  if (!['motoristas', 'passageiros', 'parceiros', 'entregadores'].includes(tipo)) return null;
+  if (!['motoristas', 'passageiros', 'parceiros', 'entregadores', 'comercios'].includes(tipo)) return null;
   const conv = db.prepare(`SELECT c.id, c.atendimento, c.atend_motivo, c.ultima_em FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id
     WHERE k.vinculo_tipo = ? AND k.vinculo_id = ? ORDER BY c.ultima_em DESC LIMIT 1`).get(tipo, id);
   const ficha = { conversa: conv || null, documentos: null, resumo_ia: null };

@@ -9,7 +9,7 @@ const FONTES = [
   { modulo: 'passageiros', rotulo: 'Passageiro', sql: 'SELECT id, nome, telefone, situacao FROM passageiros' },
   { modulo: 'parceiros', rotulo: 'Parceiro do Clube', sql: 'SELECT id, nome_estabelecimento AS nome, telefone, situacao FROM parceiros' },
   { modulo: 'entregadores', rotulo: 'Entregador', sql: 'SELECT id, nome, telefone, situacao FROM entregadores' },
-  { modulo: 'comercios', rotulo: 'Comércio', sql: 'SELECT id, nome_fantasia AS nome, telefone, situacao FROM comercios' }
+  { modulo: 'comercios', rotulo: 'Comércio', sql: 'SELECT id, nome_estabelecimento AS nome, telefone, situacao FROM comercios' }
 ];
 
 function relatorioDuplicados(db) {
@@ -34,7 +34,7 @@ function relatorioDuplicados(db) {
       mesmo_nome: nomes.size === 1,
       mesma_funcao: new Set(modulos).size < modulos.length,
       // O que a migração faria: une só mesmo telefone + mesmo nome em funções diferentes; o resto fica para decisão manual.
-      unido_automaticamente: nomes.size === 1 && new Set(modulos).size === modulos.length && !modulos.includes('parceiros'),
+      unido_automaticamente: nomes.size === 1 && new Set(modulos).size === modulos.length && !modulos.includes('parceiros') && !modulos.includes('comercios'),
       registros: lista.map((r) => ({ modulo: r.modulo, rotulo: r.rotulo, id: r.id, nome: r.nome, situacao: r.situacao }))
     });
   }
