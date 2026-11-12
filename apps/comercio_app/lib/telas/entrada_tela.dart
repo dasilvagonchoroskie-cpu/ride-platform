@@ -4,6 +4,7 @@ import '../core/formato.dart';
 import '../core/tema.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
+import 'termos_tela.dart';
 
 /// Primeira tela: entrar com o codigo enviado por e-mail (cria a conta se for
 /// a primeira vez) ou com e-mail e senha (depois do cadastro do estabelecimento).
@@ -146,6 +147,10 @@ class _EntradaTelaState extends State<EntradaTela> {
                     'Primeira vez? Receba o código, entre e cadastre o seu estabelecimento. A Central confere os dados antes de liberar os pedidos.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Cores.textoFraco, fontSize: 12, height: 1.4),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermosTela())),
+                    child: const Text('Ler os termos de uso'),
                   ),
                 ]),
               ),

@@ -39,6 +39,7 @@ class Comercio {
   bool get temLocalizacao => endereco['temLocalizacao'] == true;
   String get situacao => j['situacao'] as String? ?? '';
   String get motivo => j['motivo'] as String? ?? '';
+  String get termosVersao => j['termosVersao'] as String? ?? '';
   DateTime? get criadoEm => DateTime.tryParse(j['criadoEm'] as String? ?? '')?.toLocal();
   Map<String, dynamic>? get gastos => (j['gastos'] as Map?)?.cast<String, dynamic>();
 
@@ -450,6 +451,7 @@ class _DetalheDoComercioState extends State<_DetalheDoComercio> {
                     Linha('Endereço', c.enderecoCompleto),
                     Linha('No mapa', c.temLocalizacao ? 'Sim' : 'Ainda não'),
                     Linha('Cadastrado em', dataHora(c.criadoEm)),
+                    if (c.termosVersao.isNotEmpty) Linha('Termos aceitos', c.termosVersao),
                   ],
                 ),
               ),
