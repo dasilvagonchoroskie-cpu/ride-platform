@@ -1,6 +1,7 @@
-# Fortaleza Move Comércio — guia de teste em celular real (APK 1.0.5)
+# Fortaleza Move Comércio — guia de teste em celular real
 
-Escrito em 12/11/2026. Serve para o Evandro instalar o aplicativo e conferir, passo a passo,
+Escrito em 12/11/2026 e atualizado em 13/11/2026 (avisos, mapa, termos e ícone novos). O APK que vale para este
+guia é o **próximo APK de teste**, montado depois da auditoria; o APK 1.0.5 (12/11) não tem as novidades de 13/11. Serve para o Evandro instalar o aplicativo e conferir, passo a passo,
 sem mexer em tarifa, comissão, carteira nem Moto.
 
 ## O que precisa estar pronto
@@ -28,12 +29,13 @@ de uma rua de Goiatuba.
 
 1. Entrar com e-mail → digite o código recebido → Cadastrar estabelecimento.
 2. Preencha tudo e use **Buscar no mapa** no endereço da loja (sem isso o pedido não tem de onde sair).
-3. O app deve mostrar "aguardando aprovação" e **não** mostrar "Nova entrega".
-4. Na Central → **Comércios** (menu) → toque na loja → **Aprovar** → confirmar.
-5. No app, volte ao início: agora aparece "Nova entrega" e as quatro abas (Entregas, Histórico, Gastos, Conta).
-6. Confira que a aba **Conta** não tem carteira, crédito nem mensalidade.
-7. Teste os caminhos ruins: na Central **Suspender** (pede motivo) → o app deve mostrar o motivo e não deixar pedir;
-   **Reativar** volta ao normal. Um CNPJ inválido ou repetido deve ser barrado no cadastro.
+3. Toque em **Ler os termos de uso** (deve aparecer a faixa "minuta técnica, ainda não aprovada por advogado"), marque o aceite e envie. Sem o aceite o app não envia.
+4. O app deve mostrar "aguardando aprovação", **não** mostrar "Nova entrega" e ter o **sino** na barra com o aviso "Cadastro recebido".
+5. Na Central → **Comércios** (menu) → toque na loja (confira "Termos aceitos") → **Aprovar** → confirmar.
+6. No app, o sino ganha o aviso "Cadastro aprovado" (até ~30 s). Volte ao início: agora aparece "Nova entrega" e as quatro abas (Entregas, Histórico, Gastos, Conta).
+7. Confira que a aba **Conta** não tem carteira, crédito nem mensalidade e tem o botão **Termos de uso**.
+8. Teste os caminhos ruins: na Central **Suspender** (pede motivo) → o app deve mostrar o motivo e não deixar pedir;
+   **Reativar** volta ao normal. Cada decisão gera um aviso no sino (com o motivo, quando houver). Um CNPJ inválido ou repetido deve ser barrado no cadastro.
 
 ## Teste 2 — a chave geral bloqueada (também não aciona motorista)
 
@@ -58,7 +60,7 @@ Se você autorizar, o jeito seguro é:
 4. Conferir no app do motorista de teste: loja, endereço de coleta, telefone da loja, quem recebe,
    descrição e observações aparecem na descrição da entrega.
 5. Aceitar → coletar → entregar com o código de 4 números (a loja repassa a quem recebe; o motorista
-   nunca recebe o código). Acompanhar a linha do tempo no app (atualiza sozinha a cada 8 segundos).
+   nunca recebe o código). Acompanhar a linha do tempo **e o mapa** no app (atualiza sozinho a cada 8 segundos): loja, destino e, quando o aparelho do motorista estiver mandando localização, o motorista; se ele ficar sem sinal por mais de 2 minutos o app avisa. Conferir também o sino: Entrega aceita → Motorista a caminho → Motorista chegou à loja → Encomenda coletada → Entrega concluída (cada aviso uma vez só).
 6. Testar também: cancelar pedido, **Repetir** pelo Histórico (só preenche; pede preço e confirmação de novo),
    tela **Gastos** (só soma entregas feitas), queda de rede ao confirmar (modo avião: o app deve dizer que não
    sabe se foi pedido e, ao voltar, não criar entrega duplicada).
@@ -71,6 +73,8 @@ respondeu, e em que passo aconteceu. Também diga o modelo do celular e a versã
 
 ## O que ainda não existe (já avisado)
 
-Mapa desenhado no acompanhamento (hoje mostra a posição em texto), ícone próprio do app, termos de uso
-para lojas (precisa revisão jurídica), aviso por notificação quando a Central decide, outras formas de
-pagamento além de dinheiro direto ao motorista.
+- **Aviso com o app fechado (push):** o app consulta o servidor a cada 30 s com o app aberto. Push no celular
+  precisa registrar o app no Firebase (dependência externa). SMS e WhatsApp não existem na plataforma.
+- **Termos de uso:** o texto é uma minuta e precisa de revisão jurídica antes de valer.
+- **Outras formas de pagamento** além de dinheiro direto ao motorista: dependem de decisão sua.
+- **Selo "Comércio" no app do motorista:** hoje a identificação vem escrita na descrição da entrega.
