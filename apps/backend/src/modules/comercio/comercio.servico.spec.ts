@@ -101,7 +101,7 @@ describe('motoristasEmSos', () => {
 });
 
 describe('Mapa da Central (livresPerto): carro/moto x passageiro/Comercio/livre/offline/SOS', () => {
-  function central(sos?: Parameters<typeof bancoFalso>[0]['sos']) {
+  function central(sos?: NonNullable<Parameters<typeof bancoFalso>[0]>['sos']) {
     const { prisma } = bancoFalso({ sos });
     const c: any = Object.create(CentralService.prototype);
     c.prisma = prisma;

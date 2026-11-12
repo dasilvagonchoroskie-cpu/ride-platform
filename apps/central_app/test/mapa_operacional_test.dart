@@ -297,6 +297,26 @@ Finder _bolinhaDe(String nome, Color cor) => find.descendant(
       }),
     );
 
+/// A barra de filtros desliza de lado: rola ate a ficha aparecer.
+Future<void> _mostrarFicha(WidgetTester tester, String texto, {bool paraTras = false}) async {
+  await tester.scrollUntilVisible(
+    find.text(texto),
+    paraTras ? -80 : 80,
+    scrollable: find.descendant(of: find.byType(BarraDeFiltrosDoMapa), matching: find.byType(Scrollable)).first,
+  );
+  await tester.pumpAndSettle();
+}
+
+/// Rola a tela de detalhe do veiculo ate o alvo aparecer.
+Future<void> _rolarDetalhe(WidgetTester tester, Finder alvo) async {
+  await tester.scrollUntilVisible(
+    alvo,
+    200,
+    scrollable: find.descendant(of: find.byType(DetalheDoVeiculo), matching: find.byType(Scrollable)).first,
+  );
+  await tester.pumpAndSettle();
+}
+
 MotoristaOnline _m(String nome) => MotoristaOnline.fromJson(_frotaNoMapa().firstWhere((j) => j['name'] == nome));
 
 void main() {
@@ -454,20 +474,25 @@ void main() {
       expect(find.text('Entrega do Comércio'), findsOneWidget);
       expect(find.text('SOS (prioridade máxima)'), findsOneWidget);
       expect(find.text('Todos'), findsOneWidget);
-      expect(find.text('Carros (4)'), findsOneWidget);
-      expect(find.text('Motocicletas (3)'), findsOneWidget);
-      expect(find.text('Transporte de passageiros (1)'), findsOneWidget);
-      expect(find.text('Entregas do Comércio (4)'), findsOneWidget);
-      expect(find.text('Veículos livres (2)'), findsOneWidget);
-      expect(find.text('SOS (1)'), findsOneWidget);
+      for (final ficha in [
+        'Carros (4)',
+        'Motocicletas (3)',
+        'Transporte de passageiros (1)',
+        'Entregas do Comércio (4)',
+        'Veículos livres (2)',
+        'SOS (1)',
+      ]) {
+        await _mostrarFicha(tester, ficha);
+        expect(find.text(ficha), findsOneWidget, reason: ficha);
+      }
     });
 
     testWidgets('filtros so mudam o desenho: Comercio, Motos, Livres e SOS', (tester) async {
       final painel = await _abrir(tester, VisaoGeral(abrirDespacho: () {}));
       await _carregar(tester);
 
-      Future<void> escolher(String ficha) async {
-        await tester.ensureVisible(find.text(ficha));
+      Future<void> escolher(String ficha, {bool paraTras = false}) async {
+        await _mostrarFicha(tester, ficha, paraTras: paraTras);
         await tester.tap(find.text(ficha));
         await tester.pumpAndSettle();
       }
@@ -493,7 +518,7 @@ void main() {
       expect(find.byType(PinoDoVeiculo), findsNWidgets(1));
       expect(_pinoDe('Sonia Carro SOS'), findsOneWidget);
 
-      await escolher('Todos');
+      await escolher('Todos', paraTras: true);
       expect(find.byType(PinoDoVeiculo), findsNWidgets(7));
 
       // O filtro nao mexeu nos dados que o despacho, a localizacao e o SOS usam.
@@ -593,6 +618,8 @@ void main() {
       expect(find.textContaining('Honda CG 160'), findsNothing);
       expect(_pedidos.last, 'GET /api/admin/frota MOTO yamaha -');
 
+      await tester.ensureVisible(find.text('Suspensos'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Suspensos'));
       await _carregar(tester);
       expect(find.textContaining('Nenhuma moto encontrada'), findsOneWidget);
@@ -608,8 +635,10 @@ void main() {
       expect(find.text('Moto MTO-1A11'), findsOneWidget);
       expect(find.text('Joana Motociclista'), findsWidgets);
       expect(find.text('Aprovado'), findsWidgets);
+      await _rolarDetalhe(tester, find.text('Documentação'));
       expect(find.text('Documentação'), findsOneWidget);
       expect(find.textContaining('validade do documento ainda não é registrada'), findsOneWidget);
+      await _rolarDetalhe(tester, find.textContaining('não autoriza entregas'));
       expect(find.textContaining('não autoriza entregas'), findsOneWidget);
     });
 
@@ -619,7 +648,7 @@ void main() {
       await tester.tap(find.textContaining('Honda CG 160'));
       await _carregar(tester);
 
-      await tester.ensureVisible(find.byType(PopupMenuButton<String>).first);
+      await _rolarDetalhe(tester, find.byType(PopupMenuButton<String>));
       await tester.tap(find.byType(PopupMenuButton<String>).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Suspender veículo'));
@@ -638,7 +667,7 @@ void main() {
       expect(_pedidos.last, contains('Documento vencido'));
       expect(find.text('Reativar veículo'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Reativar veículo'));
+      await _rolarDetalhe(tester, find.text('Reativar veículo'));
       await tester.tap(find.text('Reativar veículo'));
       await _carregar(tester);
       expect(_pedidos.last, contains('"suspender":false'));
