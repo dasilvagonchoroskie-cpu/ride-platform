@@ -18,6 +18,44 @@ class ServidorFalso extends ComercioApi {
   );
   Object? erroNoPreco;
 
+  /// Avisos do sino (so os do Comercio) e o que o servidor foi avisado.
+  CaixaDeAvisos caixa = const CaixaDeAvisos(itens: []);
+  Object? erroNosAvisos;
+  final List<String> avisosLidos = [];
+  final List<String> avisosApagados = [];
+  int consultasDeAvisos = 0;
+
+  /// Imagens do mapa (null = sem mapa de ruas) e os termos de uso.
+  ConfigDoMapa? mapaConfig;
+  int consultasDeMapa = 0;
+  Object? erroNosTermos;
+  TermosDeUso termosDeTeste = const TermosDeUso(versao: '0.1.0-minuta', conteudo: '# Termos\n\n## 1. Quem somos\n\nTexto **importante**.\n\n- item um', revisadoPorAdvogado: false);
+
+  @override
+  Future<CaixaDeAvisos> avisos() async {
+    consultasDeAvisos++;
+    if (erroNosAvisos != null) throw erroNosAvisos!;
+    return caixa;
+  }
+
+  @override
+  Future<void> marcarAvisosLidos(List<String> ids) async => avisosLidos.addAll(ids);
+
+  @override
+  Future<void> apagarAvisos(List<String> ids) async => avisosApagados.addAll(ids);
+
+  @override
+  Future<ConfigDoMapa?> configDoMapa() async {
+    consultasDeMapa++;
+    return mapaConfig;
+  }
+
+  @override
+  Future<TermosDeUso> termos() async {
+    if (erroNosTermos != null) throw erroNosTermos!;
+    return termosDeTeste;
+  }
+
   /// Respostas do pedir, na ordem; o que for Exception e lancado.
   final List<Object> respostasDoPedido = [];
   final List<String> chavesRecebidas = [];
@@ -42,8 +80,14 @@ class ServidorFalso extends ComercioApi {
     throw r;
   }
 
+  /// Se definida, e o que `entrega(id)` devolve (para testar mapa, motorista etc.).
+  Entrega? entregaFixa;
+
+  /// Ultimo cadastro enviado (para conferir o aceite dos termos).
+  DadosDoCadastro? ultimoCadastro;
+
   @override
-  Future<Entrega> entrega(String id) async => entregaDeTeste(id: id);
+  Future<Entrega> entrega(String id) async => entregaFixa ?? entregaDeTeste(id: id);
 
   @override
   Future<Gastos> gastos({DateTime? de, DateTime? ate}) async => const Gastos(
@@ -62,6 +106,7 @@ class ServidorFalso extends ComercioApi {
   @override
   Future<Estabelecimento> cadastrar(DadosDoCadastro d) async {
     cadastros++;
+    ultimoCadastro = d;
     return estabelecimento(situacao: Situacao.aguardando);
   }
 
@@ -70,7 +115,7 @@ class ServidorFalso extends ComercioApi {
       const [Lugar(endereco: 'Rua A, 10', detalhe: 'Centro, Goiatuba', latitude: -18.01, longitude: -49.35)];
 }
 
-Entrega entregaDeTeste({String id = 'r1', String etapa = 'AGUARDANDO_MOTORISTA'}) => Entrega(
+Entrega entregaDeTeste({String id = 'r1', String etapa = 'AGUARDANDO_MOTORISTA', MapaDaEntrega? mapa, String? motoristaNome}) => Entrega(
       id: id,
       codigo: 'FM100',
       etapa: etapa,
@@ -86,6 +131,8 @@ Entrega entregaDeTeste({String id = 'r1', String etapa = 'AGUARDANDO_MOTORISTA'}
       veiculo: 'MOTO',
       valorEstimadoCents: 700,
       valorCobradoCents: 0,
+      mapa: mapa,
+      motoristaNome: motoristaNome,
     );
 
 Estabelecimento estabelecimento({String situacao = Situacao.aprovado, String? motivo, bool liberadas = true}) => Estabelecimento(

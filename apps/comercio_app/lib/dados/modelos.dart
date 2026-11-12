@@ -73,6 +73,7 @@ class Estabelecimento {
     required this.situacaoRotulo,
     this.motivo,
     this.entregasLiberadas = true,
+    this.termosVersao,
   });
 
   final String id;
@@ -92,6 +93,9 @@ class Estabelecimento {
   /// (o servidor tambem recusa). Servidor antigo, sem o campo: segue como liberado.
   final bool entregasLiberadas;
 
+  /// Versao dos termos de uso que a loja aceitou no cadastro (null = cadastro antigo).
+  final String? termosVersao;
+
   bool get aprovado => situacao == Situacao.aprovado;
 
   factory Estabelecimento.fromJson(dynamic j) {
@@ -110,6 +114,7 @@ class Estabelecimento {
       situacaoRotulo: _txt(m['situacaoRotulo']),
       motivo: m['motivo'] == null ? null : _txt(m['motivo']),
       entregasLiberadas: m['entregasLiberadas'] != false,
+      termosVersao: m['termosVersao'] == null ? null : _txt(m['termosVersao']),
     );
   }
 }
@@ -245,8 +250,7 @@ class Entrega {
     this.motoristaNome,
     this.veiculoDoMotorista,
     this.codigoDeEntrega,
-    this.motoristaLatitude,
-    this.motoristaLongitude,
+    this.mapa,
     this.repetido = false,
   });
 
@@ -273,14 +277,14 @@ class Entrega {
   /// Codigo de 4 numeros que quem recebe diz ao motorista. So aparece
   /// enquanto a entrega esta aberta (o servidor esconde depois).
   final String? codigoDeEntrega;
-  final double? motoristaLatitude;
-  final double? motoristaLongitude;
+  /// Pontos do mapa (coleta, entrega e, so durante a entrega, o motorista). null = encerrada.
+  final MapaDaEntrega? mapa;
 
   /// O servidor respondeu que este pedido ja existia (toque repetido).
   final bool repetido;
 
   bool get problema => Etapa.ehProblema(etapa);
-  bool get temPosicaoDoMotorista => motoristaLatitude != null && motoristaLongitude != null;
+  bool get temPosicaoDoMotorista => mapa?.motorista != null;
 
   /// Valor que vale agora: o cobrado se terminou, senao o estimado.
   int get valorCents => etapa == 'ENTREGUE' ? valorCobradoCents : valorEstimadoCents;
@@ -288,8 +292,6 @@ class Entrega {
   factory Entrega.fromJson(dynamic j) {
     final m = _mapa(j);
     final dest = _mapa(m['destinatario']);
-    // aoVivo = { ride: { driverPosition: { latitude, longitude } } } (so se houver GPS agora).
-    final pos = _mapa(_mapa(_mapa(m['aoVivo'])['ride'])['driverPosition']);
     return Entrega(
       id: _txt(m['id']),
       codigo: _txt(m['codigo']),
@@ -311,8 +313,7 @@ class Entrega {
       motoristaNome: m['motoristaNome'] == null ? null : _txt(m['motoristaNome']),
       veiculoDoMotorista: m['veiculoDoMotorista'] == null ? null : _txt(m['veiculoDoMotorista']),
       codigoDeEntrega: m['codigoDeEntrega'] == null ? null : _txt(m['codigoDeEntrega']),
-      motoristaLatitude: _dbl(pos['latitude'] ?? pos['lat']),
-      motoristaLongitude: _dbl(pos['longitude'] ?? pos['lng']),
+      mapa: m['mapa'] is Map ? MapaDaEntrega.fromJson(m['mapa']) : null,
       repetido: m['repetido'] == true,
     );
   }
@@ -446,5 +447,148 @@ class Repeticao {
       veiculo: _txt(m['veiculo'], 'MOTO'),
       aviso: _txt(m['aviso']),
     );
+  }
+}
+
+/// Um ponto do mapa. So existe se o servidor mandou latitude e longitude validas.
+class PontoDoMapa {
+  const PontoDoMapa(this.latitude, this.longitude);
+
+  final double latitude;
+  final double longitude;
+
+  static PontoDoMapa? tentar(dynamic j) {
+    final m = _mapa(j);
+    final lat = _dbl(m['latitude']);
+    final lng = _dbl(m['longitude']);
+    if (lat == null || lng == null || lat.abs() > 90 || lng.abs() > 180) return null;
+    return PontoDoMapa(lat, lng);
+  }
+}
+
+/// Ultima posicao que o aparelho do motorista mandou. `desatualizada` = o
+/// servidor ja considera o sinal velho (mais de 2 minutos).
+class MotoristaNoMapa extends PontoDoMapa {
+  const MotoristaNoMapa(super.latitude, super.longitude, {this.atualizadaEm, this.desatualizada = false});
+
+  final DateTime? atualizadaEm;
+  final bool desatualizada;
+
+  static MotoristaNoMapa? tentarMotorista(dynamic j) {
+    final p = PontoDoMapa.tentar(j);
+    if (p == null) return null;
+    final m = _mapa(j);
+    return MotoristaNoMapa(p.latitude, p.longitude, atualizadaEm: DateTime.tryParse(_txt(m['atualizadaEm']))?.toLocal(), desatualizada: m['desatualizada'] == true);
+  }
+}
+
+class MapaDaEntrega {
+  const MapaDaEntrega({this.coleta, this.entrega, this.motorista});
+
+  final PontoDoMapa? coleta;
+  final PontoDoMapa? entrega;
+  final MotoristaNoMapa? motorista;
+
+  bool get vazio => coleta == null && entrega == null && motorista == null;
+
+  factory MapaDaEntrega.fromJson(dynamic j) {
+    final m = _mapa(j);
+    return MapaDaEntrega(
+      coleta: PontoDoMapa.tentar(m['coleta']),
+      entrega: PontoDoMapa.tentar(m['entrega']),
+      motorista: MotoristaNoMapa.tentarMotorista(m['motorista']),
+    );
+  }
+}
+
+/// Imagens do mapa: o endereco (com a chave da plataforma) vem do servidor,
+/// so para quem entrou na conta (GET /geo/mapa). Nunca fica no codigo do app.
+class ConfigDoMapa {
+  const ConfigDoMapa({required this.tiles, required this.atribuicao, required this.maxZoom, required this.tamanho});
+
+  final String tiles;
+  final String atribuicao;
+  final double maxZoom;
+  final int tamanho;
+
+  /// So https, com {z}, {x} e {y}, sem espacos e de tamanho razoavel (mesma regra dos outros apps).
+  static bool enderecoValido(Object? url) {
+    if (url is! String) return false;
+    final u = url.trim();
+    return u.length <= 400 && u.startsWith('https://') && !RegExp(r'\s').hasMatch(u) && u.contains('{z}') && u.contains('{x}') && u.contains('{y}');
+  }
+
+  static ConfigDoMapa? tentar(dynamic j) {
+    final m = _mapa(j);
+    if (!enderecoValido(m['tiles'])) return null;
+    final z = m['maxZoom'];
+    final tam = m['tamanho'];
+    final a = _txt(m['atribuicao']).trim();
+    return ConfigDoMapa(
+      tiles: (m['tiles'] as String).trim(),
+      atribuicao: a.isEmpty ? '© TomTom' : a,
+      maxZoom: z is num && z >= 10 && z <= 22 ? z.toDouble() : 19,
+      tamanho: tam == 256 || tam == 512 ? tam as int : 512,
+    );
+  }
+}
+
+/// Item do sino. So os avisos do Comercio (tipo "comercio-...") aparecem no app.
+class Aviso {
+  const Aviso({required this.id, required this.titulo, required this.texto, required this.tipo, required this.criadoEm, required this.lido, this.rideId});
+
+  final String id;
+  final String titulo;
+  final String texto;
+  final String tipo;
+  final DateTime? criadoEm;
+  final bool lido;
+
+  /// Quando o aviso e de uma entrega, qual (toque abre o acompanhamento). Hoje o servidor
+  /// guarda o id dentro do aviso; null se nao houver.
+  final String? rideId;
+
+  bool get ehDoComercio => tipo.startsWith('comercio-');
+  bool get ehDeEntrega => tipo == 'comercio-entrega';
+
+  factory Aviso.fromJson(dynamic j) {
+    final m = _mapa(j);
+    return Aviso(
+      id: _txt(m['id']),
+      titulo: _txt(m['titulo']),
+      texto: _txt(m['texto']),
+      tipo: _txt(m['tipo'], 'aviso'),
+      criadoEm: DateTime.tryParse(_txt(m['criadaEm']))?.toLocal(),
+      lido: m['lida'] == true,
+      rideId: m['rideId'] == null ? null : _txt(m['rideId']),
+    );
+  }
+}
+
+class CaixaDeAvisos {
+  const CaixaDeAvisos({required this.itens});
+
+  /// Ja filtrada: so avisos do Comercio (o sino da conta e o mesmo dos passageiros).
+  final List<Aviso> itens;
+
+  int get naoLidos => itens.where((a) => !a.lido).length;
+
+  factory CaixaDeAvisos.fromJson(dynamic j) {
+    final m = _mapa(j);
+    final lista = m['itens'] is List ? (m['itens'] as List) : const [];
+    return CaixaDeAvisos(itens: lista.map(Aviso.fromJson).where((a) => a.id.isNotEmpty && a.ehDoComercio).toList());
+  }
+}
+
+class TermosDeUso {
+  const TermosDeUso({required this.versao, required this.conteudo, required this.revisadoPorAdvogado});
+
+  final String versao;
+  final String conteudo;
+  final bool revisadoPorAdvogado;
+
+  factory TermosDeUso.fromJson(dynamic j) {
+    final m = _mapa(j);
+    return TermosDeUso(versao: _txt(m['version']), conteudo: _txt(m['content']), revisadoPorAdvogado: m['revisadoPorAdvogado'] == true);
   }
 }

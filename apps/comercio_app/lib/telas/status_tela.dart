@@ -5,6 +5,7 @@ import '../core/tema.dart';
 import '../dados/modelos.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
+import '../widgets/sino_de_avisos.dart';
 
 /// Cadastro enviado, mas ainda sem permissao para pedir entregas:
 /// aguardando aprovacao, rejeitado ou suspenso.
@@ -38,7 +39,7 @@ class _StatusTelaState extends State<StatusTela> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fortaleza Move Comércio'),
-        actions: [TextButton(onPressed: s.sair, child: const Text('Sair'))],
+        actions: [const SinoDeAvisos(), TextButton(onPressed: s.sair, child: const Text('Sair'))],
       ),
       body: RefreshIndicator(
         onRefresh: _atualizar,

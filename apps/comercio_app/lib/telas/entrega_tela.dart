@@ -9,6 +9,7 @@ import '../core/tema.dart';
 import '../dados/modelos.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
+import '../widgets/mapa_entrega.dart';
 import 'nova_entrega_tela.dart';
 
 /// Acompanhamento de uma entrega. O estado vem sempre do servidor (nunca e
@@ -29,6 +30,9 @@ class _EntregaTelaState extends State<EntregaTela> {
   bool _carregando = false;
   bool _cancelando = false;
   Timer? _timer;
+
+  /// Imagens do mapa (pedidas uma vez ao servidor quando o mapa aparece).
+  Future<ConfigDoMapa?>? _ruas;
 
   String get _id => widget.inicial?.id ?? widget.id!;
 
@@ -143,6 +147,10 @@ class _EntregaTelaState extends State<EntregaTela> {
           ),
         ),
       ],
+      if (!e.final_ && e.mapa != null && !e.mapa!.vazio) ...[
+        const SizedBox(height: 18),
+        _mapa(e),
+      ],
       if (!e.final_ && (e.motoristaNome != null || e.temPosicaoDoMotorista)) ...[
         const SizedBox(height: 14),
         Card(
@@ -153,7 +161,6 @@ class _EntregaTelaState extends State<EntregaTela> {
               const SizedBox(height: 6),
               Linha('Nome', e.motoristaNome ?? ''),
               Linha('Veículo', e.veiculoDoMotorista ?? ''),
-              if (e.temPosicaoDoMotorista) Linha('Posição', '${e.motoristaLatitude!.toStringAsFixed(5)}, ${e.motoristaLongitude!.toStringAsFixed(5)} (mapa ao vivo em breve)'),
             ]),
           ),
         ),
@@ -180,6 +187,19 @@ class _EntregaTelaState extends State<EntregaTela> {
       if (!e.final_) OutlinedButton(onPressed: _cancelando ? null : _cancelar, child: Text(_cancelando ? 'Cancelando…' : 'Cancelar entrega')),
       if (e.final_) FilledButton(onPressed: _repetir, child: const Text('Repetir esta entrega')),
     ]);
+  }
+
+  Widget _mapa(Entrega e) {
+    _ruas ??= EscopoSessao.ler(context).configDoMapa();
+    return FutureBuilder<ConfigDoMapa?>(
+      future: _ruas,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const SizedBox(height: 260, child: Center(child: CircularProgressIndicator()));
+        }
+        return MapaEntrega(mapa: e.mapa!, ruas: snap.data, veiculo: e.veiculo, comMotorista: e.motoristaNome != null);
+      },
+    );
   }
 
   Widget _linhaDoTempo(Entrega e) {

@@ -71,6 +71,7 @@ class DadosDoCadastro {
     required this.email,
     required this.endereco,
     this.senha,
+    this.aceiteTermos = false,
   });
 
   final String nomeFantasia;
@@ -83,6 +84,9 @@ class DadosDoCadastro {
   final Endereco endereco;
   final String? senha;
 
+  /// A pessoa leu e marcou que aceita os termos de uso do Comercio (o servidor exige).
+  final bool aceiteTermos;
+
   Map<String, dynamic> toJson() => {
         'nomeFantasia': nomeFantasia.trim(),
         if ((razaoSocial ?? '').trim().isNotEmpty) 'razaoSocial': razaoSocial!.trim(),
@@ -93,6 +97,7 @@ class DadosDoCadastro {
         'email': email.trim().toLowerCase(),
         ..._enderecoJson(endereco),
         if ((senha ?? '').isNotEmpty) 'senha': senha,
+        'aceiteTermos': aceiteTermos,
       };
 }
 
@@ -206,4 +211,25 @@ class ComercioApi {
         if (de != null) 'de': de.toUtc().toIso8601String(),
         if (ate != null) 'ate': ate.toUtc().toIso8601String(),
       }));
+
+  // ---- Avisos (o sino da plataforma), termos e mapa ----
+
+  /// Avisos da conta; a lista ja vem so com os do Comercio (o sino e o mesmo dos passageiros).
+  Future<CaixaDeAvisos> avisos() async => CaixaDeAvisos.fromJson(await api.get('/notificacoes'));
+
+  Future<void> marcarAvisosLidos(List<String> ids) async {
+    if (ids.isEmpty) return; // sem ids o servidor marcaria TODOS (inclusive os que nao sao do Comercio)
+    await api.post('/notificacoes/lidas', {'ids': ids});
+  }
+
+  Future<void> apagarAvisos(List<String> ids) async {
+    if (ids.isEmpty) return;
+    await api.post('/notificacoes/apagar', {'ids': ids});
+  }
+
+  /// Termos de uso do Comercio (texto publico; minuta tecnica ate a revisao juridica).
+  Future<TermosDeUso> termos() async => TermosDeUso.fromJson(await api.get('/legal/comercio'));
+
+  /// Endereco das imagens do mapa (a mesma fonte dos outros apps: GET /geo/mapa). null = indisponivel.
+  Future<ConfigDoMapa?> configDoMapa() async => ConfigDoMapa.tentar(await api.get('/geo/mapa'));
 }

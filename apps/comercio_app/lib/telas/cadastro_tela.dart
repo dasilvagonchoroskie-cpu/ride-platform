@@ -5,6 +5,7 @@ import '../dados/comercio_api.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
 import '../widgets/endereco_campos.dart';
+import 'termos_tela.dart';
 
 /// Cadastro do estabelecimento (separado do cadastro de passageiro). Depois de
 /// enviado, fica AGUARDANDO: quem aprova e a Central.
@@ -26,6 +27,7 @@ class _CadastroTelaState extends State<CadastroTela> {
   final _senha = TextEditingController();
   final _endereco = EnderecoControle();
   bool _ocupado = false;
+  bool _aceitou = false;
   String? _erro;
 
   @override
@@ -41,6 +43,10 @@ class _CadastroTelaState extends State<CadastroTela> {
     if (!_form.currentState!.validate()) return;
     if (!_endereco.temLocalizacao) {
       setState(() => _erro = 'Confirme a localização do endereço no mapa ("Buscar no mapa") antes de enviar.');
+      return;
+    }
+    if (!_aceitou) {
+      setState(() => _erro = 'Para cadastrar, leia e aceite os termos de uso do Comércio.');
       return;
     }
     final s = EscopoSessao.ler(context);
@@ -59,6 +65,7 @@ class _CadastroTelaState extends State<CadastroTela> {
         email: s.email ?? '',
         endereco: _endereco.ler(),
         senha: _senha.text,
+        aceiteTermos: true,
       ));
     } catch (e) {
       if (mounted) setState(() => _erro = mensagemDe(e));
@@ -137,6 +144,23 @@ class _CadastroTelaState extends State<CadastroTela> {
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Crie uma senha'),
                 validator: Validar.campoSenha,
+              ),
+              const Titulo('TERMOS DE USO'),
+              CheckboxListTile(
+                key: const ValueKey('aceite-termos'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _aceitou,
+                onChanged: _ocupado ? null : (v) => setState(() => _aceitou = v ?? false),
+                title: const Text('Li e aceito os termos de uso e as condições comerciais do Comércio'),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermosTela())),
+                  icon: const Icon(Icons.article_outlined),
+                  label: const Text('Ler os termos de uso'),
+                ),
               ),
               if (_erro != null) ...[const SizedBox(height: 16), Faixa(_erro!, tipo: TipoFaixa.erro)],
               const SizedBox(height: 22),

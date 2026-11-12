@@ -6,6 +6,7 @@ import '../core/tema.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
 import 'estabelecimento_tela.dart';
+import 'termos_tela.dart';
 
 /// Dados do estabelecimento, edicao e saida.
 class ContaAba extends StatelessWidget {
@@ -34,6 +35,7 @@ class ContaAba extends StatelessWidget {
             Linha('Telefone', Formato.telefone(e.telefone)),
             Linha('E-mail', e.email),
             Linha('Endereço', e.endereco.porExtenso),
+            Linha('Termos aceitos', e.termosVersao ?? ''),
           ]),
         ),
       ),
@@ -46,6 +48,12 @@ class ContaAba extends StatelessWidget {
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EstabelecimentoTela())),
         icon: const Icon(Icons.edit_outlined),
         label: const Text('Editar dados'),
+      ),
+      const SizedBox(height: 10),
+      OutlinedButton.icon(
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermosTela())),
+        icon: const Icon(Icons.article_outlined),
+        label: const Text('Termos de uso'),
       ),
       const SizedBox(height: 10),
       OutlinedButton.icon(onPressed: s.sair, icon: const Icon(Icons.logout), label: const Text('Sair da conta')),

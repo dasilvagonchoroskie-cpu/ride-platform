@@ -30,6 +30,23 @@ class Sessao extends ChangeNotifier {
   /// Falha ao consultar o estabelecimento (sem rede): a tela oferece "tentar de novo".
   String? falha;
 
+  /// Imagens do mapa (pedidas ao servidor, guardadas so em memoria por 10 minutos).
+  ConfigDoMapa? _mapa;
+  DateTime? _mapaEm;
+
+  /// null = sem mapa de ruas agora (sem rede ou servidor sem fornecedor): a tela avisa, nao inventa.
+  Future<ConfigDoMapa?> configDoMapa() async {
+    final recente = _mapaEm != null && DateTime.now().difference(_mapaEm!) < const Duration(minutes: 10);
+    if (_mapa != null && recente) return _mapa;
+    try {
+      _mapa = await servidor.configDoMapa();
+      _mapaEm = DateTime.now();
+    } catch (_) {
+      // mantem o ultimo conhecido, se houver
+    }
+    return _mapa;
+  }
+
   bool get cadastrado => estabelecimento != null;
   bool get aprovado => estabelecimento?.aprovado ?? false;
 
@@ -48,6 +65,8 @@ class Sessao extends ChangeNotifier {
   void _sessaoVenceu() {
     logado = false;
     estabelecimento = null;
+    _mapa = null;
+    _mapaEm = null;
     notifyListeners();
   }
 
@@ -126,6 +145,8 @@ class Sessao extends ChangeNotifier {
     logado = false;
     estabelecimento = null;
     email = null;
+    _mapa = null; // o endereco das imagens (com a chave) sai do app junto com o login
+    _mapaEm = null;
     notifyListeners();
   }
 }

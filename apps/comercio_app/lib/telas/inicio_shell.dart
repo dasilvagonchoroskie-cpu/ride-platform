@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/tema.dart';
 import '../estado/escopo.dart';
+import '../widgets/sino_de_avisos.dart';
 import 'conta_aba.dart';
 import 'gastos_aba.dart';
 import 'historico_aba.dart';
@@ -48,6 +49,10 @@ class _InicioShellState extends State<InicioShell> {
       const ContaAba(),
     ];
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Fortaleza Move Comércio', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        actions: const [SinoDeAvisos()],
+      ),
       body: SafeArea(child: IndexedStack(index: _aba, children: abas)),
       floatingActionButton: _aba <= 1
           ? FloatingActionButton.extended(

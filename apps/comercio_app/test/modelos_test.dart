@@ -52,16 +52,18 @@ void main() {
       'motoristaNome': 'João',
       'veiculoDoMotorista': 'CG 160 · ABC1D23',
       'codigoDeEntrega': '4821',
-      'aoVivo': {
-        'ride': {
-          'driverPosition': {'latitude': -18.01, 'longitude': -49.35},
-        },
+      'mapa': {
+        'coleta': {'latitude': -18.0, 'longitude': -49.3},
+        'entrega': {'latitude': -18.02, 'longitude': -49.36},
+        'motorista': {'latitude': -18.01, 'longitude': -49.35, 'atualizadaEm': '2026-11-12T15:00:00.000Z', 'desatualizada': false},
       },
     }));
     expect(e.motoristaNome, 'João');
     expect(e.codigoDeEntrega, '4821');
     expect(e.temPosicaoDoMotorista, isTrue);
-    expect(e.motoristaLatitude, closeTo(-18.01, 1e-9));
+    expect(e.mapa!.motorista!.latitude, closeTo(-18.01, 1e-9));
+    expect(e.mapa!.coleta, isNotNull);
+    expect(e.mapa!.entrega, isNotNull);
   });
 
   test('Entrega aguenta resposta sem campos opcionais', () {

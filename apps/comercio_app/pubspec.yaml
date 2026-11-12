@@ -10,6 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.5.0
+  # Mapa do acompanhamento (mesmas versoes dos outros apps; imagens vem do servidor, sem chave no app).
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
   shared_preferences: ^2.3.3
   # Login e renovacao ficam no cofre do celular (mesma versao dos outros apps).
   flutter_secure_storage: 10.0.0
