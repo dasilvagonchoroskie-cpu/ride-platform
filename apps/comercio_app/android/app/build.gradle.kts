@@ -81,6 +81,15 @@ android {
     }
 }
 
+// O pacote da Google Play (.aab) NUNCA sai com a chave de depuracao: sem a
+// assinatura de producao, o build do pacote para aqui.
+gradle.taskGraph.whenReady {
+    val pedePacoteDaLoja = allTasks.any { it.name.contains("bundle", ignoreCase = true) && it.name.contains("release", ignoreCase = true) }
+    if (pedePacoteDaLoja && !temAssinaturaDeProducao) {
+        throw GradleException("Pacote da loja (.aab) exige a assinatura de producao (android/key.properties). Nada foi gerado.")
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

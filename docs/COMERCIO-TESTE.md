@@ -61,6 +61,9 @@ Se você autorizar, o jeito seguro é:
    descrição e observações aparecem na descrição da entrega.
 5. Aceitar → coletar → entregar com o código de 4 números (a loja repassa a quem recebe; o motorista
    nunca recebe o código). Acompanhar a linha do tempo **e o mapa** no app (atualiza sozinho a cada 8 segundos): loja, destino e, quando o aparelho do motorista estiver mandando localização, o motorista; se ele ficar sem sinal por mais de 2 minutos o app avisa. Conferir também o sino: Entrega aceita → Motorista a caminho → Motorista chegou à loja → Encomenda coletada → Entrega concluída (cada aviso uma vez só).
+5b. **Preço mudou (novo da auditoria):** o app manda ao servidor o preço que você viu. Se a Central
+   mudar a tarifa entre a consulta e a confirmação (não faça isso em produção; só se for ambiente de teste),
+   o app recusa com "O preço mudou…" e volta ao passo do preço, sem criar entrega.
 6. Testar também: cancelar pedido, **Repetir** pelo Histórico (só preenche; pede preço e confirmação de novo),
    tela **Gastos** (só soma entregas feitas), queda de rede ao confirmar (modo avião: o app deve dizer que não
    sabe se foi pedido e, ao voltar, não criar entrega duplicada).
@@ -70,6 +73,14 @@ Se você autorizar, o jeito seguro é:
 
 Print ou descrição de qualquer tela estranha, mensagem de erro, texto cortado, botão que não
 respondeu, e em que passo aconteceu. Também diga o modelo do celular e a versão do Android.
+
+## Conferir o que a auditoria mexeu
+
+- Limite de **20 entregas em andamento** por loja (a 21ª é recusada com mensagem clara).
+- Coleta em **outro endereço** só vale na mesma cidade do estabelecimento.
+- Deixe o app em segundo plano: ele **não** consulta o servidor até você voltar a abri-lo.
+- Se a Central liberar/suspender a loja com o app aberto, a tela se ajusta sozinha em até 30 s.
+- Cadastro com e-mail que já tem senha: o campo de senha é opcional.
 
 ## O que ainda não existe (já avisado)
 

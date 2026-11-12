@@ -167,12 +167,20 @@ legado, redondo, adaptativa (zona segura) e monocromática, mais o ícone 512 px
 (`apps/comercio_app/loja/icone-512.png`). O ícone anterior era cópia idêntica do da Central. Nome na tela:
 "Fortaleza Move Comércio"; pacote `br.com.fortalezamov.comercio`; versão montada pela esteira (1.0.N).
 
+## Auditoria definitiva (12/11/2026)
+
+Achados, correções, limitações e a configuração de lançamento estão em **`docs/COMERCIO-AUDITORIA.md`**.
+Resumo: 11 falhas corrigidas (teto de entregas abertas, coleta alternativa só na cidade da loja, total de gastos
+completo, **preço confirmado = preço cobrado**, atualização só com o app aberto, sessão vencida, entre outras);
+nenhuma tarifa, comissão, carteira ou configuração de cidade foi tocada; chave geral continua bloqueada.
+Esteira do pacote da Play (`aab-comercio.yml`) preparada e **não executada**.
+
 ## Testes e esteiras
 
 | Camada | Arquivo / esteira | Resultado |
 |---|---|---|
-| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts`, `comercio.portas.spec.ts` | Esteira "Testes do servidor" no commit `588f49b`: 28 arquivos de teste e **264 testes passam** (inclui avisos, mapa, termos/aceite e as cinco portas com o `RidesService.pedir` real). Tudo com dados simulados |
-| App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, **77 testes passam** no commit `588f49b` (inclui sino, mapa, termos e modelos novos) |
+| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts`, `comercio.portas.spec.ts` | Esteira "Testes do servidor" no commit `bef4d60` (auditoria): 28 arquivos de teste e **275 testes passam** (inclui avisos, mapa, termos/aceite e as cinco portas com o `RidesService.pedir` real). Tudo com dados simulados |
+| App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, **86 testes passam** no commit `bef4d60` (inclui sino, mapa, termos, modelos e proteção de preço) |
 | Central | `apps/central_app/test/painel_test.dart` (esteira "Android APKs") | análise sem problemas, 71 passam, 1 pulado de antes (commit `588f49b`) |
 | Rotas | `scripts/conferir-rotas.py` | 268 chamadas conferidas contra 260 rotas, todas existem no servidor |
 
