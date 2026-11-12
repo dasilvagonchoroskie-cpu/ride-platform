@@ -93,6 +93,11 @@ class PedidoDoComercio {
   int get valorCents => etapa == 'ENTREGUE' ? _int(j['valorCobradoCents']) : _int(j['valorEstimadoCents']);
   DateTime? get criadaEm => DateTime.tryParse(j['criadaEm'] as String? ?? '')?.toLocal();
 
+  /// APP (a loja pediu) ou MOTORISTA (lancada manualmente pelo motorista).
+  bool get lancadaPeloMotorista => j['lancamento'] == 'MOTORISTA';
+  String get lancadoPor => j['lancadoPor'] as String? ?? '';
+  DateTime? get lancadoEm => DateTime.tryParse(j['lancadoEm'] as String? ?? '')?.toLocal();
+
   AppBadgeTone get tom => switch (etapa) {
         'ENTREGUE' => AppBadgeTone.success,
         'CANCELADA' || 'FALHA_NA_ENTREGA' || 'SEM_MOTORISTA' => AppBadgeTone.danger,
@@ -326,6 +331,12 @@ class _CartaoDoPedido extends StatelessWidget {
               Wrap(children: [AppBadge(text: p.situacao, tone: p.tom)]),
               const SizedBox(height: Spacing.xs),
               Text('Comércio: ${p.comercio}', style: AppText.body),
+              Text(
+                p.lancadaPeloMotorista
+                    ? 'Origem: lançada pelo motorista${p.lancadoPor.isEmpty ? '' : ' ${p.lancadoPor}'}${p.lancadoEm == null ? '' : ' em ${dataHora(p.lancadoEm)}'}'
+                    : 'Origem: pedida pelo aplicativo do estabelecimento',
+                style: AppText.caption.copyWith(color: AppColors.comercio, fontWeight: FontWeight.w600),
+              ),
               Text('Item: ${p.encomenda}', style: AppText.caption),
               Text('Coleta: ${p.coleta}', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),
               Text('Entrega: ${p.entrega}', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),

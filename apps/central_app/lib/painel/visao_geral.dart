@@ -12,17 +12,12 @@ import '../data/painel.dart';
 import '../widgets/bussola.dart';
 import '../widgets/mapa_google.dart';
 import 'comuns.dart';
+import 'mapa_operacional.dart';
 import 'painel_state.dart';
 import '../core/mapa_config.dart';
 import '../core/medida.dart';
 
 LatLng _ll(Coords c) => LatLng(c.latitude, c.longitude);
-
-/// Carro offline: cinza, parado na ultima posicao que o aparelho mandou.
-const Color _cinzaOffline = Color(0xFF8E8E93);
-
-/// Mototaxi (Evandro, 10/10/2026): moto no mapa da Central; carro nos outros.
-IconData _iconeDo(MotoristaOnline m) => m.categoria.toUpperCase().contains('MOTO') ? Icons.two_wheeler : Icons.local_taxi;
 
 /// " · visto há 5 min" (ou ha horas/dias).
 String _vistoHa(DateTime? quando) {
@@ -52,6 +47,9 @@ class _VisaoGeralState extends State<VisaoGeral> {
   final ControleGoogle _controleGoogle = ControleGoogle();
   bool _centralizou = false;
 
+  /// Filtro do mapa (so o que e desenhado; despacho, localizacao e SOS nao dependem dele).
+  FiltroDoMapa _filtro = FiltroDoMapa.todos;
+
   /// Mapa do Google nesta montagem (nos testes, sempre o flutter_map).
   bool get _google => usarGoogleMaps && mostrarRuasNoMapa;
 
@@ -60,11 +58,11 @@ class _VisaoGeralState extends State<VisaoGeral> {
   /// Pinos desenhados para o Google (cor + icone), prontos para o mapa.
   final Map<String, gm.BitmapDescriptor> _pinos = {};
 
-  gm.BitmapDescriptor _pino(Color cor, IconData icone, double tamanho) {
-    final chave = '${cor.toARGB32()}|${icone.codePoint}|$tamanho';
+  gm.BitmapDescriptor _pino(Color cor, IconData icone, double tamanho, {IconData? selo, Color? corDoSelo}) {
+    final chave = '${cor.toARGB32()}|${icone.codePoint}|$tamanho|${selo?.codePoint}|${corDoSelo?.toARGB32()}';
     final pronto = _pinos[chave];
     if (pronto != null) return pronto;
-    pinoGoogle(cor, icone, tamanho: tamanho).then((b) {
+    pinoGoogle(cor, icone, tamanho: tamanho, selo: selo, corDoSelo: corDoSelo).then((b) {
       if (mounted) setState(() => _pinos[chave] = b);
     }).catchError((_) {});
     return gm.BitmapDescriptor.defaultMarker;
@@ -121,31 +119,40 @@ class _VisaoGeralState extends State<VisaoGeral> {
       });
     }
 
+    // Filtro so do desenho: quem nao passa no filtro continua existindo para o despacho e para o SOS.
+    final veiculos = [for (final m in p.motoristas) if (m.posicao != null && veiculoPassaNoFiltro(m, _filtro)) m];
+    final aguardando = [
+      for (final c in p.corridas)
+        if (c.naFila && c.status != 'SCHEDULED' && corridaPassaNoFiltro(c, _filtro)) c,
+    ];
+    final contagens = {for (final f in FiltroDoMapa.values) f: contarNoFiltro(p.motoristas, f)};
+
     final marcadores = <Marker>[
-      for (final c in p.corridas.where((c) => c.naFila && c.status != 'SCHEDULED'))
+      for (final c in aguardando)
         Marker(
           point: _ll(c.embarque),
           width: 44,
           height: 44,
           child: GestureDetector(
             onTap: () => _mostrarCorrida(context, c),
-            child: const _Pino(cor: AppColors.primary, icone: Icons.person_pin_circle),
-          ),
-        ),
-      for (final m in p.motoristas)
-        if (m.posicao != null)
-          Marker(
-            point: _ll(m.posicao!),
-            width: 40,
-            height: 40,
-            child: GestureDetector(
-              onTap: () => _mostrarMotorista(context, m, p),
-              child: _Pino(
-                cor: !m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success),
-                icone: _iconeDo(m),
-              ),
+            // Pedido do Comercio esperando motorista: ciano (com a caixa no icone); passageiro: dourado de sempre.
+            child: _Pino(
+              cor: c.servico == 'COMERCIO' ? AppColors.comercio : AppColors.primary,
+              icone: c.servico == 'COMERCIO' ? seloComercio : Icons.person_pin_circle,
             ),
           ),
+        ),
+      for (final m in veiculos)
+        Marker(
+          point: _ll(m.posicao!),
+          width: 40,
+          height: 40,
+          child: GestureDetector(
+            onTap: () => _mostrarMotorista(context, m, p),
+            child: PinoDoVeiculo(veiculo: m),
+          ),
+        ),
+      // SOS nunca some com o filtro: seguranca primeiro.
       for (final a in p.alertas)
         if (a.posicao != null)
           Marker(
@@ -178,7 +185,7 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   style: estiloGoogle,
                   // Indicadores em cima e legenda embaixo ficam fora da area do mapa
                   // (o logo do Google continua visivel).
-                  padding: const EdgeInsets.fromLTRB(8, 150, 8, 130),
+                  padding: const EdgeInsets.fromLTRB(8, 190, 8, 150),
                   compassEnabled: false,
                   mapToolbarEnabled: false,
                   zoomControlsEnabled: false,
@@ -195,25 +202,26 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   },
                   onCameraMove: _controleGoogle.aoMover,
                   markers: {
-                    for (final c in p.corridas.where((c) => c.naFila && c.status != 'SCHEDULED'))
+                    for (final c in aguardando)
                       gm.Marker(
                         markerId: gm.MarkerId('corrida-${c.id}'),
                         position: paraGoogle(c.embarque),
-                        icon: _pino(AppColors.primary, Icons.person_pin_circle, 44),
+                        icon: c.servico == 'COMERCIO'
+                            ? _pino(AppColors.comercio, seloComercio, 44)
+                            : _pino(AppColors.primary, Icons.person_pin_circle, 44),
                         anchor: const Offset(0.5, 0.5),
                         consumeTapEvents: true,
                         onTap: () => _mostrarCorrida(context, c),
                       ),
-                    for (final m in p.motoristas)
-                      if (m.posicao != null)
-                        gm.Marker(
-                          markerId: gm.MarkerId('motorista-${m.id}'),
-                          position: paraGoogle(m.posicao!),
-                          icon: _pino(!m.online ? _cinzaOffline : (m.ocupado ? AppColors.warning : AppColors.success), _iconeDo(m), 40),
-                          anchor: const Offset(0.5, 0.5),
-                          consumeTapEvents: true,
-                          onTap: () => _mostrarMotorista(context, m, p),
-                        ),
+                    for (final m in veiculos)
+                      gm.Marker(
+                        markerId: gm.MarkerId('motorista-${m.id}'),
+                        position: paraGoogle(m.posicao!),
+                        icon: _pino(corDoEstado(estadoDoVeiculo(m)), iconeDoVeiculo(m), 40, selo: seloDoVeiculo(m), corDoSelo: corDoSelo(m)),
+                        anchor: const Offset(0.5, 0.5),
+                        consumeTapEvents: true,
+                        onTap: () => _mostrarMotorista(context, m, p),
+                      ),
                     for (final a in p.alertas)
                       if (a.posicao != null)
                         gm.Marker(
@@ -277,6 +285,12 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   ),
                 ],
               ),
+              const SizedBox(height: Spacing.xs),
+              BarraDeFiltrosDoMapa(
+                atual: _filtro,
+                contagens: contagens,
+                aoEscolher: (f) => setState(() => _filtro = f),
+              ),
               if (p.erro != null) ...[
                 const SizedBox(height: Spacing.xs),
                 Container(
@@ -309,11 +323,12 @@ class _VisaoGeralState extends State<VisaoGeral> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Legenda(cor: AppColors.success, texto: 'Livre (online)'),
-                _Legenda(cor: AppColors.warning, texto: 'Em corrida'),
-                _Legenda(cor: _cinzaOffline, texto: 'Offline (última posição)'),
-                _Legenda(cor: AppColors.primary, texto: 'Esperando motorista'),
-                _Legenda(cor: AppColors.danger, texto: 'SOS'),
+                ItemDaLegenda(cor: AppColors.success, texto: 'Livre (online)'),
+                ItemDaLegenda(cor: AppColors.warning, texto: 'Em corrida (passageiro)', selo: seloPassageiro),
+                ItemDaLegenda(cor: AppColors.comercio, texto: 'Entrega do Comércio', selo: seloComercio),
+                ItemDaLegenda(cor: cinzaOffline, texto: 'Offline (última posição)'),
+                ItemDaLegenda(cor: AppColors.primary, texto: 'Esperando motorista'),
+                ItemDaLegenda(cor: AppColors.danger, texto: 'SOS (prioridade máxima)'),
               ],
             ),
           ),
@@ -409,7 +424,32 @@ class _VisaoGeralState extends State<VisaoGeral> {
                   BotoesContato(telefone: m.telefone),
                 ],
               ),
-              Linha('Situação', !m.online ? 'Offline${_vistoHa(m.vistoEm)}' : (m.ocupado ? 'Em corrida' : 'Livre'), destaque: true),
+              if (m.sos)
+                Container(
+                  margin: const EdgeInsets.only(bottom: Spacing.xs),
+                  padding: const EdgeInsets.all(Spacing.sm),
+                  decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(Radii.sm)),
+                  child: Row(
+                    children: [
+                      const Icon(seloSos, color: Colors.white),
+                      const SizedBox(width: Spacing.sm),
+                      Expanded(
+                        child: Text(
+                          m.servico == 'COMERCIO' ? 'SOS ABERTO durante entrega do Comércio' : 'SOS ABERTO neste veículo',
+                          style: AppText.bodyStrong.copyWith(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Linha('Situação', rotuloDoEstado(m, vistoHa: _vistoHa(m.vistoEm)), destaque: true),
+              Linha('Tipo de veículo', rotuloDoVeiculo(m)),
+              Linha('Serviço', rotuloDoServico(m.servico, origem: m.origemDoServico)),
+              if (m.servico == 'COMERCIO') ...[
+                Linha('Estabelecimento', m.comercio ?? '-'),
+                Linha('Origem', rotuloDaOrigem(m.origemDoServico)),
+              ],
+              if (corrida == null && m.corridaCodigo != null) Linha(m.servico == 'PASSAGEIRO' ? 'Corrida' : 'Entrega', m.corridaCodigo!),
               Linha('Telefone', telefoneBonito(m.telefone)),
               Linha('Veículo', m.veiculo.isEmpty ? '-' : m.veiculo),
               Linha('Placa', m.placa.isEmpty ? '-' : m.placa),
@@ -417,8 +457,8 @@ class _VisaoGeralState extends State<VisaoGeral> {
               Linha('Nota', m.nota.toStringAsFixed(1)),
               if (corrida != null) ...[
                 const Divider(color: AppColors.border),
-                Text('Corrida ${corrida.codigo} - ${corrida.fase}', style: AppText.bodyStrong),
-                Linha('Passageiro', corrida.passageiro),
+                Text('${corrida.servico == 'PASSAGEIRO' ? 'Corrida' : 'Entrega'} ${corrida.codigo} - ${corrida.fase}', style: AppText.bodyStrong),
+                Linha(corrida.servico == 'COMERCIO' ? 'Estabelecimento' : 'Passageiro', corrida.comercio ?? corrida.passageiro),
                 Linha('Embarque', corrida.enderecoEmbarque),
                 Linha('Destino', corrida.enderecoDestino),
               ],
@@ -443,11 +483,12 @@ class _VisaoGeralState extends State<VisaoGeral> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Corrida ${c.codigo} - ${c.fase}', style: AppText.heading),
+              Text('${c.servico == 'PASSAGEIRO' ? 'Corrida' : 'Entrega'} ${c.codigo} - ${c.fase}', style: AppText.heading),
               const SizedBox(height: Spacing.sm),
+              Linha('Serviço', rotuloDoServico(c.servico, origem: c.origemDoServico), destaque: c.servico == 'COMERCIO'),
               Row(
                 children: [
-                  Expanded(child: Linha('Passageiro', c.passageiro)),
+                  Expanded(child: Linha(c.servico == 'COMERCIO' ? 'Estabelecimento' : 'Passageiro', c.comercio ?? c.passageiro)),
                   BotoesContato(telefone: c.telefonePassageiro),
                 ],
               ),
@@ -538,28 +579,6 @@ class _Indicador extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Legenda extends StatelessWidget {
-  const _Legenda({required this.cor, required this.texto});
-
-  final Color cor;
-  final String texto;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: cor, shape: BoxShape.circle)),
-          const SizedBox(width: Spacing.xs),
-          Text(texto, style: AppText.caption),
-        ],
       ),
     );
   }

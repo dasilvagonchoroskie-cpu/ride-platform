@@ -50,6 +50,11 @@ class AppColors {
   static const Color warning = Color(0xFFFF9A3D);
   static const Color warningSoft = Color(0xFF382B24);
 
+  /// Azul-ciano EXCLUSIVO das entregas do Comercio (mapa, legenda, detalhes e
+  /// listas da Central). Nenhum outro servico usa esta cor.
+  static const Color comercio = Color(0xFF00B8D4);
+  static const Color comercioSoft = Color(0xFF0E3A4A);
+
   // ---- Mapa ----
   static const Color mapBackground = Color(0xFFE9E7E2);
   static const Color mapRoad = Color(0xFFFFFFFF);
