@@ -131,13 +131,27 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
 
   const decisoesPendentes = (pol = politica()) => (pol.confirmada_em ? [] : DECISOES_PENDENTES);
 
+  // Proteção contra perda de chave (12/11): guarda só a IMPRESSÃO DIGITAL da FM_DOCS_KEY usada nos arquivos. Se a chave mudar
+  // por engano (sem FM_DOCS_KEY_ANTERIOR com a antiga), o envio é bloqueado com aviso — misturar chaves deixaria os arquivos
+  // antigos ilegíveis. Troca planejada: antiga em FM_DOCS_KEY_ANTERIOR (a impressão é atualizada no primeiro envio).
+  function conferirChave() {
+    const atual = cifra.impressao();
+    if (!atual) return { ok: false };
+    const salva = getSetting('docs_chave_impressao', '');
+    const temArquivos = !!db.prepare('SELECT 1 FROM documento_versoes LIMIT 1').get();
+    if (!salva || salva === atual || !temArquivos) return { ok: true, registrar: salva !== atual };
+    if (cifra.impressao('FM_DOCS_KEY_ANTERIOR') === salva) return { ok: true, registrar: true, troca: true };
+    return { ok: false, motivo: 'A chave FM_DOCS_KEY é diferente da usada nos documentos já guardados. Restaure a chave correta (ou informe a antiga em FM_DOCS_KEY_ANTERIOR) antes de enviar novos arquivos.' };
+  }
+
   function estadoArmazenamento() {
     const arm = armazenamento.pronto();
     const chave = cifra.configurada();
+    const ck = chave ? conferirChave() : { ok: false };
     return {
-      tipo: armazenamento.nome, chave_configurada: chave, armazenamento_pronto: arm.ok,
-      pronto: chave && arm.ok,
-      motivo: !chave ? 'Chave de cifra dos documentos (FM_DOCS_KEY) não configurada.' : (arm.ok ? null : arm.motivo),
+      tipo: armazenamento.nome, chave_configurada: chave, chave_confere: chave ? ck.ok : null, armazenamento_pronto: arm.ok,
+      pronto: chave && ck.ok && arm.ok,
+      motivo: !chave ? 'Chave de cifra dos documentos (FM_DOCS_KEY) não configurada.' : (!ck.ok ? ck.motivo : (arm.ok ? null : arm.motivo)),
       max_mb: Math.round(maxBytes() / 1048576), formatos: Object.keys(TIPOS).map((t) => t.toUpperCase())
     };
   }
@@ -313,6 +327,8 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
   function exigirPronto() {
     const e = estadoArmazenamento();
     if (!e.pronto) throw new ErroDoc(503, 'armazenamento_indisponivel', `Armazenamento de documentos indisponível: ${e.motivo}`);
+    const ck = conferirChave();
+    if (ck.registrar) setSetting('docs_chave_impressao', cifra.impressao());
   }
 
   /**

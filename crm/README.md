@@ -221,6 +221,27 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   **Baixar PDF**, **Abrir para imprimir** (nova aba, por causa da CSP), **Compartilhar** (Web Share, quando o aparelho permite) e, para o
   administrador, **Baixar CSV**.
 
+### Auditoria geral de 12/11/2026 (ramo `etapa2`)
+- **IA do WhatsApp — falha real de 12/11 (12:27):** o provedor de IA (Gemini) respondeu "indisponível"; o CRM só registrava no log e a
+  conversa ficava "IA atendendo" sem resposta. Agora cada mensagem do cliente é acompanhada até a resposta ou a falha (`wa_conversas.ia_estado`):
+  erro passageiro → novas tentativas (`IA_REPETIR_MS`, padrão 30 s, 2 min, 5 min); esgotou, erro definitivo (chave recusada, sem saldo) ou a IA
+  não pode responder (limites, filtro de segurança) → transfere para a equipe com o modelo de transferência e o motivo "A IA não conseguiu
+  responder" (notificação urgente). Varredura a cada 60 s (`IA_VARREDURA_MS`; `IA_VARREDURA=0` desliga) recupera mensagens que ficaram sem
+  tratamento (reinício, temporizador perdido; até `IA_RECUPERAR_HORAS`=12 h). Mensagem nova durante o processamento não se perde. Rota
+  `POST /api/wa/conversas/:id/ia/reprocessar` (admin e gestor, auditada). A tela mostra o estado real ("IA respondendo…", "IA tentando de
+  novo", "IA não respondeu", "IA (resposta automática desligada)") e o botão "Tentar de novo".
+- **Respostas da IA:** a redação recebe os serviços do menu oficial e as informações oficiais de TODOS os assuntos (o cliente pode perguntar
+  do Clube no meio de um cadastro); continua proibido inventar preço, benefício ou regra; sem informação, encaminha para a equipe.
+- **Identidade visual:** a tela de carregamento e a de erro de inicialização desenhavam um quadrado com "FM" (identidade antiga) — agora
+  usam o logotipo oficial (`/icons/logo.png`). `favicon.svg` antigo removido; `/favicon.ico` gerado do ícone oficial; selo de notificação
+  `badge-96.png` (silhueta do logotipo); metadados de compartilhamento; ícones revalidam no navegador (antes ficavam 1 dia em cache); cache v25.
+- **Documentos:** impressão digital da `FM_DOCS_KEY` (`docs_chave_impressao`, nunca a chave) — chave trocada por engano bloqueia novos envios
+  com aviso claro; troca planejada com `FM_DOCS_KEY_ANTERIOR`.
+- **Interface:** lupa sobre o texto em todas as buscas (regra genérica de `input` vencia) corrigida; botões com área de toque ≥ 36 px no
+  celular; faixa do atendimento quebra em duas linhas quando há alerta.
+- **Segurança:** teste automático `test/rotas-permissoes.test.js` lê todas as rotas do código e confere no servidor real: sem login → 401;
+  rotas de administrador → 403 para o gestor; mutação de outra origem → 403.
+
 ### Revisão dos Relatórios e exportação PDF/CSV em todos os blocos (12/11/2026, ramo `etapa2`)
 - Auditoria: todos os pontos de exportação (listas de cada módulo, Relatórios, Financeiro, Documentos) já usam o mesmo componente
   (`public/js/exportar.js`) e o mesmo gerador (`src/relatorios-pdf.js`). Não existe mais ponto só-CSV. A tela de produção (`main`) ainda

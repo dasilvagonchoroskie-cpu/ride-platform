@@ -599,7 +599,7 @@ async function route() {
 }
 
 function renderFatal(err) {
-  app.innerHTML = `<div class="boot"><div class="boot-mark">FM</div><p>Falha ao iniciar: ${ui.esc(err.message)}</p><button class="btn btn-gold" data-reload>Tentar novamente</button></div>`;
+  app.innerHTML = `<div class="boot"><div class="boot-mark"><img src="/icons/logo.png" alt="Fortaleza Move" width="64" height="64"></div><p>Falha ao iniciar: ${ui.esc(err.message)}</p><button class="btn btn-gold" data-reload>Tentar novamente</button></div>`;
   app.querySelector('[data-reload]').addEventListener('click', () => location.reload());
 }
 

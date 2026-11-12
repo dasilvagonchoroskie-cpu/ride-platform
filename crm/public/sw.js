@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v24';
+const CACHE = 'fm-crm-v25';
 const ASSETS = [
   '/',
   '/index.html',
@@ -21,7 +21,11 @@ const ASSETS = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/favicon-32.png',
-  '/icons/logo.png'
+  '/icons/logo.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/badge-96.png',
+  '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
@@ -71,7 +75,7 @@ self.addEventListener('push', (event) => {
     await self.registration.showNotification(d.titulo || 'CRM Fortaleza Move', {
     body: d.corpo || '',
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png', // silhueta do logotipo oficial (o Android usa só a transparência)
     tag: d.tag || undefined,
     renotify: !discreto,
     silent: discreto,

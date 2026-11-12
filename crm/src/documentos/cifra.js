@@ -95,4 +95,10 @@ function decifrarTexto(buf, rotulo) {
   throw new Error('Não consegui abrir o manifesto do backup (chave errada ou arquivo alterado).');
 }
 
-module.exports = { cifrar, decifrar, sha256, configurada, cifrarTexto, decifrarTexto };
+/** Impressão digital da chave mestra (não revela a chave): detecta troca por engano antes que os arquivos fiquem ilegíveis. */
+function impressao(nome = 'FM_DOCS_KEY') {
+  const k = chaveMestra(nome);
+  return k ? crypto.createHmac('sha256', derivar(k, 'fm-docs-impressao')).update('fm-docs').digest('hex').slice(0, 24) : null;
+}
+
+module.exports = { cifrar, decifrar, sha256, configurada, cifrarTexto, decifrarTexto, impressao };

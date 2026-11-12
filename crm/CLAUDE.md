@@ -60,6 +60,20 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   Cache do app `fm-crm-v21` (etapa2; v22 no M3).
 - "Simulação incompleta" = `custos_total` não maior que zero (mesma regra da tela do financeiro).
 
+## Auditoria geral de 12/11/2026 (ramo `etapa2`, pedido do dono; NÃO está em produção)
+- IA: causa da falha real de 12/11 12:27 = provedor 5xx sem nova tentativa (log de produção: "análise automática da conversa 1: O serviço de
+  IA está indisponível agora"). `executarAutomatico` agora marca `wa_conversas.ia_estado` (processando|tentando|respondida|transferida|
+  transferida_falha|sem_acao|analisada|falhou|sem_chave|limite), `ia_erro` (só código), `ia_msg_id`, `ia_tentativas`, `ia_proxima`.
+  Erros passageiros (`PASSAGEIROS`) repetem por `IA_REPETIR_MS`; no fim, ou com motivo que não é silêncio intencional (`QUIETOS`), chama
+  `transferirPorFalha` (só se a conversa está com a IA e a última mensagem é do cliente). `recuperarPendentes` (varredura) é idempotente:
+  pega só conversa 'ia' cuja última mensagem é do cliente e ainda não tratada / tentativa vencida / processamento preso > 5 min.
+  NÃO quebrar: humano assumiu → IA quieta; eco não conta; resposta da IA ainda passa por `respostaSegura`. Testes: `test/ia-recuperacao.test.js`.
+- Ícones: nada de "FM" em texto como marca; usar `/icons/logo.png`. Selo do push: `/icons/badge-96.png`. Cache `fm-crm-v25` (etapa2).
+- Documentos: `cifra.impressao()` + setting `docs_chave_impressao`; chave diferente → 503 `armazenamento_indisponivel` (não "integridade").
+- Toda rota nova entra sozinha em `test/rotas-permissoes.test.js` (lê o código): protegida por login e, se `requireAdmin`, 403 para gestor.
+- No backup (`CRM-Fortaleza-move-`), o `app-twa` do etapa2 estava com os ícones ANTIGOS (o commit e635709 do ícone novo só estava no main):
+  igualado ao main em 12/11.
+
 ## Revisão da exportação nos Relatórios (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
 - Um só caminho de exportação: `abrirExportacao` (front) → `GET /reports/pdf` (`relatorios-pdf.js`) e `GET /reports/export` (CSV, só admin).
   Nenhum relatório novo cria PDF por fora: novo bloco = modelo em `relatorios-pdf.js` + `policy.canExportPdf` + teste em

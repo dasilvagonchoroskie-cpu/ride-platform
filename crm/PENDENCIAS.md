@@ -71,6 +71,22 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - Fora do escopo, só anotado: o filtro de período do cartão "Documentos" da tela de Relatórios considera TODOS os documentos no total e só
   os enviados no período no subtítulo (comportamento do M4, mantido); sem antivírus nos arquivos (M4); app 1.0.x sem Web Share.
 
+### Auditoria geral (12/11/2026, ramo `etapa2`)
+- [x] 12/11 IA do WhatsApp: causa encontrada no log de produção (provedor fora do ar, sem nova tentativa); novas tentativas, transferência
+      para a equipe quando não dá, recuperação após reinício, estado real na tela e botão "Tentar de novo". Testes com provedor falso.
+- [x] 12/11 Ícone antigo no carregamento (quadrado "FM") trocado pelo logotipo oficial; favicon.ico, selo de notificação, cache v25.
+- [x] 12/11 Busca com a lupa sobre o texto; botões pequenos no celular; faixa da conversa cortada no celular.
+- [x] 12/11 Proteção contra troca acidental da FM_DOCS_KEY; auditoria automática de todas as rotas (401/403/CSRF).
+- [ ] **Dono:** cadastrar as informações oficiais da Central (Configurações > Modelos de Comunicação da IA: geral, cadastro, encomendas,
+      clube). Sem elas a IA só apresenta os serviços do menu e passa para a equipe — não inventa.
+- [ ] **Dono:** configurar um provedor de IA RESERVA (ex.: Groq grátis) em Configurações > Inteligência (IA): é o que evita a transferência
+      quando o Gemini cai (não consegui confirmar daqui se já existe reserva configurada em produção).
+- [ ] **Dono:** testar no celular real: falha da IA vira "IA tentando de novo"/transferência; compartilhar e imprimir um PDF pelo Android;
+      conferir o logotipo na abertura do app e do navegador depois da publicação.
+- [ ] Gerar um APK novo a partir do etapa2 quando for publicar (o app-twa do etapa2 foi igualado ao main; nenhuma mudança de app nesta auditoria).
+- Observação (fora do escopo, sem mudança): o WhatsApp de produção reconecta a cada ~50 min (log "Reconectando…"); funciona, mas vale
+  acompanhar. `/auth/status` e `/api/health` continuam públicos (backlog).
+
 ## 3. Riscos e avisos em aberto
 
 - [ ] **Horas grátis do Render**: CRM e servidor da plataforma acordados 24 h na mesma conta. Estimativa: as 750 h

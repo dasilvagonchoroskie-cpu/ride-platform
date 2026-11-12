@@ -438,8 +438,12 @@ test('M4: persistência após reinício, integridade (adulteração) e verifica�
   t.after(() => S3.proc.kill());
   const adm3 = await entrar(S3, 'adm');
   const semChave = await adm3.baixar(`/documentos/${did}/arquivo`);
-  assert.equal(semChave.s, 500);
-  assert.equal(semChave.j.error.code, 'integridade');
+  // Desde 12/11 a troca de chave é reconhecida antes de abrir (impressão digital): aviso claro em vez de falso alarme de
+  // adulteração. O arquivo continua sem abrir e a mensagem não traz a chave.
+  assert.equal(semChave.s, 503);
+  assert.equal(semChave.j.error.code, 'armazenamento_indisponivel');
+  assert.match(semChave.j.error.message, /diferente da usada nos documentos já guardados/);
+  assert.ok(!semChave.j.error.message.includes(outraChave.slice(0, 16)));
   await S3.parar();
 
   // Adulteração do arquivo no disco: detectada ao abrir, registrada no histórico, e a verificação aponta o problema.
@@ -719,4 +723,41 @@ test('M4: armazenamento Supabase Storage privado (contra servidor HTTP falso)', 
   const amb = a.criarDoAmbiente({ dataDir: os.tmpdir(), env: { DOCS_STORAGE: 'supabase', DOCS_SUPABASE_URL: url, DOCS_SUPABASE_KEY: 'SEGREDO-FICTICIO', DOCS_SUPABASE_BUCKET: 'docs-privado' } });
   assert.equal(amb.nome, 'supabase');
   srv.close();
+});
+
+test('proteção contra troca de chave por engano: guarda só a impressão digital; chave diferente bloqueia novos envios; troca planejada com a anterior funciona', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-m4-chave-'));
+  const vivos = [];
+  t.after(() => { for (const p of vivos) { try { p.kill(); } catch (e) { /* já saiu */ } } });
+  let S = await subir({ dir });
+  vivos.push(S.proc);
+  const mid = (await S.adm('POST', '/motoristas', { ...BASE, nome: 'Chave Fictícia', telefone: '85977770001' })).j.item.id;
+  assert.equal((await S.adm.up('/documentos', pdf('a'), { funcao: 'motorista', registro_id: mid, categoria: 'cnh' }, 'cnh.pdf')).s, 201);
+  await S.parar();
+  // Banco guarda só a impressão (24 hex), nunca a chave.
+  const Database = require('better-sqlite3');
+  const db = new Database(path.join(dir, 'crm.db'));
+  const imp = db.prepare("SELECT value FROM settings WHERE key = 'docs_chave_impressao'").get();
+  db.close();
+  assert.match(imp.value, /^[0-9a-f]{24}$/);
+  assert.ok(!imp.value.includes(CHAVE_DOCS.slice(0, 24)));
+  // Chave errada: envio bloqueado com aviso claro (nada é gravado com a chave errada).
+  const outra = crypto.randomBytes(32).toString('hex');
+  S = await subir({ dir, preparar: false, env: { FM_DOCS_KEY: outra } });
+  vivos.push(S.proc);
+  let adm = await entrar(S, 'adm');
+  const bloqueado = await adm.up('/documentos', pdf('b'), { funcao: 'motorista', registro_id: mid, categoria: 'crlv' }, 'crlv.pdf');
+  assert.equal(bloqueado.s, 503);
+  assert.match(bloqueado.j.error.message, /diferente da usada nos documentos já guardados/);
+  await S.parar();
+  // Troca planejada: nova em FM_DOCS_KEY + antiga em FM_DOCS_KEY_ANTERIOR → envia, lê o antigo e passa a reconhecer a nova.
+  S = await subir({ dir, preparar: false, env: { FM_DOCS_KEY: outra, FM_DOCS_KEY_ANTERIOR: CHAVE_DOCS } });
+  vivos.push(S.proc);
+  adm = await entrar(S, 'adm');
+  assert.equal((await adm.up('/documentos', pdf('c'), { funcao: 'motorista', registro_id: mid, categoria: 'crlv' }, 'crlv.pdf')).s, 201);
+  const lista = (await adm('GET', `/documentos?funcao=motorista&registro_id=${mid}`)).j;
+  const cnh = lista.itens.find((d) => d.categoria === 'cnh' && d.id);
+  assert.ok(cnh, 'documento antigo continua listado');
+  assert.equal((await adm.baixar(`/documentos/${cnh.id}/arquivo`)).s, 200, 'arquivo antigo abre com a chave anterior');
+  await S.parar();
 });
