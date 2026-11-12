@@ -1,130 +1,470 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cofre_test.dart
 00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cofre_test.dart: sessao antiga do arquivo comum vai para o cofre sem deslogar
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cofre_test.dart: sessao antiga do arquivo comum vai para o cofre sem deslogar
-00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:00 +10: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero aprovado (6632): entra direto, sem cadastro
-00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrada_motorista_test.dart: Numero digitado errado (6631): avisa "Conta nova" e desfaz
-00:01 +12: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
-00:02 +14: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +15: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +18: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:02 +19: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +20: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +21: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +22: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +23: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +24: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +25: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/codigo_email_test.dart: Telefone sem conta: pede o e-mail e o codigo vai para ele (nada na tela)
-00:03 +26: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +27: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +28: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +29: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +30: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:04 +31: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:04 +32: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:05 +33: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
-00:05 +34: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:06 +35: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
-00:06 +36: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
-00:06 +37: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
-00:06 +38: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
-00:06 +39: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:06 +39 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:07 +40 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:07 +41 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:07 +42 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/relatorio_test.dart: Cidades da operacao vem da configuracao do servidor
-00:07 +43 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
-00:07 +44 ~7: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart
-00:07 +44 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:07 +45 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:07 +46 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
-00:08 +47 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/ajustes_aparelho_test.dart: Redmi: mostra o celular, os ajustes da Xiaomi e libera ao confirmar
-00:09 +48 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/ajustes_aparelho_test.dart: Redmi: mostra o celular, os ajustes da Xiaomi e libera ao confirmar
-00:09 +49 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
-00:09 +50 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/ajustes_aparelho_test.dart: Samsung: um ajuste so; Motorola: nenhum
-00:09 +51 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
-00:09 +52 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Historico: filtros, totais, desempenho e taxa por corrida
-00:09 +53 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
-00:10 +54 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/bussola_test.dart: Sem escolha ainda: a tela do motorista comeca no automatico
-00:10 +55 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
-00:10 +56 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/bussola_test.dart: Travou o norte: ao voltar para o mapa continua travado
-00:10 +57 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
-00:11 +58 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
-00:11 +59 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: SOS: botao de panico e 190/192
-00:11 +60 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: PIX Copia e Cola no padrao do Banco Central
-00:11 +61 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: a caminho do passageiro sem estourar
-00:11 +62 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: esperando o passageiro sem estourar
-00:11 +63 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: em viagem sem estourar
-00:11 +64 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:11 +65 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:12 +66 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:12 +67 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:12 +68 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:12 +69 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:13 +70 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:13 +71 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:13 +72 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:13 +73 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
-00:13 +74 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
-00:14 +75 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Menu tem o Clube de Vantagens
-00:14 +76 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas
-00:14 +77 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Lista os parceiros ativos com vantagens, endereco, mapa e WhatsApp
-00:15 +78 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
-00:15 +79 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem WhatsApp o botao nao aparece; detalhe mostra beneficios e liga
-00:15 +80 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem WhatsApp o botao nao aparece; detalhe mostra beneficios e liga
-00:16 +81 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Mudanca da Central aparece ao abrir de novo; parceiro desativado some
-00:16 +82 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
-00:16 +83 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
-00:16 +84 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem conexao mostra o erro e tenta de novo
-00:16 +85 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Iniciar longe do embarque: pede a rota de onde o carro esta (como antes)
-00:17 +86 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Iniciar longe do embarque: pede a rota de onde o carro esta (como antes)
-00:17 +87 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Carteirinha NAO APTO: mostra o motivo e como voltar a ficar apto
-00:17 +88 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Chamado sem as rotas (sem rede na hora): ao aceitar pede a rota como antes
-00:17 +89 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Identificacao sem conexao mostra o erro
-00:18 +90 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
-00:18 +91 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) km alem do incluso e espera alem da inclusa
-00:18 +92 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) multiplicador dinamico vale sobre o total
-00:18 +93 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS soma o trajeto e ignora tremida parado
-00:18 +94 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS ignora leitura imprecisa e salto impossivel
-00:18 +95 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS guarda e recupera (aplicativo fechado no meio da viagem)
-00:18 +96 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas le os pontos que o servidor manda
-00:18 +97 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas o traco some atras do carro
-00:18 +98 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
-00:18 +99 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Chamado marcado ENTREGA com o item; distancia ate a coleta
-00:19 +100 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Chamado marcado ENTREGA com o item; distancia ate a coleta
-00:19 +101 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Na coleta: CONFIRMAR COLETA (sem o codigo do passageiro)
-00:19 +102 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:19 +103 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:19 +104 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:19 +105 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:20 +106 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:20 +107 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:20 +108 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
-00:20 +109 ~7: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart
-00:20 +109 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS rumo entre dois pontos: norte 0, leste 90, sul 180, oeste 270
-00:20 +110 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS parado: a tremida do GPS nao mexe o carro
-00:20 +111 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS andando para o leste: acompanha a rua e o rumo fica 90 (com e sem o rumo do GPS)
-00:20 +112 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS parou depois de andar: o carro continua apontando para onde ia
-00:20 +113 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS leitura ruim e descartada; sem nenhuma boa por 15 s, a de ate 80 m entra
-00:20 +114 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS salto impossivel e descartado; se o GPS insistir 3 vezes, vale
-00:20 +115 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa cor pela situacao: livre verde, em corrida laranja, offline cinza; moto tambem
-00:21 +116 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa o carro gira para o lado em que anda (rumo do GPS)
-00:21 +117 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa sem rumo do GPS: gira pela direcao do caminho
-00:21 +118 ~7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa de 350 para 10 graus gira pelo lado curto (passa pelo norte, nao pelo sul)
-00:21 +119 ~7: All tests passed!
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cofre_test.dart: login novo vai direto para o cofre; dado comum continua no arquivo comum
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cofre_test.dart: cofre com defeito no aparelho: continua logado pelo arquivo comum
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/cofre_test.dart: codigo da instalacao: sorteado uma vez, guardado no cofre e unico
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:01 +5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: busca mostra o estabelecimento, sem CNPJ nem telefone inteiro
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: no matching candidates
+  Actual: _TextContainingWidgetFinder:<Found 1 widget with text containing 999991234: [
+            EditableText-[LabeledGlobalKey<EditableTextState>#a3d63](controller:
+TextEditingController#c5b8d(TextEditingValue(text: ┤64999991234├, selection:
+TextSelection.collapsed(offset: 11, affinity: TextAffinity.downstream, isDirectional: false),
+composing: TextRange(start: -1, end: -1))), focusNode: FocusNode#78885([PRIMARY FOCUS]),
+autocorrect: true, debugLabel: ((englishLike bodyLarge 2021).merge((blackMountainView
+bodyLarge).apply)).merge(unknown), inherit: false, color: Color(alpha: 1.0000, red: 0.1137, green:
+0.1059, blue: 0.1255, colorSpace: ColorSpace.sRGB), family: Roboto, size: 16.0, weight: 400,
+letterSpacing: 0.5, baseline: alphabetic, height: 1.5x, leadingDistribution: even, decoration:
+Color(alpha: 1.0000, red: 0.1137, green: 0.1059, blue: 0.1255, colorSpace: ColorSpace.sRGB)
+TextDecoration.none, textAlign: start, keyboardType: TextInputType(name: TextInputType.text, signed:
+null, decimal: null), autofillHints: [], spellCheckConfiguration: SpellCheckConfiguration(disabled,
+service: null, text style: null, toolbar builder: null), dependencies: [Directionality, MediaQuery,
+_EffectiveTickerMode, _ViewScope], state: EditableTextState#bade9(tickers: tracking 1 ticker)),
+          ]>
+   Which: means one was found but none were expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:245:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart line 245
+The test description was:
+  busca mostra o estabelecimento, sem CNPJ nem telefone inteiro
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +5 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Sino: abrir a lista marca como lidas; o ponto some e nao volta sozinho
+00:01 +5 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: busca mostra o estabelecimento, sem CNPJ nem telefone inteiro [E]
+  Test failed. See exception logs above.
+  The test description was: busca mostra o estabelecimento, sem CNPJ nem telefone inteiro
+  
+00:01 +6 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: busca curta pede mais letras e nao chama o servidor
+00:01 +7 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
+00:02 +8 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
+00:02 +9 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar uma: deslizar some, DESFAZER traz de volta, sem desfazer apaga no servidor
+00:02 +10 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: Comercio nao liberado pela Central: avisa e nao deixa confirmar
+00:02 +11 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Apagar todas (com desfazer) e Marcar todas como lidas
+00:02 +12 -1: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: estabelecimento nao aprovado: mostra o motivo e nao deixa confirmar
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Este estabelecimento ainda não foi aprovado
+pela Central.": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:293:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart line 293
+The test description was:
+  estabelecimento nao aprovado: mostra o motivo e nao deixa confirmar
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +12 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:03 +12 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: estabelecimento nao aprovado: mostra o motivo e nao deixa confirmar [E]
+  Test failed. See exception logs above.
+  The test description was: estabelecimento nao aprovado: mostra o motivo e nao deixa confirmar
+  
+00:03 +13 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/sino_motorista_test.dart: Aviso de saldo: fecha no X; so volta se piorar ou no dia seguinte
+00:03 +14 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: sem confirmar o endereco no mapa nao consulta o preco
+00:03 +15 -2: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: sem confirmar o endereco no mapa nao consulta o preco
+
+Warning: A call to tap() with finder "Found 1 widget with text "Ver o preço": [
+  Text("Ver o preço", inherit: true, color: Color(alpha: 1.0000, red: 0.0275, green: 0.0706, blue: 0.1686, colorSpace: ColorSpace.sRGB), family: Inter, size: 16.0, weight: 700, maxLines: 1, dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery, _ScrollableScope]),
+]" derived an Offset (Offset(180.0, 736.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderParagraph#5e314 relayoutBoundary=up3
+The hit test result at that offset is: HitTestResult(RenderPointerListener#8d1dc@Offset(180.0, 680.0), RenderSemanticsGestureHandler#ee852@Offset(180.0, 680.0), RenderPointerListener#f0ced@Offset(180.0, 680.0), _RenderScrollSemantics#553d0@Offset(180.0, 680.0), RenderClipRect#93f99@Offset(180.0, 680.0), RenderPadding#d373c@Offset(180.0, 680.0), RenderCustomMultiChildLayoutBox#e050f@Offset(180.0, 736.0), _RenderInkFeatures#421e0@Offset(180.0, 736.0), RenderPhysicalModel#e3205@Offset(180.0, 736.0), RenderSemanticsAnnotations#3afc5@Offset(180.0, 736.0), RenderRepaintBoundary#ebd43@Offset(180.0, 736.0), RenderIgnorePointer#49b53@Offset(180.0, 736.0), RenderAnimatedOpacity#01ac7@Offset(180.0, 736.0), RenderAnimatedOpacity#57a5b@Offset(180.0, 736.0), _RenderColoredBox#70c58@Offset(180.0, 736.0), RenderAnimatedOpacity#fd8c9@Offset(180.0, 736.0), RenderIgnorePointer#55613@Offset(180.0, 736.0), RenderAnimatedOpacity#4349f@Offset(180.0, 736.0), RenderRepaintBoundary#68c02@Offset(180.0, 736.0), RenderSemanticsAnnotations#15062@Offset(180.0, 736.0), RenderOffstage#2392b@Offset(180.0, 736.0), RenderSemanticsAnnotations#64d45@Offset(180.0, 736.0), _RenderTheater#40f1f@Offset(180.0, 736.0), RenderAbsorbPointer#5cc66@Offset(180.0, 736.0), RenderPointerListener#ee25e@Offset(180.0, 736.0), RenderSemanticsAnnotations#996b0@Offset(180.0, 736.0), RenderCustomPaint#667e9@Offset(180.0, 736.0), RenderSemanticsAnnotations#1cb5f@Offset(180.0, 736.0), RenderSemanticsAnnotations#76591@Offset(180.0, 736.0), RenderSemanticsAnnotations#58504@Offset(180.0, 736.0), RenderTapRegionSurface#7841c@Offset(180.0, 736.0), RenderSemanticsAnnotations#ffd54@Offset(180.0, 736.0), RenderSemanticsAnnotations#3c825@Offset(180.0, 736.0), HitTestEntry<HitTestTarget>#3d960(_ReusableRenderView#86978), HitTestEntry<HitTestTarget>#a45f6(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:181:16)
+<asynchronous suspension>
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:315:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#7      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _KeyWidgetFinder:<Found 0 widgets with key [<'erro-entrega-manual'>]: []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:317:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart line 317
+The test description was:
+  sem confirmar o endereco no mapa nao consulta o preco
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:04 +15 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/bussola_test.dart: Sem escolha ainda: a tela do motorista comeca no automatico
+00:04 +15 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: sem confirmar o endereco no mapa nao consulta o preco [E]
+  Test failed. See exception logs above.
+  The test description was: sem confirmar o endereco no mapa nao consulta o preco
+  
+00:04 +16 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio
+00:04 +17 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio
+00:05 +18 -3: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio
+
+Warning: A call to tap() with finder "Found 1 widget with text "Confirmar endereço no mapa": [
+  Text("Confirmar endereço no mapa", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery, _ScrollableScope]),
+]" derived an Offset (Offset(189.0, 668.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderParagraph#8d610 relayoutBoundary=up18
+The hit test result at that offset is: HitTestResult(RenderPointerListener#a1470@Offset(189.0, 612.0), RenderSemanticsGestureHandler#c8d42@Offset(189.0, 612.0), RenderPointerListener#05b09@Offset(189.0, 612.0), _RenderScrollSemantics#1d304@Offset(189.0, 612.0), RenderClipRect#06d7c@Offset(189.0, 612.0), RenderPadding#3f52a@Offset(189.0, 612.0), RenderCustomMultiChildLayoutBox#b5fa5@Offset(189.0, 668.0), _RenderInkFeatures#e0802@Offset(189.0, 668.0), RenderPhysicalModel#a5bcb@Offset(189.0, 668.0), RenderSemanticsAnnotations#6f57e@Offset(189.0, 668.0), RenderRepaintBoundary#a8a04@Offset(189.0, 668.0), RenderIgnorePointer#041e7@Offset(189.0, 668.0), RenderAnimatedOpacity#9bdc4@Offset(189.0, 668.0), RenderAnimatedOpacity#f7589@Offset(189.0, 668.0), _RenderColoredBox#5c718@Offset(189.0, 668.0), RenderAnimatedOpacity#d3315@Offset(189.0, 668.0), RenderIgnorePointer#8d1fe@Offset(189.0, 668.0), RenderAnimatedOpacity#39b32@Offset(189.0, 668.0), RenderRepaintBoundary#79ce4@Offset(189.0, 668.0), RenderSemanticsAnnotations#d2333@Offset(189.0, 668.0), RenderOffstage#34c93@Offset(189.0, 668.0), RenderSemanticsAnnotations#eb784@Offset(189.0, 668.0), _RenderTheater#99bf2@Offset(189.0, 668.0), RenderAbsorbPointer#d1c4f@Offset(189.0, 668.0), RenderPointerListener#1edac@Offset(189.0, 668.0), RenderSemanticsAnnotations#b2527@Offset(189.0, 668.0), RenderCustomPaint#6413b@Offset(189.0, 668.0), RenderSemanticsAnnotations#c63dd@Offset(189.0, 668.0), RenderSemanticsAnnotations#e72b3@Offset(189.0, 668.0), RenderSemanticsAnnotations#aa391@Offset(189.0, 668.0), RenderTapRegionSurface#1fb89@Offset(189.0, 668.0), RenderSemanticsAnnotations#653ba@Offset(189.0, 668.0), RenderSemanticsAnnotations#ad313@Offset(189.0, 668.0), HitTestEntry<HitTestTarget>#c85db(_ReusableRenderView#86978), HitTestEntry<HitTestTarget>#07285(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:181:16)
+<asynchronous suspension>
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:210:5)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:325:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#8      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:179:16)
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:211:11)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:325:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:05 +18 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio [E]
+  Test failed. See exception logs above.
+  The test description was: fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio
+  
+00:05 +18 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+00:05 +19 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+00:05 +20 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+00:05 +21 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+00:05 +22 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+
+Warning: A call to tap() with finder "Found 1 widget with text "Confirmar endereço no mapa": [
+  Text("Confirmar endereço no mapa", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery, _ScrollableScope]),
+]" derived an Offset (Offset(189.0, 668.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderParagraph#92a81 relayoutBoundary=up18
+The hit test result at that offset is: HitTestResult(RenderPointerListener#d3f24@Offset(189.0, 612.0), RenderSemanticsGestureHandler#e5550@Offset(189.0, 612.0), RenderPointerListener#8d187@Offset(189.0, 612.0), _RenderScrollSemantics#0e5ff@Offset(189.0, 612.0), RenderClipRect#6c787@Offset(189.0, 612.0), RenderPadding#e4c1a@Offset(189.0, 612.0), RenderCustomMultiChildLayoutBox#fe8e2@Offset(189.0, 668.0), _RenderInkFeatures#1eb2a@Offset(189.0, 668.0), RenderPhysicalModel#b87ad@Offset(189.0, 668.0), RenderSemanticsAnnotations#cca42@Offset(189.0, 668.0), RenderRepaintBoundary#50ce0@Offset(189.0, 668.0), RenderIgnorePointer#ec0fc@Offset(189.0, 668.0), RenderAnimatedOpacity#1636c@Offset(189.0, 668.0), RenderAnimatedOpacity#fa511@Offset(189.0, 668.0), _RenderColoredBox#4b922@Offset(189.0, 668.0), RenderAnimatedOpacity#21b3e@Offset(189.0, 668.0), RenderIgnorePointer#04be5@Offset(189.0, 668.0), RenderAnimatedOpacity#c870e@Offset(189.0, 668.0), RenderRepaintBoundary#6b6bf@Offset(189.0, 668.0), RenderSemanticsAnnotations#4be32@Offset(189.0, 668.0), RenderOffstage#571af@Offset(189.0, 668.0), RenderSemanticsAnnotations#ff200@Offset(189.0, 668.0), _RenderTheater#bf3b0@Offset(189.0, 668.0), RenderAbsorbPointer#d0fa6@Offset(189.0, 668.0), RenderPointerListener#a5def@Offset(189.0, 668.0), RenderSemanticsAnnotations#1aec8@Offset(189.0, 668.0), RenderCustomPaint#e4548@Offset(189.0, 668.0), RenderSemanticsAnnotations#86b3e@Offset(189.0, 668.0), RenderSemanticsAnnotations#1f64f@Offset(189.0, 668.0), RenderSemanticsAnnotations#1dabe@Offset(189.0, 668.0), RenderTapRegionSurface#37f76@Offset(189.0, 668.0), RenderSemanticsAnnotations#6dadd@Offset(189.0, 668.0), RenderSemanticsAnnotations#d195e@Offset(189.0, 668.0), HitTestEntry<HitTestTarget>#15d37(_ReusableRenderView#86978), HitTestEntry<HitTestTarget>#86584(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:181:16)
+<asynchronous suspension>
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:210:5)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:364:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#8      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+00:06 +23 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+00:06 +24 -4: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:179:16)
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:211:11)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:364:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:06 +24 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica) [E]
+  Test failed. See exception logs above.
+  The test description was: rede cai ao lancar: "Tentar de novo" repete com a MESMA chave (nao duplica)
+  
+00:06 +24 -5: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: preco mudou: mostra o valor novo e pede nova confirmacao com chave nova
+
+Warning: A call to tap() with finder "Found 1 widget with text "Confirmar endereço no mapa": [
+  Text("Confirmar endereço no mapa", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery, _ScrollableScope]),
+]" derived an Offset (Offset(189.0, 668.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderParagraph#e42ff relayoutBoundary=up18
+The hit test result at that offset is: HitTestResult(RenderPointerListener#6852a@Offset(189.0, 612.0), RenderSemanticsGestureHandler#8045a@Offset(189.0, 612.0), RenderPointerListener#24bfb@Offset(189.0, 612.0), _RenderScrollSemantics#fc341@Offset(189.0, 612.0), RenderClipRect#4f60d@Offset(189.0, 612.0), RenderPadding#ff451@Offset(189.0, 612.0), RenderCustomMultiChildLayoutBox#ffed2@Offset(189.0, 668.0), _RenderInkFeatures#e64f4@Offset(189.0, 668.0), RenderPhysicalModel#a1773@Offset(189.0, 668.0), RenderSemanticsAnnotations#8dd77@Offset(189.0, 668.0), RenderRepaintBoundary#aa56b@Offset(189.0, 668.0), RenderIgnorePointer#1b507@Offset(189.0, 668.0), RenderAnimatedOpacity#f7351@Offset(189.0, 668.0), RenderAnimatedOpacity#a18f5@Offset(189.0, 668.0), _RenderColoredBox#4fc65@Offset(189.0, 668.0), RenderAnimatedOpacity#fc911@Offset(189.0, 668.0), RenderIgnorePointer#8589a@Offset(189.0, 668.0), RenderAnimatedOpacity#a5f1c@Offset(189.0, 668.0), RenderRepaintBoundary#8ee8f@Offset(189.0, 668.0), RenderSemanticsAnnotations#bf76e@Offset(189.0, 668.0), RenderOffstage#7d6e5@Offset(189.0, 668.0), RenderSemanticsAnnotations#ff10f@Offset(189.0, 668.0), _RenderTheater#4ce55@Offset(189.0, 668.0), RenderAbsorbPointer#a3758@Offset(189.0, 668.0), RenderPointerListener#aebd0@Offset(189.0, 668.0), RenderSemanticsAnnotations#b4eb9@Offset(189.0, 668.0), RenderCustomPaint#04cb7@Offset(189.0, 668.0), RenderSemanticsAnnotations#e1342@Offset(189.0, 668.0), RenderSemanticsAnnotations#d5c15@Offset(189.0, 668.0), RenderSemanticsAnnotations#e35cf@Offset(189.0, 668.0), RenderTapRegionSurface#8389d@Offset(189.0, 668.0), RenderSemanticsAnnotations#03531@Offset(189.0, 668.0), RenderSemanticsAnnotations#060bd@Offset(189.0, 668.0), HitTestEntry<HitTestTarget>#3dd88(_ReusableRenderView#86978), HitTestEntry<HitTestTarget>#06782(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:181:16)
+<asynchronous suspension>
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:210:5)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:386:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#8      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:179:16)
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:211:11)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:386:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  preco mudou: mostra o valor novo e pede nova confirmacao com chave nova
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:07 +24 -6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Menu tem o Clube de Vantagens
+00:07 +24 -6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: preco mudou: mostra o valor novo e pede nova confirmacao com chave nova [E]
+  Test failed. See exception logs above.
+  The test description was: preco mudou: mostra o valor novo e pede nova confirmacao com chave nova
+  
+00:07 +25 -6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: servidor recusa (porta fechada): mostra o motivo e fica na tela
+
+Warning: A call to tap() with finder "Found 1 widget with text "Confirmar endereço no mapa": [
+  Text("Confirmar endereço no mapa", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery, _ScrollableScope]),
+]" derived an Offset (Offset(189.0, 668.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderParagraph#141b0 relayoutBoundary=up18
+The hit test result at that offset is: HitTestResult(RenderPointerListener#caa7e@Offset(189.0, 612.0), RenderSemanticsGestureHandler#038e7@Offset(189.0, 612.0), RenderPointerListener#96d1c@Offset(189.0, 612.0), _RenderScrollSemantics#16930@Offset(189.0, 612.0), RenderClipRect#917b5@Offset(189.0, 612.0), RenderPadding#8616d@Offset(189.0, 612.0), RenderCustomMultiChildLayoutBox#2cd37@Offset(189.0, 668.0), _RenderInkFeatures#2fc73@Offset(189.0, 668.0), RenderPhysicalModel#b1f8c@Offset(189.0, 668.0), RenderSemanticsAnnotations#656f0@Offset(189.0, 668.0), RenderRepaintBoundary#b1ced@Offset(189.0, 668.0), RenderIgnorePointer#de9b0@Offset(189.0, 668.0), RenderAnimatedOpacity#7ee03@Offset(189.0, 668.0), RenderAnimatedOpacity#3289d@Offset(189.0, 668.0), _RenderColoredBox#8cfb6@Offset(189.0, 668.0), RenderAnimatedOpacity#c83b2@Offset(189.0, 668.0), RenderIgnorePointer#6f845@Offset(189.0, 668.0), RenderAnimatedOpacity#ba4b0@Offset(189.0, 668.0), RenderRepaintBoundary#b90d5@Offset(189.0, 668.0), RenderSemanticsAnnotations#6272e@Offset(189.0, 668.0), RenderOffstage#a282f@Offset(189.0, 668.0), RenderSemanticsAnnotations#cbc17@Offset(189.0, 668.0), _RenderTheater#5a4f2@Offset(189.0, 668.0), RenderAbsorbPointer#7788b@Offset(189.0, 668.0), RenderPointerListener#c7154@Offset(189.0, 668.0), RenderSemanticsAnnotations#ea3f9@Offset(189.0, 668.0), RenderCustomPaint#16533@Offset(189.0, 668.0), RenderSemanticsAnnotations#a9183@Offset(189.0, 668.0), RenderSemanticsAnnotations#6c179@Offset(189.0, 668.0), RenderSemanticsAnnotations#30b52@Offset(189.0, 668.0), RenderTapRegionSurface#50846@Offset(189.0, 668.0), RenderSemanticsAnnotations#7281e@Offset(189.0, 668.0), RenderSemanticsAnnotations#acd36@Offset(189.0, 668.0), HitTestEntry<HitTestTarget>#f1d26(_ReusableRenderView#86978), HitTestEntry<HitTestTarget>#afe88(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:181:16)
+<asynchronous suspension>
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:210:5)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:407:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#8      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+00:08 +26 -6: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: servidor recusa (porta fechada): mostra o motivo e fica na tela
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
+#3      _tocar (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:179:16)
+#4      _preencherDados (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:211:11)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart:407:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  servidor recusa (porta fechada): mostra o motivo e fica na tela
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:08 +26 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem WhatsApp o botao nao aparece; detalhe mostra beneficios e liga
+00:08 +26 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: servidor recusa (porta fechada): mostra o motivo e fica na tela [E]
+  Test failed. See exception logs above.
+  The test description was: servidor recusa (porta fechada): mostra o motivo e fica na tela
+  
+00:08 +27 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Mudanca da Central aparece ao abrir de novo; parceiro desativado some
+00:09 +28 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Mudanca da Central aparece ao abrir de novo; parceiro desativado some
+00:09 +29 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Mudanca da Central aparece ao abrir de novo; parceiro desativado some
+00:09 +30 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Mudanca da Central aparece ao abrir de novo; parceiro desativado some
+00:09 +31 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem parceiros mostra o aviso e a identificacao continua
+00:09 +32 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem conexao mostra o erro e tenta de novo
+00:09 +33 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem conexao mostra o erro e tenta de novo
+00:09 +34 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Sem conexao mostra o erro e tenta de novo
+00:09 +35 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Carteirinha APTO: nome, numero, logotipo, situacao e datas do servidor
+00:09 +36 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/clube_motorista_test.dart: Carteirinha NAO APTO: mostra o motivo e como voltar a ficar apto
+00:10 +37 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Chamado marcado ENTREGA com o item; distancia ate a coleta
+00:10 +38 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Chamado marcado ENTREGA com o item; distancia ate a coleta
+00:10 +39 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Na coleta: CONFIRMAR COLETA (sem o codigo do passageiro)
+00:10 +40 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_motorista_test.dart: Entrega: codigo errado mostra o motivo; certo encerra (o codigo vai ao servidor)
+00:11 +41 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Aprovado na Central: "Atualizar status" leva para a tela inicial
+00:11 +42 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Ainda em analise: continua na tela e o perfil fica
+00:12 +43 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Dados do cadastro trazem a aprovacao (sincronizar ja basta)
+00:12 +44 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Central suspendeu ou bloqueou: nao fica como "em analise"
+00:12 +45 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Sair pede confirmacao: "Ficar" nao apaga a conta
+00:12 +46 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/aprovacao_motorista_test.dart: Boas-vindas: sem modo demonstracao no app de verdade
+00:12 +47 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS rumo entre dois pontos: norte 0, leste 90, sul 180, oeste 270
+00:12 +48 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS parado: a tremida do GPS nao mexe o carro
+00:12 +49 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS andando para o leste: acompanha a rua e o rumo fica 90 (com e sem o rumo do GPS)
+00:12 +50 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS parou depois de andar: o carro continua apontando para onde ia
+00:12 +51 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS leitura ruim e descartada; sem nenhuma boa por 15 s, a de ate 80 m entra
+00:12 +52 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Filtro do GPS salto impossivel e descartado; se o GPS insistir 3 vezes, vale
+00:12 +53 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa cor pela situacao: livre verde, em corrida laranja, offline cinza; moto tambem
+00:12 +54 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa o carro gira para o lado em que anda (rumo do GPS)
+00:13 +55 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa sem rumo do GPS: gira pela direcao do caminho
+00:13 +56 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/carro_no_mapa_test.dart: Carro no mapa de 350 para 10 graus gira pelo lado curto (passa pelo norte, nao pelo sul)
+00:13 +57 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) dentro do incluso: so a bandeirada
+00:13 +58 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) km alem do incluso e espera alem da inclusa
+00:13 +59 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Conta do taximetro (igual a do servidor) multiplicador dinamico vale sobre o total
+00:13 +60 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS soma o trajeto e ignora tremida parado
+00:13 +61 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS ignora leitura imprecisa e salto impossivel
+00:13 +62 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Medicao pelo GPS guarda e recupera (aplicativo fechado no meio da viagem)
+00:13 +63 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas le os pontos que o servidor manda
+00:13 +64 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Rota pelas ruas o traco some atras do carro
+00:13 +65 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: Em viagem: o valor do taximetro aparece no canto da tela
+00:13 +66 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_test.dart: A caminho do passageiro: mostra o valor estimado
+00:13 +67 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada de 5 minutos no meio da viagem entra no tempo parado
+00:13 +68 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: sinal fechado (40 s) e transito lento nao contam como parada
+00:13 +69 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada acontecendo agora ja aparece (o valor corre enquanto espera)
+00:13 +70 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: tempo parado guardado volta igual depois de fechar o app
+00:13 +71 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/taximetro_paradas_test.dart: parada vale na conta como espera (sem passar o tempo de franquia duas vezes)
+00:14 +72 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_sem_gps_test.dart: sem posicao nenhuma: usa a ultima posicao do servidor
+00:14 +73 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_sem_gps_test.dart: sem ultima posicao: centro da cidade do motorista
+00:14 +74 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_sem_gps_test.dart: ja com posicao (guardada ou GPS): nao mexe; sem dados: continua esperando
+00:14 +75 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
+00:14 +76 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
+00:14 +77 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
+00:14 +78 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
+00:14 +79 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
+00:14 +80 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
+00:14 +81 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:15 +82 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:15 +83 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:15 +84 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:15 +85 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:15 +86 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:16 +87 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
+00:16 +88 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:16 +89 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:16 +90 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:17 +91 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:17 +92 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:17 +93 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contador local do dia perto do teto (80%) entra no modo economia; no teto, acabou
+00:17 +94 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca so busca com 3 letras uteis ("rua", "av." nao contam)
+00:17 +95 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca espera 500 ms depois da ultima tecla (900 ms no modo economia)
+00:17 +96 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Regras da busca buscas guardadas: mesma busca nao vai ao servidor de novo
+00:17 +97 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:17 +98 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:17 +99 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:17 +100 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/ajustes_aparelho_test.dart: Redmi: mostra o celular, os ajustes da Xiaomi e libera ao confirmar
+00:17 +101 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/ajustes_aparelho_test.dart: Redmi: mostra o celular, os ajustes da Xiaomi e libera ao confirmar
+00:17 +102 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/ajustes_aparelho_test.dart: Redmi: mostra o celular, os ajustes da Xiaomi e libera ao confirmar
+00:18 +103 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:18 +104 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1: a caminho, navegar, ligar e Cheguei ao local
+00:19 +105 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~1 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~2 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~3 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~4 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~5 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~6 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +105 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 1b: esperando com cronometro e deslizar INICIAR VIAGEM
+00:19 +106 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 2: viagem com FINALIZAR VIAGEM
+00:19 +107 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Corrida etapa 3: resumo financeiro, nota e Concluir
+00:19 +108 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
+00:19 +109 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Aceitar e iniciar no embarque: usa as rotas do chamado (nenhuma rota nova)
+00:20 +110 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Perfil e documentos: situacao, motivo, documentos e senha
+00:20 +111 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Iniciar longe do embarque: pede a rota de onde o carro esta (como antes)
+00:20 +112 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: em uso, guardado, carro novo esperando a Central
+00:20 +113 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/rotas_economia_test.dart: Chamado sem as rotas (sem rede na hora): ao aceitar pede a rota como antes
+00:20 +114 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Meus veiculos: categoria do carro, pedido esperando a Central e pedir outra
+00:20 +115 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: SOS: botao de panico e 190/192
+00:21 +116 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: PIX Copia e Cola no padrao do Banco Central
+00:21 +117 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: a caminho do passageiro sem estourar
+00:21 +118 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: esperando o passageiro sem estourar
+00:21 +119 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: em viagem sem estourar
+00:21 +120 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: historico sem estourar
+00:21 +121 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: perfil sem estourar
+00:21 +122 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: meus carros sem estourar
+00:21 +123 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: SOS sem estourar
+00:22 +124 ~7 -7: /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/telas_test.dart: Tela pequena e letra grande: menu sem estourar
+00:22 +125 ~7 -7: Some tests failed.
+
+Failing tests:
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: busca mostra o estabelecimento, sem CNPJ nem telefone inteiro
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: estabelecimento nao aprovado: mostra o motivo e nao deixa confirmar
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: fluxo completo: preco oficial, confirmacao e lancamento pelo caminho do Comercio
+  /home/runner/work/ride-platform/ride-platform/apps/mobile_driver/test/entrega_manual_test.dart: preco mudou: mostra o valor novo e pede nova confirmacao com chave nova
+  ... and 3 more
