@@ -5,10 +5,12 @@ import { UserRole } from '@ride/shared';
 jest.mock('../rides/rides.service', () => ({ RidesService: class RidesService {} }));
 jest.mock('../pracas/pracas.service', () => ({ PracasService: class PracasService {} }));
 
+import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../../common/constants/metadata.constants';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { AdminComercioController, ComercioController } from './comercio.controller';
-import { ComercioService } from './comercio.service';
+import { ComercioService, MAX_ABERTAS_POR_LOJA } from './comercio.service';
 import { ComercioAvisosService } from './comercio.avisos';
 import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import { encerrarComercios } from './comercio.conta';
@@ -86,12 +88,15 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
         return pedidos.find((p) => p.comercioId === k.comercioId && p.chave === k.chave) ?? null;
       },
       findFirst: async ({ where }: any) => comJoin(pedidos.find((p) => p.rideId === where.rideId && p.comercioId === where.comercioId)),
-      findMany: async ({ where }: any) =>
+      findMany: async ({ where, take }: any = {}) =>
         pedidos
           .filter((p) => (!where?.comercioId || p.comercioId === where.comercioId))
+          .filter((p) => !where?.ride?.status || corridas[p.rideId]?.status === where.ride.status)
           .map(comJoin)
-          .map((p) => ({ ...p, comercio: comercios.find((c) => c.id === p.comercioId) })),
-      count: async ({ where }: any) => pedidos.filter((p) => p.comercioId === where.comercioId).length,
+          .map((p) => ({ ...p, comercio: comercios.find((c) => c.id === p.comercioId) }))
+          .slice(0, take ?? Infinity),
+      count: async ({ where }: any) =>
+        pedidos.filter((p) => p.comercioId === where.comercioId && (!where.ride?.status?.in || where.ride.status.in.includes(corridas[p.rideId]?.status))).length,
       create: async ({ data }: any) => {
         if (pedidos.some((p) => p.comercioId === data.comercioId && p.chave === data.chave)) throw Object.assign(new Error('unique'), { code: 'P2002' });
         pedidos.push({ createdAt: new Date(), ...data });
@@ -800,5 +805,112 @@ describe('Comercio: mapa do acompanhamento (13/11/2026)', () => {
     await aprovado(ctx, 'u2', { ...cadastro, cnpj: '45723174000110', email: 'joao@loja.com.br' });
     const e = await ctx.s.pedir('u1', pedido());
     await expect(ctx.s.detalhe('u2', e.id)).rejects.toThrow('não encontrada');
+  });
+});
+
+describe('Comercio: correcoes da auditoria (13/11/2026)', () => {
+  it('gastos: o total soma TODAS as entregas do periodo, mesmo passando de 500; a lista mostra as mais recentes e avisa que foi cortada', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const loja = ctx.comercios[0];
+    for (let i = 0; i < 650; i++) {
+      const rideId = `r-massa-${i}`;
+      ctx.corridas[rideId] = {
+        id: rideId, code: `FM${i}`, status: 'COMPLETED', category: 'ENTREGA_MOTO', requestedAt: new Date(), finishedAt: new Date(),
+        estimatedFareCents: 700, finalFareCents: 700, entrega: { destinatarioNome: 'Ana', destinatarioTelefone: '1', coletadaEm: new Date(), entregueEm: new Date() },
+      };
+      ctx.pedidos.push({ rideId, comercioId: loja.id, chave: `chave-massa-${String(i).padStart(8, '0')}`, createdAt: new Date() });
+    }
+    const g = await ctx.s.gastos('u1');
+    expect(g.realizadas).toBe(650);
+    expect(g.totalCents).toBe(650 * 700);
+    expect(g.cobrancas).toHaveLength(500);
+    expect(g.listaCortada).toBe(true);
+  });
+
+  it('limite de entregas abertas por loja: a 21a e recusada sem chamar o despacho; ao liberar uma, volta a passar; repetir uma chave existente nao conta', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    for (let i = 0; i < MAX_ABERTAS_POR_LOJA; i++) await ctx.s.pedir('u1', pedido(`chave-limite-${String(i).padStart(8, '0')}`));
+    expect(ctx.rides.pedir).toHaveBeenCalledTimes(MAX_ABERTAS_POR_LOJA);
+    await expect(ctx.s.pedir('u1', pedido('chave-limite-novo000001'))).rejects.toThrow('entregas em andamento');
+    expect(ctx.rides.pedir).toHaveBeenCalledTimes(MAX_ABERTAS_POR_LOJA);
+    // o mesmo toque de uma entrega que ja existe continua devolvendo a mesma (idempotencia vem antes do limite)
+    const igual = await ctx.s.pedir('u1', pedido('chave-limite-00000000'));
+    expect(igual.repetido).toBe(true);
+    // uma termina: abre vaga
+    ctx.corridas[ctx.pedidos[0].rideId].status = 'COMPLETED';
+    await expect(ctx.s.pedir('u1', pedido('chave-limite-novo000002'))).resolves.toMatchObject({ repetido: false });
+    // o limite e por loja: a outra loja nao e afetada
+    await aprovado(ctx, 'u2', { ...cadastro, cnpj: '45723174000110', email: 'joao@loja.com.br' });
+    await expect(ctx.s.pedir('u2', pedido('chave-outra-loja000001'))).resolves.toMatchObject({ repetido: false });
+  });
+
+  describe('coleta alternativa so na cidade da loja', () => {
+    const pracas = [
+      { id: 'goiatuba', nome: 'Goiatuba', latitude: -18.01, longitude: -49.36, raioKm: 20 },
+      { id: 'itumbiara', nome: 'Itumbiara', latitude: -18.41, longitude: -49.21, raioKm: 20 },
+    ];
+    const outraCidade = { address: 'Av. Central, 10, Itumbiara', latitude: -18.41, longitude: -49.21 };
+
+    it('coleta em outra cidade e recusada no preco e no pedido, antes do despacho', async () => {
+      const ctx = montar({ pracas });
+      await aprovado(ctx);
+      await expect(ctx.s.cotar('u1', { ...pedido(), coletaAlternativa: outraCidade } as never)).rejects.toThrow('mesma cidade do estabelecimento');
+      await expect(ctx.s.pedir('u1', { ...pedido(), coletaAlternativa: outraCidade } as never)).rejects.toThrow('mesma cidade do estabelecimento');
+      expect(ctx.rides.estimar).not.toHaveBeenCalled();
+      expect(ctx.rides.pedir).not.toHaveBeenCalled();
+      expect(ctx.pedidos).toHaveLength(0);
+    });
+
+    it('coleta em outro endereco da mesma cidade segue funcionando', async () => {
+      const ctx = montar({ pracas });
+      await aprovado(ctx);
+      await ctx.s.pedir('u1', { ...pedido(), coletaAlternativa: { address: 'Av. Goiás, 900', latitude: -18.02, longitude: -49.37 } } as never);
+      expect(ctx.pedidos[0].coletaAlternativa).toBe(true);
+    });
+  });
+
+  it('o aviso "Encomenda coletada" sai uma vez so, mesmo se a entrega passar pelas duas etapas de coleta', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const e = await ctx.s.pedir('u1', pedido());
+    ctx.corridas[e.id].driver = { user: { name: 'João' } };
+    ctx.corridas[e.id].status = 'IN_PROGRESS';
+    ctx.corridas[e.id].entrega.coletadaEm = null; // primeiro instante: ainda sem a hora da coleta
+    expect(await ctx.avisos.sincronizar()).toBe(1);
+    ctx.corridas[e.id].entrega.coletadaEm = new Date(); // depois: a caminho da entrega
+    expect(await ctx.avisos.sincronizar()).toBe(0);
+    expect(ctx.avisosGravados.filter((a) => a.titulo === 'Encomenda coletada')).toHaveLength(1);
+  });
+});
+
+describe('Comercio: o guarda de papeis de verdade barra quem nao deve (auditoria 13/11/2026)', () => {
+  const guarda = new RolesGuard(new Reflector());
+  const handlers = (classe: { prototype: object }) =>
+    Object.getOwnPropertyNames(classe.prototype).filter((n) => n !== 'constructor' && typeof (classe.prototype as any)[n] === 'function');
+  const contexto = (classe: { prototype: object }, nome: string, role: string) =>
+    ({
+      getHandler: () => (classe.prototype as any)[nome],
+      getClass: () => classe,
+      switchToHttp: () => ({ getRequest: () => ({ user: { id: 'x', role } }) }),
+    }) as never;
+
+  it('rotas do aplicativo: motorista e Central (ADMIN) sao recusados em TODAS; passageiro passa', () => {
+    const lista = handlers(ComercioController);
+    expect(lista.length).toBeGreaterThanOrEqual(9);
+    for (const h of lista) {
+      for (const papel of ['DRIVER', 'ADMIN']) expect(() => guarda.canActivate(contexto(ComercioController, h, papel))).toThrow('permissao');
+      expect(guarda.canActivate(contexto(ComercioController, h, 'PASSENGER'))).toBe(true);
+    }
+  });
+
+  it('rotas da Central: passageiro (inclusive uma loja) e motorista sao recusados em TODAS; ADMIN passa', () => {
+    const lista = handlers(AdminComercioController);
+    expect(lista.length).toBeGreaterThanOrEqual(6);
+    for (const h of lista) {
+      for (const papel of ['PASSENGER', 'DRIVER']) expect(() => guarda.canActivate(contexto(AdminComercioController, h, papel))).toThrow('permissao');
+      expect(guarda.canActivate(contexto(AdminComercioController, h, 'ADMIN'))).toBe(true);
+    }
   });
 });

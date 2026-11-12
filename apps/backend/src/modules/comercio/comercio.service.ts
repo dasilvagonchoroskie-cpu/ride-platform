@@ -88,6 +88,12 @@ const CRIAR_TABELAS = [
 ];
 
 const POR_PAGINA = 20;
+/** Teto de seguranca da soma de gastos (muito acima do uso real de uma loja num periodo). */
+const LIMITE_DA_SOMA = 20_000;
+const LIMITE_DA_LISTA = 500;
+/** Entregas abertas ao mesmo tempo por loja: protege os motoristas de uma enxurrada de pedidos. */
+export const MAX_ABERTAS_POR_LOJA = 20;
+const STATUS_ABERTOS = ['SCHEDULED', 'REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'];
 
 /**
  * Chave geral do Comercio (13/11/2026). Nasce DESLIGADA: enquanto o dono nao
@@ -348,6 +354,28 @@ export class ComercioService implements OnModuleInit {
     return { address: enderecoPorExtenso(c), latitude: c.latitude, longitude: c.longitude, placeId: undefined };
   }
 
+  /**
+   * Coleta alternativa so dentro da cidade do estabelecimento (auditoria 13/11): sem isto, uma
+   * loja de uma cidade sem entregas poderia "coletar" em outra cidade que tenha a Entrega ligada.
+   */
+  private async exigirColetaNaCidade(c: Linha, alternativa?: { latitude: number; longitude: number }): Promise<void> {
+    if (!alternativa || c.latitude == null || c.longitude == null) return;
+    const [daLoja, daColeta] = await Promise.all([this.pracaDe(c), this.pracaDe(alternativa)]);
+    if (daLoja !== daColeta) {
+      throw BusinessException.validation('A coleta em outro endereço precisa ser na mesma cidade do estabelecimento.');
+    }
+  }
+
+  /** Teto de entregas abertas por loja: a loja pode ter varias, mas nao uma enxurrada para os motoristas. */
+  private async exigirLimiteDeAbertas(comercioId: string): Promise<void> {
+    const abertas = await this.prisma.comercioPedido.count({
+      where: { comercioId, ride: { status: { in: STATUS_ABERTOS as never } } },
+    });
+    if (abertas >= MAX_ABERTAS_POR_LOJA) {
+      throw BusinessException.conflict(`Você já tem ${MAX_ABERTAS_POR_LOJA} entregas em andamento. Aguarde alguma terminar ou cancele uma antes de pedir outra.`);
+    }
+  }
+
   private destino(d: EntregaInput['destino']) {
     return {
       address: enderecoPorExtenso(d),
@@ -360,6 +388,7 @@ export class ComercioService implements OnModuleInit {
   /** Consulta o preco ANTES de confirmar (nao cria nada). */
   async cotar(userId: string, input: CotarInput) {
     const c = await this.podePedir(userId);
+    await this.exigirColetaNaCidade(c, input.coletaAlternativa);
     const pickup = this.coleta(c, input.coletaAlternativa);
     const orc = await this.rides.estimar(
       { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
@@ -381,6 +410,8 @@ export class ComercioService implements OnModuleInit {
     const c = await this.podePedir(userId);
     const ja = await this.prisma.comercioPedido.findUnique({ where: { comercioId_chave: { comercioId: c.id, chave: input.chave } } });
     if (ja) return { ...(await this.detalhe(userId, ja.rideId)), repetido: true };
+    await this.exigirColetaNaCidade(c, input.coletaAlternativa);
+    await this.exigirLimiteDeAbertas(c.id);
 
     const trava = `${c.id}:${input.chave}`;
     if (this.emAndamento.has(trava)) {
@@ -617,25 +648,33 @@ export class ComercioService implements OnModuleInit {
     const padrao = periodoPadrao();
     const de = periodo?.de ?? padrao.de;
     const ate = periodo?.ate ?? padrao.ate;
+    const filtro = { comercioId, createdAt: { gte: de, lt: ate } };
+    // Auditoria 13/11: o total sai de TODAS as entregas do periodo (so o minimo de cada uma).
+    // Antes, o total era somado so sobre as 500 mais recentes e ficava menor sem avisar.
+    const linhas = await this.prisma.comercioPedido.findMany({
+      where: filtro,
+      select: { ride: { select: { status: true, finalFareCents: true, estimatedFareCents: true } } },
+      take: LIMITE_DA_SOMA,
+    });
+    const resumo = somarGastos(linhas.map((p) => p.ride));
     const lista = await this.prisma.comercioPedido.findMany({
-      where: { comercioId, createdAt: { gte: de, lt: ate } },
+      where: { ...filtro, ride: { status: 'COMPLETED' as never } },
       orderBy: { createdAt: 'desc' },
-      take: 500,
+      take: LIMITE_DA_LISTA,
       include: this.include(),
     });
-    const resumo = somarGastos(lista.map((p) => p.ride));
     return {
       periodo: { de: de.toISOString(), ate: ate.toISOString() },
       ...resumo,
-      cobrancas: lista
-        .filter((p) => p.ride.status === 'COMPLETED')
-        .map((p) => ({
-          id: p.ride.id,
-          codigo: p.ride.code,
-          em: (p.ride.finishedAt ?? p.ride.requestedAt).toISOString(),
-          destinatario: p.ride.entrega?.destinatarioNome ?? null,
-          valorCents: valorCobrado(p.ride),
-        })),
+      // true = a lista de cobrancas abaixo mostra so as mais recentes (o total acima continua completo).
+      listaCortada: resumo.realizadas > LIMITE_DA_LISTA,
+      cobrancas: lista.map((p) => ({
+        id: p.ride.id,
+        codigo: p.ride.code,
+        em: (p.ride.finishedAt ?? p.ride.requestedAt).toISOString(),
+        destinatario: p.ride.entrega?.destinatarioNome ?? null,
+        valorCents: valorCobrado(p.ride),
+      })),
     };
   }
 

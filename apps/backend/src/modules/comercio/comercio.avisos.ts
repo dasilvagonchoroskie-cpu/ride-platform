@@ -66,7 +66,10 @@ export function avisoDaEtapa(etapa: Etapa, motorista?: string | null): (TextoDeA
 }
 
 /** A chave de nao-repeticao: o mesmo marco da mesma entrega avisa uma vez so. */
-export const chaveDoAviso = (rideId: string, etapa: Etapa): string => `${rideId}:${etapa}`;
+export const chaveDoAviso = (rideId: string, etapa: Etapa): string => `${rideId}:${marcoDoAviso(etapa)}`;
+
+/** "Coletada" e "a caminho da entrega" sao o mesmo marco para a loja: um aviso so (auditoria 13/11). */
+const marcoDoAviso = (etapa: Etapa): Etapa => (etapa === 'A_CAMINHO_DA_ENTREGA' ? 'COLETADA' : etapa);
 
 const ABERTAS = ['SCHEDULED', 'REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'];
 /** Pedido que acabou ha menos disto ainda e conferido (pega o aviso final). */
