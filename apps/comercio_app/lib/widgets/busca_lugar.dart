@@ -74,8 +74,10 @@ class _BuscaDeLugarState extends State<BuscaDeLugar> {
       if (_erro != null) ...[const SizedBox(height: 10), Faixa(_erro!, tipo: TipoFaixa.erro)],
       if (_achados != null && _achados!.isNotEmpty) ...[
         const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(color: Cores.cartao, borderRadius: BorderRadius.circular(12), border: Border.all(color: Cores.borda)),
+        Material(
+          color: Cores.cartao,
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Cores.borda)),
           child: Column(children: [
             for (final l in _achados!)
               ListTile(
