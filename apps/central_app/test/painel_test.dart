@@ -1704,9 +1704,9 @@ void main() {
   testWidgets('Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem', (tester) async {
     _zerarComercios();
     await _abrir(tester, const ComerciosTela());
+    // Janela alta: a lista e preguicosa e so monta o que cabe na tela.
+    tester.view.physicalSize = const Size(1080, 6000);
     await _carregar(tester);
-    // ignore: avoid_print
-    print('DIAG ${find.byType(Text).evaluate().map((e) => (e.widget as Text).data).join(' | ')}');
     expect(find.text('Pizzaria Boa'), findsWidgets);
     expect(find.text('Padaria Central'), findsOneWidget);
     expect(find.text('Aguardando aprovação'), findsOneWidget);
