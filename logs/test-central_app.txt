@@ -1,6 +1,6 @@
 00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart
 00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Regras do mapa (sem tela) o servidor manda servico, origem, estabelecimento, corrida e SOS
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
@@ -10,34 +10,8 @@
 00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
 00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral legenda explica as cores e os filtros mostram as contagens
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: exactly one matching candidate
-  Actual: _TextWidgetFinder:<Found 0 widgets with text "Transporte de passageiros (1)": []>
-   Which: means none were found but one was expected
-
-When the exception was thrown, this was the stack:
-#4      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:459:7)
-<asynchronous suspension>
-#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided one frame from package:stack_trace)
-
-This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart line 459
-The test description was:
-  legenda explica as cores e os filtros mostram as contagens
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:01 +10 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:01 +10 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral legenda explica as cores e os filtros mostram as contagens [E]
-  Test failed. See exception logs above.
-  The test description was: legenda explica as cores e os filtros mostram as contagens
-  
-00:02 +10 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS
+00:02 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:02 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS
 ══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
 The following StateError was thrown running a test:
 Bad state: No element
@@ -45,13 +19,23 @@ Bad state: No element
 When the exception was thrown, this was the stack:
 #0      Iterable.single (dart:core/iterable.dart:694:25)
 #1      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
-#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
-#3      main.<anonymous closure>.<anonymous closure>.escolher (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:470:22)
-#4      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:475:13)
+#2      WidgetController.dragUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2489:38)
 <asynchronous suspension>
-#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+#3      TestAsyncUtils.guard.<anonymous closure> (package:flutter_test/src/test_async_utils.dart:130:27)
 <asynchronous suspension>
-#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+#4      WidgetController.scrollUntilVisible.<anonymous closure> (package:flutter_test/src/controller.dart:2439:7)
+<asynchronous suspension>
+#5      TestAsyncUtils.guard.<anonymous closure> (package:flutter_test/src/test_async_utils.dart:130:27)
+<asynchronous suspension>
+#6      _mostrarFicha (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:302:3)
+<asynchronous suspension>
+#7      main.<anonymous closure>.<anonymous closure>.escolher (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:495:9)
+<asynchronous suspension>
+#8      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:505:7)
+<asynchronous suspension>
+#9      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#10     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
 <asynchronous suspension>
 <asynchronous suspension>
 (elided one frame from package:stack_trace)
@@ -59,160 +43,53 @@ When the exception was thrown, this was the stack:
 The test description was:
   filtros so mudam o desenho: Comercio, Motos, Livres e SOS
 ════════════════════════════════════════════════════════════════════════════════════════════════════
-00:02 +10 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:02 +10 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS [E]
+00:03 +12 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +12 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS [E]
   Test failed. See exception logs above.
   The test description was: filtros so mudam o desenho: Comercio, Motos, Livres e SOS
   
-00:02 +11 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral detalhe: entrega do Comercio pedida pelo aplicativo
-00:02 +12 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral detalhe: entrega lancada pelo motorista aparece como tal
-00:03 +13 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral detalhe: SOS aparece primeiro e a entrega continua visivel
-00:03 +14 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:03 +15 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:04 +16 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:04 +17 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:04 +17 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
-
-Warning: A call to tap() with finder "Found 1 widget with text "Suspensos": [
-  Text("Suspensos", dependencies: [DefaultSelectionStyle, DefaultTextStyle, MediaQuery]),
-]" derived an Offset (Offset(859.5, 100.0)) that would not hit test on the specified widget.
-Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-Indeed, Offset(859.5, 100.0) is outside the bounds of the root of the render tree, Size(360.0, 780.0).
-The finder corresponds to this RenderBox: RenderParagraph#fc827 relayoutBoundary=up26
-The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#4a42d(_ReusableRenderView#00fe6), HitTestEntry<HitTestTarget>#ea468(<AutomatedTestWidgetsFlutterBinding>))
-#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
-#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
-#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
-#3      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:596:20)
-<asynchronous suspension>
-#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
-<asynchronous suspension>
-To silence this warning, pass "warnIfMissed: false" to "tap()".
-To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
-
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: exactly one matching candidate
-  Actual: _TextContainingWidgetFinder:<Found 0 widgets with text containing Nenhuma moto encontrada:
-[]>
-   Which: means none were found but one was expected
-
-When the exception was thrown, this was the stack:
-#4      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:598:7)
-<asynchronous suspension>
-#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided one frame from package:stack_trace)
-
-This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart line 598
-The test description was:
-  busca e filtro de situacao vao para o servidor
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:05 +17 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:05 +17 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor [E]
-  Test failed. See exception logs above.
-  The test description was: busca e filtro de situacao vao para o servidor
-  
-00:05 +18 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
-00:06 +19 -3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: exactly one matching candidate
-  Actual: _TextContainingWidgetFinder:<Found 0 widgets with text containing não autoriza entregas:
-[]>
-   Which: means none were found but one was expected
-
-When the exception was thrown, this was the stack:
-#4      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:613:7)
-<asynchronous suspension>
-#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided one frame from package:stack_trace)
-
-This was caught by the test expectation on the following line:
-  file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart line 613
-The test description was:
-  detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:06 +19 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
-00:06 +19 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega [E]
-  Test failed. See exception logs above.
-  The test description was: detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
-  
-Warning: At least one test in this suite creates an HttpClient. When running a test suite that uses
-TestWidgetsFlutterBinding, all HTTP requests will return status code 400, and no network request
-will actually be made. Any test expecting a real network connection and status code will fail.
-To test code that needs an HttpClient, provide your own HttpClient implementation to the code under
-test, so that your test can consistently provide a testable response to the code under test.
-00:06 +20 -4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central suspender exige motivo, avisa o servidor e permite reativar
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following StateError was thrown running a test:
-Bad state: No element
-
-When the exception was thrown, this was the stack:
-#0      Iterable.first (dart:core/iterable.dart:663:7)
-#1      _FirstFinderMixin.filter (package:flutter_test/src/finders.dart:1383:28)
-#3      Iterable.single (dart:core/iterable.dart:694:13)
-#4      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
-#5      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
-#6      main.<anonymous closure>.<anonymous closure> (file:///home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart:622:20)
-<asynchronous suspension>
-#7      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
-<asynchronous suspension>
-#8      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
-<asynchronous suspension>
-<asynchronous suspension>
-(elided 2 frames from dart:async-patch and package:stack_trace)
-
-The test description was:
-  suspender exige motivo, avisa o servidor e permite reativar
-════════════════════════════════════════════════════════════════════════════════════════════════════
-00:06 +20 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central suspender exige motivo, avisa o servidor e permite reativar [E]
-  Test failed. See exception logs above.
-  The test description was: suspender exige motivo, avisa o servidor e permite reativar
-  
-00:06 +20 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:07 +21 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:07 +22 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:07 +23 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:07 +24 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:07 +25 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:07 +26 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:08 +27 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:08 +28 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:09 +29 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
-00:09 +30 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:10 +31 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:10 +32 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:10 +33 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:10 +34 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:10 +35 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:11 +36 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:11 +37 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
-00:11 +38 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
-00:11 +39 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
-00:12 +40 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
-00:12 +41 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
-00:12 +42 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
-00:12 +43 -5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
+00:03 +13 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:03 +14 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:04 +15 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:04 +16 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:04 +17 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:05 +18 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:05 +19 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
+00:05 +20 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
+00:05 +21 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
+00:06 +22 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:06 +23 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central suspender exige motivo, avisa o servidor e permite reativar
+00:07 +24 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +25 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +26 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +27 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +28 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +29 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +30 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:08 +31 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:08 +32 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:10 +33 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:10 +34 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:11 +35 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:11 +36 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:11 +37 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:11 +38 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:11 +39 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:11 +40 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:11 +41 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:12 +42 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
+00:12 +43 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
+00:12 +44 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
+00:12 +45 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:12 +46 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
+00:13 +47 -1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
 
 Warning: A call to tap() with finder "Found 1 widget with icon "IconData(U+0E3A7)" (ignoring all but last): [
   Icon(IconData(U+0E3A7), size: 20.0, color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), dependencies: [Directionality, IconTheme]),
-]" derived an Offset (Offset(90.0, 484.6)) that would not hit test on the specified widget.
+]" derived an Offset (Offset(90.0, 492.1)) that would not hit test on the specified widget.
 Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
-The finder corresponds to this RenderBox: RenderSemanticsAnnotations#fa94b relayoutBoundary=up1
-The hit test result at that offset is: HitTestResult(RenderDecoratedBox#d28ba@Offset(74.0, 0.6), RenderConstrainedBox#45a80@Offset(74.0, 0.6), RenderPadding#3fc9f@Offset(74.0, 0.6), RenderPositionedBox#2f883@Offset(74.0, 0.6), RenderConstrainedBox#74d5e@Offset(74.0, 0.6), RenderFlex#aa4e7@Offset(74.0, 420.6), RenderPadding#21fb1@Offset(90.0, 436.6), _RenderSingleChildViewport#0fb30@Offset(90.0, 436.6), RenderIgnorePointer#c234d@Offset(90.0, 436.6), RenderSemanticsAnnotations#51b20@Offset(90.0, 436.6), RenderPointerListener#84549@Offset(90.0, 436.6), RenderSemanticsGestureHandler#a70b5@Offset(90.0, 436.6), RenderPointerListener#e797f@Offset(90.0, 436.6), _RenderScrollSemantics#7fba9@Offset(90.0, 436.6), RenderClipRect#edc66@Offset(90.0, 436.6), RenderPadding#300d4@Offset(90.0, 436.6), RenderPadding#f8204@Offset(90.0, 484.6), RenderStack#c8066@Offset(90.0, 484.6), _RenderInkFeatures#3bfaf@Offset(90.0, 484.6), RenderCustomPaint#1b259@Offset(90.0, 484.6), RenderPhysicalShape#30a48@Offset(90.0, 484.6), RenderConstrainedBox#f9524@Offset(90.0, 484.6), RenderPositionedBox#98885@Offset(90.0, 484.6), RenderPointerListener#5956e@Offset(90.0, 484.6), _RenderBottomSheetLayoutWithSizeListener#a4adc@Offset(90.0, 484.6), RenderClipRect#e75b6@Offset(90.0, 484.6), RenderSemanticsAnnotations#a5c8e@Offset(90.0, 484.6), RenderPadding#e92f9@Offset(90.0, 484.6), RenderSemanticsAnnotations#d230c@Offset(90.0, 484.6), RenderRepaintBoundary#6ce10@Offset(90.0, 484.6), RenderIgnorePointer#218b7@Offset(90.0, 484.6), RenderRepaintBoundary#7ee3c@Offset(90.0, 484.6), RenderSemanticsAnnotations#0b7ef@Offset(90.0, 484.6), RenderOffstage#ad1e0@Offset(90.0, 484.6), RenderSemanticsAnnotations#5deac@Offset(90.0, 484.6), _RenderTheater#b7dad@Offset(90.0, 484.6), RenderAbsorbPointer#22b85@Offset(90.0, 484.6), RenderPointerListener#46014@Offset(90.0, 484.6), RenderSemanticsAnnotations#73c53@Offset(90.0, 484.6), RenderCustomPaint#80565@Offset(90.0, 484.6), RenderSemanticsAnnotations#6d872@Offset(90.0, 484.6), RenderSemanticsAnnotations#e987d@Offset(90.0, 484.6), RenderSemanticsAnnotations#1e073@Offset(90.0, 484.6), RenderTapRegionSurface#2aa5d@Offset(90.0, 484.6), RenderSemanticsAnnotations#57bee@Offset(90.0, 484.6), RenderSemanticsAnnotations#5aca0@Offset(90.0, 484.6), HitTestEntry<HitTestTarget>#c6e8d(_ReusableRenderView#182c8), HitTestEntry<HitTestTarget>#7ebe6(<AutomatedTestWidgetsFlutterBinding>))
+The finder corresponds to this RenderBox: RenderSemanticsAnnotations#2e914 relayoutBoundary=up1
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#55cff(TextSpan(debugLabel: ((englishLike bodyMedium 2021).merge((((whiteMountainView bodyMedium).apply).apply).apply)).merge(unknown), inherit: false, color: Color(alpha: 1.0000, red: 0.9529, green: 0.9608, blue: 0.9804, colorSpace: ColorSpace.sRGB), family: Inter, size: 15.0, weight: 600, letterSpacing: 0.3, baseline: alphabetic, height: 1.4x, leadingDistribution: even, decoration: Color(alpha: 1.0000, red: 0.9529, green: 0.9608, blue: 0.9804, colorSpace: ColorSpace.sRGB) TextDecoration.none, "Corrida AB12CD - Motorista a caminho")), RenderParagraph#0d0fd@Offset(74.0, 7.1), RenderFlex#005dd@Offset(74.0, 428.1), RenderPadding#1e058@Offset(90.0, 444.1), _RenderSingleChildViewport#735af@Offset(90.0, 444.1), RenderIgnorePointer#e848b@Offset(90.0, 444.1), RenderSemanticsAnnotations#3a98b@Offset(90.0, 444.1), RenderPointerListener#34b6b@Offset(90.0, 444.1), RenderSemanticsGestureHandler#84c37@Offset(90.0, 444.1), RenderPointerListener#eb721@Offset(90.0, 444.1), _RenderScrollSemantics#d267b@Offset(90.0, 444.1), RenderClipRect#15f96@Offset(90.0, 444.1), RenderPadding#2c98c@Offset(90.0, 444.1), RenderPadding#b1f9e@Offset(90.0, 492.1), RenderStack#e528b@Offset(90.0, 492.1), _RenderInkFeatures#c0bee@Offset(90.0, 492.1), RenderCustomPaint#494f6@Offset(90.0, 492.1), RenderPhysicalShape#82c79@Offset(90.0, 492.1), RenderConstrainedBox#a4530@Offset(90.0, 492.1), RenderPositionedBox#68839@Offset(90.0, 492.1), RenderPointerListener#8f852@Offset(90.0, 492.1), _RenderBottomSheetLayoutWithSizeListener#ca6c2@Offset(90.0, 492.1), RenderClipRect#d08c0@Offset(90.0, 492.1), RenderSemanticsAnnotations#ae5c6@Offset(90.0, 492.1), RenderPadding#78229@Offset(90.0, 492.1), RenderSemanticsAnnotations#50c22@Offset(90.0, 492.1), RenderRepaintBoundary#e659e@Offset(90.0, 492.1), RenderIgnorePointer#118cc@Offset(90.0, 492.1), RenderRepaintBoundary#a3626@Offset(90.0, 492.1), RenderSemanticsAnnotations#805f5@Offset(90.0, 492.1), RenderOffstage#d565e@Offset(90.0, 492.1), RenderSemanticsAnnotations#95fcd@Offset(90.0, 492.1), _RenderTheater#94b5f@Offset(90.0, 492.1), RenderAbsorbPointer#18b2b@Offset(90.0, 492.1), RenderPointerListener#e28cd@Offset(90.0, 492.1), RenderSemanticsAnnotations#f0652@Offset(90.0, 492.1), RenderCustomPaint#74fe8@Offset(90.0, 492.1), RenderSemanticsAnnotations#c30c8@Offset(90.0, 492.1), RenderSemanticsAnnotations#71e4f@Offset(90.0, 492.1), RenderSemanticsAnnotations#65102@Offset(90.0, 492.1), RenderTapRegionSurface#1b06c@Offset(90.0, 492.1), RenderSemanticsAnnotations#37fd0@Offset(90.0, 492.1), RenderSemanticsAnnotations#7a350@Offset(90.0, 492.1), HitTestEntry<HitTestTarget>#88beb(_ReusableRenderView#01c95), HitTestEntry<HitTestTarget>#d7dbc(<AutomatedTestWidgetsFlutterBinding>))
 #0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
 #1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
 #2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
@@ -248,58 +125,55 @@ This was caught by the test expectation on the following line:
 The test description was:
   Visao Geral: indicadores em cima do mapa e toque no carro
 ════════════════════════════════════════════════════════════════════════════════════════════════════
-00:13 +43 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro [E]
+00:13 +47 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro [E]
   Test failed. See exception logs above.
   The test description was: Visao Geral: indicadores em cima do mapa e toque no carro
   
-00:13 +43 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:14 +44 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:15 +45 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:15 +46 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:16 +47 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
-00:16 +48 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
-00:17 +49 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:18 +50 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
-00:21 +51 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
-00:22 +52 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
-00:22 +53 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
-00:22 +54 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
-00:22 +55 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
-00:22 +56 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
-00:22 +57 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
-00:22 +58 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
-00:22 +59 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
-00:22 +60 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
-00:22 +61 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
-00:22 +62 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
-00:22 +63 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: comercios sem estourar
-00:22 +64 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
-00:22 +65 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
-00:23 +66 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
-00:24 +67 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
-00:24 +68 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
-00:25 +69 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:25 +70 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:25 +71 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
-00:26 +72 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:26 +73 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:27 +74 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem
-00:28 +75 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
-00:29 +76 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
-00:29 +77 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:30 +78 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:30 +79 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:30 +80 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
-00:30 +80 ~1 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
-00:31 +81 ~1 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:31 +82 ~1 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
-00:31 +83 ~1 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
-00:32 +84 ~1 -6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:32 +85 ~1 -6: Some tests failed.
+00:13 +47 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:14 +48 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:15 +49 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
+00:15 +50 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
+00:16 +51 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
+00:16 +52 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
+00:17 +53 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:18 +54 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
+00:21 +55 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
+00:22 +56 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
+00:22 +57 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
+00:22 +58 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
+00:22 +59 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
+00:22 +60 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
+00:22 +61 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
+00:22 +62 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
+00:22 +63 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
+00:22 +64 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
+00:22 +65 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
+00:22 +66 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
+00:22 +67 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: comercios sem estourar
+00:22 +68 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
+00:22 +69 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
+00:22 +70 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
+00:23 +71 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
+00:24 +72 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
+00:24 +73 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
+00:25 +74 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
+00:25 +75 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
+00:25 +76 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+00:26 +77 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:27 +78 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem
+00:28 +79 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
+00:28 +80 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
+00:29 +81 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
+00:29 +82 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
+00:30 +83 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
+00:30 +84 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
+00:30 +84 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
+00:30 +85 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
+00:31 +86 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
+00:31 +87 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+00:31 +88 ~1 -2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
+00:32 +89 ~1 -2: Some tests failed.
 
 Failing tests:
   /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral legenda explica as cores e os filtros mostram as contagens
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
-  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
-  ... and 2 more
+  /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
