@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DriverStatus, Prisma, RideStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { motoristasEmSos, servicoDa, servicosDasCorridas } from '../comercio/comercio.servico';
 
 const ATIVAS: RideStatus[] = [
   RideStatus.SCHEDULED,
@@ -98,6 +99,8 @@ export class ReportsService {
                last_seen_at AS "lastSeenAt"
         FROM driver_locations`,
     ]);
+    const servicos = await servicosDasCorridas(this.prisma, [...emAndamento.map((r) => r.id), ...corridasHoje.map((r) => r.id)]);
+    const emSos = await motoristasEmSos(this.prisma);
     const corridaDo = new Map(emAndamento.map((r) => [r.driverId as string, r]));
     const pos = new Map(posicoes.map((p) => [p.driverId, p]));
     const lista = motoristas.map((m) => {
@@ -120,6 +123,10 @@ export class ReportsService {
         longitude: p ? Number(p.longitude) : null,
         lastSeenAt: p?.lastSeenAt ?? null,
         ride: c ? { id: c.id, code: c.code, status: c.status, passengerName: c.passenger.name } : null,
+        servico: c ? servicoDa(servicos, c.id).servico : null,
+        origemDoServico: c ? servicoDa(servicos, c.id).origem : null,
+        comercio: c ? servicoDa(servicos, c.id).comercio : null,
+        sos: emSos.has(m.id),
       };
     });
     const ordem: Record<SituacaoMotorista, number> = { EM_VIAGEM: 0, NO_EMBARQUE: 1, A_CAMINHO: 2, LIVRE: 3, OFFLINE: 4 };
@@ -150,6 +157,9 @@ export class ReportsService {
         driverId: r.driverId,
         driverName: r.driver?.user.name ?? null,
         driverPlate: r.vehicle?.plate ?? null,
+        servico: servicoDa(servicos, r.id).servico,
+        origemDoServico: servicoDa(servicos, r.id).origem,
+        comercio: servicoDa(servicos, r.id).comercio,
       })),
     };
   }
@@ -174,8 +184,12 @@ export class ReportsService {
           FROM driver_locations WHERE driver_id::text = ANY(${ids})`
       : [];
     const ondeEsta = new Map(posicoes.map((p) => [p.driverId, { latitude: Number(p.latitude), longitude: Number(p.longitude) }]));
+    const servicos = await servicosDasCorridas(this.prisma, corridas.map((c) => c.id));
     return {
       items: corridas.map((c) => ({
+        servico: servicoDa(servicos, c.id).servico,
+        origemDoServico: servicoDa(servicos, c.id).origem,
+        comercio: servicoDa(servicos, c.id).comercio,
         id: c.id,
         code: c.code,
         status: c.status,

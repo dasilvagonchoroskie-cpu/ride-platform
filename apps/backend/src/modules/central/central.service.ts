@@ -14,6 +14,8 @@ import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de
 import { DadosPessoaisService } from './dados-pessoais.service';
 import { PedidosExclusaoService } from './pedidos-exclusao.service';
 import { encerrarComercios } from '../comercio/comercio.conta';
+import { motoristasEmSos, servicoDa, servicosDasCorridas } from '../comercio/comercio.servico';
+import { ehEntrega } from '../entregas/entregas.regras';
 
 /** Conta criada pelo teste automatico (marcada no login com a chave de teste). */
 export const eraTeste = (metadata: unknown): boolean =>
@@ -402,7 +404,10 @@ export class CentralService {
           vehicleId: null,
           acceptedAt: null,
           requestedAt: new Date(),
-          category: motorista.vehicles[0]?.category ?? corrida.category,
+          // Entrega mantem a categoria de ENTREGA: e ela que liga a conferencia do
+          // codigo de entrega e a confirmacao da coleta. Trocar pela do carro
+          // desligaria essas conferencias (12/11/2026).
+          category: ehEntrega(corrida.category) ? corrida.category : (motorista.vehicles[0]?.category ?? corrida.category),
         },
       });
       if (anterior) {
@@ -458,11 +463,15 @@ export class CentralService {
       },
       take: 200,
     });
-    const ocupados = new Set(
-      (
-        await this.prisma.ride.findMany({ where: { status: { in: EM_ANDAMENTO } }, select: { driverId: true } })
-      ).map((r) => r.driverId),
-    );
+    const emCorrida = await this.prisma.ride.findMany({
+      where: { status: { in: EM_ANDAMENTO } },
+      select: { id: true, code: true, status: true, driverId: true },
+    });
+    const ocupados = new Set(emCorrida.map((r) => r.driverId));
+    const corridaDo = new Map(emCorrida.filter((r) => r.driverId).map((r) => [r.driverId as string, r]));
+    // Tipo de servico vem do banco (pedido do Comercio ligado a corrida), nunca da descricao.
+    const servicos = await servicosDasCorridas(this.prisma, emCorrida.map((r) => r.id));
+    const emSos = await motoristasEmSos(this.prisma);
     const posicoes = await this.prisma.$queryRaw<
       Array<{ driverId: string; latitude: number; longitude: number; lastSeenAt: Date | null }>
     >`
@@ -488,9 +497,26 @@ export class CentralService {
           rating: Number(m.ratingAvg),
           online: m.isOnline,
           lastSeenAt: p?.lastSeenAt ?? null,
+          ...this.servicoDoMotorista(corridaDo.get(m.id), servicos),
+          sos: emSos.has(m.id),
         };
       })
       .sort((a, b) => Number(b.online) - Number(a.online) || (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+  }
+
+  /** O que o motorista esta fazendo agora: passageiro ou entrega (Comercio), com a corrida e a loja. */
+  private servicoDoMotorista(
+    corrida: { id: string; code: string; status: string } | undefined,
+    servicos: Awaited<ReturnType<typeof servicosDasCorridas>>,
+  ) {
+    if (!corrida) return { servico: null, origemDoServico: null, comercio: null, corrida: null };
+    const s = servicoDa(servicos, corrida.id);
+    return {
+      servico: s.servico,
+      origemDoServico: s.origem,
+      comercio: s.comercio,
+      corrida: { id: corrida.id, code: corrida.code, status: corrida.status },
+    };
   }
 
   // ================= Motoristas =================
