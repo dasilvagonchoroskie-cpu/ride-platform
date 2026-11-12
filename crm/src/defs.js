@@ -231,8 +231,56 @@ const ENTITIES = {
   }
 };
 
+// Etapa 2 (M2): entregadores e motociclistas. Só existe com a Etapa 2 ligada (a tabela vem da migração 003).
+// Mesmo fluxo do motorista (interessado → cadastro → análise → aprovado → contratado), com a modalidade de atuação.
+const MODALIDADES_ENTREGA = ['Entregador de moto', 'Motociclista (mototáxi)', 'Entregador de bicicleta', 'Entregador de carro', 'Outra'];
+const STATUS_ENTREGADOR = STATUS_MOTORISTA;
+if (process.env.FM_ETAPA2 === '1') {
+  ENTITIES.entregadores = {
+    table: 'entregadores',
+    label: 'Entregadores',
+    singular: 'Entregador',
+    icon: 'send',
+    dateField: 'data_primeiro_contato',
+    dateFieldLabel: 'primeiro contato',
+    orderField: 'data_acompanhamento',
+    orderDir: 'asc',
+    searchFields: ['nome', 'telefone', 'cidade', 'origem', 'placa', 'veiculo', 'modalidade', 'proxima_acao', 'observacoes'],
+    statusField: 'situacao',
+    statuses: STATUS_ENTREGADOR,
+    fechados: ['Contratado'],
+    perdidos: ['Não prosseguiu'],
+    interactions: true,
+    columns: ['nome', 'modalidade', 'cidade', 'situacao', 'documentos', 'data_acompanhamento'],
+    fields: [
+      { key: 'nome', label: 'Nome completo', type: 'text', required: true, max: 120, full: true },
+      { key: 'telefone', label: 'Telefone', type: 'tel', required: true, max: 25 },
+      { key: 'cidade', label: 'Cidade', type: 'text', required: true, max: 80 },
+      { key: 'data_primeiro_contato', label: 'Data do primeiro contato', type: 'date', required: true },
+      { key: 'origem', label: 'Origem do contato', type: 'select', required: true, options: ORIGENS },
+      { key: 'situacao', label: 'Situação', type: 'select', required: true, options: STATUS_ENTREGADOR },
+      { key: 'modalidade', label: 'Modalidade de atuação', type: 'select', options: MODALIDADES_ENTREGA },
+      { key: 'veiculo', label: 'Veículo (modelo, cor, ano)', type: 'text', max: 120 },
+      { key: 'placa', label: 'Placa', type: 'text', max: 10 },
+      { key: 'cnh_categoria', label: 'Categoria da CNH', type: 'select', options: ['A', 'B', 'AB', 'C', 'D', 'E', 'AC', 'AD', 'AE'] },
+      { key: 'documentos', label: 'Documentos', type: 'select', options: ['Não enviados', 'Incompletos', 'Recebidos — conferir', 'Conferidos'] },
+      { key: 'doc_cnh', label: 'CNH', type: 'select', options: STATUS_DOC },
+      { key: 'doc_crlv', label: 'Documento do veículo (CRLV)', type: 'select', options: STATUS_DOC },
+      { key: 'doc_endereco', label: 'Comprovante de endereço', type: 'select', options: STATUS_DOC },
+      { key: 'endereco', label: 'Endereço', type: 'text', max: 200, full: true },
+      { key: 'contratado_em', label: 'Contratado em', type: 'date' },
+      { key: 'proxima_acao', label: 'Próxima ação', type: 'text', max: 160 },
+      { key: 'data_acompanhamento', label: 'Data do acompanhamento', type: 'date' },
+      { key: 'observacoes', label: 'Observações', type: 'textarea', max: 2000, full: true }
+    ]
+  };
+  // Tarefas podem apontar para um entregador.
+  ENTITIES.tarefas.fields.find((f) => f.key === 'entidade_tipo').options.push('entregadores');
+}
+
 module.exports = {
   ENTITIES,
+  MODALIDADES_ENTREGA,
   ORIGENS,
   CANAIS,
   PRIORIDADES,

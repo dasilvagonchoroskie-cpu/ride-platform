@@ -47,6 +47,19 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## M2 entregadores e relatórios em PDF (12/11/2026, ramo `etapa2`, pedido do dono)
+- `entregadores`: módulo funcional como o motorista (mesmas situações, `Contratado` verde, documentos, `modalidade`), só existe em
+  `ENTITIES` com `FM_ETAPA2=1` (migração 003). Mesma pessoa pode ser motorista e entregador. `POST /entregadores/:id/contratar`.
+  A IA não cria entregadores e não marca os documentos deles (só motorista).
+- PDF: `src/pdf/documento.js` (escritor de PDF sem dependência, Helvetica/AFM, PNG com transparência), `src/pdf/relatorio.js`
+  (layout padrão: identidade, filtros, indicadores, tabelas com totais, aviso de lista vazia, rodapé LGPD) e `src/relatorios-pdf.js`
+  (modelos por setor). Rota `GET /reports/pdf` (antes de `/:entity`); filtros iguais aos da lista via `entities.montarFiltro`.
+- Permissão: `policy.canExportPdf` (admin tudo; gestor só tarefas/campanhas/resumo/financeiro/cenario). CSV segue só admin. Toda
+  exportação é auditada. Novo relatório = novo modelo em `relatorios-pdf.js` + permissão em `policy.js` + teste em `test/m2-pdf.test.js`.
+- Front: `public/js/exportar.js` (`abrirExportacao`: baixar, abrir/imprimir em nova aba, compartilhar, CSV). Sem iframe (CSP).
+  Cache do app `fm-crm-v21` (etapa2).
+- "Simulação incompleta" = `custos_total` não maior que zero (mesma regra da tela do financeiro).
+
 ## Ficha do motorista e "fechados" em verde (10/11/2026, pedido do dono)
 - Motorista: situação nova `Contratado` (fechado), documentos por item `doc_cnh`/`doc_crlv`/`doc_endereco` (Não enviado /
   Recebido — conferir / Conferido) + resumo `documentos` (Não enviados / Incompletos / Recebidos — conferir / Conferidos),

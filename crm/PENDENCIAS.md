@@ -35,7 +35,12 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       - [x] M1 (parte do banco) pessoas, empresas, vínculos e CPF/CNPJ protegidos (11/11, testado com dados fictícios).
       - [x] M1 (telas) ficha central da pessoa, "adicionar função", aviso de telefone repetido e junção de duplicados
             (só admin) — 11/11, no ambiente de desenvolvimento com dados fictícios (testes automáticos + navegador).
-      - [ ] Próximos (aguardando conferência do dono): M2 entregadores/motociclistas · M3 comércios · M4 documentos e
+      - [x] M2 entregadores e motociclistas (12/11, ramo etapa2, dados fictícios): módulo próprio com a mesma pessoa podendo ser
+            motorista e entregador, situação independente, "Contratado" em verde, documentos, modalidade, dashboard, relatórios,
+            WhatsApp. Limitação: a IA ainda não marca os documentos do entregador (só do motorista); marcar manualmente na ficha.
+      - [x] Relatórios em PDF em todos os setores, com CSV complementar (12/11, ramo etapa2): ver README "Relatórios em PDF".
+            Ainda sem PDF: Conversas, Pessoas, Empresas e ficha individual (Etapa 3); Dashboard (o "Relatório geral" cobre o período).
+      - [ ] Próximos (aguardando conferência do dono): M3 comércios · M4 documentos e
             armazenamento seguro (sem documentos reais). Depois: IA/WhatsApp ligados à pessoa (hoje o cadastro criado
             pela IA ainda não ganha pessoa).
       - [x] Ficha central da EMPRESA (parceiro do Clube; comércio entra no M3) e preservação dos históricos antigos
@@ -43,7 +48,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
             nenhum) — 11/11, desenvolvimento, dados fictícios.
       - [ ] Política de retenção e descarte por tipo de dado (decisão da empresa; não usar prazo fixo sem avaliar).
       - [ ] **Migração dos dados reais e deploy da Etapa 2: só depois do teste das notificações + autorização.**
-- [ ] Etapa 3 — PDF de cada fichário concluído (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
+- [ ] Etapa 3 — PDF de cada fichário concluído (o gerador central de PDF já existe desde 12/11) (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
       usuário autorizado, com nova versão sem apagar o histórico.
 - [ ] Etapa 4 — status reais e independentes para entregadores, parceiros e comércios (verde só para concluído).
 

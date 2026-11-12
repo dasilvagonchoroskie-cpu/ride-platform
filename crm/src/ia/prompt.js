@@ -15,6 +15,7 @@ const MOTIVOS_TRANSF = Object.keys(C.MOTIVOS_TRANSFERENCIA);
 // Campos que a IA pode preencher em cada cadastro (nada de situação, datas, valores ou telefone).
 const CAMPOS_IA = {
   motoristas: ['nome', 'cidade', 'endereco', 'veiculo', 'placa', 'cnh_categoria', 'proxima_acao', 'observacoes'],
+  entregadores: ['nome', 'cidade', 'endereco', 'modalidade', 'veiculo', 'placa', 'cnh_categoria', 'proxima_acao', 'observacoes'],
   passageiros: ['nome', 'cidade', 'proxima_acao', 'observacoes'],
   parceiros: ['nome_estabelecimento', 'categoria', 'responsavel', 'cidade', 'beneficio', 'proxima_acao', 'observacoes']
 };
@@ -161,7 +162,8 @@ function camposPorPerfil() {
 }
 
 // Todas as chaves que a IA pode devolver quando ainda não há cadastro (o cadastro criado usa só as do seu tipo).
-const CHAVES_SEM_CADASTRO = [...new Set(Object.values(CAMPOS_IA).flat().concat(['nome']))];
+// Sem cadastro vinculado a IA só conhece os três perfis que ela sabe criar (entregador é ligado à mão, na ficha).
+const CHAVES_SEM_CADASTRO = [...new Set([CAMPOS_IA.motoristas, CAMPOS_IA.passageiros, CAMPOS_IA.parceiros].flat().concat(['nome']))];
 
 function montarPrompt({ contato, vinculo, tipoAlvo, camposEspec, mensagens }) {
   const contexto = {

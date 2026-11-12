@@ -105,6 +105,8 @@ Execute `npm test` para rodar os testes automatizados incluídos (CSV, limitador
 | Excluir tarefas | sim | sim |
 | Excluir cenários e simulações financeiras | sim | não |
 | Exportar CSV (dados pessoais) | sim | não |
+| Exportar PDF de listas de pessoas (motoristas, entregadores, passageiros, parceiros, atendimentos) | sim | não |
+| Exportar PDF de tarefas, campanhas, relatório geral e planejamento financeiro | sim | sim |
 | Usuários, dados da organização, trilha de auditoria e atividade recente | sim | não |
 | Alterar a própria senha e ver/encerrar as próprias sessões (tela Configurações) | sim | sim |
 | Ver e responder conversas de WhatsApp, vincular a cadastro, criar tarefa a partir da conversa | sim | sim |
@@ -152,7 +154,7 @@ test/                  testes automatizados (+ offline-harness/)
 ## Limitações desta versão
 - Sem envio automático de mensagens, cobranças ou integração com os aplicativos operacionais.
 - Recuperação de senha exige acesso ao servidor (não há e-mail configurado).
-- PDF é gerado pela impressão do navegador; CSV é exportado pelo servidor.
+- PDF e CSV são gerados pelo servidor (ver "Relatórios em PDF"). A tela "Relatórios" ainda tem "Imprimir tela" (impressão do navegador).
 - Não há envio de notificações push.
 
 ## WhatsApp: conversas dentro do CRM
@@ -203,6 +205,21 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Também com `FM_ETAPA2=1`: menu **Empresas** (mesma ficha central para parceiros do Clube; rotas `/api/empresas*`). As
   fichas centrais mostram os históricos originais de cada função (acompanhamentos, tarefas, WhatsApp e, para o
   administrador, auditoria), sem copiar nem substituir nada.
+
+## Relatórios em PDF (12/11/2026, ramo `etapa2`)
+- PDF é o formato principal de exportação; o CSV continua como alternativa (só administrador). Gerador central **sem dependência
+  nova** (`src/pdf/`: escritor de PDF próprio, A4, Helvetica, logotipo da Fortaleza Move, rodapé "Página X de N") e modelos por setor
+  em `src/relatorios-pdf.js`.
+- `GET /api/reports/pdf?type=<motoristas|entregadores|passageiros|parceiros|atendimentos|campanhas|tarefas|resumo|financeiro|cenario>`
+  com os MESMOS filtros da lista (`q`, `f_<campo>`, `etapa`, `de`, `ate`; `id` para `cenario`). Cabeçalho `X-Linhas` = nº de registros
+  (só nas listas). Sem registros o PDF sai assim mesmo, dizendo "Nenhum registro encontrado para os filtros aplicados." Máx. 5.000 linhas.
+- CSV: `GET /api/reports/export?type=…` (por período) ou `&modo=lista` (filtros da lista; sem período, todo o histórico).
+- Permissões (decididas no servidor; `meta.can.exportar_pdf` só orienta os botões): administrador exporta tudo; gestor só tarefas,
+  campanhas, resumo, financeiro e cenário (listas de pessoas têm dados pessoais: LGPD). Toda exportação é auditada ("Exportação PDF/CSV"),
+  sem gravar dados pessoais.
+- Tela: botão **Exportar** nas listas, em Relatórios (por cartão e "Relatório geral (PDF)") e em Financeiro. Abre uma janela com
+  **Baixar PDF**, **Abrir para imprimir** (nova aba, por causa da CSP), **Compartilhar** (Web Share, quando o aparelho permite) e, para o
+  administrador, **Baixar CSV**.
 
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados

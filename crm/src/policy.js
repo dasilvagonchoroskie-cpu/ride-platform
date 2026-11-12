@@ -29,9 +29,19 @@ function canDelete(role, entityKey) {
   return role === 'admin' || GESTOR_DELETABLE.has(entityKey);
 }
 
+// Exportação em PDF/CSV. Listas de PESSOAS (motoristas, entregadores, passageiros, parceiros, atendimentos) trazem dado
+// pessoal: só o administrador. Os demais setores (tarefas, marketing, financeiro, resumo do período) não listam dados
+// pessoais de terceiros e o gestor também pode exportar em PDF. O CSV continua só do administrador, em todos.
+const EXPORTA_GESTOR_PDF = new Set(['tarefas', 'campanhas', 'resumo', 'financeiro', 'cenario']);
+
+function canExportPdf(role, tipo) {
+  return role === 'admin' || EXPORTA_GESTOR_PDF.has(tipo);
+}
+
 function permissionsFor(role, entityKeys) {
   return {
     exportar: role === 'admin',
+    exportar_pdf: [...EXPORTA_GESTOR_PDF, ...entityKeys].filter((t, i, a) => a.indexOf(t) === i && canExportPdf(role, t)),
     excluir_financeiro: role === 'admin',
     ver_atividade: role === 'admin',
     excluir: entityKeys.filter((k) => canDelete(role, k))
@@ -39,5 +49,5 @@ function permissionsFor(role, entityKeys) {
 }
 
 module.exports = {
-  canDelete,
+  canDelete, canExportPdf,
   permissionsFor, ROLES, DEFAULT_ROLE, parseRole, parseTrustProxy };

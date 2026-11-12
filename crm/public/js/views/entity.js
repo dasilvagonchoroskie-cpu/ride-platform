@@ -1,10 +1,13 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
+import { abrirExportacao, botaoExportar, podeExportar } from '../exportar.js';
 
 export async function renderEntity(view, state, key, params) {
   // O servidor valida de novo: esconder o botão é só conveniência.
   const podeExcluir = ((state.meta.can && state.meta.can.excluir) || []).includes(key);
   const def = state.meta.entities[key];
+  // Motorista e entregador/motociclista têm a mesma ficha: documentos (CNH, CRLV, endereço) e "contratado".
+  const ehCondutor = key === 'motoristas' || key === 'entregadores';
   const hasCategoria = def.fields.some((f) => f.key === 'categoria');
   let vista = params.get('vista') || 'lista';
   if (!def.views.includes(vista)) vista = 'lista';
@@ -12,7 +15,7 @@ export async function renderEntity(view, state, key, params) {
   const fechados = def.fechados || [];
   const filtros = { q: '', situacao: '', categoria: '', page: 1, etapa: fechados.length ? 'andamento' : '' };
   const ehFechado = (row) => fechados.includes(row[def.statusField]);
-  const ROTULO_FECHADO = { motoristas: 'Contratados', parceiros: 'Parcerias fechadas', passageiros: 'Cadastrados' }[key] || 'Fechados';
+  const ROTULO_FECHADO = { motoristas: 'Contratados', entregadores: 'Contratados', parceiros: 'Parcerias fechadas', passageiros: 'Cadastrados' }[key] || 'Fechados';
   let listSeq = 0; // descarta respostas antigas (a busca dispara várias requisições; a mais lenta não pode vencer a mais nova)
   let calRef = null;
   let calMes = ui.todayISO().slice(0, 7);
@@ -21,7 +24,7 @@ export async function renderEntity(view, state, key, params) {
     <div class="page-head">
       <div>
         <div class="eyebrow">${ui.esc(def.label)}</div>
-        <h2>${ui.esc(def.singular)}s</h2>
+        <h2>${ui.esc(key === 'entregadores' ? 'Entregadores' : `${def.singular}s`)}</h2>
         <p class="sub" id="ent-count">Carregando registros…</p>
       </div>
       <div class="page-actions">
@@ -30,6 +33,7 @@ export async function renderEntity(view, state, key, params) {
           <button class="btn btn-sm ${vista === 'kanban' ? 'btn-primary' : ''}" data-vista="kanban" style="${vista === 'kanban' ? '' : 'background:transparent;color:#5b6b82'}">${ui.icon('board', 15)} Kanban</button>
           <button class="btn btn-sm ${vista === 'calendario' ? 'btn-primary' : ''}" data-vista="calendario" style="${vista === 'calendario' ? '' : 'background:transparent;color:#5b6b82'}">${ui.icon('calendar', 15)} Calendário</button>
         </div>` : ''}
+        ${podeExportar(state, key) ? botaoExportar() : ''}
         <button class="btn btn-primary" id="btn-new">${ui.icon('plus', 16)} Novo ${def.singular.toLowerCase()}</button>
       </div>
     </div>
@@ -172,14 +176,14 @@ export async function renderEntity(view, state, key, params) {
     let banner = '';
     if (fechados.includes(status)) {
       const quando = item.contratado_em || item.confirmado_em;
-      banner = `<div class="ficha-banner fechado">✅ ${ui.esc(status)}${quando ? ` em ${ui.fmtDate(quando)}` : ''}${key === 'motoristas' ? ' — motorista trabalhando' : key === 'parceiros' ? ' — parceria fechada' : ''}</div>`;
-    } else if (key === 'motoristas' && status === 'Aprovado') {
+      banner = `<div class="ficha-banner fechado">✅ ${ui.esc(status)}${quando ? ` em ${ui.fmtDate(quando)}` : ''}${key === 'motoristas' ? ' — motorista trabalhando' : key === 'entregadores' ? ' — entregador trabalhando' : key === 'parceiros' ? ' — parceria fechada' : ''}</div>`;
+    } else if (ehCondutor && status === 'Aprovado') {
       banner = '<div class="ficha-banner quase">Cadastro aprovado. Falta marcar como contratado quando ele começar a trabalhar.</div>';
     } else if (!(def.perdidos || []).includes(status)) {
       banner = `<div class="ficha-banner andamento">Em andamento: ${ui.esc(status || '—')}</div>`;
     }
     let docs = '';
-    if (key === 'motoristas' && ficha.documentos) {
+    if (ehCondutor && ficha.documentos) {
       docs = `<div class="section-title">Documentos</div><div class="ficha-docs">${DOCS.map(([tipo, campo, nome]) => {
         const rec = ficha.documentos[tipo];
         const st = item[campo] || (rec ? 'Recebido — conferir' : 'Não enviado');
@@ -203,7 +207,7 @@ export async function renderEntity(view, state, key, params) {
       data = await api.get(`/${key}/${id}`);
     } catch (err) { ui.toast(err.message, 'error'); return; }
     const item = data.item;
-    const ocultos = key === 'motoristas' ? DOCS.map((d) => d[1]) : [];
+    const ocultos = ehCondutor ? DOCS.map((d) => d[1]) : [];
     const fields = def.fields
       .filter((f) => !(f.type === 'relation' && !item[f.key]) && !ocultos.includes(f.key))
       .map((f) => `<div class="detail-item ${f.full ? 'full' : ''}"><dt>${ui.esc(f.label)}</dt><dd>${detailValue(f, item)}</dd></div>`)
@@ -218,7 +222,7 @@ export async function renderEntity(view, state, key, params) {
       : '';
 
     const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
-    const podeContratar = key === 'motoristas' && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
+    const podeContratar = ehCondutor && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
     const ficha = (data.titular
       ? (data.titular.tipo === 'pessoa'
         ? `<div class="ficha-acoes"><a class="btn btn-sm btn-soft" href="#/pessoas?id=${Number(data.titular.id)}">${ui.icon('users', 15)} Ficha central da pessoa (todas as funções)</a></div>`
@@ -226,7 +230,7 @@ export async function renderEntity(view, state, key, params) {
       + fichaHtml(item, data.ficha);
 
     const m = ui.modal({
-      title: `${key === 'motoristas' ? 'Ficha do motorista' : def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
+      title: `${key === 'motoristas' ? 'Ficha do motorista' : key === 'entregadores' ? 'Ficha do entregador' : def.singular} · ${item[def.columns[0]] || `#${item.id}`}`,
       subtitle: `Registro #${item.id}${item.created_at ? ` · criado em ${ui.fmtDate(item.created_at)}` : ''}`,
       size: 'wide',
       body: `${ficha}<dl class="detail-list">${fields}</dl>
@@ -248,7 +252,7 @@ export async function renderEntity(view, state, key, params) {
       const vals = DOCS.map((d) => estado[d[1]] || (data.ficha && data.ficha.documentos && data.ficha.documentos[d[0]] ? 'Recebido — conferir' : 'Não enviado'));
       const geral = vals.every((v) => v === 'Conferido') ? 'Conferidos' : vals.every((v) => v !== 'Não enviado') ? 'Recebidos — conferir' : vals.some((v) => v !== 'Não enviado') ? 'Incompletos' : 'Não enviados';
       try {
-        await api.patch(`/motoristas/${item.id}`, { [campo]: 'Conferido', documentos: geral });
+        await api.patch(`/${key}/${item.id}`, { [campo]: 'Conferido', documentos: geral });
         ui.toast('Documento marcado como conferido.', 'success');
         m.close();
         openDetail(item.id);
@@ -261,12 +265,12 @@ export async function renderEntity(view, state, key, params) {
         title: 'Marcar como contratado',
         message: `“${item.nome}” passa para “Contratado” (já trabalhando) e fica em verde, separado dos cadastros em andamento. A data fica registrada.`,
         confirmLabel: 'Marcar como contratado',
-        requireCheck: 'Confirmo que este motorista foi contratado.'
+        requireCheck: key === 'entregadores' ? 'Confirmo que este entregador foi contratado.' : 'Confirmo que este motorista foi contratado.'
       });
       if (!ok) return;
       try {
-        await api.post(`/motoristas/${item.id}/contratar`, { confirmo: true });
-        ui.toast('Motorista marcado como contratado.', 'success');
+        await api.post(`/${key}/${item.id}/contratar`, { confirmo: true });
+        ui.toast(key === 'entregadores' ? 'Entregador marcado como contratado.' : 'Motorista marcado como contratado.', 'success');
         m.close();
         loadList();
       } catch (err) { ui.toast(err.message, 'error'); }
@@ -331,7 +335,7 @@ export async function renderEntity(view, state, key, params) {
       try {
         if (isNew) {
           // Etapa 2: antes de criar, avisa se o telefone já pertence a alguém. Nunca associa sozinho: o usuário escolhe.
-          const titular = { motoristas: 'pessoa', passageiros: 'pessoa', parceiros: 'empresa' }[key];
+          const titular = { motoristas: 'pessoa', entregadores: 'pessoa', passageiros: 'pessoa', parceiros: 'empresa' }[key];
           if (state.meta.etapa2 && titular && payload.telefone) {
             const v = await api.post(titular === 'pessoa' ? '/pessoas/verificar-telefone' : '/empresas/verificar-telefone', { telefone: payload.telefone });
             if (v.possiveis.length) {
@@ -566,6 +570,22 @@ export async function renderEntity(view, state, key, params) {
   }
 
   /* ------------------------------ eventos ----------------------------- */
+  // Exportar: PDF (principal) e CSV (complementar) com os MESMOS filtros da lista que está na tela.
+  const btnExp = view.querySelector('[data-exportar]');
+  if (btnExp) btnExp.addEventListener('click', () => {
+    const p = new URLSearchParams();
+    if (filtros.q) p.set('q', filtros.q);
+    if (filtros.situacao) p.set('f_situacao', filtros.situacao);
+    if (filtros.categoria) p.set('f_categoria', filtros.categoria);
+    if (filtros.etapa) p.set('etapa', filtros.etapa);
+    const f = p.toString();
+    abrirExportacao(state, {
+      titulo: `Exportar ${def.label.toLowerCase()}`, tipo: key,
+      pdf: `type=${key}${f ? `&${f}` : ''}`,
+      csv: `type=${key}&modo=lista${f ? `&${f}` : ''}`, csvNome: `${key}.csv`
+    });
+  });
+
   view.querySelector('#btn-new').addEventListener('click', () => {
     if (vista === 'calendario') params.set('data', ui.todayISO());
     openForm(null);

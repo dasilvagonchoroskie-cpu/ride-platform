@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
+import { abrirExportacao, podeExportar, podePdf } from '../exportar.js';
 
 const MODULOS = [
   { key: 'motoristas', label: 'Motoristas', icon: 'steering' },
@@ -20,10 +21,10 @@ function mini(label, value) {
 }
 
 export async function renderReports(view, state) {
-  // Exportação em massa de dados pessoais é restrita a administradores (validado também no servidor).
-  const podeExportar = !!(state.meta.can && state.meta.can.exportar);
-  const exportBtn = (tipo) => podeExportar
-    ? `<button class="btn btn-sm btn-ghost no-print" data-export="${tipo}">${ui.icon('download', 14)} CSV</button>`
+  // PDF é o formato principal e o CSV é complementar; as permissões são validadas também no servidor.
+  // `tipo` = módulo do CSV; `pdfTipo` = modelo do PDF (as simulações saem no modelo "financeiro").
+  const exportBtn = (tipo, pdfTipo = tipo) => podeExportar(state, pdfTipo) || podeExportar(state, tipo)
+    ? `<button class="btn btn-sm btn-ghost no-print" data-export="${tipo}" data-pdf="${pdfTipo}">${ui.icon('download', 14)} Exportar</button>`
     : '';
   const hoje = ui.todayISO();
   let de = `${hoje.slice(0, 7)}-01`;
@@ -34,10 +35,11 @@ export async function renderReports(view, state) {
       <div>
         <div class="eyebrow">Relatórios</div>
         <h2>Histórico e resultados</h2>
-        <p class="sub">Filtre por período, consulte os totais e exporte em CSV</p>
+        <p class="sub">Filtre por período, consulte os totais e exporte em PDF (ou CSV)</p>
       </div>
       <div class="page-actions no-print">
-        <button class="btn btn-ghost" id="rep-print">${ui.icon('print', 16)} Imprimir / PDF</button>
+        ${podePdf(state, 'resumo') ? `<button class="btn btn-primary" id="rep-pdf">${ui.icon('download', 16)} Relatório geral (PDF)</button>` : ''}
+        <button class="btn btn-ghost" id="rep-print">${ui.icon('print', 16)} Imprimir tela</button>
       </div>
     </div>
 
@@ -106,6 +108,16 @@ export async function renderReports(view, state) {
         </div>
       </div>
 
+      ${s.entregadores ? `<div class="report-section">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Entregadores e motociclistas por situação</h3><p class="sub">${ui.fmtInt(s.entregadores.total)} cadastros no período</p></div>
+            ${exportBtn('entregadores')}
+          </div>
+          <div class="card-body">${breakdown(s.entregadores.por_situacao)}</div>
+        </div>
+      </div>` : ''}
+
       <div class="grid-2 report-section">
         <div class="card">
           <div class="card-head">
@@ -153,7 +165,7 @@ export async function renderReports(view, state) {
         <div class="card">
           <div class="card-head">
             <div><h3>Simulações financeiras registradas</h3><p class="sub">${ui.fmtInt(s.simulacoes.total)} simulações · receita estimada somada ${ui.fmtMoney(s.simulacoes.receita_total)}</p></div>
-            ${exportBtn('simulacoes')}
+            ${exportBtn('simulacoes', 'financeiro')}
           </div>
           <div class="card-body" style="padding-top:8px">
             ${s.simulacoes.items.length ? ui.tableHtml({
@@ -174,11 +186,14 @@ export async function renderReports(view, state) {
 
       <p class="small muted no-print">Os relatórios consideram a data de cadastro/contato de cada módulo dentro do período selecionado. Registros fora do período não entram nos totais.</p>`;
 
-    body.querySelectorAll('[data-export]').forEach((btn) => btn.addEventListener('click', async () => {
-      try {
-        await api.download(`/reports/export?type=${btn.dataset.export}&de=${de}&ate=${ate}`, `${btn.dataset.export}_${de}_${ate}.csv`);
-        ui.toast('Arquivo CSV gerado.', 'success');
-      } catch (err) { ui.toast(err.message, 'error'); }
+    body.querySelectorAll('[data-export]').forEach((btn) => btn.addEventListener('click', () => {
+      const tipo = btn.dataset.export;
+      const pdfTipo = btn.dataset.pdf;
+      abrirExportacao(state, {
+        titulo: `Exportar — ${btn.closest('.card').querySelector('h3').textContent}`, tipo: pdfTipo,
+        pdf: `type=${pdfTipo}&de=${de}&ate=${ate}`,
+        csv: `type=${tipo}&de=${de}&ate=${ate}`, csvNome: `${tipo}_${de}_${ate}.csv`
+      });
     }));
   }
 
@@ -198,6 +213,8 @@ export async function renderReports(view, state) {
     load();
   }));
   view.querySelector('#rep-print').addEventListener('click', () => window.print());
+  const repPdf = view.querySelector('#rep-pdf');
+  if (repPdf) repPdf.addEventListener('click', () => abrirExportacao(state, { titulo: 'Relatório geral do período', tipo: 'resumo', pdf: `type=resumo&de=${de}&ate=${ate}` }));
 
   await load();
 }

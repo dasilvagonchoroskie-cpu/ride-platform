@@ -20,6 +20,7 @@ const correio = require('./email');
 const { createNotificacoes } = require('./notificacoes');
 const { documentosRecebidos } = require('./ia/documentos');
 const { gerarCodigoRecuperacao } = require('./reset');
+const hasOwn = (obj, chave) => Object.prototype.hasOwnProperty.call(obj, chave);
 // Rota assíncrona: erro vira resposta 500 do Express (sem rejeição solta que derrubaria o processo).
 const seguro = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -634,6 +635,7 @@ router.get('/meta', (req, res) => {
     parceiros: db.prepare("SELECT COUNT(*) c FROM parceiros WHERE situacao NOT IN ('Parceria confirmada','Não concretizada')").get().c,
     wa: wa.store.contarNaoLidas()
   };
+  if (hasOwn(ENTITIES, 'entregadores')) pendentes.entregadores = db.prepare("SELECT COUNT(*) c FROM entregadores WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c;
 
   res.json({
     user: req.user,
@@ -700,6 +702,15 @@ router.get('/dashboard', (req, res) => {
     ),
     tarefas_atrasadas: n("SELECT COUNT(*) c FROM tarefas WHERE situacao IN ('Pendente','Em andamento') AND data_vencimento < ?", hoje)
   };
+  // Etapa 2 (M2): entregadores e motociclistas, no mesmo critério do motorista (cada um conta em UMA etapa).
+  if (hasOwn(ENTITIES, 'entregadores')) {
+    kpis.entregadores_total = n('SELECT COUNT(*) c FROM entregadores');
+    kpis.entregadores_interessados = n("SELECT COUNT(*) c FROM entregadores WHERE situacao = 'Novo interessado'");
+    kpis.entregadores_em_processo = n("SELECT COUNT(*) c FROM entregadores WHERE situacao IN ('Primeiro contato realizado','Aguardando retorno','Cadastro em andamento','Cadastro em análise')");
+    kpis.entregadores_aprovados = n("SELECT COUNT(*) c FROM entregadores WHERE situacao = 'Aprovado'");
+    kpis.entregadores_contratados = n("SELECT COUNT(*) c FROM entregadores WHERE situacao = 'Contratado'");
+    kpis.entregadores_docs_a_conferir = n("SELECT COUNT(*) c FROM entregadores WHERE situacao IN ('Aprovado','Contratado') AND COALESCE(documentos,'') <> 'Conferidos'");
+  }
 
   const months = [];
   const base = new Date(`${hoje}T12:00:00Z`);
@@ -740,6 +751,7 @@ router.get('/dashboard', (req, res) => {
 
   const proximas = [
     ...db.prepare("SELECT id, nome AS titulo, 'Motorista' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM motoristas WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite),
+    ...(hasOwn(ENTITIES, 'entregadores') ? db.prepare("SELECT id, nome AS titulo, 'Entregador' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM entregadores WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite) : []),
     ...db.prepare("SELECT id, nome AS titulo, 'Passageiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM passageiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Usuário cadastrado','Não prosseguiu')").all(limite),
     ...db.prepare("SELECT id, nome_estabelecimento AS titulo, 'Parceiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM parceiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Parceria confirmada','Não concretizada')").all(limite),
     ...db.prepare("SELECT id, titulo, 'Tarefa' AS modulo, data_vencimento AS data, situacao, descricao AS acao FROM tarefas WHERE data_vencimento <= ? AND situacao NOT IN ('Concluída','Cancelada')").all(limite)
@@ -798,6 +810,15 @@ function reportSummary(de, ate) {
       por_situacao: porSituacao('motoristas', 'situacao'),
       por_origem: porCampo('motoristas', 'origem')
     },
+    ...(hasOwn(defs, 'entregadores') ? {
+      entregadores: {
+        total: db.prepare(`SELECT COUNT(*) c FROM entregadores WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
+        contratados: db.prepare(`SELECT COUNT(*) c FROM entregadores WHERE data_primeiro_contato BETWEEN ? AND ? AND situacao = 'Contratado'`).get(de, ate).c,
+        por_situacao: porSituacao('entregadores', 'situacao'),
+        por_modalidade: porCampo('entregadores', 'modalidade'),
+        por_origem: porCampo('entregadores', 'origem')
+      }
+    } : {}),
     passageiros: {
       total: db.prepare(`SELECT COUNT(*) c FROM passageiros WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
       por_situacao: porSituacao('passageiros', 'situacao'),
@@ -843,6 +864,29 @@ router.get('/reports/summary', (req, res) => {
   res.json(reportSummary(de, ate));
 });
 
+/* ------------------------- relatórios em PDF (todos os setores) ------------------------- */
+// PDF é o formato principal de exportação; o CSV abaixo continua como opção complementar.
+const { criarRelatoriosPdf, ErroRelatorio } = require('./relatorios-pdf');
+const relatoriosPdf = criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario });
+
+router.get('/reports/pdf', (req, res) => {
+  const tipo = String(req.query.type || '');
+  // Quem decide é o servidor: gestor só exporta setores sem lista de pessoas (policy.canExportPdf). Tudo é auditado.
+  if (!relatoriosPdf.tiposValidos().includes(tipo)) return fail(res, 400, 'invalid_type', 'Tipo de relatório inválido.');
+  if (!policy.canExportPdf(req.user.role, tipo)) return fail(res, 403, 'forbidden', 'Somente administradores exportam listas com dados pessoais.');
+  try {
+    const r = relatoriosPdf.gerar(tipo, req.query, req.user);
+    audit(req, 'exportar', tipo, null, `Exportação PDF: ${r.resumo}`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${r.arquivo}"`);
+    if (r.linhas !== null && r.linhas !== undefined) res.setHeader('X-Linhas', String(r.linhas));
+    res.send(r.buffer);
+  } catch (err) {
+    if (err instanceof ErroRelatorio) return fail(res, err.status, 'report', err.message);
+    throw err;
+  }
+});
+
 router.get('/reports/export', requireAdmin, (req, res) => {
   const type = String(req.query.type || 'motoristas');
   const { de, ate } = period(req.query);
@@ -866,7 +910,12 @@ router.get('/reports/export', requireAdmin, (req, res) => {
 
   // Mesmo critério de data do resumo: campanhas sem data planejada usam a data de publicação.
   const dateExpr = def.table === 'campanhas' ? 'COALESCE(data_publicacao, data_planejada)' : def.dateField;
-  const rows = db.prepare(`SELECT * FROM ${def.table} WHERE ${dateExpr} BETWEEN ? AND ? ORDER BY ${dateExpr} DESC, id DESC`).all(de, ate);
+  // modo=lista (botão CSV das telas de lista): os MESMOS filtros da lista (busca, situação, etapa…) e, sem período, todo o histórico.
+  const lista = req.query.modo === 'lista';
+  const filtro = lista ? entities.montarFiltro(def, req.query) : null;
+  const rows = lista
+    ? db.prepare(`SELECT * FROM ${def.table} WHERE ${filtro.where.join(' AND ')} ORDER BY ${dateExpr} DESC, id DESC`).all(...filtro.params)
+    : db.prepare(`SELECT * FROM ${def.table} WHERE ${dateExpr} BETWEEN ? AND ? ORDER BY ${dateExpr} DESC, id DESC`).all(de, ate);
   const header = ['ID', ...def.fields.map((f) => f.label), 'Criado em'];
   const body = rows.map((r) => [
     r.id,
@@ -876,8 +925,8 @@ router.get('/reports/export', requireAdmin, (req, res) => {
     }),
     r.created_at ? localDate(r.created_at) : ''
   ]);
-  audit(req, 'exportar', def.table, null, `Exportação CSV de ${def.label} (${de} a ${ate}, ${rows.length} linhas)`);
-  sendCsv(res, `${type}_${stamp}.csv`, header, body);
+  audit(req, 'exportar', def.table, null, `Exportação CSV de ${def.label} (${lista ? 'lista com filtros' : `${de} a ${ate}`}, ${rows.length} linhas)`);
+  sendCsv(res, lista ? `${type}_lista.csv` : `${type}_${stamp}.csv`, header, body);
 });
 
 /* -------------------------------- financeiro ------------------------------- */
@@ -1276,18 +1325,23 @@ router.post('/parceiros/:id/confirmar', (req, res) => {
 });
 
 // Motorista contratado (já trabalhando): marcação manual e datada, como a confirmação de parceria. Fica verde na lista.
-router.post('/motoristas/:id/contratar', (req, res) => {
-  const id = Number(req.params.id);
-  const row = db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id);
-  if (!row) return fail(res, 404, 'not_found', 'Motorista não encontrado.');
-  if (row.situacao === 'Contratado') return fail(res, 409, 'already', 'Este motorista já está como contratado.');
-  if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
-  const now = nowISO();
-  db.prepare('UPDATE motoristas SET situacao = ?, contratado_em = ?, updated_at = ? WHERE id = ?').run('Contratado', todayISO(), now, id);
-  entities.logInteraction('motoristas', id, req, `Motorista contratado (marcado por ${req.user.nome})`, row.situacao, 'Contratado', 'Confirmação');
-  audit(req, 'contratar', 'motoristas', id, 'Motorista marcado como contratado');
-  res.json({ item: db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id) });
-});
+// Entregador (Etapa 2, M2) segue a mesma regra: marcação manual, datada, com confirmação explícita.
+function contratar(tabela, rotulo) {
+  return (req, res) => {
+    const id = Number(req.params.id);
+    const row = db.prepare(`SELECT * FROM ${tabela} WHERE id = ?`).get(id);
+    if (!row) return fail(res, 404, 'not_found', `${rotulo} não encontrado.`);
+    if (row.situacao === 'Contratado') return fail(res, 409, 'already', `Este ${rotulo.toLowerCase()} já está como contratado.`);
+    if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+    const now = nowISO();
+    db.prepare(`UPDATE ${tabela} SET situacao = ?, contratado_em = ?, updated_at = ? WHERE id = ?`).run('Contratado', todayISO(), now, id);
+    entities.logInteraction(tabela, id, req, `${rotulo} contratado (marcado por ${req.user.nome})`, row.situacao, 'Contratado', 'Confirmação');
+    audit(req, 'contratar', tabela, id, `${rotulo} marcado como contratado`);
+    res.json({ item: db.prepare(`SELECT * FROM ${tabela} WHERE id = ?`).get(id) });
+  };
+}
+router.post('/motoristas/:id/contratar', contratar('motoristas', 'Motorista'));
+if (hasOwn(ENTITIES, 'entregadores')) router.post('/entregadores/:id/contratar', contratar('entregadores', 'Entregador'));
 
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".
@@ -1327,7 +1381,7 @@ router.post('/:entity', (req, res) => {
 
 // Ficha: conversa do WhatsApp vinculada, documentos recebidos (motorista) e o último resumo da IA.
 function fichaDoCadastro(tipo, id) {
-  if (!['motoristas', 'passageiros', 'parceiros'].includes(tipo)) return null;
+  if (!['motoristas', 'passageiros', 'parceiros', 'entregadores'].includes(tipo)) return null;
   const conv = db.prepare(`SELECT c.id, c.atendimento, c.atend_motivo, c.ultima_em FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id
     WHERE k.vinculo_tipo = ? AND k.vinculo_id = ? ORDER BY c.ultima_em DESC LIMIT 1`).get(tipo, id);
   const ficha = { conversa: conv || null, documentos: null, resumo_ia: null };
@@ -1335,7 +1389,7 @@ function fichaDoCadastro(tipo, id) {
     const a = db.prepare('SELECT resultado, criado_em FROM ia_analises WHERE conversa_id = ? ORDER BY id DESC LIMIT 1').get(conv.id);
     if (a) { try { ficha.resumo_ia = { texto: JSON.parse(a.resultado).resumo || '', em: a.criado_em }; } catch (err) { /* análise antiga */ } }
   }
-  if (tipo === 'motoristas') {
+  if (tipo === 'motoristas' || tipo === 'entregadores') {
     const rec = conv ? documentosRecebidos(wa.store.listarMensagens(conv.id, { limite: 500 })) : { cnh: null, crlv: null, endereco: null };
     ficha.documentos = rec;
   }

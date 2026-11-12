@@ -12,6 +12,8 @@ const VINCULOS = {
   parceiros: { table: 'parceiros', nome: 'nome_estabelecimento', tel: 'telefone' },
   passageiros: { table: 'passageiros', nome: 'nome', tel: 'telefone' }
 };
+// Etapa 2 (M2): conversa também pode ser ligada a um entregador (só com a Etapa 2 ligada; a tabela vem da migração 003).
+if (process.env.FM_ETAPA2 === '1') VINCULOS.entregadores = { table: 'entregadores', nome: 'nome', tel: 'telefone' };
 
 // Só avança: uma entrega não volta para "enviada". "falhou" não é sobrescrito por recibo.
 const ORDEM_STATUS = { pendente: 0, enviando: 0, enviada: 1, entregue: 2, lida: 3 };
@@ -291,18 +293,20 @@ function createStore(db, opts = {}) {
   }
 
   /* ---------------------------------- consultas ---------------------------------- */
+  const temEntregadores = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'entregadores'").get();
   const SELECT_CONVERSA = `
     SELECT c.id, c.situacao, c.responsavel_id, c.nao_lidas, c.ultima_mensagem, c.ultima_em, c.ultima_direcao,
            c.atendimento, c.atend_assunto, c.atend_motivo, c.atend_em, c.saudado_em, c.espera_em,
            k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado,
            CASE k.vinculo_tipo WHEN 'motoristas' THEN m.nome WHEN 'passageiros' THEN p.nome
-                               WHEN 'parceiros' THEN r.nome_estabelecimento END AS vinculo_nome,
+                               WHEN 'parceiros' THEN r.nome_estabelecimento${temEntregadores ? ' WHEN \'entregadores\' THEN e.nome' : ''} END AS vinculo_nome,
            u.nome AS responsavel_nome
       FROM wa_conversas c
       JOIN wa_contatos k ON k.id = c.contato_id
       LEFT JOIN motoristas m ON k.vinculo_tipo = 'motoristas' AND m.id = k.vinculo_id
       LEFT JOIN passageiros p ON k.vinculo_tipo = 'passageiros' AND p.id = k.vinculo_id
       LEFT JOIN parceiros r ON k.vinculo_tipo = 'parceiros' AND r.id = k.vinculo_id
+      ${temEntregadores ? "LEFT JOIN entregadores e ON k.vinculo_tipo = 'entregadores' AND e.id = k.vinculo_id" : ''}
       LEFT JOIN users u ON u.id = c.responsavel_id`;
 
   function listarConversas({ situacao, atendimento, naoLidas, q, responsavelId, page = 1, size = 30 } = {}) {

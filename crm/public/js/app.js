@@ -22,6 +22,7 @@ const NAV = [
   { key: 'relatorios', label: 'Relatórios', icon: 'file', title: 'Relatórios', sub: 'Histórico, filtros por período e exportação' },
   { key: 'configuracoes', label: 'Configurações', icon: 'settings', title: 'Configurações', sub: 'Organização, usuários, segurança e auditoria' },
   // Etapa 2 (só aparece com a Etapa 2 ligada no servidor): ficha central de cada pessoa e as suas funções.
+  { key: 'entregadores', label: 'Entregadores', icon: 'send', entity: 'entregadores', title: 'Entregadores e motociclistas', sub: 'Interessados, cadastros e aprovações de quem faz entregas e mototáxi', etapa2: true },
   { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true },
   { key: 'empresas', label: 'Empresas', icon: 'building', title: 'Empresas', sub: 'Ficha central: cada empresa e as suas funções (Clube de Vantagens, comércio)', etapa2: true }
 ];
@@ -452,7 +453,9 @@ async function enterApp() {
           <div class="nav-label">Gestão</div>
           ${NAV.slice(0, 1).map((i) => navItem(i, state.meta.pendentes)).join('')}
           ${state.meta.etapa2 ? ['pessoas', 'empresas'].map((k) => navItem(NAV.find((n) => n.key === k), state.meta.pendentes)).join('') : ''}
-          ${NAV.slice(1, 8).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${NAV.slice(1, 2).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${state.meta.etapa2 && state.meta.entities.entregadores ? navItem(NAV.find((n) => n.key === 'entregadores'), state.meta.pendentes) : ''}
+          ${NAV.slice(2, 8).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Análise</div>
           ${NAV.slice(8, 10).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Sistema</div>
@@ -574,7 +577,7 @@ async function route() {
     else if (key === 'configuracoes') await renderSettings(view, state);
     else if (key === 'pessoas' && state.meta.etapa2) await renderPessoas(view, state, params);
     else if (key === 'empresas' && state.meta.etapa2) await renderEmpresas(view, state, params);
-    else if (key === 'pessoas' || key === 'empresas') location.hash = '#/dashboard';
+    else if (key === 'pessoas' || key === 'empresas' || (key === 'entregadores' && !state.meta.entities.entregadores)) location.hash = '#/dashboard';
     else if (item.entity) await renderEntity(view, state, item.entity, params);
     state.refreshMeta();
   } catch (err) {

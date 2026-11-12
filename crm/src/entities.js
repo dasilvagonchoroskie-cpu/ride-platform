@@ -72,7 +72,8 @@ function validate(def, body, options = {}) {
   return { values, errors };
 }
 
-function listEntity(def, query) {
+/** Monta o WHERE da listagem (busca, selects, etapa, período, responsável). Usado pela lista da tela e pelas exportações. */
+function montarFiltro(def, query) {
   const where = ['1 = 1'];
   const params = [];
 
@@ -110,6 +111,11 @@ function listEntity(def, query) {
     params.push(`%${likeEscape(query.responsavel)}%`);
   }
 
+  return { where, params };
+}
+
+function listEntity(def, query) {
+  const { where, params } = montarFiltro(def, query);
   const total = db.prepare(`SELECT COUNT(*) AS c FROM ${def.table} WHERE ${where.join(' AND ')}`).get(...params).c;
 
   const sortable = new Set([...def.fields.map((f) => f.key), 'id', 'created_at', 'updated_at']);
@@ -228,4 +234,5 @@ function deleteEntity(def, id, req) {
   return { status: 200 };
 }
 
-module.exports = { ENTITIES, clearConfirmation, likeEscape, validate, listEntity, createEntity, updateEntity, deleteEntity, logInteraction, resolveOptions };
+module.exports = {
+  montarFiltro, ENTITIES, clearConfirmation, likeEscape, validate, listEntity, createEntity, updateEntity, deleteEntity, logInteraction, resolveOptions };

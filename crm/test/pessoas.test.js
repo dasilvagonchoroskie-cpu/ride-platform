@@ -45,7 +45,7 @@ test('ficha central: pessoa com uma e com várias funções, aviso de telefone, 
   assert.deepEqual(f.j.funcoes.map((x) => x.funcao), ['motorista']);
   assert.match(f.j.pessoa.uid, /^[0-9a-f-]{36}$/);
   assert.equal(f.j.funcoes_disponiveis.find((x) => x.funcao === 'passageiro').ja_tem, false);
-  assert.equal(f.j.funcoes_disponiveis.find((x) => x.funcao === 'entregador').disponivel, false, 'entregador só no M2');
+  assert.equal(f.j.funcoes_disponiveis.find((x) => x.funcao === 'entregador').disponivel, true, 'entregador existe a partir do M2');
 
   // Aviso de possível duplicado pelo telefone, escrito de outro jeito; não associa sozinho.
   const v = await ges('POST', '/pessoas/verificar-telefone', { telefone: '5585999990000' });
@@ -63,7 +63,8 @@ test('ficha central: pessoa com uma e com várias funções, aviso de telefone, 
   assert.equal(add.j.item.nome, 'João Teste Silva');
   assert.equal((await ges('POST', `/pessoas/${joao}/funcoes`, { funcao: 'passageiro', dados: PAS })).s, 409, 'a mesma função ativa duas vezes não');
   assert.equal((await ges('POST', `/pessoas/${joao}/funcoes`, { funcao: 'parceiro_clube', dados: {} })).s, 422, 'função de empresa não cabe em pessoa');
-  assert.equal((await ges('POST', `/pessoas/${joao}/funcoes`, { funcao: 'entregador', dados: {} })).s, 422, 'entregador ainda indisponível');
+  // Entregador (M2) não está mais "indisponível": sem os dados obrigatórios, a validação responde 422 e nada é criado.
+  assert.equal((await ges('POST', `/pessoas/${joao}/funcoes`, { funcao: 'entregador', dados: {} })).s, 422);
   // Escolher a pessoa ao criar pelo módulo: se já tem a função, recusa sem criar nada.
   const antes = (await adm('GET', '/pessoas')).j.total;
   assert.equal((await ges('POST', '/motoristas', { ...MOT, nome: 'João', telefone: '85999990000', pessoa_id: joao })).s, 409);

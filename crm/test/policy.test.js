@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { parseRole, parseTrustProxy, canDelete, permissionsFor } = require('../src/policy');
+const { parseRole, parseTrustProxy, canDelete, permissionsFor, canExportPdf } = require('../src/policy');
 
 test('perfil ausente vira gestor, nunca admin', () => {
   assert.deepEqual(parseRole(undefined), { role: 'gestor' });
@@ -37,6 +37,12 @@ test('gestor só exclui tarefas; admin exclui tudo', () => {
 
 test('permissionsFor reflete o perfil', () => {
   const keys = ['motoristas', 'tarefas'];
-  assert.deepEqual(permissionsFor('admin', keys), { exportar: true, excluir_financeiro: true, ver_atividade: true, excluir: keys });
-  assert.deepEqual(permissionsFor('gestor', keys), { exportar: false, excluir_financeiro: false, ver_atividade: false, excluir: ['tarefas'] });
+  const a = permissionsFor('admin', keys);
+  assert.deepEqual({ ...a, exportar_pdf: [...a.exportar_pdf].sort() }, { exportar: true, excluir_financeiro: true, ver_atividade: true, excluir: keys, exportar_pdf: ['campanhas', 'cenario', 'financeiro', 'motoristas', 'resumo', 'tarefas'] });
+  // Gestor: PDF só dos setores sem lista de pessoas (tarefas, marketing, financeiro, resumo); CSV continua só do admin.
+  const g = permissionsFor('gestor', keys);
+  assert.deepEqual({ ...g, exportar_pdf: [...g.exportar_pdf].sort() }, { exportar: false, excluir_financeiro: false, ver_atividade: false, excluir: ['tarefas'], exportar_pdf: ['campanhas', 'cenario', 'financeiro', 'resumo', 'tarefas'] });
+  assert.equal(canExportPdf('gestor', 'motoristas'), false);
+  assert.equal(canExportPdf('gestor', 'atendimentos'), false);
+  assert.equal(canExportPdf('admin', 'motoristas'), true);
 });
