@@ -128,7 +128,7 @@ const TOM_SITUACAO = (def, situacao) => {
   return null;
 };
 
-function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario }) {
+function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario, docs = null }) {
   const org = () => ({ nome: getSetting('org_nome', 'Fortaleza Move'), slogan: getSetting('slogan', '') });
   const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -308,8 +308,33 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
     };
   }
 
-  /** Quais tipos existem agora (entregadores só com a Etapa 2). */
-  const tiposValidos = () => [...Object.keys(MODELOS).filter((t) => hasOwn(ENTITIES, t)), 'resumo', 'financeiro', 'cenario'];
+  /** Documentos (M4): só metadados e situação. Nunca CPF/CNPJ, nunca o conteúdo dos arquivos. Administrador apenas (policy). */
+  function documentos(q, usuario) {
+    const r = docs.consultar({ user: usuario }, { situacao: String(q.situacao || ''), funcao: String(q.funcao || ''), categoria: String(q.categoria || ''), q: q.q, tudo: true });
+    const itens = r.items;
+    const conta = (s) => itens.filter((i) => i.situacao === s).length;
+    const filtros = [];
+    for (const [rot, v] of [['Situação', q.situacao && docs.SITUACOES[q.situacao]], ['Função', q.funcao], ['Categoria', q.categoria], ['Busca', String(q.q || '').trim() && `“${String(q.q).trim().slice(0, 60)}”`]]) if (v) filtros.push([rot, String(v)]);
+    if (!filtros.length) filtros.push(['Filtros', 'sem filtros: todos os documentos']);
+    const tom = (s) => (s === 'conferido' ? 'verde' : s === 'rejeitado' || s === 'necessita_atualizacao' ? 'vermelho' : null);
+    const blocos = [
+      { tipo: 'indicadores', itens: [
+        { rotulo: 'Total de documentos', valor: fmtInt(itens.length) }, { rotulo: 'Pendentes de conferência', valor: fmtInt(conta('pendente')), tom: 'dourado' },
+        { rotulo: 'Conferidos', valor: fmtInt(conta('conferido')), tom: 'verde' },
+        { rotulo: 'Rejeitados / a atualizar', valor: fmtInt(conta('rejeitado') + conta('necessita_atualizacao')), tom: 'vermelho' }
+      ] },
+      { tipo: 'tabela', titulo: 'Documentos', colunas: [
+        { titulo: 'Cadastro', peso: 2.2 }, { titulo: 'Função', peso: 1.4 }, { titulo: 'Documento', peso: 1.8 }, { titulo: 'Situação', peso: 1.6 },
+        { titulo: 'Versões', peso: 0.8, alinhar: 'direita' }, { titulo: 'Enviado em', peso: 1.1 }, { titulo: 'Conferido por', peso: 1.6 }, { titulo: 'Conferido em', peso: 1.1 }
+      ], linhas: itens.map((i) => ({ celulas: [i.registro_titulo || `#${i.registro_id}`, i.funcao_rotulo, i.titulo || i.categoria_rotulo, i.situacao_rotulo, String(i.total_versoes), fmtData(i.versao_atual && i.versao_atual.data_envio), i.conferido_por_nome || '', fmtData(i.conferido_em)], tom: tom(i.situacao) })),
+        totais: itens.length ? [`Total: ${fmtInt(itens.length)}`, '', '', '', '', '', '', ''] : null, vazio: 'Nenhum documento encontrado para os filtros aplicados.',
+        observacao: 'Relatório de controle: não contém CPF, CNPJ nem o conteúdo dos arquivos.' }
+    ];
+    return { relatorio: { titulo: 'Relatório de Documentos', subtitulo: 'Situação da conferência por cadastro', paisagem: true, filtros, blocos }, linhas: itens.length, arquivo: 'documentos', resumo: `Documentos (${itens.length} linhas)` };
+  }
+
+  /** Quais tipos existem agora (entregadores e documentos só com a Etapa 2). */
+  const tiposValidos = () => [...Object.keys(MODELOS).filter((t) => hasOwn(ENTITIES, t)), 'resumo', 'financeiro', 'cenario', ...(docs && docs.ativo() ? ['documentos'] : [])];
 
   function gerar(tipo, query, usuario) {
     const t = String(tipo || '');
@@ -321,7 +346,7 @@ function criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, repo
       q.de = /^\d{4}-\d{2}-\d{2}$/.test(String(q.de || '')) ? q.de : `${hoje.slice(0, 7)}-01`;
       q.ate = /^\d{4}-\d{2}-\d{2}$/.test(String(q.ate || '')) ? q.ate : hoje;
     }
-    const r = hasOwn(MODELOS, t) ? modulo(t, q, usuario) : t === 'resumo' ? resumo(q) : t === 'financeiro' ? financeiro(q) : cenario(q);
+    const r = hasOwn(MODELOS, t) ? modulo(t, q, usuario) : t === 'documentos' ? documentos(q, usuario) : t === 'resumo' ? resumo(q) : t === 'financeiro' ? financeiro(q) : cenario(q);
     const agora = new Date();
     const buffer = gerarRelatorio({ ...r.relatorio, org: org(), logo: logo(), rodape: { gerado_por: usuario && usuario.nome, gerado_em: agora } });
     const carimbo = new Date(agora.getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10);

@@ -236,6 +236,38 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   PDF (`type=comercios`) e CSV só para administrador (dados pessoais; LGPD); gestor consulta e gerencia, sem auditoria e sem junção.
 - A IA não cria comércios nem marca documentos; o vínculo da conversa com um comércio é manual.
 
+## M4 — Documentos e armazenamento seguro (12/11/2026, ramo `etapa2`, só desenvolvimento, dados fictícios)
+- **Arquivo digital por função** (só com `FM_ETAPA2=1`, migração 005): cada ficha de motorista, entregador, parceiro do Clube e comércio
+  tem os seus documentos (`funcao` + `registro_id`). A mesma pessoa/empresa com várias funções tem documentos separados por função;
+  nada é copiado. Categorias: pessoa (CNH, CRLV, comprovante de endereço, outro) e empresa (cartão CNPJ, contrato social, comprovante
+  de endereço, alvará, documento do responsável, outro).
+- **Situação de cada documento** (independente): Não enviado, Pendente de conferência, Conferido, Rejeitado, Necessita atualização.
+  Conferir/rejeitar **nunca** contrata, ativa ou encerra a função: só muda o documento (e os campos antigos `doc_cnh/doc_crlv/doc_endereco`).
+  A situação geral da ficha vem dos documentos exigidos (`docs_politica.obrigatorios`; motorista/entregador: CNH, CRLV e comprovante).
+- **Versões:** enviar de novo cria versão nova (volta a "Pendente"); todas as versões ficam guardadas e acessíveis ao administrador.
+  Nada é apagado sozinho. Exclusão definitiva só administrador, política ligada, `confirmo:true` e motivo; o histórico permanece.
+- **Armazenamento (`src/documentos/`):** cada arquivo é cifrado antes de sair do servidor (AES-256-GCM, chave por arquivo embrulhada
+  pela chave mestra `FM_DOCS_KEY`, 64 hex, **fora do repositório e do servidor de código**), com nome interno aleatório, em área privada
+  (sem URL pública). Adaptadores: `local` (pasta `DOCS_DIR` ou `data/documentos`; recusa disco efêmero do Render/produção a menos que
+  `FM_DOCS_LOCAL_PERSISTENTE=1`) e `supabase` (Storage privado, `DOCS_STORAGE=supabase`, `DOCS_SUPABASE_URL/KEY/BUCKET`). Os arquivos
+  ficam **fora** do retrato cifrado do cofre; os metadados (com as chaves embrulhadas) ficam no banco.
+- **Validação:** PDF/JPG/PNG/WEBP pelo conteúdo (assinatura), extensão coerente, tamanho até `DOCS_MAX_MB` (10), PDF com JavaScript/ação
+  automática recusado, nome enviado só vira rótulo. Não há antivírus.
+- **Acesso:** `GET /api/documentos/:id/arquivo` confere perfil, integridade (tamanho + SHA-256) e registra o acesso. Administrador
+  vê/baixa/confere tudo; **gestor, por padrão, só anexa e vê a situação**. O administrador libera por tipo de documento (política).
+  Tentativas negadas e falhas de integridade ficam no histórico do documento e na auditoria.
+- **CPF/CNPJ:** só cifrados (`src/protegidos.js`, `FM_DADOS_KEY`), com finalidade; ficha mostra máscara; "mostrar número" é auditado;
+  só administrador; coleta **desligada** até o dono decidir (`docs_politica.cpf_cnpj`).
+- **Rotas:** `/documentos/meta|politica|lista`, `/documentos?funcao=&registro_id=`, `POST /documentos` e `/documentos/:id/versoes`
+  (corpo bruto; metadados nos cabeçalhos `X-Documento`/`X-Nome-Arquivo`), `/documentos/:id[/arquivo|/conferir|/excluir-definitivo]`,
+  `PUT /pessoas/:id/cpf`, `PUT /empresas/:id/cnpj` (+ `/remover`, `/revelar`). Relatório `type=documentos` (PDF e CSV, só admin,
+  sem CPF/CNPJ nem conteúdo), cartões do dashboard e de Relatórios.
+- **Manutenção:** `npm run docs:verificar` (abre cada versão, confere hash, acha órfãos), `docs:backup <pasta>` (arquivos cifrados +
+  manifesto cifrado, incremental) e `docs:restaurar <pasta>` (só repõe o que falta, confere hash). Guarde o backup **e** a `FM_DOCS_KEY`
+  em lugares separados: sem a chave os arquivos não abrem.
+- Front: painel "Documentos (arquivo digital)" em cada ficha, menu **Documentos** (lista, filtros, política e decisões pendentes do dono).
+  Cache do app `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
+
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados
   (aprovados + contratados, com o detalhe) e contratados. Documento pendente não muda a etapa (aparece à parte).

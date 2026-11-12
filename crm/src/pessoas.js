@@ -13,6 +13,7 @@
 const crypto = require('crypto');
 const { chaveTelefone, nomeNormal, finalTelefone, FUNCOES } = require('./titulares');
 const { toWaPhone } = require('./whatsapp/phone');
+const protegidos = require('./protegidos');
 
 const FUNCAO_DA_TABELA = Object.fromEntries(Object.entries(FUNCOES).map(([f, v]) => [v.tabela, f]));
 
@@ -226,6 +227,57 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
     evento(v.titular_tipo, v.titular_id, 'funcao_encerrada', `${FUNCOES[v.funcao] ? FUNCOES[v.funcao].rotulo : v.funcao} (registro #${id} excluído)`, req);
   }
 
+
+  /* --------------------- CPF / CNPJ protegidos (M4) --------------------- */
+  // Só o administrador mexe (rotas decidem). O número só é gravado cifrado; a ficha mostra a máscara. Abrir o número inteiro
+  // (revelar) é uma operação à parte, auditada. Valores NUNCA entram em auditoria, evento ou resposta de lista.
+  const PROTEGIDO = { pessoa: { campo: 'cpf', rotulo: 'CPF' }, empresa: { campo: 'cnpj', rotulo: 'CNPJ' } };
+  const formatar = (campo, d) => (campo === 'cpf' ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') : d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'));
+  function infoProtegido(tipo, id) {
+    const P = PROTEGIDO[tipo];
+    const t = obterTitular(tipo, id);
+    return { campo: P.campo, rotulo: P.rotulo, tem: !!t[`${P.campo}_indice`], mascara: t[`${P.campo}_mascara`] || null, finalidade: t[`${P.campo}_finalidade`] || null };
+  }
+  function definirProtegido(tipo, id, valor, finalidade, req) {
+    const P = PROTEGIDO[tipo]; const T = TIPOS[tipo];
+    const t = obterTitular(tipo, id);
+    if (t.situacao !== 'ativa') throw new ErroPessoa(409, 'Só cadastros ativos podem receber este dado.');
+    let p;
+    try { p = protegidos.proteger(P.campo, valor, finalidade); } catch (e) {
+      if (e.code === 'sem_chave') throw new ErroPessoa(503, 'Campo protegido indisponível: a chave de proteção (FM_DADOS_KEY) não está configurada no servidor.');
+      if (e.code === 'invalido' || e.code === 'sem_finalidade') throw new ErroPessoa(422, e.message);
+      throw e;
+    }
+    const outro = db.prepare(`SELECT id, ${T.nome} AS nome FROM ${T.tabela} WHERE ${P.campo}_indice = ? AND situacao = 'ativa' AND id <> ?`).get(p.indice, t.id);
+    if (outro) throw new ErroPessoa(409, `Este ${P.rotulo} já está cadastrado em outra ficha (${T.rotulo.toLowerCase()} #${outro.id}: ${outro.nome}). Junte os cadastros duplicados em vez de repetir.`);
+    db.prepare(`UPDATE ${T.tabela} SET ${P.campo}_cifrado = ?, ${P.campo}_indice = ?, ${P.campo}_finalidade = ?, ${P.campo}_mascara = ?, atualizado_em = ? WHERE id = ?`)
+      .run(p.cifrado, p.indice, p.finalidade, protegidos.mascarar(P.campo, valor), agora(), t.id);
+    evento(tipo, t.id, 'protegido_informado', `${P.rotulo} informado (finalidade registrada; valor não é gravado no histórico)`, req);
+    audit(req, 'proteger_dado', T.tabela, t.id, `${P.rotulo} informado/atualizado (valor não registrado)`);
+    return infoProtegido(tipo, t.id);
+  }
+  function removerProtegido(tipo, id, req) {
+    const P = PROTEGIDO[tipo]; const T = TIPOS[tipo];
+    const t = obterTitular(tipo, id);
+    if (!t[`${P.campo}_indice`]) throw new ErroPessoa(409, `Nenhum ${P.rotulo} informado nesta ficha.`);
+    db.prepare(`UPDATE ${T.tabela} SET ${P.campo}_cifrado = NULL, ${P.campo}_indice = NULL, ${P.campo}_finalidade = NULL, ${P.campo}_mascara = NULL, atualizado_em = ? WHERE id = ?`).run(agora(), t.id);
+    evento(tipo, t.id, 'protegido_removido', `${P.rotulo} removido da ficha`, req);
+    audit(req, 'remover_dado', T.tabela, t.id, `${P.rotulo} removido (valor não registrado)`);
+    return infoProtegido(tipo, t.id);
+  }
+  function revelarProtegido(tipo, id, req) {
+    const P = PROTEGIDO[tipo]; const T = TIPOS[tipo];
+    const t = obterTitular(tipo, id);
+    if (!t[`${P.campo}_cifrado`]) throw new ErroPessoa(409, `Nenhum ${P.rotulo} informado nesta ficha.`);
+    let d;
+    try { d = protegidos.abrir(P.campo, t[`${P.campo}_cifrado`]); } catch (e) {
+      throw new ErroPessoa(e.code === 'sem_chave' ? 503 : 500, e.code === 'sem_chave' ? 'Chave de proteção (FM_DADOS_KEY) não configurada.' : 'Não foi possível abrir o dado protegido.');
+    }
+    evento(tipo, t.id, 'protegido_revelado', `${P.rotulo} aberto por ${req.user ? req.user.nome : 'sistema'}`, req);
+    audit(req, 'revelar_dado', T.tabela, t.id, `${P.rotulo} exibido por inteiro (valor não registrado)`);
+    return { campo: P.campo, valor: formatar(P.campo, d) };
+  }
+
   /* ------------------------------ duplicados ------------------------------ */
   function duplicados() { return duplicadosTitulares('pessoa'); }
   function duplicadosTitulares(tipo) {
@@ -306,6 +358,8 @@ function createPessoas({ db, entities, ENTITIES, audit }) {
 
   return {
     ativa, catalogo, criarRegistro, aoExcluirRegistro, FUNCAO_DA_TABELA,
+    // CPF/CNPJ protegidos (M4)
+    infoProtegido, definirProtegido, removerProtegido, revelarProtegido,
     // pessoas (M1)
     listar, ficha, verificarTelefone, adicionarFuncao, duplicados, juntar,
     // genéricos (pessoa | empresa)

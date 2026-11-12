@@ -735,3 +735,13 @@ dialog.modal::backdrop { background: rgba(6, 26, 51, .55); backdrop-filter: blur
 .hist-corpo { padding: 12px 14px; }
 .hist-sub { margin: 12px 0 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-2); }
 .hist-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 5px 0; font-size: 13px; border-bottom: 1px dashed #eef2f9; }
+
+/* Documentos (M4): lista de documentos por ficha, histórico e política. Pensado para o celular (linha empilha). */
+.doc-lista { display: grid; gap: 8px; }
+.doc-linha { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 11px; background: #fff; flex-wrap: wrap; }
+.doc-info { flex: 1; min-width: 170px; overflow-wrap: anywhere; }
+.doc-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+.pol-checks { display: grid; gap: 8px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check input { width: 18px; height: 18px; flex: none; }
+@media (max-width: 640px) { .doc-acoes { width: 100%; } .doc-acoes .btn { flex: 1; min-height: 40px; } }

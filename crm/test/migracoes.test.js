@@ -46,16 +46,16 @@ test('migrações: aplicam em ordem, registram versão e são idempotentes; regi
   const { digitalTabelas, contar } = require('../src/migracoes/simular');
   const antesDigital = digitalTabelas(db);
   const antesContagem = contar(db);
-  assert.deepEqual(m.estado(db).pendentes, [1, 2, 3, 4]);
+  assert.deepEqual(m.estado(db).pendentes, [1, 2, 3, 4, 5]);
   const r1 = m.migrar(db, { log: { log() {} } });
-  assert.deepEqual(r1.aplicadas.map((x) => x.versao), [1, 2, 3, 4]);
+  assert.deepEqual(r1.aplicadas.map((x) => x.versao), [1, 2, 3, 4, 5]);
   assert.deepEqual(m.estado(db).pendentes, []);
-  assert.equal(m.estado(db).versao_atual, 4);
+  assert.equal(m.estado(db).versao_atual, 5);
   const r2 = m.migrar(db, { log: { log() {} } });
   assert.equal(r2.aplicadas.length, 0, 'segunda execução não faz nada');
   assert.deepEqual(contar(db), antesContagem, 'nenhum registro antigo a mais ou a menos');
   assert.deepEqual(digitalTabelas(db), antesDigital, 'nenhum registro antigo alterado');
-  assert.equal(db.prepare('SELECT COUNT(*) c FROM schema_migracoes').get().c, 4);
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM schema_migracoes').get().c, 5);
   assert.ok(m.verificarIntegridade(db).ok);
 });
 
@@ -124,7 +124,7 @@ test('produção protegida: sem FM_ETAPA2 nada é migrado; com FM_ETAPA2=1 migra
   const com = bancoFicticio({ etapa2: true }); // banco novo: migra ao ligar (sem cadastros ainda)
   assert.equal(com.db.prepare("SELECT COUNT(*) c FROM sqlite_master WHERE name = 'pessoas'").get().c, 1);
   const copias = fs.readdirSync(path.join(com.dir, 'backups')).filter((f) => f.startsWith('pre-migracao-'));
-  assert.equal(copias.length, 4, 'uma cópia antes de cada migração');
+  assert.equal(copias.length, 5, 'uma cópia antes de cada migração');
   delete process.env.FM_ETAPA2;
 });
 
@@ -179,7 +179,7 @@ test('rotas de leitura da Etapa 2: só administrador; consulta fica na auditoria
   assert.equal(dup.j.total_grupos, 1);
   const mig = await adm('GET', '/admin/migracoes');
   assert.equal(mig.j.etapa2_ligada, false);
-  assert.deepEqual(mig.j.pendentes, [1, 2, 3, 4], 'nada foi migrado no servidor');
+  assert.deepEqual(mig.j.pendentes, [1, 2, 3, 4, 5], 'nada foi migrado no servidor');
   assert.equal(mig.j.integridade.ok, true);
   const aud = await adm('GET', '/audit');
   assert.ok(aud.j.items.some((a) => a.entity === 'duplicados'));

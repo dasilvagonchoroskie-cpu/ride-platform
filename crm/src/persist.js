@@ -19,8 +19,9 @@ const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 const INTERVALO_MS = Number(process.env.SNAPSHOT_INTERVALO_MS) || 30000;
-// Nunca vão para o retrato: biblioteca do WhatsApp (instalada no build), backups locais e o banco em si (vai serializado).
-const IGNORAR = /^(wa-lib|backups)(\/|$)|^crm\.db(-wal|-shm|-journal)?$|\.tmp$/;
+// Nunca vão para o retrato: biblioteca do WhatsApp (instalada no build), backups locais, os arquivos dos documentos (M4: têm
+// armazenamento próprio, cifrado) e o banco em si (vai serializado).
+const IGNORAR = /^(wa-lib|backups|documentos)(\/|$)|^crm\.db(-wal|-shm|-journal)?$|\.tmp$/;
 
 function dirs() {
   const dataDir = process.env.FM_DATA_DIR ? path.resolve(process.env.FM_DATA_DIR) : path.join(ROOT, 'data');

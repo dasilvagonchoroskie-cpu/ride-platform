@@ -108,6 +108,16 @@ export async function renderReports(view, state) {
         </div>
       </div>
 
+      ${s.documentos ? `<div class="report-section">
+        <div class="card">
+          <div class="card-head">
+            <div><h3>Documentos (arquivo digital)</h3><p class="sub">${ui.fmtInt(s.documentos.total)} documento(s) guardado(s) · ${ui.fmtInt(s.documentos.enviados_no_periodo)} enviado(s) no período</p></div>
+            ${exportBtn('documentos')}
+          </div>
+          <div class="card-body">${breakdown([['Pendente de conferência', 'pendente'], ['Conferido', 'conferido'], ['Rejeitado', 'rejeitado'], ['Necessita atualização', 'necessita_atualizacao']].map(([chave, k]) => ({ chave, total: s.documentos.por_situacao[k] || 0 })))}</div>
+        </div>
+      </div>` : ''}
+
       ${s.comercios ? `<div class="report-section">
         <div class="card">
           <div class="card-head">

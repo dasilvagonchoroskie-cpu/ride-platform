@@ -44,9 +44,16 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
             Clube, empresa central reaproveitada (sem duplicar), situações, histórico, "Ativo na plataforma" em verde, dashboard,
             relatórios (PDF só admin + CSV), WhatsApp, tarefas. Limitações: sem CNPJ/documentos (M4); telefone e WhatsApp são um
             campo só; a IA não cria comércio nem marca documentos; gestor não exporta PDF/CSV de comércios (confirmar com o dono).
-      - [ ] Próximo (aguardando avaliação e autorização do dono): M4 documentos e
-            armazenamento seguro (sem documentos reais). Depois: IA/WhatsApp ligados à pessoa (hoje o cadastro criado
-            pela IA ainda não ganha pessoa).
+      - [x] M4 documentos e armazenamento seguro (12/11, ramo etapa2, dados fictícios): arquivo digital por função, cifrado, versões,
+            situações independentes, permissões admin/gestor, CPF/CNPJ cifrados, backup/restauração/verificação, relatório PDF/CSV.
+            Limitações: adaptador Supabase só testado com servidor falso; sem antivírus; sem rotação da `FM_DOCS_KEY`; CPF/CNPJ
+            "obrigatório" não existe (só desligado/opcional).
+      - [ ] DECISÕES DO DONO (M4): (1) manter originais em todas as substituições; (2) armazenamento definitivo (pasta persistente
+            da Hostinger ou Supabase Storage privado) e configuração; (3) quais documentos o gestor pode ver/baixar/conferir;
+            (4) quais dados de CPF/CNPJ exigir e guardar em cada cadastro; (5) prazo de retenção de documentos e cadastros encerrados.
+            Antes de qualquer uso real: gerar `FM_DOCS_KEY` e `FM_DADOS_KEY` (64 hex) e guardá-las fora do servidor e do repositório.
+      - [ ] Próximo (aguardando avaliação do M4 e autorização do dono): etapa seguinte. Depois: IA/WhatsApp ligados à pessoa (hoje o
+            cadastro criado pela IA ainda não ganha pessoa).
       - [x] Ficha central da EMPRESA (parceiro do Clube; comércio entra no M3) e preservação dos históricos antigos
             (ficha central mostra os históricos originais de cada ficha; testado que migração e junção não alteram
             nenhum) — 11/11, desenvolvimento, dados fictícios.

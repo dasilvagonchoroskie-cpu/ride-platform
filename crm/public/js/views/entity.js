@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
 import { abrirExportacao, botaoExportar, podeExportar } from '../exportar.js';
+import { FUNCAO_DA_ENTIDADE, montarPainel } from '../documentos.js';
 
 export async function renderEntity(view, state, key, params) {
   // O servidor valida de novo: esconder o botão é só conveniência.
@@ -235,6 +236,7 @@ export async function renderEntity(view, state, key, params) {
       subtitle: `Registro #${item.id}${item.created_at ? ` · criado em ${ui.fmtDate(item.created_at)}` : ''}`,
       size: 'wide',
       body: `${ficha}<dl class="detail-list">${fields}</dl>
+             ${state.meta.documentos && FUNCAO_DA_ENTIDADE[key] ? '<div id="doc-painel"></div>' : ''}
              ${historico}
              ${data.interacoes.length === 0 && def.interactions ? '<div class="notice" style="margin-top:14px">Nenhum acompanhamento registrado ainda. Use “Registrar acompanhamento” para manter o histórico.</div>' : ''}`,
       footer: `
@@ -245,6 +247,10 @@ export async function renderEntity(view, state, key, params) {
         ${podeAtivar ? `<button class="btn btn-gold btn-sm" data-detail-ativar>${ui.icon('check', 15)} Marcar como ativo na plataforma</button>` : ''}
         <button class="btn btn-primary btn-sm" data-detail-edit>${ui.icon('edit', 15)} Editar</button>`
     });
+
+    // Arquivo digital de documentos (M4): só com a Etapa 2; o servidor decide o que cada perfil pode fazer.
+    const painelDocs = m.dialog.querySelector('#doc-painel');
+    if (painelDocs) montarPainel(painelDocs, state, FUNCAO_DA_ENTIDADE[key], item.id);
 
     // Links para a conversa fecham a ficha antes de navegar.
     m.dialog.querySelectorAll('a[href^="#/conversas"], a[href^="#/pessoas"], a[href^="#/empresas"]').forEach((a) => a.addEventListener('click', () => m.close()));

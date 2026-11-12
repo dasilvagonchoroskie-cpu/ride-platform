@@ -649,8 +649,13 @@ router.get('/meta', (req, res) => {
     },
     entities: defs,
     pendentes,
-    can: policy.permissionsFor(req.user.role, Object.keys(ENTITIES)),
+    can: (() => {
+      const c = policy.permissionsFor(req.user.role, Object.keys(ENTITIES));
+      if (docs.ativo() && req.user.role === 'admin') c.exportar_pdf.push('documentos');
+      return c;
+    })(),
     etapa2: pessoas.ativa() ? { funcoes: pessoas.catalogo() } : null,
+    documentos: docs.ativo(),
     hoje: todayISO()
   });
 });
@@ -719,6 +724,13 @@ router.get('/dashboard', (req, res) => {
     kpis.comercios_novos = n("SELECT COUNT(*) c FROM comercios WHERE situacao IN ('Identificado','Primeiro contato','Aguardando resposta')");
     kpis.comercios_negociacao = n("SELECT COUNT(*) c FROM comercios WHERE situacao IN ('Em negociação','Proposta apresentada','Cadastro em andamento')");
     kpis.comercios_ativos = n("SELECT COUNT(*) c FROM comercios WHERE situacao = 'Ativo na plataforma'");
+  }
+
+  // Etapa 2 (M4): documentos aguardando conferência e documentos com pendência (rejeitado / necessita atualização).
+  if (docs.ativo()) {
+    const c = docs.contagens();
+    kpis.documentos_pendentes = c.pendentes;
+    kpis.documentos_atencao = c.atencao;
   }
 
   const months = [];
@@ -838,6 +850,7 @@ function reportSummary(de, ate) {
         por_origem: porCampo('comercios', 'origem')
       }
     } : {}),
+    ...(docs.ativo() ? { documentos: docs.resumoPeriodo(de, ate) } : {}),
     passageiros: {
       total: db.prepare(`SELECT COUNT(*) c FROM passageiros WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
       por_situacao: porSituacao('passageiros', 'situacao'),
@@ -886,7 +899,9 @@ router.get('/reports/summary', (req, res) => {
 /* ------------------------- relatórios em PDF (todos os setores) ------------------------- */
 // PDF é o formato principal de exportação; o CSV abaixo continua como opção complementar.
 const { criarRelatoriosPdf, ErroRelatorio } = require('./relatorios-pdf');
-const relatoriosPdf = criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario });
+const relatoriosPdf = criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, reportSummary, cenarioCompleto, computeCenario,
+  // `docs` é criado mais abaixo (depois de pessoas): o relatório acessa por função, só quando é chamado.
+  docs: { ativo: () => docs.ativo(), consultar: (...a) => docs.consultar(...a), get SITUACOES() { return docs.SITUACOES; } } });
 
 router.get('/reports/pdf', (req, res) => {
   const tipo = String(req.query.type || '');
@@ -922,6 +937,15 @@ router.get('/reports/export', requireAdmin, (req, res) => {
     });
     audit(req, 'exportar', 'simulacoes', null, `Exportação CSV de simulações (${de} a ${ate}, ${rows.length} linhas)`);
     return sendCsv(res, `financeiro_${stamp}.csv`, header, body);
+  }
+
+  if (type === 'documentos' && docs.ativo()) {
+    // Só metadados e situação da conferência (nada de CPF/CNPJ nem arquivo). Administrador (a rota já exige).
+    const lista = docs.consultar(req, { situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, tudo: true }).items;
+    const header = ['ID', 'Função', 'Cadastro', 'Documento', 'Situação', 'Versões', 'Enviado em', 'Conferido por', 'Conferido em'];
+    const body = lista.map((i) => [i.id, i.funcao_rotulo, i.registro_titulo || '', i.titulo || i.categoria_rotulo, i.situacao_rotulo, i.total_versoes, i.versao_atual ? localDate(i.versao_atual.data_envio) || i.versao_atual.data_envio : '', i.conferido_por_nome || '', i.conferido_em ? localDate(i.conferido_em) : '']);
+    audit(req, 'exportar', 'documentos', null, `Exportação CSV de documentos (${lista.length} linhas)`);
+    return sendCsv(res, 'documentos.csv', header, body);
   }
 
   const def = Object.prototype.hasOwnProperty.call(ENTITIES, type) ? ENTITIES[type] : null;
@@ -1248,6 +1272,24 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
 // juntar duplicados é só do administrador (confirmação explícita + auditoria).
 const { createPessoas, ErroPessoa } = require('./pessoas');
 const pessoas = createPessoas({ db, entities, ENTITIES, audit });
+
+// Documentos (M4): arquivo digital por função, cifrado, em armazenamento privado (src/documentos/). Só com FM_ETAPA2=1 e a migração 005.
+const { createDocumentos, ErroDoc } = require('./documentos/service');
+const { criarDoAmbiente } = require('./documentos/armazenamento');
+const docs = createDocumentos({
+  db, armazenamento: criarDoAmbiente({ dataDir: DATA_DIR }), ENTITIES, entities, audit, getSetting, setSetting, todayISO, isDateISO, localDate
+});
+function docsAtivo(req, res, next) {
+  if (!docs.ativo()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
+  next();
+}
+// Erro de regra de documentos vira resposta com o código e a mensagem certos; o resto cai no tratador geral.
+const comDoc = (fn) => seguro(async (req, res) => {
+  try { await fn(req, res); } catch (err) {
+    if (err instanceof ErroDoc) return res.status(err.status).json({ error: { code: err.code, message: err.message } });
+    throw err;
+  }
+});
 function etapa2(req, res, next) {
   if (!pessoas.ativa()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
   next();
@@ -1280,7 +1322,16 @@ router.post('/pessoas/juntar', etapa2, requireAdmin, (req, res) => respostaPesso
   const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
   res.json(pessoas.juntar({ manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
 }));
-router.get('/pessoas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(pessoas.ficha(Number(req.params.id), { admin: req.user.role === 'admin' }))));
+// Ficha central + resumo dos documentos de cada função (só situação) + CPF/CNPJ mascarado (só administrador).
+function fichaCentral(req, tipo) {
+  const admin = req.user.role === 'admin';
+  const f = pessoas.fichaTitular(tipo, Number(req.params.id), { admin });
+  if (f.mesclada) return f;
+  if (docs.ativo()) f.documentos = docs.resumoDasFuncoes([...f.funcoes, ...f.funcoes_encerradas]);
+  if (admin) f.protegido = { ...pessoas.infoProtegido(tipo, Number(req.params.id)), coleta: docs.ativo() ? docs.politica().cpf_cnpj[tipo === 'pessoa' ? 'cpf' : 'cnpj'] : 'desligado' };
+  return f;
+}
+router.get('/pessoas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(fichaCentral(req, 'pessoa'))));
 router.post('/pessoas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
   const r = pessoas.adicionarFuncao(Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
   res.status(201).json({ item: r.item, titular: r.titular });
@@ -1302,11 +1353,27 @@ router.post('/empresas/juntar', etapa2, requireAdmin, (req, res) => respostaPess
   const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
   res.json(pessoas.juntarTitulares('empresa', { manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
 }));
-router.get('/empresas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(pessoas.fichaTitular('empresa', Number(req.params.id), { admin: req.user.role === 'admin' }))));
+router.get('/empresas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(fichaCentral(req, 'empresa'))));
 router.post('/empresas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
   const r = pessoas.adicionarFuncaoTitular('empresa', Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
   res.status(201).json({ item: r.item, titular: r.titular });
 }));
+
+
+// CPF (pessoa) e CNPJ (empresa): só administrador; só cifrados; coleta só se a política estiver "opcional" (decisão pendente do dono).
+for (const [tipo, caminho, campo] of [['pessoa', 'pessoas', 'cpf'], ['empresa', 'empresas', 'cnpj']]) {
+  router.put(`/${caminho}/:id/${campo}`, etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+    if (!docs.ativo() || docs.politica().cpf_cnpj[campo] !== 'opcional') {
+      return fail(res, 409, 'coleta_desligada', `A coleta de ${campo.toUpperCase()} está desligada: a política de dados ainda não foi definida pelo dono.`);
+    }
+    res.json({ protegido: pessoas.definirProtegido(tipo, Number(req.params.id), req.body && req.body[campo], req.body && req.body.finalidade, req) });
+  }));
+  router.post(`/${caminho}/:id/${campo}/remover`, etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+    if (!req.body || req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+    res.json({ protegido: pessoas.removerProtegido(tipo, Number(req.params.id), req) });
+  }));
+  router.post(`/${caminho}/:id/${campo}/revelar`, etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => res.json(pessoas.revelarProtegido(tipo, Number(req.params.id), req))));
+}
 
 /* ----------------------- Etapa 2: consultas só de leitura ----------------------- */
 // Relatório de possíveis duplicados (mostra só nome, módulo, situação e 4 últimos dígitos do telefone) e estado das
@@ -1377,6 +1444,62 @@ if (hasOwn(ENTITIES, 'comercios')) {
     res.json({ item: db.prepare('SELECT * FROM comercios WHERE id = ?').get(id) });
   });
 }
+
+
+/* ------------------------------- Documentos (M4) ------------------------------- */
+// Todas as rotas exigem login e FM_ETAPA2=1. A permissão (admin/gestor, categoria liberada) é decidida no servidor em service.js.
+// Nenhum arquivo tem URL pública: o conteúdo só sai por GET /documentos/:id/arquivo, que confere permissão e registra o acesso.
+const { maxBytes } = require('./documentos/validacao');
+const lerArquivo = (req, res, next) => express.raw({ type: () => true, limit: maxBytes() + 1048576 })(req, res, (err) => {
+  if (err) return fail(res, err.status === 413 ? 413 : 400, 'arquivo_invalido', err.status === 413 ? 'Arquivo maior que o limite permitido.' : 'Não foi possível ler o arquivo enviado.');
+  next();
+});
+// Metadados do envio vão em cabeçalhos (não na URL): X-Documento = JSON codificado; X-Nome-Arquivo = nome codificado.
+function metaDoEnvio(req) {
+  const dec = (v) => { try { return decodeURIComponent(String(v || '')); } catch (e) { return ''; } };
+  let meta = {};
+  const bruto = dec(req.get('x-documento'));
+  if (bruto.length > 3000) throw new ErroDoc(422, 'invalido', 'Dados do envio grandes demais.');
+  try { meta = bruto ? JSON.parse(bruto) : {}; } catch (e) { throw new ErroDoc(422, 'invalido', 'Dados do envio inválidos.'); }
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) meta = {};
+  return { ...meta, nome: dec(req.get('x-nome-arquivo')).slice(0, 200), conteudo: Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0) };
+}
+
+router.get('/documentos/meta', docsAtivo, (req, res) => res.json({
+  funcoes: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, { rotulo: require('./titulares').FUNCOES[f].rotulo, categorias: docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo })) }])),
+  situacoes: docs.SITUACOES, geral: docs.GERAL, armazenamento: docs.estadoArmazenamento(),
+  pode: { politica: req.user.role === 'admin', anexar: policy.docsAnexar(req.user.role, docs.politica()) }
+}));
+router.get('/documentos/politica', docsAtivo, requireAdmin, (req, res) => {
+  const pol = docs.politica();
+  res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol), armazenamento: docs.estadoArmazenamento(), categorias: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo }))])) });
+});
+router.put('/documentos/politica', docsAtivo, requireAdmin, comDoc((req, res) => {
+  const pol = docs.salvarPolitica(req, req.body);
+  res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol) });
+}));
+router.get('/documentos/lista', docsAtivo, comDoc((req, res) => res.json(docs.consultar(req, {
+  situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, page: req.query.page
+}))));
+router.get('/documentos', docsAtivo, comDoc((req, res) => res.json(docs.listar(req, String(req.query.funcao || ''), req.query.registro_id))));
+router.post('/documentos', docsAtivo, lerArquivo, comDoc(async (req, res) => {
+  res.status(201).json(await docs.anexar(req, metaDoEnvio(req)));
+}));
+router.get('/documentos/:id', docsAtivo, comDoc((req, res) => res.json(docs.historico(req, req.params.id))));
+router.post('/documentos/:id/versoes', docsAtivo, lerArquivo, comDoc(async (req, res) => {
+  res.status(201).json(await docs.anexar(req, { ...metaDoEnvio(req), documento_id: req.params.id }));
+}));
+router.get('/documentos/:id/arquivo', docsAtivo, comDoc(async (req, res) => {
+  const r = await docs.obterArquivo(req, req.params.id, { versao: req.query.versao, acao: req.query.modo === 'ver' ? 'ver' : 'baixar' });
+  res.setHeader('Content-Type', r.mime);
+  res.setHeader('Content-Disposition', `${req.query.modo === 'ver' ? 'inline' : 'attachment'}; filename="${r.nomeDownload}"`);
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  res.setHeader('Content-Length', String(r.conteudo.length));
+  res.end(r.conteudo);
+}));
+router.post('/documentos/:id/conferir', docsAtivo, comDoc((req, res) => res.json({ documento: docs.conferir(req, req.params.id, req.body || {}) })));
+router.patch('/documentos/:id', docsAtivo, comDoc((req, res) => res.json({ documento: docs.observar(req, req.params.id, req.body || {}) })));
+router.post('/documentos/:id/excluir-definitivo', docsAtivo, comDoc(async (req, res) => res.json(await docs.excluirDefinitivo(req, req.params.id, req.body || {}))));
 
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".

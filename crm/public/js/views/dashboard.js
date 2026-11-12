@@ -90,6 +90,8 @@ export async function renderDashboard(view, state) {
       ${k.entregadores_total !== undefined ? kpiCard({ icon: 'check', label: 'Entregadores contratados', value: k.entregadores_contratados, foot: `${ui.fmtInt(k.entregadores_aprovados)} aprovado(s) aguardando contratação${k.entregadores_docs_a_conferir ? ` · ${ui.fmtInt(k.entregadores_docs_a_conferir)} com documentos a conferir` : ''}`, tone: 'green' }) : ''}
       ${k.comercios_total !== undefined ? kpiCard({ icon: 'building', label: 'Comércios parceiros (entregas)', value: k.comercios_total, foot: `${ui.fmtInt(k.comercios_novos)} novo(s) · ${ui.fmtInt(k.comercios_negociacao)} em negociação` }) : ''}
       ${k.comercios_total !== undefined ? kpiCard({ icon: 'check', label: 'Comércios ativos na plataforma', value: k.comercios_ativos, foot: 'Já pedindo entregas · separado do Clube de Vantagens', tone: 'green' }) : ''}
+      ${k.documentos_pendentes !== undefined ? kpiCard({ icon: 'file', label: 'Documentos a conferir', value: k.documentos_pendentes, foot: 'Enviados e ainda sem conferência · arquivo digital', tone: k.documentos_pendentes ? 'gold' : '' }) : ''}
+      ${k.documentos_atencao ? kpiCard({ icon: 'alert', label: 'Documentos com pendência', value: k.documentos_atencao, foot: 'Rejeitados ou precisando de atualização', tone: 'gold' }) : ''}
       ${kpiCard({ icon: 'users', label: 'Passageiros interessados', value: k.passageiros_interessados, foot: `${ui.fmtInt(k.passageiros_cadastrados)} já cadastrados` })}
       ${kpiCard({ icon: 'store', label: 'Parceiros em negociação', value: k.parceiros_negociacao, foot: 'Clube de Vantagens' })}
       ${kpiCard({ icon: 'building', label: 'Parcerias confirmadas', value: k.parcerias_confirmadas, foot: 'Confirmação manual', tone: 'green' })}

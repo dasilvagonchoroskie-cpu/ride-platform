@@ -72,6 +72,19 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Front: menu Comércios, banner "comércio pedindo entregas", botão "Marcar como ativo na plataforma", cartões no dashboard e em Relatórios.
   Cache do app `fm-crm-v22` (etapa2). Testes: `test/m3-comercios.test.js`.
 
+## M4 documentos e armazenamento (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- `documentos` / `documento_versoes` / `documento_eventos` (migração 005, congelada; eventos append-only e versões imutáveis por gatilho; sem DELETE).
+  Documento = `funcao` (motorista|entregador|parceiro_clube|comercio) + `registro_id`; um por categoria (índice parcial), "outros" ilimitado.
+  `src/documentos/`: `service.js` (regras, permissão, eventos, auditoria), `cifra.js` (AES-256-GCM por arquivo, `FM_DOCS_KEY`),
+  `armazenamento.js` (local/supabase; nunca sobrescreve; recusa disco efêmero), `validacao.js` (assinatura, extensão, tamanho, PDF ativo),
+  `manutencao.js` (verificar/backup/restaurar). Arquivos NUNCA entram no retrato do cofre (`persist.js` IGNORAR `documentos`).
+- Regras: conferir NUNCA muda a situação da função (`sincronizarLegado` só mexe em `doc_*`/`documentos`); permissão no servidor
+  (`policy.docs*`, política em setting `docs_politica`: gestor só anexa por padrão; ver/conferir por categoria liberada; exclusão definitiva
+  desligada); todo acesso/negação/integridade vira evento + auditoria; CPF/CNPJ só cifrado, só admin, coleta desligada por padrão.
+- Decisões do dono ainda pendentes (nada inventado): manter originais em toda substituição; armazenamento definitivo; o que o gestor vê;
+  quais CPF/CNPJ exigir; prazo de retenção. Sem exclusão automática. `FM_DOCS_KEY` precisa existir antes de qualquer uso real.
+- Front: `public/js/documentos.js` (painel por ficha, tela Documentos, política, bloco CPF/CNPJ); cache `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
+
 ## Ficha do motorista e "fechados" em verde (10/11/2026, pedido do dono)
 - Motorista: situação nova `Contratado` (fechado), documentos por item `doc_cnh`/`doc_crlv`/`doc_endereco` (Não enviado /
   Recebido — conferir / Conferido) + resumo `documentos` (Não enviados / Incompletos / Recebidos — conferir / Conferidos),

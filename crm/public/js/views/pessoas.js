@@ -3,6 +3,7 @@
 // originais de cada ficha (sem copiar nem substituir nada).
 import { api } from '../api.js';
 import * as ui from '../ui.js';
+import { resumoCentral, blocoProtegido } from '../documentos.js';
 
 const NAV_DA_TABELA = { motoristas: 'motoristas', passageiros: 'passageiros', parceiros: 'parceiros', entregadores: 'entregadores', comercios: 'comercios' };
 const ICONE = { motorista: 'steering', passageiro: 'users', entregador: 'send', parceiro_clube: 'store', comercio: 'building' };
@@ -110,17 +111,19 @@ async function renderFicha(view, state, id, c, tipo) {
       </div>
     </div>
 
+    <div id="p-protegido"></div>
+
     ${d.possiveis_duplicados.length ? `<div class="notice warn" style="margin:14px 0">${ui.icon('alert', 15)}
       <span><b>Possível cadastro repetido:</b> ${d.possiveis_duplicados.map((x) => `${ui.esc(x.nome)} (telefone terminado em ${ui.esc(x.telefone_final)})`).join(', ')}.
       ${admin ? `<a href="#/${c.base}?duplicados=1">Comparar e decidir</a>` : 'Avise o administrador para conferir.'}</span></div>` : ''}
 
     <div class="section-title">Funções na Fortaleza Move</div>
     <div class="funcao-grid">
-      ${d.funcoes.length ? d.funcoes.map((f) => cartaoFuncao(f)).join('') : '<div class="card"><div class="empty"><p>Nenhuma função ativa.</p></div></div>'}
+      ${d.funcoes.length ? d.funcoes.map((f) => cartaoFuncao(f, false, d.documentos)).join('') : '<div class="card"><div class="empty"><p>Nenhuma função ativa.</p></div></div>'}
     </div>
 
     ${d.funcoes_encerradas.length ? `<div class="section-title">Funções encerradas (o histórico continua guardado)</div>
-      <div class="funcao-grid">${d.funcoes_encerradas.map((f) => cartaoFuncao(f, true)).join('')}</div>` : ''}
+      <div class="funcao-grid">${d.funcoes_encerradas.map((f) => cartaoFuncao(f, true, d.documentos)).join('')}</div>` : ''}
 
     <div class="section-title">Histórico de cada função (registros originais de cada ficha)</div>
     ${historicoFuncoesHtml(d.historico_funcoes, admin)}
@@ -132,16 +135,17 @@ async function renderFicha(view, state, id, c, tipo) {
       : '<p class="muted small">Sem eventos registrados.</p>'}</div></div>`;
 
   view.querySelector('#p-add').addEventListener('click', () => adicionarFuncao(state, p, disponiveis, c, () => renderFicha(view, state, id, c, tipo)));
+  if (d.protegido) blocoProtegido(view.querySelector('#p-protegido'), state, tipo, id, d.protegido, () => renderFicha(view, state, id, c, tipo));
 }
 
-function cartaoFuncao(f, encerrada = false) {
+function cartaoFuncao(f, encerrada = false, documentos = null) {
   const r = f.registro;
   const nav = NAV_DA_TABELA[f.registro_tabela];
   return `<div class="card funcao-card ${encerrada ? 'encerrada' : ''} ${r.fechado && !encerrada ? 'fechada' : ''}">
     <div class="funcao-topo"><span class="funcao-icone">${ui.icon(ICONE[f.funcao] || 'users', 18)}</span>
       <div><b>${ui.esc(f.rotulo)}</b><div class="muted small">Ficha #${f.registro_id}${r.titulo && !r.removido ? ` · ${ui.esc(r.titulo)}` : ''}</div></div></div>
     <div class="funcao-situacao">${r.removido ? ui.badge('Registro excluído', 'danger') : ui.badge(r.situacao || '—', tomRegistro(r))}
-      ${r.documentos ? ui.badge(`Documentos: ${r.documentos}`) : ''}</div>
+      ${r.documentos ? ui.badge(`Documentos: ${r.documentos}`) : ''}${documentos ? resumoCentral(documentos, f.funcao, f.registro_id) : ''}</div>
     <div class="muted small">${encerrada ? `Encerrada em ${ui.fmtDate(f.encerrado_em)} · ${ui.esc(f.motivo_encerramento || '')}`
       : r.contratado_em ? `Contratado em ${ui.fmtDate(r.contratado_em)}` : r.confirmado_em ? `Confirmado em ${ui.fmtDate(r.confirmado_em)}` : `Função desde ${ui.fmtDate(f.criado_em)}`}</div>
     ${!r.removido && nav ? `<a class="btn btn-sm btn-ghost" href="#/${nav}?abrir=${f.registro_id}">Abrir ficha de ${ui.esc(f.rotulo.toLowerCase())}</a>` : ''}

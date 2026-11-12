@@ -13,7 +13,10 @@
     "backup": "node scripts/backup.js",
     "test": "node --test test/*.test.js",
     "test:offline": "node --disable-warning=ExperimentalWarning test/offline-harness/run.js",
-    "wa:instalar": "bash scripts/instalar-whatsapp.sh"
+    "wa:instalar": "bash scripts/instalar-whatsapp.sh",
+    "docs:backup": "node scripts/docs-backup.js",
+    "docs:restaurar": "node scripts/docs-restaurar.js",
+    "docs:verificar": "node scripts/docs-verificar.js"
   },
   "engines": {
     "node": ">=18.17"

@@ -7,6 +7,7 @@ import { renderReports } from './views/reports.js';
 import { renderSettings } from './views/settings.js';
 import { renderConversas } from './views/whatsapp.js';
 import { renderPessoas, renderEmpresas } from './views/pessoas.js';
+import { renderDocumentos } from './documentos.js';
 import { iniciarAvisos, pararAvisos, sincronizarPush } from './notificacoes.js';
 
 const NAV = [
@@ -24,6 +25,7 @@ const NAV = [
   // Etapa 2 (só aparece com a Etapa 2 ligada no servidor): ficha central de cada pessoa e as suas funções.
   { key: 'entregadores', label: 'Entregadores', icon: 'send', entity: 'entregadores', title: 'Entregadores e motociclistas', sub: 'Interessados, cadastros e aprovações de quem faz entregas e mototáxi', etapa2: true },
   { key: 'comercios', label: 'Comércios', icon: 'building', entity: 'comercios', title: 'Comércios parceiros', sub: 'Lojas que vão usar a plataforma para pedir entregas', etapa2: true },
+  { key: 'documentos', label: 'Documentos', icon: 'file', title: 'Documentos', sub: 'Arquivo digital e conferência de documentos por função', etapa2: true },
   { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true },
   { key: 'empresas', label: 'Empresas', icon: 'building', title: 'Empresas', sub: 'Ficha central: cada empresa e as suas funções (Clube de Vantagens, comércio)', etapa2: true }
 ];
@@ -457,6 +459,7 @@ async function enterApp() {
           ${NAV.slice(1, 2).map((i) => navItem(i, state.meta.pendentes)).join('')}
           ${state.meta.etapa2 && state.meta.entities.entregadores ? navItem(NAV.find((n) => n.key === 'entregadores'), state.meta.pendentes) : ''}
           ${state.meta.etapa2 && state.meta.entities.comercios ? navItem(NAV.find((n) => n.key === 'comercios'), state.meta.pendentes) : ''}
+          ${state.meta.documentos ? navItem(NAV.find((n) => n.key === 'documentos'), state.meta.pendentes) : ''}
           ${NAV.slice(2, 8).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Análise</div>
           ${NAV.slice(8, 10).map((i) => navItem(i, state.meta.pendentes)).join('')}
@@ -577,9 +580,10 @@ async function route() {
     else if (key === 'relatorios') await renderReports(view, state);
     else if (key === 'conversas') await renderConversas(view, state);
     else if (key === 'configuracoes') await renderSettings(view, state);
+    else if (key === 'documentos' && state.meta.documentos) await renderDocumentos(view, state);
     else if (key === 'pessoas' && state.meta.etapa2) await renderPessoas(view, state, params);
     else if (key === 'empresas' && state.meta.etapa2) await renderEmpresas(view, state, params);
-    else if (key === 'pessoas' || key === 'empresas' || (key === 'entregadores' && !state.meta.entities.entregadores) || (key === 'comercios' && !state.meta.entities.comercios)) location.hash = '#/dashboard';
+    else if (key === 'pessoas' || key === 'empresas' || key === 'documentos' || (key === 'entregadores' && !state.meta.entities.entregadores) || (key === 'comercios' && !state.meta.entities.comercios)) location.hash = '#/dashboard';
     else if (item.entity) await renderEntity(view, state, item.entity, params);
     state.refreshMeta();
   } catch (err) {

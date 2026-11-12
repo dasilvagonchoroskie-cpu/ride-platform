@@ -18,7 +18,8 @@ const LISTA = [
   require('./001_pessoas_empresas_vinculos'),
   require('./002_vincular_cadastros_existentes'),
   require('./003_entregadores'),
-  require('./004_comercios')
+  require('./004_comercios'),
+  require('./005_documentos')
 ];
 
 const checksum = (m) => crypto.createHash('sha256').update(`${m.versao}|${m.nome}|${m.up.toString()}|${m.verificar ? m.verificar.toString() : ''}`).digest('hex');

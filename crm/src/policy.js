@@ -38,6 +38,23 @@ function canExportPdf(role, tipo) {
   return role === 'admin' || EXPORTA_GESTOR_PDF.has(tipo);
 }
 
+
+// Documentos (M4). Privilégio mínimo: o administrador faz tudo; o gestor, por padrão, só ANEXA e consulta a situação
+// (metadados). Ver/baixar o ARQUIVO e conferir dependem de a categoria ter sido liberada ao gestor pelo administrador
+// (política `docs_politica`, decisão pendente do dono). Exclusão definitiva é só do administrador.
+const DOCS_POLITICA_PADRAO = {
+  obrigatorios: { motorista: ['cnh', 'crlv', 'comprovante_endereco'], entregador: ['cnh', 'crlv', 'comprovante_endereco'], parceiro_clube: [], comercio: [] },
+  gestor: { anexar: true, conferir: false, categorias_visiveis: [] },
+  exclusao_definitiva: false,
+  cpf_cnpj: { cpf: 'desligado', cnpj: 'desligado' },
+  confirmada_em: null
+};
+const docsVerArquivo = (role, categoria, pol) => role === 'admin' || (role === 'gestor' && !!pol && !!pol.gestor && (pol.gestor.categorias_visiveis || []).includes(categoria));
+const docsAnexar = (role, pol) => role === 'admin' || (role === 'gestor' && !!pol && !!pol.gestor && pol.gestor.anexar === true);
+// Conferir exige poder ver o arquivo: ninguém confere o que não pode abrir.
+const docsConferir = (role, categoria, pol) => role === 'admin' || (role === 'gestor' && !!pol && !!pol.gestor && pol.gestor.conferir === true && docsVerArquivo(role, categoria, pol));
+const docsExcluirDefinitivo = (role) => role === 'admin';
+
 function permissionsFor(role, entityKeys) {
   return {
     exportar: role === 'admin',
@@ -49,5 +66,5 @@ function permissionsFor(role, entityKeys) {
 }
 
 module.exports = {
-  canDelete, canExportPdf,
+  canDelete, canExportPdf, DOCS_POLITICA_PADRAO, docsVerArquivo, docsAnexar, docsConferir, docsExcluirDefinitivo,
   permissionsFor, ROLES, DEFAULT_ROLE, parseRole, parseTrustProxy };
