@@ -34,8 +34,8 @@ class AtualizacaoPeriodica with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState estado) {
-    final voltou = estado == AppLifecycleState.resumed;
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final voltou = state == AppLifecycleState.resumed;
     if (voltou == _emPrimeiroPlano) return;
     _emPrimeiroPlano = voltou;
     if (voltou) {
