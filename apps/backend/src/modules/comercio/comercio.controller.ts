@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@ride/shared';
@@ -12,6 +12,7 @@ import { atualizarSchema, cadastroSchema, cotarSchema, decisaoSchema, entregaSch
 import { ComercioService } from './comercio.service';
 
 const paginaSchema = z.object({ pagina: z.coerce.number().int().min(1).max(500).default(1) });
+const configSchema = z.object({ ativo: z.boolean() });
 const motivoSchema = z.object({ motivo: z.string().trim().max(300).optional() });
 const filtroPedidosSchema = z.object({ praca: z.string().trim().max(80).optional(), status: z.string().trim().max(20).optional(), comercioId: z.string().uuid().optional() });
 
@@ -111,6 +112,18 @@ export class AdminComercioController {
   @ApiOperation({ summary: 'Entregas pedidas pelo aplicativo Comercio (origem identificada)' })
   async pedidos(@CurrentUser() user: AuthenticatedUser, @Query(new ZodValidationPipe(filtroPedidosSchema)) q: { praca?: string; status?: string; comercioId?: string }) {
     return this.comercio.adminPedidos(await this.pracas.filtro(user, q.praca), q);
+  }
+
+  @Get('config')
+  @ApiOperation({ summary: 'Chave geral do Comercio (entregas liberadas ou nao)' })
+  config() {
+    return this.comercio.lerConfig();
+  }
+
+  @Put('config')
+  @ApiOperation({ summary: 'Liga ou desliga as entregas do Comercio (so o dono; auditado)' })
+  gravarConfig(@CurrentUser('id') adminId: string, @Body(new ZodValidationPipe(configSchema)) body: { ativo: boolean }) {
+    return this.comercio.gravarConfig(adminId, body.ativo);
   }
 
   @Get(':id')

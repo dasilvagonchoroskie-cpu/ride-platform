@@ -121,6 +121,17 @@ class ComerciosApi {
     return [for (final x in (r['itens'] as List? ?? const []).whereType<Map<String, dynamic>>()) PedidoDoComercio(x)];
   }
 
+  /// Chave geral do Comercio (nasce desligada; so o dono liga).
+  Future<bool> config() async {
+    final r = await _c.request('GET', '/admin/comercios/config') as Map<String, dynamic>;
+    return r['ativo'] == true;
+  }
+
+  Future<bool> gravarConfig(bool ativo) async {
+    final r = await _c.request('PUT', '/admin/comercios/config', body: {'ativo': ativo}) as Map<String, dynamic>;
+    return r['ativo'] == true;
+  }
+
   Future<Comercio> detalhe(String id) async => Comercio(await _c.request('GET', '/admin/comercios/$id') as Map<String, dynamic>);
 
   Future<Comercio> decidir(String id, String acao, {String? motivo}) async {
@@ -145,7 +156,7 @@ class _ComerciosTelaState extends State<ComerciosTela> {
     ('REJEITADO', 'Rejeitados'),
   ];
 
-  late Future<(List<Comercio>, List<PedidoDoComercio>)> _dados;
+  late Future<(List<Comercio>, List<PedidoDoComercio>, bool)> _dados;
   String? _situacao;
   String? _praca;
 
@@ -154,10 +165,10 @@ class _ComerciosTelaState extends State<ComerciosTela> {
     return ComerciosApi(api.cliente, api.praca);
   }
 
-  Future<(List<Comercio>, List<PedidoDoComercio>)> _buscar() async {
+  Future<(List<Comercio>, List<PedidoDoComercio>, bool)> _buscar() async {
     final api = _api;
-    final r = await Future.wait<Object>([api.lista(_situacao), api.pedidos()]);
-    return (r[0] as List<Comercio>, r[1] as List<PedidoDoComercio>);
+    final r = await Future.wait<Object>([api.lista(_situacao), api.pedidos(), api.config()]);
+    return (r[0] as List<Comercio>, r[1] as List<PedidoDoComercio>, r[2] as bool);
   }
 
   void _recarregar() => setState(() {
@@ -169,6 +180,27 @@ class _ComerciosTelaState extends State<ComerciosTela> {
     super.initState();
     _praca = Provider.of<PainelState>(context, listen: false).api.praca;
     _dados = _buscar();
+  }
+
+  Future<void> _mudarChave(bool ligar) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text(ligar ? 'Liberar as entregas do Comércio?' : 'Bloquear as entregas do Comércio?'),
+        content: Text(ligar
+            ? 'Lojas aprovadas poderão pedir entregas a motoristas de verdade, mas só nas cidades onde a Entrega está ligada em Entregas. Tarifas, comissões e carteiras não mudam.'
+            : 'Nenhuma loja consegue consultar preço nem pedir entrega. Entregas já pedidas continuam e podem ser canceladas.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: Text(ligar ? 'Liberar' : 'Bloquear')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final feito = await tentar(context, () async {
+      await _api.gravarConfig(ligar);
+    }, sucesso: ligar ? 'Entregas do Comércio liberadas.' : 'Entregas do Comércio bloqueadas.');
+    if (feito && mounted) _recarregar();
   }
 
   Future<void> _abrir(Comercio c) async {
@@ -190,7 +222,7 @@ class _ComerciosTelaState extends State<ComerciosTela> {
       builder: (context, s) {
         if (s.hasError) return Aviso(texto: 'Não foi possível carregar os comércios: ${mensagemDe(s.error!)}', tentarDeNovo: _recarregar);
         if (!s.hasData) return const Center(child: CircularProgressIndicator());
-        final (lista, pedidos) = s.data!;
+        final (lista, pedidos, liberadas) = s.data!;
         return RefreshIndicator(
           onRefresh: () async => _recarregar(),
           child: ListView(
@@ -200,6 +232,8 @@ class _ComerciosTelaState extends State<ComerciosTela> {
                 'Lojas que pedem coleta e entrega pelo aplicativo Comércio. Aprovar o cadastro não liga a entrega: isso continua em Entregas, por cidade.',
                 style: AppText.caption.copyWith(color: AppColors.textMuted),
               ),
+              const SizedBox(height: Spacing.sm),
+              _ChaveGeral(liberadas: liberadas, dono: Provider.of<PainelState>(context, listen: false).dono, aoMudar: _mudarChave),
               const SizedBox(height: Spacing.sm),
               Wrap(
                 spacing: Spacing.xs,
@@ -241,6 +275,32 @@ class _ComerciosTelaState extends State<ComerciosTela> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Chave geral: nasce BLOQUEADA. So o dono liga; o operador de cidade so ve.
+class _ChaveGeral extends StatelessWidget {
+  const _ChaveGeral({required this.liberadas, required this.dono, required this.aoMudar});
+
+  final bool liberadas;
+  final bool dono;
+  final Future<void> Function(bool ligar) aoMudar;
+
+  @override
+  Widget build(BuildContext context) {
+    return CartaoDeLista(
+      child: SwitchListTile(
+        value: liberadas,
+        onChanged: dono ? (v) => aoMudar(v) : null,
+        title: Text('Entregas do Comércio liberadas', style: AppText.bodyStrong),
+        subtitle: Text(
+          liberadas
+              ? 'Lojas aprovadas podem pedir entrega nas cidades com Entrega ligada.${dono ? '' : ' Só o dono muda isto.'}'
+              : 'Bloqueado: nenhuma loja consulta preço nem pede entrega.${dono ? '' : ' Só o dono muda isto.'}',
+          style: AppText.caption,
+        ),
+      ),
     );
   }
 }
@@ -335,7 +395,7 @@ class _DetalheDoComercioState extends State<_DetalheDoComercio> {
         builder: (d) => AlertDialog(
           title: Text('${_rotulo(acao)} ${_c.nome}?'),
           content: Text(acao == 'APROVAR'
-              ? 'O estabelecimento poderá pedir entregas, mas só onde a entrega estiver ligada em Entregas. Nenhuma tarifa ou comissão muda.'
+              ? 'O estabelecimento poderá pedir entregas só depois de você liberar as entregas do Comércio (chave no alto desta tela) e só onde a entrega estiver ligada em Entregas. Nenhuma tarifa ou comissão muda.'
               : 'O estabelecimento volta a poder pedir entregas.'),
           actions: [
             TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Voltar')),

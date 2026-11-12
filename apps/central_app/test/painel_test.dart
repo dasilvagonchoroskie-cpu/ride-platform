@@ -571,6 +571,7 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       ],
     };
   }
+  if (caminho == '/api/admin/comercios/config') return {'ativo': _comercioLiberado};
   if (caminho == '/api/admin/comercios/entregas') {
     return {
       'itens': [
@@ -767,12 +768,16 @@ Map<String, dynamic> _novoComercio(String id, String nome, String situacao, {Str
 final Map<String, Map<String, dynamic>> _comerciosDeTeste = {};
 final List<String> _pedidosDeComercio = [];
 
+/// Chave geral do Comercio no servidor falso (nasce bloqueada).
+bool _comercioLiberado = false;
+
 void _zerarComercios() {
   _comerciosDeTeste
     ..clear()
     ..[_idComercioA] = _novoComercio(_idComercioA, 'Pizzaria Boa', 'AGUARDANDO')
     ..[_idComercioB] = _novoComercio(_idComercioB, 'Padaria Central', 'APROVADO');
   _pedidosDeComercio.clear();
+  _comercioLiberado = false;
 }
 
 /// Passageiros que a Central mandou excluir.
@@ -805,6 +810,11 @@ MockClient _servidor() => MockClient((http.Request r) async {
       }
       if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
         _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
+      }
+      if (r.url.path == '/api/admin/comercios/config' && r.method == 'PUT') {
+        final b = jsonDecode(r.body) as Map;
+        _pedidosDeComercio.add('${r.method} ${r.url.path} ${r.body}');
+        _comercioLiberado = b['ativo'] == true;
       }
       if (r.url.path.startsWith('/api/admin/comercios/') && r.url.path.endsWith('/decisao') && r.method == 'POST') {
         final id = r.url.path.split('/')[4];
@@ -1710,6 +1720,18 @@ void main() {
     expect(find.text('Pizzaria Boa'), findsWidgets);
     expect(find.text('Padaria Central'), findsOneWidget);
     expect(find.text('Aguardando aprovação'), findsOneWidget);
+
+    // Chave geral: nasce bloqueada; so liga depois de confirmar, e grava.
+    expect(find.textContaining('Bloqueado: nenhuma loja consulta preço'), findsOneWidget);
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Tarifas, comissões e carteiras não mudam'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Liberar'));
+    await _carregar(tester);
+    expect(_pedidosDeComercio.single, 'PUT /api/admin/comercios/config {"ativo":true}');
+    expect(find.textContaining('Lojas aprovadas podem pedir entrega'), findsOneWidget);
+    _pedidosDeComercio.clear();
+
     // Entrega pedida pelo aplicativo Comercio, com a origem identificada.
     await tester.ensureVisible(find.text('Comércio: Pizzaria Boa'));
     expect(find.text('Comércio: Pizzaria Boa'), findsOneWidget);

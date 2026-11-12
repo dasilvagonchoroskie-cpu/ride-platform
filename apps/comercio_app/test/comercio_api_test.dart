@@ -97,6 +97,18 @@ void main() {
     expect(await api.meu(), isNull);
   });
 
+  test('meu(): lê a chave geral da Central; servidor sem o campo segue como liberado', () async {
+    final loja = {
+      'id': 'c1', 'nomeFantasia': 'Pizzaria Boa', 'cnpj': '11222333000181', 'responsavelNome': 'Ana', 'telefone': '+5564999998888',
+      'email': 'a@b.com', 'situacao': 'APROVADO', 'situacaoRotulo': 'Aprovado',
+      'endereco': {'logradouro': 'Rua B', 'numero': '20', 'bairro': 'Centro', 'cidade': 'Goiatuba', 'uf': 'GO', 'cep': '75600000', 'porExtenso': 'Rua B, 20'},
+    };
+    Future<Estabelecimento?> ler(Map<String, dynamic> resposta) => ComercioApi(ApiClient(cliente: MockClient((_) async => ok(resposta)))).meu();
+    expect((await ler({'cadastrado': true, 'comercio': loja, 'entregasLiberadas': false}))!.entregasLiberadas, isFalse);
+    expect((await ler({'cadastrado': true, 'comercio': loja, 'entregasLiberadas': true}))!.entregasLiberadas, isTrue);
+    expect((await ler({'cadastrado': true, 'comercio': loja}))!.entregasLiberadas, isTrue);
+  });
+
   test('cadastro manda só números no CNPJ/CPF/CEP e a senha só se informada', () async {
     Map<String, dynamic>? corpo;
     final api = ComercioApi(ApiClient(cliente: MockClient((req) async {

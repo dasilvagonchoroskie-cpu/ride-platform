@@ -3,6 +3,7 @@ import { Prisma, UserRole } from '@prisma/client';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
 import { PracasService } from '../pracas/pracas.service';
+import { encerrarComercios } from '../comercio/comercio.conta';
 
 /**
  * Limpeza dos dados (Evandro, 08/10/2026: "esses registros que foram de
@@ -210,6 +211,8 @@ export class LimpezaService {
    */
   private async apagarUsuarios(ids: string[], opcoes: { comCorridas: boolean }) {
     if (ids.length === 0) return { contas: 0, corridas: 0 };
+    // Quarto aplicativo: cadastro de loja ligado a conta sai antes (senao a chave estrangeira trava).
+    await encerrarComercios(this.prisma, ids, { apagarTudo: opcoes.comCorridas });
     return this.prisma.withTransaction(async (tx) => {
       const motoristas = (await tx.driver.findMany({ where: { userId: { in: ids } }, select: { id: true } })).map((d) => d.id);
       let corridas = 0;

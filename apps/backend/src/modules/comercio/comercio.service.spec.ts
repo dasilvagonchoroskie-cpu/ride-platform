@@ -1,3 +1,4 @@
+import { RequestMethod } from '@nestjs/common';
 import { UserRole } from '@ride/shared';
 
 // O motor de corridas e o das cidades sao simulados (e nao carregam o banco).
@@ -8,6 +9,7 @@ import { ROLES_KEY } from '../../common/constants/metadata.constants';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { AdminComercioController, ComercioController } from './comercio.controller';
 import { ComercioService } from './comercio.service';
+import { encerrarComercios } from './comercio.conta';
 
 /**
  * Aplicativo Comercio: o servidor do estabelecimento, com um banco falso na
@@ -37,7 +39,7 @@ const pedido = (chave = 'chave-numero-0000001') => ({
   veiculo: 'MOTO' as const,
 });
 
-function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number } = {}) {
+function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: boolean } = {}) {
   const usuarios: Record<string, any> = {
     u1: { id: 'u1', role: 'PASSENGER', email: 'maria@padaria.com.br', emailVerifiedAt: new Date(), passwordHash: null },
     u2: { id: 'u2', role: 'PASSENGER', email: 'joao@loja.com.br', emailVerifiedAt: new Date(), passwordHash: null },
@@ -48,6 +50,7 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number } = {}) {
   const pedidos: any[] = [];
   const corridas: Record<string, any> = {};
   const auditoria: any[] = [];
+  const config: Record<string, unknown> = opcoes.desligado ? {} : { 'comercio.config': { ativo: true } };
   let n = 0;
 
   const comJoin = (p: any) => (p ? { ...p, ride: corridas[p.rideId] } : null);
@@ -83,6 +86,13 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number } = {}) {
         if (pedidos.some((p) => p.comercioId === data.comercioId && p.chave === data.chave)) throw Object.assign(new Error('unique'), { code: 'P2002' });
         pedidos.push({ createdAt: new Date(), ...data });
       },
+    },
+    // Chave geral do Comercio (tabela de configuracoes): nos testes comeca LIGADA, salvo `desligado`.
+    setting: {
+      findUnique: async ({ where }: any) => (config[where.key] === undefined ? null : { key: where.key, value: config[where.key] }),
+      upsert: jest.fn(async ({ where, update, create }: any) => {
+        config[where.key] = (config[where.key] === undefined ? create : update).value;
+      }),
     },
     auditLog: { create: jest.fn(async ({ data }: any) => void auditoria.push(data)) },
     $executeRawUnsafe: jest.fn(),
@@ -174,7 +184,7 @@ describe('Comercio: cadastro e autenticacao (testes 1 e 3)', () => {
 
   it('quem nao cadastrou nada nao enxerga nem pede nada', async () => {
     const ctx = montar();
-    expect(await ctx.s.meu('u2')).toEqual({ cadastrado: false, comercio: null });
+    expect(await ctx.s.meu('u2')).toEqual({ cadastrado: false, comercio: null, entregasLiberadas: true });
     await expect(ctx.s.historico('u2')).rejects.toThrow('ainda não cadastrou');
     await expect(ctx.s.pedir('u2', pedido())).rejects.toThrow('ainda não cadastrou');
   });
@@ -467,5 +477,134 @@ describe('Comercio: Central (testes 20 e 21)', () => {
     const l = await ctx.s.adminPedidos(null, {});
     expect(l.itens[0]).toMatchObject({ origem: 'COMERCIO', comercio: 'Padaria Estrela', praca: 'goiatuba' });
     expect((await ctx.s.adminPedidos('outra', {})).itens).toHaveLength(0);
+  });
+});
+
+
+describe('Comercio: chave geral desligada por padrao (entrega comercial nao dispara)', () => {
+  it('desligado: aprovado nao consulta preco nem pede entrega, e o motor de corridas nem e chamado', async () => {
+    const ctx = montar({ desligado: true });
+    await aprovado(ctx);
+    await expect(ctx.s.cotar('u1', { destino: pedido().destino } as never)).rejects.toThrow(/ainda não foram liberadas/);
+    await expect(ctx.s.pedir('u1', pedido() as never)).rejects.toThrow(/ainda não foram liberadas/);
+    expect(ctx.rides.estimar).not.toHaveBeenCalled();
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    expect(ctx.pedidos).toHaveLength(0);
+    expect(Object.keys(ctx.corridas)).toHaveLength(0);
+  });
+
+  it('desligado: cadastro, aprovacao, consulta ao proprio cadastro e historico continuam funcionando', async () => {
+    const ctx = montar({ desligado: true });
+    const c = await aprovado(ctx);
+    const meu = await ctx.s.meu('u1');
+    expect(meu.cadastrado).toBe(true);
+    expect(meu.entregasLiberadas).toBe(false);
+    expect((await ctx.s.historico('u1')).itens).toEqual([]);
+    expect((await ctx.s.adminDetalhe(null, c.id)).situacao).toBe('APROVADO');
+  });
+
+  it('sem registro nenhum a chave esta desligada; so ativo===true liga (valor torto nao liga)', async () => {
+    const ctx = montar({ desligado: true });
+    expect(await ctx.s.ativo()).toBe(false);
+    await ctx.prisma.setting.upsert({ where: { key: 'comercio.config' }, update: { value: { ativo: 'true' } }, create: { value: { ativo: 'true' } } });
+    expect(await ctx.s.ativo()).toBe(false);
+    await ctx.prisma.setting.upsert({ where: { key: 'comercio.config' }, update: { value: [true] }, create: { value: [true] } });
+    expect(await ctx.s.ativo()).toBe(false);
+  });
+
+  it('ligar e desligar: grava, audita antes e depois, e o pedido so passa com a chave ligada', async () => {
+    const ctx = montar({ desligado: true });
+    await aprovado(ctx);
+    expect(await ctx.s.gravarConfig('dono', true)).toEqual({ ativo: true });
+    const ligado = ctx.auditoria.find((a) => a.action === 'COMERCIO_CONFIG');
+    expect(ligado).toMatchObject({ actorId: 'dono', before: { ativo: false }, after: { ativo: true } });
+    expect((await ctx.s.pedir('u1', pedido() as never)).repetido).toBe(false);
+    await ctx.s.gravarConfig('dono', false);
+    await expect(ctx.s.pedir('u1', pedido('outra-chave-00000002') as never)).rejects.toThrow(/ainda não foram liberadas/);
+  });
+
+  it('a chave geral so e gravada pelo dono (Central) e so lida por quem esta na Central', () => {
+    expect(Reflect.getMetadata(ROLES_KEY, AdminComercioController)).toEqual([UserRole.ADMIN]);
+    const guardas = Reflect.getMetadata('__guards__', AdminComercioController) as unknown[];
+    expect(guardas).toContain(DonoGravaGuard);
+    expect(typeof AdminComercioController.prototype.gravarConfig).toBe('function');
+    // PUT = grava => a guarda exige o dono (comportamento testado logo abaixo).
+    expect(Reflect.getMetadata('method', AdminComercioController.prototype.gravarConfig)).toBe(RequestMethod.PUT);
+  });
+});
+
+
+describe('Comercio: permissoes da Central (so o dono grava)', () => {
+  // Guarda de verdade; so a pergunta "este admin e de uma cidade?" e simulada.
+  const guarda = new DonoGravaGuard({
+    exigirDono: async (u: { id: string }) => {
+      if (u.id === 'operador') throw new Error('So o dono da Central pode mexer nisto.');
+    },
+  } as never);
+  const ctx = (id: string, method: string, role = UserRole.ADMIN) => ({ switchToHttp: () => ({ getRequest: () => ({ user: { id, role }, method }) }) }) as never;
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('operador de cidade: %s e recusado (aprovar, rejeitar, suspender, reativar, ligar e desligar)', async (metodo) => {
+    await expect(guarda.canActivate(ctx('operador', metodo))).rejects.toThrow('So o dono');
+  });
+
+  it('operador de cidade pode LER (GET); o dono pode ler e gravar', async () => {
+    await expect(guarda.canActivate(ctx('operador', 'GET'))).resolves.toBe(true);
+    for (const m of ['GET', 'POST', 'PUT']) await expect(guarda.canActivate(ctx('dono', m))).resolves.toBe(true);
+  });
+
+  it('toda rota de gravacao da Central passa por essa guarda (decisao e chave geral); as de leitura sao GET', () => {
+    const metodo = (f: unknown) => Reflect.getMetadata('method', f as never) as number;
+    const p = AdminComercioController.prototype;
+    expect(metodo(p.decidir)).toBe(RequestMethod.POST);
+    expect(metodo(p.gravarConfig)).toBe(RequestMethod.PUT);
+    for (const f of [p.listar, p.pedidos, p.detalhe, p.config]) expect(metodo(f)).toBe(RequestMethod.GET);
+    expect(Reflect.getMetadata('__guards__', AdminComercioController)).toContain(DonoGravaGuard);
+  });
+});
+
+describe('Comercio: apagar a conta de um estabelecimento nao trava nem guarda dados pessoais', () => {
+  function banco(pedidosDaLoja: number) {
+    const loja = { id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' };
+    const chamadas: string[] = [];
+    const db: any = {
+      comercio: {
+        findMany: jest.fn(async () => [loja]),
+        delete: jest.fn(async () => void chamadas.push('apagou cadastro')),
+        update: jest.fn(async ({ data }: any) => void chamadas.push(`anonimizou ${data.status} ${data.cnpj}`)),
+      },
+      comercioPedido: {
+        count: jest.fn(async () => pedidosDaLoja),
+        deleteMany: jest.fn(async () => void chamadas.push('apagou pedidos')),
+      },
+    };
+    return { db, chamadas };
+  }
+
+  it('sem entregas: o cadastro sai de vez (a exclusao da conta nao trava na chave estrangeira)', async () => {
+    const { db, chamadas } = banco(0);
+    expect(await encerrarComercios(db, ['u1'])).toEqual({ apagados: 1, anonimizados: 0 });
+    expect(chamadas).toEqual(['apagou pedidos', 'apagou cadastro']);
+  });
+
+  it('com entregas: fica o historico, SUSPENSO e sem dados pessoais (CNPJ/telefone/e-mail trocados)', async () => {
+    const { db, chamadas } = banco(3);
+    expect(await encerrarComercios(db, ['u1'])).toEqual({ apagados: 0, anonimizados: 1 });
+    expect(chamadas).toEqual(['anonimizou SUSPENSO exclaaaaaaaabb']);
+    const dados = db.comercio.update.mock.calls[0][0].data;
+    expect(dados).toMatchObject({ razaoSocial: null, responsavelCpf: null, latitude: null, longitude: null, motivo: 'Conta excluída.' });
+    expect(dados.email).toMatch(/@excluido\.invalid$/);
+  });
+
+  it('limpeza do teste (apagarTudo): sai tudo, mesmo com entregas (as corridas tambem saem)', async () => {
+    const { db } = banco(5);
+    expect(await encerrarComercios(db, ['u1'], { apagarTudo: true })).toEqual({ apagados: 1, anonimizados: 0 });
+  });
+
+  it('se o banco falhar (ex.: tabela ainda nao criada), avisa e NAO derruba a exclusao da conta', async () => {
+    const avisos: string[] = [];
+    const db: any = { comercio: { findMany: async () => { throw new Error('relation "comercios" does not exist'); } }, comercioPedido: {} };
+    await expect(encerrarComercios(db, ['u1'], {}, (m) => avisos.push(m))).resolves.toEqual({ apagados: 0, anonimizados: 0 });
+    expect(avisos[0]).toContain('does not exist');
+    await expect(encerrarComercios(db, [])).resolves.toEqual({ apagados: 0, anonimizados: 0 });
   });
 });

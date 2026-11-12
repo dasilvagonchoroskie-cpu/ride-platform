@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/tema.dart';
+import '../estado/escopo.dart';
 import 'conta_aba.dart';
 import 'gastos_aba.dart';
 import 'historico_aba.dart';
@@ -22,6 +23,18 @@ class _InicioShellState extends State<InicioShell> {
   int _versao = 0;
 
   Future<void> _nova() async {
+    final loja = EscopoSessao.ler(context).estabelecimento;
+    if (loja != null && !loja.entregasLiberadas) {
+      await showDialog<void>(
+        context: context,
+        builder: (d) => AlertDialog(
+          title: const Text('Entregas ainda não liberadas'),
+          content: const Text('Seu cadastro está aprovado, mas a Central ainda não liberou os pedidos de entrega pelo aplicativo. Assim que liberar, o botão "Nova entrega" passa a funcionar.'),
+          actions: [TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('Entendi'))],
+        ),
+      );
+      return;
+    }
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NovaEntregaTela()));
     if (mounted) setState(() => _versao += 1);
   }

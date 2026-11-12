@@ -154,7 +154,8 @@ class ComercioApi {
     final r = await api.get('/comercio/meu');
     final m = r is Map ? r : const {};
     if (m['cadastrado'] != true || m['comercio'] == null) return null;
-    return Estabelecimento.fromJson(m['comercio']);
+    final loja = m['comercio'];
+    return Estabelecimento.fromJson(loja is Map ? {...loja, 'entregasLiberadas': m['entregasLiberadas']} : loja);
   }
 
   Future<Estabelecimento> cadastrar(DadosDoCadastro d) async => Estabelecimento.fromJson(await api.post('/comercio/cadastro', d.toJson()));

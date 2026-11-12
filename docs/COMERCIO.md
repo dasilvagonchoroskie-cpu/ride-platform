@@ -1,8 +1,10 @@
 # Fortaleza Move Comércio — 4º aplicativo
 
-Desenvolvido em 12/11/2026 (branch `comercio-app`, PR #59, rascunho). **Não opera:** a entrega
-continua desligada em todas as cidades e nada aqui liga Moto, tarifa, comissão, carteira ou
-repasse. Ligar é decisão do dono, em Central → Entregas.
+Desenvolvido em 12/11/2026 (branch `comercio-app`, PR #59, rascunho). **Não opera:** o Comércio
+nasce com a **chave geral bloqueada** (veja abaixo) e nada aqui liga Moto, tarifa, comissão,
+carteira ou repasse. Atenção: no banco de produção a Entrega **está ligada em Goiatuba**
+(carro e moto, configuração de teste do dono de 11/11/2026, preservada). Por isso a chave geral
+do Comércio é independente da chave da cidade.
 
 O Comércio **não é marketplace**: a loja pede que um motorista busque e entregue uma encomenda
 dela. Não há catálogo, pedido de cliente final, cardápio nem pagamento dentro do app.
@@ -31,11 +33,32 @@ Central (papel ADMIN), prefixo `/admin/comercios`: `GET` (lista, filtros), `GET 
 `GET :id`, `POST :id/decisao` (APROVAR, REJEITAR, SUSPENDER, REATIVAR). **Só o dono grava**
 (`DonoGravaGuard`); o operador de cidade lê só a cidade dele. Cada decisão vai para a auditoria.
 
+## Chave geral do Comércio (bloqueada por padrão)
+
+Registro `comercio.config` na tabela de configurações (`settings`). **Sem registro = bloqueado**;
+só o valor `ativo: true` libera. Enquanto estiver bloqueada, mesmo uma loja APROVADA recebe
+"As entregas pelo aplicativo Comércio ainda não foram liberadas pela Central" ao consultar preço
+ou pedir entrega — o motor de corridas nem é chamado. Cadastro, aprovação, histórico e cancelamento
+continuam. Quem liga: **só o dono**, em Central → Comércios → "Entregas do Comércio liberadas"
+(`PUT /admin/comercios/config`, auditado com antes e depois; operador de cidade só vê). Ligar a chave
+**não** liga a Entrega em cidade nenhuma: o pedido ainda precisa de Entrega ligada na cidade da coleta
+(`exigirLigada`, checado dentro do pedido oficial) e de o veículo estar permitido ali.
+
+Portas que o pedido precisa atravessar, todas no servidor: (1) conta com e-mail confirmado,
+(2) estabelecimento APROVADO pelo dono, (3) chave geral do Comércio ligada, (4) Entrega ligada na
+cidade da coleta, (5) veículo aceito na cidade.
+
+## Contas apagadas
+
+Apagar uma conta (Central → Excluir passageiro, Limpeza de dados, "desfazer conta nova") não trava
+mais por causa do cadastro da loja: sem entregas o cadastro sai junto; com entregas ele fica
+SUSPENSO e sem dados pessoais (nome, CNPJ, CPF, telefone, e-mail, endereço). Nunca derruba a exclusão.
+
 ## Regras que o servidor garante (não depende do app)
 
 - Cadastro nasce **AGUARDANDO**. Não existe aprovação automática.
 - CNPJ e CPF com dígito verificador; telefone, e-mail, CEP e senha validados; CNPJ não repete.
-- Só loja **APROVADA** pede preço e entrega. SUSPENSO/REJEITADO/AGUARDANDO são barrados.
+- Só loja **APROVADA**, com a chave geral ligada, pede preço e entrega. SUSPENSO/REJEITADO/AGUARDANDO são barrados.
 - Cada loja só enxerga e cancela as **próprias** entregas (outra loja recebe "não encontrado").
 - **Sem duplicidade:** cada pedido leva uma chave; repetir a mesma chave devolve a entrega já
   criada e não cria outra. Queda de rede **nunca** é tratada como "pedido feito": o app mostra
@@ -69,14 +92,14 @@ pelo Comércio e, no menu Entregas, a origem "Comércio: nome da loja".
 
 | Camada | Arquivo / esteira | Resultado (12/11/2026) |
 |---|---|---|
-| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts` | 48 de 48 passam (esteira "Testes do servidor") |
+| Servidor | `comercio.regras.spec.ts`, `comercio.service.spec.ts` | 63 de 63 passam localmente (esteira "Testes do servidor") |
 | App Comércio | `apps/comercio_app/test/*` (esteira "Android Comercio") | análise sem problemas, 51 de 51 passam |
 | Central | `apps/central_app/test/painel_test.dart` (esteira "Android APKs") | análise sem problemas, 71 passam, 1 pulado de antes |
 | Rotas | `scripts/conferir-rotas.py` | 257 chamadas conferidas, todas existem no servidor |
 
 ## O que NÃO foi (nem pode ser) testado ainda
 
-- **Despacho de verdade a motorista:** com a entrega desligada, nenhum motorista real recebe
+- **Despacho de verdade a motorista:** com a chave geral do Comércio bloqueada, nenhum motorista real recebe
   pedido do Comércio. Os testes de despacho, aceite/recusa, atualização de status e conclusão
   são do **serviço com o pedido simulado** (`pedir` falso com o formato real). O ponta a ponta
   com motorista só ocorre depois de autorização expressa do dono (ligar a entrega numa cidade

@@ -13,6 +13,7 @@ import { PushService } from '../../integrations/notifications/push.service';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { DadosPessoaisService } from './dados-pessoais.service';
 import { PedidosExclusaoService } from './pedidos-exclusao.service';
+import { encerrarComercios } from '../comercio/comercio.conta';
 
 /** Conta criada pelo teste automatico (marcada no login com a chave de teste). */
 export const eraTeste = (metadata: unknown): boolean =>
@@ -702,6 +703,8 @@ export class CentralService {
       },
     });
     if (emCorrida > 0) throw BusinessException.conflict(`${u.name} tem corrida em andamento ou agendada.`);
+    // Quarto aplicativo: o cadastro da loja nao trava a exclusao nem guarda dados da pessoa.
+    await encerrarComercios(this.prisma, [userId], {}, (m) => this.logger.warn(m));
     const [corridas, pagamentos, avaliacoes, alertas] = await Promise.all([
       this.prisma.ride.count({ where: { passengerId: userId } }),
       this.prisma.payment.count({ where: { payerId: userId } }),

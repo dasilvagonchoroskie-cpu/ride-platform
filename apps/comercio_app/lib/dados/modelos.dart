@@ -72,6 +72,7 @@ class Estabelecimento {
     required this.situacao,
     required this.situacaoRotulo,
     this.motivo,
+    this.entregasLiberadas = true,
   });
 
   final String id;
@@ -86,6 +87,10 @@ class Estabelecimento {
   final String situacao;
   final String situacaoRotulo;
   final String? motivo;
+
+  /// Chave geral da Central: enquanto estiver bloqueada, ninguem pede entrega
+  /// (o servidor tambem recusa). Servidor antigo, sem o campo: segue como liberado.
+  final bool entregasLiberadas;
 
   bool get aprovado => situacao == Situacao.aprovado;
 
@@ -104,6 +109,7 @@ class Estabelecimento {
       situacao: _txt(m['situacao'], Situacao.aguardando),
       situacaoRotulo: _txt(m['situacaoRotulo']),
       motivo: m['motivo'] == null ? null : _txt(m['motivo']),
+      entregasLiberadas: m['entregasLiberadas'] != false,
     );
   }
 }

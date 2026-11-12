@@ -115,6 +115,16 @@ void main() {
       await fechar(tester);
     });
 
+    testWidgets('aprovado, mas a Central ainda não liberou as entregas: avisa e não abre o pedido', (tester) async {
+      await abrir(tester, sessaoCom(ServidorFalso(), loja: estabelecimento(liberadas: false)));
+      await tocar(tester, 'Nova entrega');
+      expect(find.text('Entregas ainda não liberadas'), findsOneWidget);
+      expect(find.text('Consultar preço'), findsNothing);
+      await tocar(tester, 'Entendi');
+      expect(find.text('Entregas ainda não liberadas'), findsNothing);
+      await fechar(tester);
+    });
+
     testWidgets('a aba Conta mostra o estabelecimento e não mostra carteira nem crédito', (tester) async {
       await abrir(tester, sessaoCom(ServidorFalso(), loja: estabelecimento()));
       await tester.tap(find.text('Conta'));

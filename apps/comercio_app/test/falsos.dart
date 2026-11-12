@@ -88,7 +88,7 @@ Entrega entregaDeTeste({String id = 'r1', String etapa = 'AGUARDANDO_MOTORISTA'}
       valorCobradoCents: 0,
     );
 
-Estabelecimento estabelecimento({String situacao = Situacao.aprovado, String? motivo}) => Estabelecimento(
+Estabelecimento estabelecimento({String situacao = Situacao.aprovado, String? motivo, bool liberadas = true}) => Estabelecimento(
       id: 'c1',
       nomeFantasia: 'Pizzaria Boa',
       cnpj: '11222333000181',
@@ -109,4 +109,5 @@ Estabelecimento estabelecimento({String situacao = Situacao.aprovado, String? mo
       situacao: situacao,
       situacaoRotulo: situacao == Situacao.aprovado ? 'Aprovado' : (situacao == Situacao.aguardando ? 'Seu cadastro ainda está aguardando aprovação da Central.' : 'Indisponível'),
       motivo: motivo,
+      entregasLiberadas: liberadas,
     );

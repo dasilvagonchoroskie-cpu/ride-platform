@@ -83,6 +83,15 @@ const CRIAR_TABELAS = [
 
 const POR_PAGINA = 20;
 
+/**
+ * Chave geral do Comercio (13/11/2026). Nasce DESLIGADA: enquanto o dono nao
+ * liga em Central -> Comercios, nenhum estabelecimento consulta preco nem pede
+ * entrega, mesmo aprovado e mesmo que a entrega da cidade esteja ligada para
+ * os passageiros. Cadastro, aprovacao e cancelamento seguem funcionando.
+ */
+export const CHAVE_COMERCIO = 'comercio.config';
+const MENSAGEM_DESLIGADO = 'As entregas pelo aplicativo Comércio ainda não foram liberadas pela Central.';
+
 type Linha = Prisma.ComercioGetPayload<Record<string, never>>;
 
 /** O que o aplicativo (e a Central) ve do estabelecimento. */
@@ -205,7 +214,8 @@ export class ComercioService implements OnModuleInit {
 
   async meu(userId: string) {
     const c = await this.prisma.comercio.findUnique({ where: { userId } });
-    return c ? { cadastrado: true as const, comercio: comercioPublico(c) } : { cadastrado: false as const, comercio: null };
+    const entregasLiberadas = await this.ativo();
+    return c ? { cadastrado: true as const, comercio: comercioPublico(c), entregasLiberadas } : { cadastrado: false as const, comercio: null, entregasLiberadas };
   }
 
   async atualizar(userId: string, input: Record<string, any>) {
@@ -242,6 +252,43 @@ export class ComercioService implements OnModuleInit {
       },
     });
     return comercioPublico(novo);
+  }
+
+  /** Chave geral: so `ativo === true` liga. Sem registro, desligado. */
+  async ativo(): Promise<boolean> {
+    const r = await this.prisma.setting.findUnique({ where: { key: CHAVE_COMERCIO } });
+    const v = r?.value;
+    return !!v && typeof v === 'object' && !Array.isArray(v) && (v as { ativo?: unknown }).ativo === true;
+  }
+
+  private async exigirAtivo(): Promise<void> {
+    if (!(await this.ativo())) throw BusinessException.forbidden(MENSAGEM_DESLIGADO);
+  }
+
+  async lerConfig() {
+    return { ativo: await this.ativo() };
+  }
+
+  /** So o dono liga ou desliga (a guarda do controlador); fica auditado. */
+  async gravarConfig(adminId: string, ativo: boolean) {
+    const antes = await this.ativo();
+    await this.prisma.setting.upsert({
+      where: { key: CHAVE_COMERCIO },
+      update: { value: { ativo } as never, updatedBy: adminId },
+      create: { key: CHAVE_COMERCIO, value: { ativo } as never, updatedBy: adminId, description: 'Aplicativo Comercio: entregas liberadas (liga/desliga geral)' },
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: UserRole.ADMIN,
+        action: 'COMERCIO_CONFIG',
+        entity: 'setting',
+        entityId: CHAVE_COMERCIO,
+        before: { ativo: antes } as never,
+        after: { ativo } as never,
+      },
+    });
+    return { ativo };
   }
 
   /** O comerciante so enxerga o proprio estabelecimento. */
@@ -282,6 +329,7 @@ export class ComercioService implements OnModuleInit {
   /** Consulta o preco ANTES de confirmar (nao cria nada). */
   async cotar(userId: string, input: CotarInput) {
     const c = await this.aprovado(userId);
+    await this.exigirAtivo();
     const pickup = this.coleta(c, input.coletaAlternativa);
     const orc = await this.rides.estimar(
       { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
@@ -301,6 +349,7 @@ export class ComercioService implements OnModuleInit {
 
   async pedir(userId: string, input: EntregaInput) {
     const c = await this.aprovado(userId);
+    await this.exigirAtivo();
     const ja = await this.prisma.comercioPedido.findUnique({ where: { comercioId_chave: { comercioId: c.id, chave: input.chave } } });
     if (ja) return { ...(await this.detalhe(userId, ja.rideId)), repetido: true };
 
