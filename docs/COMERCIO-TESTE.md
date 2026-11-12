@@ -1,11 +1,11 @@
-# Fortaleza Move Comércio — guia de teste em celular real (APK 1.0.3)
+# Fortaleza Move Comércio — guia de teste em celular real (APK 1.0.5)
 
 Escrito em 12/11/2026. Serve para o Evandro instalar o aplicativo e conferir, passo a passo,
 sem mexer em tarifa, comissão, carteira nem Moto.
 
 ## O que precisa estar pronto
 
-- O APK `fortaleza-comercio-3.apk` (64 bits; o `-32bits` é só para celular antigo). Foi enviado
+- O APK `fortaleza-comercio-5.apk` (64 bits; o `-32bits` é só para celular antigo). Foi enviado
   anexado no chat e também está na página de versões do GitHub (release `apk-fortaleza-comercio-mais-recente`).
 - O servidor de testes de sempre (Render). O app já vem apontando para ele; não há nada para configurar no celular.
 - Um e-mail seu que receba o código de entrada (o código chega por e-mail, não aparece na tela).
