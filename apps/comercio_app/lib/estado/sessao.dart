@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -63,6 +64,9 @@ class Sessao extends ChangeNotifier {
   }
 
   void _sessaoVenceu() {
+    // O login que venceu nao fica guardado no celular (a proxima abertura pede para entrar de novo).
+    unawaited(Armazenamento.atual.apagar(Armazenamento.acesso));
+    unawaited(Armazenamento.atual.apagar(Armazenamento.renovacao));
     logado = false;
     estabelecimento = null;
     _mapa = null;

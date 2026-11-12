@@ -1,9 +1,9 @@
 # Regras de minificacao/R8 para producao.
 #
 # O conjunto de dependencias deste app (http, shared_preferences,
-# geolocator, intl) sao todas bibliotecas maduras que ja embutem suas
-# proprias regras consumidoras (consumer-rules.pro) dentro do AAR — o
-# Gradle aplica isso automaticamente. As linhas abaixo sao so a rede de
+# flutter_secure_storage, flutter_map, latlong2) sao bibliotecas maduras que
+# ja embutem suas proprias regras consumidoras (consumer-rules.pro) dentro do
+# AAR — o Gradle aplica isso automaticamente. As linhas abaixo sao so a rede de
 # seguranca padrao recomendada pelo proprio time do Flutter.
 
 # O motor do Flutter e os plugins gerados na build nunca podem ser

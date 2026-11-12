@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'falsos.dart';
 
 Sessao sessaoCom(ServidorFalso servidor, {bool logado = true, Estabelecimento? loja}) {
+  servidor.loja ??= loja; // o servidor falso responde com a mesma loja da sessao
   final s = Sessao(api: ApiClient(), servidor: servidor);
   s.iniciando = false;
   s.logado = logado;
@@ -122,6 +123,41 @@ void main() {
       expect(find.text('Consultar preço'), findsNothing);
       await tocar(tester, 'Entendi');
       expect(find.text('Entregas ainda não liberadas'), findsNothing);
+      await fechar(tester);
+    });
+
+    testWidgets('a Central liberou depois que o app abriu: ao tocar, confere no servidor e abre o pedido', (tester) async {
+      final servidor = ServidorFalso()..loja = estabelecimento(liberadas: true);
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento(liberadas: false)));
+      await tocar(tester, 'Nova entrega');
+      expect(find.text('Entregas ainda não liberadas'), findsNothing);
+      expect(find.textContaining('Nova entrega · 1/6'), findsOneWidget);
+      await fechar(tester);
+    });
+
+    testWidgets('a Central suspendeu a loja depois que o app abriu: ao tocar, mostra a situação e não abre o pedido', (tester) async {
+      final servidor = ServidorFalso()..loja = estabelecimento(situacao: Situacao.suspenso, motivo: 'Uso indevido do serviço');
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      await tocar(tester, 'Nova entrega');
+      expect(find.text('Estabelecimento suspenso'), findsOneWidget);
+      expect(find.textContaining('Nova entrega · 1/6'), findsNothing);
+      await fechar(tester);
+    });
+
+    testWidgets('o login venceu com uma tela aberta por cima: volta para a entrada e apaga o login guardado', (tester) async {
+      await Armazenamento.atual.gravar(Armazenamento.acesso, 'acesso-velho');
+      await Armazenamento.atual.gravar(Armazenamento.renovacao, 'r' * 30);
+      final s = sessaoCom(ServidorFalso(), loja: estabelecimento());
+      await abrir(tester, s);
+      await tester.tap(find.text('Nova entrega'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Nova entrega · 1/6'), findsOneWidget);
+      s.api.aoSessaoExpirar!();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Nova entrega · 1/6'), findsNothing);
+      expect(find.text('Ler os termos de uso'), findsOneWidget);
+      expect(await Armazenamento.atual.ler(Armazenamento.acesso), isNull);
+      expect(await Armazenamento.atual.ler(Armazenamento.renovacao), isNull);
       await fechar(tester);
     });
 

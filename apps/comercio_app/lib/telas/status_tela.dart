@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/atualizacao.dart';
+import '../core/config.dart';
 import '../core/formato.dart';
 import '../core/tema.dart';
 import '../dados/modelos.dart';
@@ -18,6 +20,25 @@ class StatusTela extends StatefulWidget {
 
 class _StatusTelaState extends State<StatusTela> {
   bool _atualizando = false;
+  AtualizacaoPeriodica? _atualizacao;
+
+  @override
+  void initState() {
+    super.initState();
+    // Aprovacao e suspensao saem da Central a qualquer hora: confere sozinho (so com o app aberto).
+    _atualizacao = AtualizacaoPeriodica(
+      intervalo: AppConfig.atualizacaoDosAvisos,
+      aoAtualizar: () {
+        if (!_atualizando) _atualizar();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _atualizacao?.dispose();
+    super.dispose();
+  }
 
   Future<void> _atualizar() async {
     final s = EscopoSessao.ler(context);

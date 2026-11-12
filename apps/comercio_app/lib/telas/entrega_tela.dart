@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../core/api.dart';
+import '../core/atualizacao.dart';
 import '../core/config.dart';
 import '../core/formato.dart';
 import '../core/tema.dart';
@@ -29,7 +28,7 @@ class _EntregaTelaState extends State<EntregaTela> {
   String? _falha;
   bool _carregando = false;
   bool _cancelando = false;
-  Timer? _timer;
+  AtualizacaoPeriodica? _atualizacao;
 
   /// Imagens do mapa (pedidas uma vez ao servidor quando o mapa aparece).
   Future<ConfigDoMapa?>? _ruas;
@@ -43,15 +42,17 @@ class _EntregaTelaState extends State<EntregaTela> {
     Future.microtask(() {
       if (mounted) _carregar();
     });
-    _timer = Timer.periodic(AppConfig.atualizacao, (_) {
-      final e = _e;
-      if (e == null || !e.final_) _carregar(silencioso: true);
-    });
+    // So consulta com o app aberto e enquanto a entrega nao terminou.
+    _atualizacao = AtualizacaoPeriodica(
+      intervalo: AppConfig.atualizacao,
+      ativa: () => !(_e?.final_ ?? false),
+      aoAtualizar: () => _carregar(silencioso: true),
+    );
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _atualizacao?.dispose();
     super.dispose();
   }
 

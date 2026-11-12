@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+import '../core/atualizacao.dart';
 import '../core/config.dart';
 import '../core/tema.dart';
 import '../dados/modelos.dart';
@@ -23,7 +22,7 @@ class InicioAba extends StatefulWidget {
 class _InicioAbaState extends State<InicioAba> {
   List<Entrega>? _abertas;
   String? _falha;
-  Timer? _timer;
+  AtualizacaoPeriodica? _atualizacao;
   bool _carregando = false;
 
   @override
@@ -32,12 +31,12 @@ class _InicioAbaState extends State<InicioAba> {
     Future.microtask(() {
       if (mounted) _carregar();
     });
-    _timer = Timer.periodic(AppConfig.atualizacao * 2, (_) => _carregar(silencioso: true));
+    _atualizacao = AtualizacaoPeriodica(intervalo: AppConfig.atualizacao * 2, aoAtualizar: () => _carregar(silencioso: true));
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _atualizacao?.dispose();
     super.dispose();
   }
 

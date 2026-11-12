@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+import '../core/atualizacao.dart';
 import '../core/config.dart';
 import '../estado/escopo.dart';
 import '../telas/avisos_tela.dart';
@@ -18,7 +17,7 @@ class SinoDeAvisos extends StatefulWidget {
 
 class _SinoDeAvisosState extends State<SinoDeAvisos> {
   int _naoLidos = 0;
-  Timer? _timer;
+  AtualizacaoPeriodica? _atualizacao;
   bool _conferindo = false;
 
   @override
@@ -27,12 +26,12 @@ class _SinoDeAvisosState extends State<SinoDeAvisos> {
     Future.microtask(() {
       if (mounted) _conferir();
     });
-    _timer = Timer.periodic(AppConfig.atualizacaoDosAvisos, (_) => _conferir());
+    _atualizacao = AtualizacaoPeriodica(intervalo: AppConfig.atualizacaoDosAvisos, aoAtualizar: _conferir);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _atualizacao?.dispose();
     super.dispose();
   }
 

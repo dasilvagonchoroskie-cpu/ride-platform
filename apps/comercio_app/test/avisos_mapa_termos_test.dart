@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'falsos.dart';
 
 Sessao sessaoCom(ServidorFalso servidor, {bool logado = true, Estabelecimento? loja}) {
+  servidor.loja ??= loja; // o servidor falso responde com a mesma loja da sessao
   final s = Sessao(api: ApiClient(), servidor: servidor);
   s.iniciando = false;
   s.logado = logado;

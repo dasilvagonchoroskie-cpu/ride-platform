@@ -24,8 +24,14 @@ class _InicioShellState extends State<InicioShell> {
   int _versao = 0;
 
   Future<void> _nova() async {
-    final loja = EscopoSessao.ler(context).estabelecimento;
-    if (loja != null && !loja.entregasLiberadas) {
+    final sessao = EscopoSessao.ler(context);
+    // A Central pode ter liberado (ou suspendido) depois que o app abriu: confere no servidor
+    // antes de dizer "ainda nao liberado". Sem rede, vale o que o app ja sabia.
+    await sessao.atualizar();
+    if (!mounted) return;
+    final loja = sessao.estabelecimento;
+    if (loja == null || !loja.aprovado) return; // a tela de situacao assume
+    if (!loja.entregasLiberadas) {
       await showDialog<void>(
         context: context,
         builder: (d) => AlertDialog(
@@ -42,18 +48,19 @@ class _InicioShellState extends State<InicioShell> {
 
   @override
   Widget build(BuildContext context) {
-    final abas = <Widget>[
-      InicioAba(key: ValueKey('inicio$_versao'), aoNovaEntrega: _nova),
-      HistoricoAba(key: ValueKey('hist$_versao')),
-      GastosAba(key: ValueKey('gastos$_versao')),
-      const ContaAba(),
-    ];
+    // Monta so a aba aberta: as outras nao ficam consultando o servidor escondidas.
+    final aba = switch (_aba) {
+      0 => InicioAba(key: ValueKey('inicio$_versao'), aoNovaEntrega: _nova),
+      1 => HistoricoAba(key: ValueKey('hist$_versao')),
+      2 => GastosAba(key: ValueKey('gastos$_versao')),
+      _ => const ContaAba(),
+    };
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fortaleza Move Comércio', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
         actions: const [SinoDeAvisos()],
       ),
-      body: SafeArea(child: IndexedStack(index: _aba, children: abas)),
+      body: SafeArea(child: aba),
       floatingActionButton: _aba <= 1
           ? FloatingActionButton.extended(
               onPressed: _nova,

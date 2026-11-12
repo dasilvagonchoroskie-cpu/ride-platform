@@ -10,16 +10,56 @@ import 'telas/inicio_shell.dart';
 import 'telas/status_tela.dart';
 import 'widgets/comuns.dart';
 
-class ComercioApp extends StatelessWidget {
+class ComercioApp extends StatefulWidget {
   const ComercioApp({super.key, required this.sessao});
 
   final Sessao sessao;
+
+  @override
+  State<ComercioApp> createState() => _ComercioAppState();
+}
+
+class _ComercioAppState extends State<ComercioApp> {
+  final _navegador = GlobalKey<NavigatorState>();
+  late bool _logado;
+  late bool _podeUsar;
+
+  Sessao get sessao => widget.sessao;
+
+  bool _calcularPodeUsar() => sessao.logado && (sessao.estabelecimento?.aprovado ?? false);
+
+  @override
+  void initState() {
+    super.initState();
+    _logado = sessao.logado;
+    _podeUsar = _calcularPodeUsar();
+    sessao.addListener(_aoMudar);
+  }
+
+  @override
+  void dispose() {
+    sessao.removeListener(_aoMudar);
+    super.dispose();
+  }
+
+  /// Saiu da conta, o login venceu ou a Central suspendeu a loja: as telas abertas por cima
+  /// (pedido, acompanhamento, avisos) saem e o Porteiro mostra a tela certa. So na MUDANCA,
+  /// para nao fechar uma tela que a pessoa esta lendo a cada atualizacao.
+  void _aoMudar() {
+    final logado = sessao.logado;
+    final podeUsar = _calcularPodeUsar();
+    final perdeu = (_logado && !logado) || (_podeUsar && !podeUsar);
+    _logado = logado;
+    _podeUsar = podeUsar;
+    if (perdeu) _navegador.currentState?.popUntil((r) => r.isFirst);
+  }
 
   @override
   Widget build(BuildContext context) {
     return EscopoSessao(
       sessao: sessao,
       child: MaterialApp(
+        navigatorKey: _navegador,
         title: 'Fortaleza Move Comércio',
         debugShowCheckedModeBanner: false,
         theme: Tema.escuro,
