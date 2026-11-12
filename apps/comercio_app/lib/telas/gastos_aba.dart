@@ -46,7 +46,7 @@ class _GastosAbaState extends State<GastosAba> {
       onRefresh: _carregar,
       child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 100), children: [
         const Text('Gastos com entregas', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
-        if (g != null) Text('${Formato.dataHora(g.de).split(' ').first} a ${Formato.dataHora(g.ate).split(' ').first}', style: const TextStyle(color: Cores.textoSuave)),
+        if (g != null) Text('${Formato.dataHora(g.de).split(' ').first} a ${_ultimoDia(g.ate)}', style: const TextStyle(color: Cores.textoSuave)),
         const SizedBox(height: 16),
         if (g == null && _falha != null)
           Estado(icone: Icons.cloud_off, titulo: 'Sem conexão', texto: _falha, botao: 'Tentar de novo', aoTocar: _carregar)
@@ -70,6 +70,10 @@ class _GastosAbaState extends State<GastosAba> {
             ),
           ),
           const Titulo('COBRANÇAS'),
+          if (g.listaCortada) ...[
+            const Faixa('Mostrando as cobranças mais recentes. O total acima considera todas as entregas do período.'),
+            const SizedBox(height: 8),
+          ],
           if (g.cobrancas.isEmpty)
             const Text('Nenhuma entrega concluída neste período.', style: TextStyle(color: Cores.textoSuave))
           else
@@ -92,6 +96,13 @@ class _GastosAbaState extends State<GastosAba> {
         ],
       ]),
     );
+  }
+
+  /// O fim do periodo vem como o instante em que o proximo mes comeca: mostra o ultimo dia de verdade.
+  String _ultimoDia(String iso) {
+    final d = DateTime.tryParse(iso);
+    if (d == null) return '';
+    return Formato.dataHora(d.subtract(const Duration(minutes: 1)).toIso8601String()).split(' ').first;
   }
 
   Widget _numero(String rotulo, int n, Color cor) => Expanded(

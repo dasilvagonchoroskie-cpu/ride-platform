@@ -102,6 +102,8 @@ const STATUS_ABERTOS = ['SCHEDULED', 'REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED'
  * os passageiros. Cadastro, aprovacao e cancelamento seguem funcionando.
  */
 export const CHAVE_COMERCIO = 'comercio.config';
+/** O app reconhece esta frase para voltar a tela de consulta de preco. */
+export const MENSAGEM_PRECO_MUDOU = 'O preço mudou:';
 const MENSAGEM_DESLIGADO = 'As entregas pelo aplicativo Comércio ainda não foram liberadas pela Central.';
 
 type Linha = Prisma.ComercioGetPayload<Record<string, never>>;
@@ -366,6 +368,24 @@ export class ComercioService implements OnModuleInit {
     }
   }
 
+  /**
+   * Honestidade do preco: a loja confirmou um valor; se o preco OFICIAL mudou desde a consulta
+   * (tarifa, bandeira da hora), o pedido nao e criado com outro valor sem ela saber.
+   */
+  private async exigirMesmoPreco(userId: string, c: Linha, input: EntregaInput): Promise<void> {
+    const pickup = this.coleta(c, input.coletaAlternativa);
+    const orc = await this.rides.estimar(
+      { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
+      userId,
+    );
+    const opcao = (orc.opcoesEntrega ?? []).find((o) => o.veiculo === input.veiculo);
+    if (!opcao) throw BusinessException.validation('Este veículo não está disponível agora. Consulte o preço de novo.');
+    if (opcao.estimatedFareCents !== input.valorEsperadoCents) {
+      const reais = (v: number) => `R$ ${(v / 100).toFixed(2).replace('.', ',')}`;
+      throw BusinessException.conflict(`${MENSAGEM_PRECO_MUDOU} era ${reais(input.valorEsperadoCents!)} e agora é ${reais(opcao.estimatedFareCents)}. Consulte o preço de novo.`);
+    }
+  }
+
   /** Teto de entregas abertas por loja: a loja pode ter varias, mas nao uma enxurrada para os motoristas. */
   private async exigirLimiteDeAbertas(comercioId: string): Promise<void> {
     const abertas = await this.prisma.comercioPedido.count({
@@ -412,6 +432,7 @@ export class ComercioService implements OnModuleInit {
     if (ja) return { ...(await this.detalhe(userId, ja.rideId)), repetido: true };
     await this.exigirColetaNaCidade(c, input.coletaAlternativa);
     await this.exigirLimiteDeAbertas(c.id);
+    if (input.valorEsperadoCents != null) await this.exigirMesmoPreco(userId, c, input);
 
     const trava = `${c.id}:${input.chave}`;
     if (this.emAndamento.has(trava)) {

@@ -59,6 +59,7 @@ class ServidorFalso extends ComercioApi {
   /// Respostas do pedir, na ordem; o que for Exception e lancado.
   final List<Object> respostasDoPedido = [];
   final List<String> chavesRecebidas = [];
+  final List<int?> valoresEsperados = [];
   int consultasDePreco = 0;
   int cadastros = 0;
 
@@ -73,8 +74,9 @@ class ServidorFalso extends ComercioApi {
   }
 
   @override
-  Future<Entrega> pedirEntrega(String chave, DadosDeEntrega d, String? cotacao) async {
+  Future<Entrega> pedirEntrega(String chave, DadosDeEntrega d, String? cotacao, {int? valorEsperadoCents}) async {
     chavesRecebidas.add(chave);
+    valoresEsperados.add(valorEsperadoCents);
     final Object r = respostasDoPedido.isEmpty ? entregaDeTeste() : respostasDoPedido.removeAt(0);
     if (r is Entrega) return r;
     throw r;

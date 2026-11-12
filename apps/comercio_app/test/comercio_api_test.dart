@@ -43,8 +43,9 @@ void main() {
       corpo = jsonDecode(req.body) as Map<String, dynamic>;
       return ok({'id': 'r1', 'codigo': 'FM1', 'etapa': 'AGUARDANDO_MOTORISTA', 'situacao': 'Aguardando motorista', 'final': false, 'repetido': false});
     })));
-    final e = await api.pedirEntrega('c' * 32, dados(), 'assinada');
+    final e = await api.pedirEntrega('c' * 32, dados(), 'assinada', valorEsperadoCents: 700);
     expect(e.id, 'r1');
+    expect(corpo!['valorEsperadoCents'], 700); // o preço que a pessoa viu vai junto
     expect(corpo!['chave'], 'c' * 32);
     expect(corpo!['cotacao'], 'assinada');
     expect(corpo!['veiculo'], 'MOTO');
@@ -56,6 +57,16 @@ void main() {
     expect(destino['cep'], '75600000');
     expect(destino.containsKey('complemento'), isFalse);
     expect(destino['latitude'], -18.01);
+  });
+
+  test('sem preço esperado o campo não vai (consulta de preço nunca leva)', () async {
+    Map<String, dynamic>? corpo;
+    final api = ComercioApi(ApiClient(cliente: MockClient((req) async {
+      corpo = jsonDecode(req.body) as Map<String, dynamic>;
+      return ok({'coleta': {'endereco': 'x', 'alternativa': false}, 'entrega': {'endereco': 'y'}, 'opcoes': []});
+    })));
+    await api.consultarPreco(dados());
+    expect(corpo!.containsKey('valorEsperadoCents'), isFalse);
   });
 
   test('coleta em outro endereço vai com a posição', () async {

@@ -178,11 +178,13 @@ export const entregaSchema = z.object({
   veiculo: z.enum(['MOTO', 'CARRO']),
   /** Medida assinada do preco consultado (a rota nao e medida de novo). */
   cotacao: z.string().max(2000).optional(),
+  /** Preco que a loja viu e confirmou: se o preco oficial mudou ate o pedido, o servidor recusa e pede nova consulta. */
+  valorEsperadoCents: z.number().int().min(0).max(10_000_000).optional(),
 });
 export type EntregaInput = z.infer<typeof entregaSchema>;
 
 /** Para consultar o preco: igual ao pedido, sem a chave. */
-export const cotarSchema = entregaSchema.omit({ chave: true }).partial({ encomenda: true });
+export const cotarSchema = entregaSchema.omit({ chave: true, valorEsperadoCents: true }).partial({ encomenda: true });
 export type CotarInput = z.infer<typeof cotarSchema>;
 
 export const decisaoSchema = z.object({

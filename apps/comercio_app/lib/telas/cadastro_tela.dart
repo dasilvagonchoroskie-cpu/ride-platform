@@ -138,12 +138,12 @@ class _CadastroTelaState extends State<CadastroTela> {
               ),
               const Titulo('ENDEREÇO DO ESTABELECIMENTO (ONDE O MOTORISTA COLETA)'),
               EnderecoCampos(controle: _endereco, servidor: s.servidor),
-              const Titulo('SENHA PARA OS PRÓXIMOS ACESSOS'),
+              const Titulo('SENHA PARA OS PRÓXIMOS ACESSOS (OPCIONAL)'),
               TextFormField(
                 controller: _senha,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Crie uma senha'),
-                validator: Validar.campoSenha,
+                decoration: const InputDecoration(labelText: 'Crie uma senha', helperText: 'Opcional. Se este e-mail já tem senha, deixe em branco; você sempre pode entrar pelo código do e-mail.'),
+                validator: (v) => (v ?? '').isEmpty ? null : Validar.campoSenha(v),
               ),
               const Titulo('TERMOS DE USO'),
               CheckboxListTile(

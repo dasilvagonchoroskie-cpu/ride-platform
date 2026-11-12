@@ -112,6 +112,22 @@ void main() {
     expect(g.cobrancas.single.valorCents, 700);
   });
 
+  test('Gastos: avisa quando a lista de cobranças foi cortada pelo servidor (o total segue completo)', () {
+    final g = Gastos.fromJson({
+      'periodo': {'de': '2026-11-01T03:00:00.000Z', 'ate': '2026-12-01T03:00:00.000Z'},
+      'realizadas': 650,
+      'canceladas': 0,
+      'emAndamento': 0,
+      'totalCents': 455000,
+      'listaCortada': true,
+      'cobrancas': <dynamic>[],
+    });
+    expect(g.listaCortada, isTrue);
+    expect(g.totalCents, 455000);
+    // servidor antigo (sem o campo): nao inventa o aviso
+    expect(Gastos.fromJson({'periodo': {}, 'cobrancas': <dynamic>[]}).listaCortada, isFalse);
+  });
+
   test('Repetição devolve só dados para preencher (rua vem do endereço por extenso)', () {
     final r = Repeticao.fromJson({
       'encomenda': {'descricao': '1 pizza', 'observacoes': null},

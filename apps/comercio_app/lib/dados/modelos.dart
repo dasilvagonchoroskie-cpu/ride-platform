@@ -371,8 +371,11 @@ class Gastos {
     required this.emAndamento,
     required this.totalCents,
     required this.cobrancas,
+    this.listaCortada = false,
   });
 
+  /// true = a lista de cobrancas mostra so as mais recentes (o total continua completo).
+  final bool listaCortada;
   final String de;
   final String ate;
   final int realizadas;
@@ -393,6 +396,7 @@ class Gastos {
       emAndamento: _int(m['emAndamento']),
       totalCents: _int(m['totalCents']),
       cobrancas: lista.map(Cobranca.fromJson).toList(),
+      listaCortada: m['listaCortada'] == true,
     );
   }
 }

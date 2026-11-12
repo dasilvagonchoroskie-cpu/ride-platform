@@ -93,6 +93,11 @@ describe('Comercio: destinatario, destino e pedido (testes 6, 7 e 8)', () => {
     expect(entregaSchema.safeParse({ ...pedido, destino: { ...pedido.destino, latitude: undefined } }).success).toBe(false);
     expect(entregaSchema.safeParse({ ...pedido, veiculo: 'BICICLETA' }).success).toBe(false);
     expect(entregaSchema.safeParse({ ...pedido, veiculo: undefined }).success).toBe(false);
+    // preco confirmado pela loja: inteiro, nao negativo, com teto; a consulta de preco nao aceita o campo
+    expect(entregaSchema.safeParse({ ...pedido, valorEsperadoCents: 700 }).success).toBe(true);
+    for (const ruim of [-1, 7.5, '700', 99_999_999]) expect(entregaSchema.safeParse({ ...pedido, valorEsperadoCents: ruim }).success).toBe(false);
+    const { chave: _c, ...semChave } = pedido;
+    expect((cotarSchema.parse({ ...semChave, valorEsperadoCents: 700 }) as Record<string, unknown>).valorEsperadoCents).toBeUndefined();
   });
 
   it('a chave do pedido precisa ser longa e sem simbolos (idempotencia)', () => {

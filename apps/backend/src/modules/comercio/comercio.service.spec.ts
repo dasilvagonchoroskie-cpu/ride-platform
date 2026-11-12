@@ -10,7 +10,7 @@ import { ROLES_KEY } from '../../common/constants/metadata.constants';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { AdminComercioController, ComercioController } from './comercio.controller';
-import { ComercioService, MAX_ABERTAS_POR_LOJA } from './comercio.service';
+import { ComercioService, MAX_ABERTAS_POR_LOJA, MENSAGEM_PRECO_MUDOU } from './comercio.service';
 import { ComercioAvisosService } from './comercio.avisos';
 import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import { encerrarComercios } from './comercio.conta';
@@ -868,6 +868,41 @@ describe('Comercio: correcoes da auditoria (13/11/2026)', () => {
       await aprovado(ctx);
       await ctx.s.pedir('u1', { ...pedido(), coletaAlternativa: { address: 'Av. Goiás, 900', latitude: -18.02, longitude: -49.37 } } as never);
       expect(ctx.pedidos[0].coletaAlternativa).toBe(true);
+    });
+  });
+
+  describe('preco confirmado = preco cobrado', () => {
+    it('se o preco oficial mudou desde a consulta, o pedido e recusado (sem despacho) e a mensagem diz de quanto para quanto', async () => {
+      const ctx = montar();
+      await aprovado(ctx);
+      await expect(ctx.s.pedir('u1', { ...pedido(), valorEsperadoCents: 650 } as never)).rejects.toThrow(`${MENSAGEM_PRECO_MUDOU} era R$ 6,50 e agora é R$ 7,00`);
+      expect(ctx.rides.pedir).not.toHaveBeenCalled();
+      expect(ctx.pedidos).toHaveLength(0);
+    });
+
+    it('mesmo preco: pede normalmente; sem o campo (app antigo) tambem pede, sem reconsultar', async () => {
+      const ctx = montar();
+      await aprovado(ctx);
+      await expect(ctx.s.pedir('u1', { ...pedido('chave-preco-igual0001'), valorEsperadoCents: 700 } as never)).resolves.toMatchObject({ repetido: false });
+      const antes = ctx.rides.estimar.mock.calls.length;
+      await expect(ctx.s.pedir('u1', pedido('chave-sem-preco000001') as never)).resolves.toMatchObject({ repetido: false });
+      expect(ctx.rides.estimar.mock.calls.length).toBe(antes);
+    });
+
+    it('veiculo que a cidade nao oferece mais: recusa e manda consultar de novo', async () => {
+      const ctx = montar();
+      await aprovado(ctx);
+      await expect(ctx.s.pedir('u1', { ...pedido(), veiculo: 'CARRO', valorEsperadoCents: 700 } as never)).rejects.toThrow('Consulte o preço de novo');
+      expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    });
+
+    it('repetir o toque de uma entrega que ja existe devolve a mesma, mesmo que o preco tenha mudado depois', async () => {
+      const ctx = montar();
+      await aprovado(ctx);
+      const a = await ctx.s.pedir('u1', { ...pedido('chave-replay-000001'), valorEsperadoCents: 700 } as never);
+      const b = await ctx.s.pedir('u1', { ...pedido('chave-replay-000001'), valorEsperadoCents: 700 } as never);
+      expect(b.id).toBe(a.id);
+      expect(b.repetido).toBe(true);
     });
   });
 

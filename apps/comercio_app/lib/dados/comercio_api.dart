@@ -27,7 +27,7 @@ class DadosDeEntrega {
   final String? referencia;
   final String? veiculo;
 
-  Map<String, dynamic> toJson({String? chave, String? cotacao}) {
+  Map<String, dynamic> toJson({String? chave, String? cotacao, int? valorEsperadoCents}) {
     return {
       if (chave != null) 'chave': chave,
       'encomenda': {
@@ -55,6 +55,7 @@ class DadosDeEntrega {
       },
       if (veiculo != null) 'veiculo': veiculo,
       if (cotacao != null && cotacao.isNotEmpty) 'cotacao': cotacao,
+      if (valorEsperadoCents != null) 'valorEsperadoCents': valorEsperadoCents,
     };
   }
 }
@@ -195,8 +196,12 @@ class ComercioApi {
   /// So devolve uma entrega se o SERVIDOR confirmou. Erro de rede lanca
   /// ApiException(NETWORK_ERROR): o pedido pode ou nao ter sido gravado; a
   /// tela repete com a MESMA chave (o servidor nao duplica).
-  Future<Entrega> pedirEntrega(String chave, DadosDeEntrega d, String? cotacao) async =>
-      Entrega.fromJson(await api.post('/comercio/entregas', d.toJson(chave: chave, cotacao: cotacao)));
+  ///
+  /// [valorEsperadoCents] e o preco que a pessoa viu e confirmou: se o preco
+  /// oficial mudou desde a consulta, o servidor recusa (409) em vez de cobrar
+  /// um valor diferente do mostrado.
+  Future<Entrega> pedirEntrega(String chave, DadosDeEntrega d, String? cotacao, {int? valorEsperadoCents}) async =>
+      Entrega.fromJson(await api.post('/comercio/entregas', d.toJson(chave: chave, cotacao: cotacao, valorEsperadoCents: valorEsperadoCents)));
 
   Future<Entrega> entrega(String id) async => Entrega.fromJson(await api.get('/comercio/entregas/$id'));
 

@@ -250,6 +250,46 @@ void main() {
       await fechar(tester);
     });
 
+    testWidgets('confirma mandando o preço que a pessoa viu', (tester) async {
+      final servidor = ServidorFalso();
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      await preencherAtePreco(tester);
+      await tocar(tester, 'Continuar');
+      await tocar(tester, 'Confirmar entrega');
+      expect(servidor.valoresEsperados, [700]);
+      await fechar(tester);
+    });
+
+    testWidgets('preço mudou no servidor: não abre entrega, volta ao preço e usa outra chave', (tester) async {
+      final servidor = ServidorFalso()
+        ..respostasDoPedido.add(ApiException('CONFLICT', 'O preço mudou: era R\$ 7,00 e agora é R\$ 8,00. Consulte o preço de novo.', statusCode: 409));
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      await preencherAtePreco(tester);
+      await tocar(tester, 'Continuar');
+      await tocar(tester, 'Confirmar entrega');
+
+      expect(find.textContaining('O preço mudou'), findsOneWidget);
+      expect(find.text('Entrega FM100'), findsNothing);
+      expect(find.text('Consultar preço'), findsOneWidget); // voltou para consultar de novo
+      expect(find.text('Tentar de novo'), findsNothing); // não é queda de rede
+
+      servidor.cotacao = Cotacao(
+        enderecoColeta: 'Rua B, 20, Centro, Goiatuba/GO',
+        coletaAlternativa: false,
+        enderecoEntrega: 'Rua A, 10, Centro, Goiatuba/GO',
+        opcoes: const [OpcaoPreco(veiculo: 'MOTO', nome: 'Moto', valorCents: 800)],
+        assinatura: 'assinada',
+      );
+      await tocar(tester, 'Consultar preço');
+      expect(find.text('R\$ 8,00'), findsOneWidget);
+      await tocar(tester, 'Continuar');
+      await tocar(tester, 'Confirmar entrega');
+      expect(servidor.valoresEsperados, [700, 800]);
+      expect(servidor.chavesRecebidas[0], isNot(servidor.chavesRecebidas[1])); // pedido novo, chave nova
+      expect(find.text('Entrega FM100'), findsOneWidget);
+      await fechar(tester);
+    });
+
     testWidgets('recusa do servidor ao confirmar (ex.: suspenso): mostra o motivo e não abre entrega', (tester) async {
       final servidor = ServidorFalso()..respostasDoPedido.add(ApiException('FORBIDDEN', 'Seu estabelecimento está suspenso. Fale com a Central.', statusCode: 403));
       await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));

@@ -168,7 +168,8 @@ class _NovaEntregaTelaState extends State<NovaEntregaTela> {
       _erro = null;
     });
     try {
-      final entrega = await s.servidor.pedirEntrega(chave, _dados(), cotacao.assinatura);
+      // Manda junto o preco que a pessoa viu: se mudou, o servidor recusa.
+      final entrega = await s.servidor.pedirEntrega(chave, _dados(), cotacao.assinatura, valorEsperadoCents: cotacao.opcao(_veiculo!)?.valorCents);
       if (!mounted) return;
       // So aqui, com a resposta do servidor, a entrega existe.
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => EntregaTela(inicial: entrega)));
@@ -179,6 +180,13 @@ class _NovaEntregaTelaState extends State<NovaEntregaTela> {
           _incerto = true;
           _erro = 'Sem resposta do servidor. Não sabemos se a entrega foi registrada. Toque em "Tentar de novo": é seguro, o mesmo pedido não é duplicado. '
               'Você também pode conferir na aba Entregas.';
+        } else if (e.statusCode == 409 && e.message.startsWith('O preço mudou')) {
+          // O preco oficial mudou depois da consulta: nada foi pedido. Volta
+          // para consultar de novo (outra chave, porque o pedido muda).
+          _cotacao = null;
+          _chave = null;
+          _passo = 3;
+          _erro = e.message;
         } else {
           _erro = e.message;
         }
