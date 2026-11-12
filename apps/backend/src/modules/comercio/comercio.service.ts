@@ -536,6 +536,8 @@ export class ComercioService implements OnModuleInit {
       cnpj: cnpjParcial(c.cnpj),
       telefone: c.telefone,
       enderecoDeRetirada: enderecoPorExtenso(c),
+      cidade: c.cidade,
+      uf: c.uf,
       situacao: c.status,
       situacaoRotulo: rotuloDaSituacao(c.status),
       podeLancar: motivo === null,

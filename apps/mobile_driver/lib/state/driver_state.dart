@@ -20,6 +20,7 @@ import '../core/utils/filtro_gps.dart';
 import '../core/situacao_veiculo.dart';
 import '../data/demo/driver_demo.dart';
 import '../data/models/driver_models.dart';
+import '../data/models/entrega_manual.dart';
 import '../core/avisos.dart';
 import '../core/medida.dart';
 import '../core/mapa_config.dart';
@@ -538,6 +539,47 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         'longitude': p.longitude,
       },
     });
+    await retomarCorridaDoServidor();
+    await conferirCorrida();
+  }
+
+  // ------------------------------------------------------------------
+  // Entrega manual do Comercio (12/11/2026). O servidor confere TUDO (cidade
+  // do motorista, loja aprovada, chave geral, Entrega ligada, veiculo aceito)
+  // e calcula o preco; aqui so se pergunta e se mostra.
+  // ------------------------------------------------------------------
+
+  /// Procura o estabelecimento por telefone, e-mail ou nome (so os da cidade do motorista).
+  Future<ResultadoDaBusca> buscarEstabelecimento(String busca) async => ResultadoDaBusca.fromJson(
+      await _client.request('POST', '/driver/manual-deliveries/buscar', body: {'busca': busca.trim()}) as Map<String, dynamic>);
+
+  Future<PerfilDoEstabelecimento> perfilDoEstabelecimento(String id) async => PerfilDoEstabelecimento.fromJson(
+      await _client.request('GET', '/driver/manual-deliveries/estabelecimentos/$id') as Map<String, dynamic>);
+
+  /// Endereco no mapa (o mesmo servico da corrida), perto do motorista.
+  Future<List<LugarAchado>> buscarEnderecoDaEntrega(String texto) async {
+    final r = await _client.request('GET', '/geo/search', query: {
+      'q': texto.trim(),
+      'lat': '${position.latitude}',
+      'lng': '${position.longitude}',
+    });
+    return [for (final x in (r is List ? r : const [])) ?LugarAchado.tentar(x)];
+  }
+
+  /// Preco oficial do servidor pelo veiculo do motorista. Nao cria nada.
+  /// null = sem preco para este veiculo agora.
+  Future<CotacaoDaEntrega?> cotarEntregaManual(DadosDaEntregaManual d) async =>
+      CotacaoDaEntrega.ler(await _client.request('POST', '/driver/manual-deliveries/cotar', body: d.toJson()) as Map<String, dynamic>);
+
+  /// Lanca a entrega: o servidor abre o pedido oficial do Comercio e ja entrega
+  /// a este motorista. Depois a tela da corrida assume. Em queda de rede, repita
+  /// com a MESMA [chave]: o servidor nao duplica.
+  Future<void> lancarEntregaManual(DadosDaEntregaManual d, {required String chave, required CotacaoDaEntrega cotacao}) async {
+    await _client.request(
+      'POST',
+      '/driver/manual-deliveries',
+      body: d.toJson(chave: chave, cotacao: cotacao.cotacao, valorEsperadoCents: cotacao.valorCents),
+    );
     await retomarCorridaDoServidor();
     await conferirCorrida();
   }

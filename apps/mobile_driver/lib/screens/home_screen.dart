@@ -12,6 +12,7 @@ import '../widgets/ride_map.dart';
 import 'activity_screen.dart';
 import 'avisos_screen.dart';
 import 'corrida_manual_screen.dart';
+import 'entrega_manual_screen.dart';
 import 'menu_screen.dart';
 import 'rides_history_screen.dart';
 import 'sos_screen.dart';
@@ -465,6 +466,13 @@ class _PainelInferior extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.add_road),
                   label: const Text('Lançar corrida manual'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const EntregaManualScreen()),
+                  ),
+                  icon: const Icon(Icons.storefront),
+                  label: const Text('Lançar entrega manualmente'),
                 ),
               ],
               if (onSimular != null)
