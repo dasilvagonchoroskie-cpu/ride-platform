@@ -10,7 +10,7 @@ import { ROLES_KEY } from '../../common/constants/metadata.constants';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { AdminComercioController, ComercioController } from './comercio.controller';
-import { ComercioService, MAX_ABERTAS_POR_LOJA, MENSAGEM_PRECO_MUDOU } from './comercio.service';
+import { ComercioService, MAX_ABERTAS_POR_LOJA, MENSAGEM_PRECO_MUDOU, lerEmLotes } from './comercio.service';
 import { ComercioAvisosService } from './comercio.avisos';
 import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import { encerrarComercios } from './comercio.conta';
@@ -80,7 +80,13 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
         return c;
       },
       update: async ({ where, data }: any) => ({ ...Object.assign(comercios.find((c) => c.id === where.id), data) }),
-      findMany: async () => [...comercios],
+      updateMany: async ({ where, data }: any) => {
+        const c = comercios.find((x) => x.id === where.id && (!where.status || x.status === where.status));
+        if (!c) return { count: 0 };
+        Object.assign(c, data);
+        return { count: 1 };
+      },
+      findMany: async ({ skip, take }: any = {}) => comercios.slice(skip ?? 0, (skip ?? 0) + (take ?? comercios.length)),
     },
     comercioPedido: {
       findUnique: async ({ where }: any) => {
@@ -88,13 +94,13 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
         return pedidos.find((p) => p.comercioId === k.comercioId && p.chave === k.chave) ?? null;
       },
       findFirst: async ({ where }: any) => comJoin(pedidos.find((p) => p.rideId === where.rideId && p.comercioId === where.comercioId)),
-      findMany: async ({ where, take }: any = {}) =>
+      findMany: async ({ where, take, skip }: any = {}) =>
         pedidos
           .filter((p) => (!where?.comercioId || p.comercioId === where.comercioId))
           .filter((p) => !where?.ride?.status || corridas[p.rideId]?.status === where.ride.status)
           .map(comJoin)
           .map((p) => ({ ...p, comercio: comercios.find((c) => c.id === p.comercioId) }))
-          .slice(0, take ?? Infinity),
+          .slice(skip ?? 0, (skip ?? 0) + (take ?? Infinity)),
       count: async ({ where }: any) =>
         pedidos.filter((p) => p.comercioId === where.comercioId && (!where.ride?.status?.in || where.ride.status.in.includes(corridas[p.rideId]?.status))).length,
       create: async ({ data }: any) => {
@@ -109,6 +115,8 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
         config[where.key] = (config[where.key] === undefined ? create : update).value;
       }),
     },
+    // Motoristas que lancaram entregas manualmente (nome para a auditoria da Central).
+    driver: { findMany: async ({ where }: any) => (where.id.in as string[]).map((id) => ({ id, user: { name: id === 'mot1' ? 'Carlos Souza' : null } })) },
     auditLog: { create: jest.fn(async ({ data }: any) => void auditoria.push(data)) },
     notification: {
       findFirst: async ({ where }: any) => avisosGravados.find((a) => a.userId === where.userId && a.dados?.chave === where.data.equals) ?? null,
@@ -489,6 +497,20 @@ describe('Comercio: Central (testes 20 e 21)', () => {
     expect((await ctx.s.adminListar('outra', {})).itens).toHaveLength(0);
     expect((await ctx.s.adminListar(null, {})).itens).toHaveLength(2);
     await expect(ctx.s.adminDetalhe('outra', c.id)).rejects.toThrow('não encontrado');
+  });
+
+  it('entrega lancada pelo motorista: a Central ve quem lancou e quando; a do app da loja vem sem autor', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const doApp = await ctx.s.pedir('u1', pedido('chave-numero-0000001'));
+    const manual = await ctx.s.pedir('u1', pedido('chave-numero-0000002'));
+    const quando = new Date('2026-11-13T01:00:00.000Z');
+    Object.assign(ctx.pedidos.find((p) => p.rideId === manual.id)!, { origem: 'MOTORISTA', lancadoPor: 'mot1', lancadoEm: quando });
+    const { itens } = await ctx.s.adminPedidos(null, {});
+    const m = itens.find((i) => i.id === manual.id)!;
+    const a = itens.find((i) => i.id === doApp.id)!;
+    expect(m).toMatchObject({ lancamento: 'MOTORISTA', lancadoPor: 'Carlos Souza', lancadoEm: quando.toISOString() });
+    expect(a).toMatchObject({ lancamento: 'APP', lancadoPor: null, lancadoEm: null });
   });
 
   it('entregas do Comercio na Central trazem a origem e a cidade', async () => {
@@ -947,5 +969,50 @@ describe('Comercio: o guarda de papeis de verdade barra quem nao deve (auditoria
       for (const papel of ['PASSENGER', 'DRIVER']) expect(() => guarda.canActivate(contexto(AdminComercioController, h, papel))).toThrow('permissao');
       expect(guarda.canActivate(contexto(AdminComercioController, h, 'ADMIN'))).toBe(true);
     }
+  });
+});
+
+
+describe('Comercio: trava de decisao e leitura em lotes (13/11/2026)', () => {
+  it('duas decisoes ao mesmo tempo: so a primeira vale, a segunda recebe aviso e nao duplica a auditoria', async () => {
+    const ctx = montar();
+    const c = await ctx.s.cadastrar('u1', cadastro);
+    const [a, b] = await Promise.allSettled([
+      ctx.s.adminDecidir('dono', c.id, 'APROVAR'),
+      ctx.s.adminDecidir('dono', c.id, 'APROVAR'),
+    ]);
+    expect([a.status, b.status].sort()).toEqual(['fulfilled', 'rejected']);
+    const recusada = [a, b].find((r) => r.status === 'rejected') as PromiseRejectedResult;
+    expect(String(recusada.reason.message)).toContain('acabou de ser alterado');
+    expect(ctx.auditoria.filter((x) => x.action === 'COMERCIO_APROVAR')).toHaveLength(1);
+    expect(ctx.avisosGravados.filter((x) => x.tipo === 'comercio-decisao')).toHaveLength(1);
+  });
+
+  it('lerEmLotes: junta so o que passa no filtro mesmo quando os 300 primeiros sao de outra cidade', async () => {
+    const todos = Array.from({ length: 700 }, (_, i) => ({ i, cidade: i < 650 ? 'outra' : 'minha' }));
+    const chamadas: number[] = [];
+    const r = await lerEmLotes(
+      async (skip, take) => {
+        chamadas.push(skip);
+        return todos.slice(skip, skip + take);
+      },
+      async (x) => (x.cidade === 'minha' ? x.i : null),
+    );
+    expect(r).toHaveLength(50);
+    expect(chamadas).toEqual([0, 300, 600]);
+  });
+
+  it('lerEmLotes: para no limite e nao le a tabela inteira', async () => {
+    const chamadas: number[] = [];
+    const r = await lerEmLotes(
+      async (skip, take) => {
+        chamadas.push(skip);
+        return Array.from({ length: take }, (_, i) => skip + i);
+      },
+      async (x) => x,
+      10,
+    );
+    expect(r).toHaveLength(10);
+    expect(chamadas).toEqual([0]);
   });
 });

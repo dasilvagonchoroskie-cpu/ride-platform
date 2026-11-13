@@ -871,27 +871,25 @@ export class ComercioService implements OnModuleInit {
   }
 
   async adminListar(praca: string | null, f: { situacao?: string; busca?: string }) {
-    const lista = await this.prisma.comercio.findMany({
-      where: {
-        ...(f.situacao ? { status: f.situacao } : {}),
-        ...(f.busca
-          ? {
-              OR: [
-                { nomeFantasia: { contains: f.busca, mode: 'insensitive' } },
-                { cnpj: { contains: digitos(f.busca) || '#' } },
-                { email: { contains: f.busca, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 300,
-    });
-    const itens = [];
-    for (const c of lista) {
-      if (!(await this.visivel(c, praca))) continue;
-      itens.push({ ...comercioPublico(c), praca: await this.pracaDe(c) });
-    }
+    const where = {
+      ...(f.situacao ? { status: f.situacao } : {}),
+      ...(f.busca
+        ? {
+            OR: [
+              { nomeFantasia: { contains: f.busca, mode: 'insensitive' as const } },
+              { cnpj: { contains: digitos(f.busca) || '#' } },
+              { email: { contains: f.busca, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+    // A cidade do estabelecimento sai da posicao dele (nao e uma coluna): le em lotes e
+    // filtra ate juntar o limite, para o operador de uma cidade nao perder cadastros
+    // porque os 300 mais novos eram de outra cidade.
+    const itens = await lerEmLotes(
+      (skip, take) => this.prisma.comercio.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
+      async (c) => ((await this.visivel(c, praca)) ? { ...comercioPublico(c), praca: await this.pracaDe(c) } : null),
+    );
     return { itens };
   }
 
@@ -907,10 +905,16 @@ export class ComercioService implements OnModuleInit {
     if (!c) throw BusinessException.notFound('Estabelecimento não encontrado.');
     const r = decidir(c.status, acao, motivo);
     if (!r.ok) throw BusinessException.validation(r.erro);
-    const novo = await this.prisma.comercio.update({
-      where: { id },
+    // Trava contra duas decisoes ao mesmo tempo (dois cliques, duas abas): so grava se a
+    // situacao ainda e a que foi lida; a segunda tentativa recebe um aviso e nao duplica a auditoria.
+    const gravou = await this.prisma.comercio.updateMany({
+      where: { id, status: c.status },
       data: { status: r.para, motivo: motivo?.trim() || null, decididoPor: adminId, decididoEm: new Date() },
     });
+    if (gravou.count === 0) {
+      throw BusinessException.conflict('Este estabelecimento acabou de ser alterado por outra decisão. Atualize a tela e confira a situação.');
+    }
+    const novo = (await this.prisma.comercio.findUnique({ where: { id } })) as NonNullable<typeof c>;
     await this.prisma.auditLog.create({
       data: {
         actorId: adminId,
@@ -928,32 +932,61 @@ export class ComercioService implements OnModuleInit {
 
   /** Entregas pedidas pelo aplicativo Comercio (origem identificada), com o andamento. */
   async adminPedidos(praca: string | null, f: { status?: string; comercioId?: string }) {
-    const lista = await this.prisma.comercioPedido.findMany({
-      where: { ...(f.comercioId ? { comercioId: f.comercioId } : {}) },
-      orderBy: { createdAt: 'desc' },
-      take: 300,
-      include: { ...this.include(), comercio: { select: { nomeFantasia: true, latitude: true, longitude: true } } },
-    });
     const todas = await this.pracas.listar();
+    const lista = await lerEmLotes(
+      (skip, take) =>
+        this.prisma.comercioPedido.findMany({
+          where: { ...(f.comercioId ? { comercioId: f.comercioId } : {}) },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take,
+          include: { ...this.include(), comercio: { select: { nomeFantasia: true, latitude: true, longitude: true } } },
+        }),
+      // A cidade vem do ponto de coleta da corrida; antes o corte de 300 vinha ANTES deste filtro.
+      async (p) => {
+        const pr = pracaDoPonto(todas, { latitude: p.ride.pickupLat, longitude: p.ride.pickupLng })?.id ?? null;
+        if (praca && pr !== praca) return null;
+        if (f.status === 'abertas' && this.item(p).final) return null;
+        return { p, praca: pr };
+      },
+    );
     // Quem lancou manualmente (motorista) e quando: para a auditoria na Central.
-    const lancadores = [...new Set(lista.map((p) => p.lancadoPor).filter((x): x is string => !!x))];
+    const lancadores = [...new Set(lista.map(({ p }) => p.lancadoPor).filter((x): x is string => !!x))];
     const nomes = new Map<string, string>();
     if (lancadores.length) {
       const motoristas = await this.prisma.driver.findMany({ where: { id: { in: lancadores } }, select: { id: true, user: { select: { name: true } } } });
       for (const m of motoristas) nomes.set(m.id, m.user?.name ?? 'Motorista');
     }
-    const itens = lista
-      .map((p) => ({ p, praca: pracaDoPonto(todas, { latitude: p.ride.pickupLat, longitude: p.ride.pickupLng })?.id ?? null }))
-      .filter(({ praca: pr }) => !praca || pr === praca)
-      .map(({ p, praca: pr }) => ({
-        ...this.item(p),
-        comercio: p.comercio.nomeFantasia,
-        praca: pr,
-        comissaoCents: p.ride.commissionCents,
-        lancadoPor: p.lancadoPor ? (nomes.get(p.lancadoPor) ?? 'Motorista') : null,
-        lancadoEm: p.lancadoEm ? new Date(p.lancadoEm).toISOString() : null,
-      }))
-      .filter((i) => (f.status === 'abertas' ? !i.final : true));
+    const itens = lista.map(({ p, praca: pr }) => ({
+      ...this.item(p),
+      comercio: p.comercio.nomeFantasia,
+      praca: pr,
+      comissaoCents: p.ride.commissionCents,
+      lancadoPor: p.lancadoPor ? (nomes.get(p.lancadoPor) ?? 'Motorista') : null,
+      lancadoEm: p.lancadoEm ? new Date(p.lancadoEm).toISOString() : null,
+    }));
     return { itens };
   }
+}
+
+/**
+ * Le uma lista grande em lotes de 300 e devolve so o que passa no filtro (que roda no
+ * aplicativo, nao no banco), ate juntar 300 itens ou acabar a tabela (no maximo 20 lotes).
+ */
+export async function lerEmLotes<L, R>(
+  buscar: (skip: number, take: number) => Promise<L[]>,
+  filtrar: (linha: L) => Promise<R | null>,
+  limite = 300,
+): Promise<R[]> {
+  const saida: R[] = [];
+  for (let lote = 0; lote < 20 && saida.length < limite; lote++) {
+    const linhas = await buscar(lote * 300, 300);
+    for (const l of linhas) {
+      const r = await filtrar(l);
+      if (r !== null) saida.push(r);
+      if (saida.length >= limite) break;
+    }
+    if (linhas.length < 300) break;
+  }
+  return saida;
 }
