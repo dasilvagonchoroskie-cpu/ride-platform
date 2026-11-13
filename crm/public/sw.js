@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v32';
+const CACHE = 'fm-crm-v33';
 const ASSETS = [
   '/',
   '/index.html',
