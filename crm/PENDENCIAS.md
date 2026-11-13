@@ -21,6 +21,8 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       e uma vez por atendimento; falso positivo do filtro (opção 3 transferida à toa) corrigido. 207/207 testes.
 - [ ] Dono: repetir o teste pelo site (sem precisar concluir no CRM) e escolher cada opção do menu; conferir os textos em
       Configurações → Modelos de Comunicação da IA (saudação de retorno e as 5 aberturas são editáveis).
+- [x] 13/11 Avisos dentro do CRM: ao abrir ou voltar para o CRM, nada do que já foi notificado no celular aparece de novo na tela
+      (antes acumulava e repetia em dobro); com o CRM aberto, no máximo 2 avisos por vez, um por conversa. Cache `fm-crm-v31`.
 - [ ] Opcional: "Health Check Path" `/api/health` no painel do Render (a ferramenta do Claude não altera essa opção).
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)

@@ -74,6 +74,11 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   nunca na abertura. `respostaSegura(..., { publicos })`: trecho que também está na conversa/modelos/informações não é "dado interno"
   (falso positivo real: "coleta e entrega de encomendas"). Testes: `test/ia-operacao.test.js`.
 
+## Avisos na tela (13/11/2026, pedido do dono; cache `fm-crm-v31`)
+- `iniciarAvisos` (public/js/notificacoes.js): aviso na tela SÓ para o que chega com o CRM aberto. Ao voltar do segundo plano
+  (`visibilitychange`) a busca é silenciosa (só avança `ultimo`): o celular já notificou. Trava `buscando` (duas buscas juntas
+  duplicavam), 1 aviso por conversa+tipo, no máximo 2 na tela, 1 som. NÃO voltar a mostrar o acumulado.
+
 ## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; publicado em 13/11)
 - `src/documentos/recebidos.js` + migração 007 `wa_anexos` (uma linha por mensagem, sem DELETE por gatilho). Situações: aguardando_ficha |
   pendente_classificacao | anexado | duplicado | recusado | falhou | nao_documento. Área de espera CIFRADA (`docs.guardarRecebido/lerRecebido`,
