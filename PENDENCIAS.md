@@ -24,6 +24,14 @@ Esta seção vale mais que qualquer linha antiga mais abaixo que a contradiga. L
 
 **Feito (13/11, #106):** conta de revisão do Google no servidor (`OTP_CONTAS_REVISAO`, desligada por padrão; 9 testes novos, esteira do servidor verde no `2e60e7b`). **Depende do dono:** autorizar as duas contas e gravar a variável no Render; só então desligar `OTP_DEBUG_RETURN`.
 
+**Feito (13/11, auditoria técnica final, PR #59 em rascunho):**
+- **Login:** a renovação do login agora tolera resposta perdida (janela de 2 min, só se o token novo existe e não foi revogado); antes, queda de rede no instante da renovação deslogava o aparelho. 7 testes novos. Trade-off aceito: um token antigo roubado vale 2 min a mais, mas só se o novo ainda não foi usado/revogado.
+- **Banco:** tabelas criadas pelo próprio servidor (Comércio, Clube, Entregas) agora ligam a proteção de linhas (RLS) já na criação; teste que varre o código impede esquecer. SQL cru conferido: só nomes fixos ou lidos do catálogo e validados por regex.
+- **GPS do motorista parado:** conferido que o serviço nativo reenvia a posição a cada 45 s (limite do servidor: 2 min), então ele continua elegível. Só um comentário do código foi corrigido; nenhuma lógica mudou.
+- **Comércio (leitura do fluxo):** preço confirmado antes do pedido, trava de pedido duplicado (chave + banco), teto de entregas abertas, coleta só na cidade da loja, auditoria de cada pedido. Tarifas, comissões e regras comerciais não foram tocadas.
+- **Testes:** servidor 40 suítes / 452 testes passando (local e esteira no `b4a6cd1`); Central e motorista conferidos pela esteira. Não rodados: celular real, produção, Firebase real, GPS em movimento, taxímetro na rua.
+- **Risco residual:** a Central guarda o login em armazenamento comum do Android (os outros 3 apps usam o cofre); migrar exige mexer no código nativo e teste em aparelho. Também sem prova em celular: reconexão após queda de rede, notificações duplicadas/falhas, processo morto pelo sistema.
+
 **Feito (13/11, testes automáticos novos, esteira do servidor verde no `ad7959a` para os 5 primeiros):** limpeza de dados (10), cidades/praças e guardas do dono (24), documentos do motorista (15), usuários (14), painel de relatórios (10), motoristas — ficar online/aprovação/documentos (22). São testes com banco de mentira; **não** provam nada em produção. `notificacoes` já tinha teste na caixa de entrada.
 
 **Feito (13/11):** `docs/FIREBASE.md` e `docs/MANUAL-CENTRAL.md` escritos a partir do código (sem valores secretos). **Feito (13/11):** passos **só de leitura** no teste de ponta a ponta para as rotas novas (frota, Comércios, entregas do Comércio, chave geral; recusa sem login). Se o servidor no ar não tem a rota (404), o passo é PULADO. Conferido só contra um servidor de mentira local; **não rodado contra produção** (o PR #59 não foi publicado e `MUDAR_CONFIG=nao` continua).
