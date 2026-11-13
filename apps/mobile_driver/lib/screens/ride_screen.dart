@@ -573,8 +573,13 @@ class _Viagem extends StatelessWidget {
         _Passageiro(d: d, offer: offer),
         // Etapa 3: paradas na ordem, cada uma com o seu caminho.
         for (var i = 0; i < offer.paradas.length; i++) ...[
-          _Endereco(rotulo: 'Parada ${i + 1}', texto: offer.paradas[i].address, cor: AppColors.warning),
-          _BotoesNavegar(destino: offer.paradas[i].coords),
+          _Endereco(
+            rotulo: offer.paradas[i].entrega != null ? 'Entrega ${i + 1} de ${offer.paradas.length + 1}' : 'Parada ${i + 1}',
+            texto: offer.paradas[i].address,
+            cor: offer.paradas[i].entrega?.entregue == true ? AppColors.success : AppColors.warning,
+          ),
+          if (offer.paradas[i].entrega != null) _EntregaDaParadaCard(d: d, parada: offer.paradas[i], proxima: _ehProximaParada(offer, i)),
+          if (offer.paradas[i].entrega?.entregue != true) _BotoesNavegar(destino: offer.paradas[i].coords),
         ],
         if (offer.semDestino)
           _Endereco(rotulo: 'Destino', texto: 'Sem destino: pergunte ao passageiro. O valor sai pelo taxímetro.', cor: AppColors.danger)
@@ -583,8 +588,15 @@ class _Viagem extends StatelessWidget {
           _BotoesNavegar(destino: offer.dropoffCoords),
         ],
         const SizedBox(height: Spacing.lg),
-        if (offer.entrega != null)
-          Deslizar(texto: 'CONFIRMAR ENTREGA', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: () => pedirCodigoDaEntrega(context, d))
+        if (offer.faltaEntregarParada)
+          Text(
+            'Confirme as entregas anteriores, na ordem, antes de encerrar a última.',
+            key: const ValueKey('falta-entregar-parada'),
+            style: AppText.caption.copyWith(color: AppColors.textMuted),
+            textAlign: TextAlign.center,
+          )
+        else if (offer.entrega != null)
+          Deslizar(texto: offer.paradas.any((p) => p.entrega != null) ? 'CONFIRMAR ÚLTIMA ENTREGA' : 'CONFIRMAR ENTREGA', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: () => pedirCodigoDaEntrega(context, d))
         else
           Deslizar(texto: 'FINALIZAR VIAGEM', cor: AppColors.danger, ocupado: d.enviandoEtapa, aoConfirmar: d.finishRide),
       ],
@@ -787,6 +799,115 @@ class _FaixaEntrega extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A proxima parada a entregar (a primeira ainda nao entregue): so ela mostra o botao.
+bool _ehProximaParada(RideOffer offer, int i) {
+  final primeira = offer.paradas.indexWhere((p) => p.entrega != null && !p.entrega!.entregue);
+  return primeira == i;
+}
+
+/// Varias entregas: quem recebe nesta parada e o botao para confirmar com o codigo dela.
+class _EntregaDaParadaCard extends StatelessWidget {
+  const _EntregaDaParadaCard({required this.d, required this.parada, required this.proxima});
+
+  final DriverState d;
+  final ParadaDaCorrida parada;
+  final bool proxima;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = parada.entrega!;
+    final tel = e.destinatarioTelefone.replaceAll(RegExp(r'\D'), '');
+    return Container(
+      key: ValueKey('parada-entrega-${parada.sequencia}'),
+      margin: const EdgeInsets.only(bottom: Spacing.sm),
+      padding: const EdgeInsets.all(Spacing.md),
+      decoration: BoxDecoration(color: AppColors.brandSoft, borderRadius: BorderRadius.circular(Radii.sm)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(e.entregue ? Icons.check_circle : Icons.inventory_2_outlined, color: e.entregue ? AppColors.success : AppColors.brand),
+            const SizedBox(width: Spacing.sm),
+            Expanded(child: Text(e.descricao, style: AppText.bodyStrong, maxLines: 2, overflow: TextOverflow.ellipsis)),
+          ]),
+          const SizedBox(height: Spacing.xs),
+          Row(children: [
+            Expanded(child: Text('Quem recebe: ${e.destinatarioNome}', style: AppText.body)),
+            if (tel.isNotEmpty && !e.entregue)
+              TextButton.icon(onPressed: () => launchUrl(Uri.parse('tel:+$tel')), icon: const Icon(Icons.call, size: 18), label: const Text('Ligar')),
+          ]),
+          if (e.entregue)
+            Text('Entregue ✔', style: AppText.caption.copyWith(color: AppColors.success, fontWeight: FontWeight.w700))
+          else if (proxima)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: ValueKey('entregar-parada-${parada.sequencia}'),
+                onPressed: () => pedirCodigoDaParada(context, d, parada),
+                child: Text('Entregar (peça o código de ${e.destinatarioNome.split(' ').first})'),
+              ),
+            )
+          else
+            Text('Entregue as anteriores primeiro.', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Janela do codigo de uma entrega do caminho (varias entregas): igual a da ultima, mas confirma so a parada.
+Future<void> pedirCodigoDaParada(BuildContext context, DriverState d, ParadaDaCorrida parada) async {
+  final campo = TextEditingController();
+  var enviando = false;
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) {
+        Future<void> confirmar() async {
+          if (enviando) return;
+          setState(() => enviando = true);
+          final ok = await d.entregarParada(parada.sequencia, campo.text.trim());
+          if (!ctx.mounted) return;
+          if (ok) {
+            Navigator.of(ctx).pop();
+          } else {
+            setState(() => enviando = false);
+          }
+        }
+
+        return AlertDialog(
+          title: Text('Código de ${parada.entrega?.destinatarioNome ?? 'quem recebe'}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Peça a quem recebe o código de 4 números e digite aqui.'),
+              const SizedBox(height: Spacing.md),
+              TextField(
+                key: const ValueKey('campo-codigo-parada'),
+                controller: campo,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: AppText.title.copyWith(letterSpacing: 8),
+                decoration: const InputDecoration(counterText: '', hintText: '0000'),
+                onSubmitted: (_) => confirmar(),
+              ),
+              if (d.erroDaEntrega != null)
+                Text(d.erroDaEntrega!, style: AppText.body.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Voltar')),
+            FilledButton(onPressed: enviando ? null : confirmar, child: const Text('Confirmar')),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 /// Janela do codigo da entrega: o motorista digita os 4 numeros que quem

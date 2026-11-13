@@ -256,6 +256,31 @@ class RideOffer {
 
   /// Mesma oferta com a distancia ate o embarque pelas ruas (a rota que o
   /// proprio app pediu quando o chamado chegou).
+  /// Mesma oferta com as paradas trocadas (ex.: uma entrega do caminho foi confirmada).
+  RideOffer comParadas(List<ParadaDaCorrida> novas) => RideOffer(
+        id: id,
+        code: code,
+        passengerName: passengerName,
+        passengerRating: passengerRating,
+        pickupAddress: pickupAddress,
+        pickupCoords: pickupCoords,
+        dropoffAddress: dropoffAddress,
+        dropoffCoords: dropoffCoords,
+        distanceToPickupMeters: distanceToPickupMeters,
+        tripDistanceMeters: tripDistanceMeters,
+        durationSeconds: durationSeconds,
+        fareCents: fareCents,
+        earningCents: earningCents,
+        paymentMethod: paymentMethod,
+        expiresInSeconds: expiresInSeconds,
+        paradas: novas,
+        semDestino: semDestino,
+        entrega: entrega,
+      );
+
+  /// Entrega com varias paradas: falta confirmar alguma antes da ultima?
+  bool get faltaEntregarParada => entrega != null && paradas.any((p) => p.entrega != null && !p.entrega!.entregue);
+
   RideOffer comAteEmbarque(int metros) => RideOffer(
         id: id,
         code: code,
@@ -305,24 +330,73 @@ class EntregaDoChamado {
       };
 }
 
-/// Uma parada no caminho (etapa 3).
+/// Varias entregas num pedido: quem recebe numa parada do caminho e se ja foi entregue.
+class EntregaDaParada {
+  const EntregaDaParada({required this.descricao, required this.destinatarioNome, this.destinatarioTelefone = '', this.entregue = false});
+
+  final String descricao;
+  final String destinatarioNome;
+  final String destinatarioTelefone;
+  final bool entregue;
+
+  static EntregaDaParada? ler(Object? v) {
+    if (v is! Map) return null;
+    return EntregaDaParada(
+      descricao: v['descricao']?.toString() ?? '',
+      destinatarioNome: v['destinatarioNome']?.toString() ?? '',
+      destinatarioTelefone: v['destinatarioTelefone']?.toString() ?? '',
+      entregue: v['entregue'] == true,
+    );
+  }
+
+  EntregaDaParada comoEntregue() =>
+      EntregaDaParada(descricao: descricao, destinatarioNome: destinatarioNome, destinatarioTelefone: destinatarioTelefone, entregue: true);
+
+  Map<String, dynamic> toJson() => {
+        'descricao': descricao,
+        'destinatarioNome': destinatarioNome,
+        'destinatarioTelefone': destinatarioTelefone,
+        'entregue': entregue,
+      };
+}
+
+/// Uma parada no caminho (etapa 3). Em entrega com varias paradas, [entrega] diz quem recebe ali.
 class ParadaDaCorrida {
-  const ParadaDaCorrida({required this.address, required this.coords});
+  const ParadaDaCorrida({required this.address, required this.coords, this.sequencia = 0, this.entrega});
 
   final String address;
   final Coords coords;
 
-  /// Lista como o servidor manda: [{address, latitude, longitude}].
-  static List<ParadaDaCorrida> lista(Object? v) => [
-        for (final p in (v is List ? v : const []).whereType<Map>())
-          if (p['latitude'] is num && p['longitude'] is num)
-            ParadaDaCorrida(
-              address: p['address']?.toString() ?? 'Parada',
-              coords: Coords((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()),
-            ),
-      ];
+  /// Ordem da parada na rota (1, 2, ...), como o servidor numera.
+  final int sequencia;
+  final EntregaDaParada? entrega;
 
-  Map<String, dynamic> toJson() => {'address': address, 'latitude': coords.latitude, 'longitude': coords.longitude};
+  ParadaDaCorrida comoEntregue() =>
+      ParadaDaCorrida(address: address, coords: coords, sequencia: sequencia, entrega: entrega?.comoEntregue());
+
+  /// Lista como o servidor manda: [{address, latitude, longitude, sequence, entrega}].
+  static List<ParadaDaCorrida> lista(Object? v) {
+    final saida = <ParadaDaCorrida>[];
+    for (final p in (v is List ? v : const []).whereType<Map>()) {
+      if (p['latitude'] is num && p['longitude'] is num) {
+        saida.add(ParadaDaCorrida(
+          address: p['address']?.toString() ?? 'Parada',
+          coords: Coords((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble()),
+          sequencia: p['sequence'] is num ? (p['sequence'] as num).toInt() : saida.length + 1,
+          entrega: EntregaDaParada.ler(p['entrega']),
+        ));
+      }
+    }
+    return saida;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'address': address,
+        'latitude': coords.latitude,
+        'longitude': coords.longitude,
+        'sequence': sequencia,
+        if (entrega != null) 'entrega': entrega!.toJson(),
+      };
 }
 
 /// Fases da corrida do ponto de vista do motorista.
@@ -343,8 +417,8 @@ class DriverRide {
   final String startedAt;
   final String? finishedAt;
 
-  DriverRide copyWith({RidePhase? phase, String? finishedAt}) => DriverRide(
-        offer: offer,
+  DriverRide copyWith({RidePhase? phase, String? finishedAt, RideOffer? offer}) => DriverRide(
+        offer: offer ?? this.offer,
         phase: phase ?? this.phase,
         pin: pin,
         startedAt: startedAt,

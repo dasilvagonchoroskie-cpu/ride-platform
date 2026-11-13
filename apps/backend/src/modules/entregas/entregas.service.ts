@@ -385,6 +385,18 @@ export class EntregasService implements OnModuleInit {
         vehicle: { select: { plate: true, model: true, category: true } },
       },
     });
+    // Varias entregas num pedido: quantas ja foram entregues (as do caminho + a ultima).
+    const progresso = new Map<string, { total: number; feitas: number }>();
+    const ids = lista.map((r) => r.id);
+    if (ids.length) {
+      const linhas = await this.prisma
+        .$queryRawUnsafe<Array<{ ride_id: string; total: number | bigint; feitas: number | bigint }>>(
+          'SELECT "ride_id", COUNT(*) AS total, COUNT("entregue_em") AS feitas FROM "entrega_paradas" WHERE "ride_id" = ANY($1::uuid[]) GROUP BY "ride_id"',
+          ids,
+        )
+        .catch(() => []);
+      for (const l of linhas) progresso.set(l.ride_id, { total: Number(l.total), feitas: Number(l.feitas) });
+    }
     const todas = await this.pracas.listar();
     const itens = lista
       .map((r) => ({ r, p: pracaDoPonto(todas, { latitude: r.pickupLat, longitude: r.pickupLng })?.id ?? null }))
@@ -407,6 +419,11 @@ export class EntregasService implements OnModuleInit {
         veiculo: r.vehicle ? `${r.vehicle.model} · ${r.vehicle.plate}` : null,
         pedidaEm: r.requestedAt.toISOString(),
         detalhe: this.publico(r.entrega, 'central'),
+        /** Varias entregas: total e quantas ja foram entregues (entrega unica: 1 de 1 ou 0 de 1). */
+        progresso: {
+          total: (progresso.get(r.id)?.total ?? 0) + 1,
+          concluidas: (progresso.get(r.id)?.feitas ?? 0) + (r.entrega?.entregueEm ? 1 : 0),
+        },
       }));
     return { itens };
   }
