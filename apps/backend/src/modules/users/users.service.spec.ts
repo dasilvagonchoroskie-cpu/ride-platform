@@ -6,6 +6,7 @@ import { UsersService } from './users.service';
  */
 function montar(opcoes: { usuario?: Record<string, unknown> | null; enderecos?: number; emailEmUso?: boolean; apelidoRepetido?: boolean; dono?: boolean } = {}) {
   const usuario = opcoes.usuario === undefined ? { id: 'u1', role: 'PASSENGER', passwordHash: 'segredo', name: 'Ana', metadata: {} } : opcoes.usuario;
+  const tx: Record<string, unknown> = {};
   const prisma = {
     user: {
       findUnique: jest.fn(async () => usuario),
@@ -23,8 +24,9 @@ function montar(opcoes: { usuario?: Record<string, unknown> | null; enderecos?: 
     },
     refreshToken: { updateMany: jest.fn(async () => ({})) },
     driver: { updateMany: jest.fn(async () => ({})) },
-    $transaction: jest.fn(async (fn: (t: unknown) => unknown) => fn(prisma)),
+    $transaction: jest.fn(async (fn: (t: unknown) => unknown) => fn(tx)),
   };
+  Object.assign(tx, prisma);
   const repo = {
     update: jest.fn(async (_id: string, data: Record<string, unknown>) => ({ id: 'u1', passwordHash: 'segredo', ...data })),
     findById: jest.fn(async () => usuario),
