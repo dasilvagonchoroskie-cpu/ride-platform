@@ -147,6 +147,15 @@ Future<void> _esperar(WidgetTester tester) async {
   }
 }
 
+/// Espera (ate ~10 s simulados) a condicao ficar verdadeira: as respostas do servidor falso
+/// chegam por tarefas reais e a repeticao do cliente usa temporizador simulado.
+Future<void> _aguardar(WidgetTester tester, bool Function() pronto) async {
+  for (var i = 0; i < 20 && !pronto(); i++) {
+    await _esperar(tester);
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+}
+
 /// Abre a tela dentro de uma rota (como no app), para provar que fecha ao lancar.
 Future<void> _abrir(WidgetTester tester) async {
   tester.view.physicalSize = const Size(1080, 2340);
@@ -365,6 +374,8 @@ void main() {
     expect(destino['uf'], 'GO');
     expect(destino['latitude'], -18.0201);
     // Voltou para a tela anterior (a corrida assume).
+    await _aguardar(tester, () => find.text('Lançar entrega manualmente').evaluate().isEmpty);
+    await tester.pumpAndSettle();
     expect(find.text('Lançar entrega manualmente'), findsNothing);
     expect(find.text('abrir-entrega'), findsOneWidget);
   });
@@ -379,13 +390,14 @@ void main() {
     await _tocar(tester, find.text('Confirmar o preço e lançar a entrega'));
     // O cliente repete sozinho depois de 2 s (mesma chave); as duas caem.
     await tester.pump(const Duration(seconds: 3));
-    await _esperar(tester);
+    await _aguardar(tester, () => find.textContaining('Sem conexão').evaluate().isNotEmpty);
 
     expect(find.textContaining('Sem conexão'), findsOneWidget);
     expect(find.text('Tentar de novo'), findsOneWidget);
     expect(_lancamentos.length, 2);
 
     await _tocar(tester, find.text('Tentar de novo'));
+    await _aguardar(tester, () => find.text('abrir-entrega').evaluate().isNotEmpty);
     expect(_lancamentos.length, 3);
     expect(_lancamentos.map((l) => l['chave']).toSet().length, 1, reason: 'todas as tentativas usam a mesma chave');
     expect(find.text('abrir-entrega'), findsOneWidget);
