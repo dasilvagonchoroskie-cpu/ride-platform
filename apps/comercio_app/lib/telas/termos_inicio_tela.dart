@@ -101,9 +101,11 @@ class _TermosInicioTelaState extends State<TermosInicioTela> {
                 ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 20), children: blocosDeTexto(p.conteudo)),
               ]),
             ),
-            Container(
+            Material(
+              color: Cores.cartao,
+              child: Container(
               padding: const EdgeInsets.fromLTRB(12, 6, 20, 14),
-              decoration: const BoxDecoration(color: Cores.cartao, border: Border(top: BorderSide(color: Cores.borda))),
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: Cores.borda))),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 CheckboxListTile(
                   key: const ValueKey('aceite-inicial'),
@@ -119,6 +121,7 @@ class _TermosInicioTelaState extends State<TermosInicioTela> {
                   Expanded(flex: 3, child: BotaoPrincipal(texto: 'Aceitar e continuar', carregando: _gravando, aoTocar: _li ? _aceitar : null)),
                 ]),
               ]),
+            ),
             ),
           ]),
         ),
