@@ -15,6 +15,16 @@ export async function renderEntity(view, state, key, params) {
   // Separação do que está em andamento e do que já está 100% fechado (verde).
   const fechados = def.fechados || [];
   const filtros = { q: '', situacao: '', categoria: '', page: 1, etapa: fechados.length ? 'andamento' : '' };
+  // Cartões do painel abrem a lista já filtrada: #/motoristas?situacao=A|B&etapa=&rotulo=...&de=AAAA-MM-DD&ate=AAAA-MM-DD.
+  // "situacao" aceita vários valores separados por "|". O aviso no topo diz qual filtro está valendo e deixa limpar.
+  const doPainel = {
+    situacoes: (params.get('situacao') || '').split('|').map((v) => v.trim()).filter(Boolean),
+    de: /^\d{4}-\d{2}-\d{2}$/.test(params.get('de') || '') ? params.get('de') : '',
+    ate: /^\d{4}-\d{2}-\d{2}$/.test(params.get('ate') || '') ? params.get('ate') : '',
+    rotulo: String(params.get('rotulo') || '').slice(0, 120)
+  };
+  if (params.has('etapa') && fechados.length && ['', 'andamento', 'fechados'].includes(params.get('etapa'))) filtros.etapa = params.get('etapa');
+  const filtroDoPainelAtivo = () => doPainel.situacoes.length > 0 || !!doPainel.de || !!doPainel.ate;
   const ehFechado = (row) => fechados.includes(row[def.statusField]);
   const ROTULO_FECHADO = { motoristas: 'Contratados', entregadores: 'Contratados', parceiros: 'Parcerias fechadas', comercios: 'Ativos', passageiros: 'Cadastrados' }[key] || 'Fechados';
   let listSeq = 0; // descarta respostas antigas (a busca dispara várias requisições; a mais lenta não pode vencer a mais nova)
@@ -40,9 +50,9 @@ export async function renderEntity(view, state, key, params) {
     </div>
 
     ${fechados.length ? `<div class="etapas ${vista !== 'lista' ? 'hidden' : ''}" id="etapas">
-      <button class="btn btn-sm btn-ghost ativo" data-etapa="andamento" type="button">Em andamento</button>
-      <button class="btn btn-sm btn-ghost verde" data-etapa="fechados" type="button">✅ ${ui.esc(ROTULO_FECHADO)}</button>
-      <button class="btn btn-sm btn-ghost" data-etapa="" type="button">Todos</button>
+      <button class="btn btn-sm btn-ghost ${filtros.etapa === 'andamento' ? 'ativo' : ''}" data-etapa="andamento" type="button">Em andamento</button>
+      <button class="btn btn-sm btn-ghost verde ${filtros.etapa === 'fechados' ? 'ativo' : ''}" data-etapa="fechados" type="button">✅ ${ui.esc(ROTULO_FECHADO)}</button>
+      <button class="btn btn-sm btn-ghost ${filtros.etapa === '' ? 'ativo' : ''}" data-etapa="" type="button">Todos</button>
     </div>` : ''}
     <div class="toolbar ${vista !== 'lista' ? 'hidden' : ''}" id="toolbar">
       <div class="search">
@@ -58,6 +68,7 @@ export async function renderEntity(view, state, key, params) {
       <button class="btn btn-ghost btn-sm" id="f-limpar">Limpar</button>
     </div>
 
+    <div id="filtro-painel"></div>
     <div id="content"></div>`;
 
   const content = view.querySelector('#content');
@@ -67,6 +78,9 @@ export async function renderEntity(view, state, key, params) {
     const p = new URLSearchParams();
     if (filtros.q) p.set('q', filtros.q);
     if (filtros.situacao) p.set('f_situacao', filtros.situacao);
+    else if (doPainel.situacoes.length && vista === 'lista') p.set('f_situacao', doPainel.situacoes.join('|'));
+    if (doPainel.de && vista === 'lista') p.set('de', doPainel.de);
+    if (doPainel.ate && vista === 'lista') p.set('ate', doPainel.ate);
     if (filtros.categoria) p.set('f_categoria', filtros.categoria);
     if (filtros.etapa && vista === 'lista') p.set('etapa', filtros.etapa);
     p.set('page', String(filtros.page));
@@ -92,11 +106,11 @@ export async function renderEntity(view, state, key, params) {
     const data = await api.get(`/${key}?${queryString()}`);
     if (seq !== listSeq) return;
     filtros.page = data.page; // o servidor devolve a página real (ex.: após excluir o último item da última página)
-    countEl.textContent = `${ui.fmtInt(data.total)} ${data.total === 1 ? 'registro' : 'registros'}${filtros.q || filtros.situacao ? ' com os filtros aplicados' : ' na base'}`;
+    countEl.textContent = `${ui.fmtInt(data.total)} ${data.total === 1 ? 'registro' : 'registros'}${filtros.q || filtros.situacao || filtroDoPainelAtivo() ? ' com os filtros aplicados' : ' na base'}`;
     if (!data.items.length) {
       content.innerHTML = `<div class="card">${ui.emptyState(
-        filtros.q || filtros.situacao || filtros.categoria ? 'Nenhum resultado' : `Nenhum ${def.singular.toLowerCase()} cadastrado`,
-        filtros.q || filtros.situacao || filtros.categoria
+        filtros.q || filtros.situacao || filtros.categoria || filtroDoPainelAtivo() ? 'Nenhum resultado' : `Nenhum ${def.singular.toLowerCase()} cadastrado`,
+        filtros.q || filtros.situacao || filtros.categoria || filtroDoPainelAtivo()
           ? 'Ajuste a pesquisa ou remova os filtros para ver outros registros.'
           : `Comece cadastrando o primeiro ${def.singular.toLowerCase()}. Os indicadores do dashboard passam a refletir esses dados.`,
         `<button class="btn btn-primary" id="empty-new">${ui.icon('plus', 16)} Cadastrar ${def.singular.toLowerCase()}</button>`
@@ -627,6 +641,9 @@ export async function renderEntity(view, state, key, params) {
     const p = new URLSearchParams();
     if (filtros.q) p.set('q', filtros.q);
     if (filtros.situacao) p.set('f_situacao', filtros.situacao);
+    else if (doPainel.situacoes.length) p.set('f_situacao', doPainel.situacoes.join('|'));
+    if (doPainel.de) p.set('de', doPainel.de);
+    if (doPainel.ate) p.set('ate', doPainel.ate);
     if (filtros.categoria) p.set('f_categoria', filtros.categoria);
     if (filtros.etapa) p.set('etapa', filtros.etapa);
     const f = p.toString();
@@ -662,9 +679,27 @@ export async function renderEntity(view, state, key, params) {
     loadList();
   }));
 
+  const avisoPainel = view.querySelector('#filtro-painel');
+  function desenharAvisoPainel() {
+    if (!filtroDoPainelAtivo() || vista !== 'lista') { avisoPainel.innerHTML = ''; return; }
+    const partes = [];
+    if (doPainel.situacoes.length) partes.push(doPainel.situacoes.join(' ou '));
+    if (doPainel.de || doPainel.ate) partes.push(`${doPainel.de ? `de ${ui.fmtDate(doPainel.de)} ` : ''}${doPainel.ate ? `até ${ui.fmtDate(doPainel.ate)}` : ''}`.trim());
+    avisoPainel.innerHTML = `<div class="notice" style="margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+      <span>${ui.icon('list', 15)} <b>Filtro do painel:</b> ${ui.esc(doPainel.rotulo || partes.join(' · '))}</span>
+      <button class="btn btn-sm btn-ghost" id="painel-limpar" type="button">Ver todos</button></div>`;
+    avisoPainel.querySelector('#painel-limpar').addEventListener('click', () => { limparFiltroDoPainel(); filtros.page = 1; loadList(); });
+  }
+  function limparFiltroDoPainel() {
+    if (!filtroDoPainelAtivo()) return;
+    Object.assign(doPainel, { situacoes: [], de: '', ate: '', rotulo: '' });
+    desenharAvisoPainel();
+  }
+  desenharAvisoPainel();
+
   const q = view.querySelector('#f-q');
   q.addEventListener('input', ui.debounce(() => { filtros.q = q.value.trim(); filtros.page = 1; loadList(); }, 320));
-  view.querySelector('#f-situacao').addEventListener('change', (e) => { filtros.situacao = e.target.value; filtros.page = 1; loadList(); });
+  view.querySelector('#f-situacao').addEventListener('change', (e) => { limparFiltroDoPainel(); filtros.situacao = e.target.value; filtros.page = 1; loadList(); });
   const cat = view.querySelector('#f-categoria');
   if (cat) cat.addEventListener('change', (e) => { filtros.categoria = e.target.value; filtros.page = 1; loadList(); });
   view.querySelector('#f-limpar').addEventListener('click', () => {
@@ -672,6 +707,7 @@ export async function renderEntity(view, state, key, params) {
     view.querySelector('#f-situacao').value = '';
     if (cat) cat.value = '';
     Object.assign(filtros, { q: '', situacao: '', categoria: '', page: 1 });
+    limparFiltroDoPainel();
     loadList();
   });
 

@@ -2,14 +2,29 @@ import { api } from '../api.js';
 import * as ui from '../ui.js';
 import * as notif from '../notificacoes.js';
 
-function kpiCard({ icon, label, value, foot, tone = '', wa = '' }) {
-  return `<div class="kpi ${tone}"${wa ? ` data-wa="${ui.esc(wa)}" role="button" tabindex="0" style="cursor:pointer"` : ''}>
+// Todo cartão é um atalho: `wa` abre Conversas no filtro certo; `go` abre o módulo já filtrado (ver `ir`).
+function kpiCard({ icon, label, value, foot, tone = '', wa = '', go = '' }) {
+  const alvo = wa ? ` data-wa="${ui.esc(wa)}"` : (go ? ` data-ir="${ui.esc(go)}"` : '');
+  return `<div class="kpi ${tone}"${alvo}${alvo ? ' role="button" tabindex="0" style="cursor:pointer"' : ''} title="${alvo ? 'Toque para ver os registros' : ''}">
     <div class="kpi-icon">${ui.icon(icon, 17)}</div>
     <div class="kpi-value">${ui.fmtInt(value)}</div>
     <div class="kpi-label">${ui.esc(label)}</div>
     ${foot ? `<div class="kpi-foot">${ui.esc(foot)}</div>` : ''}
   </div>`;
 }
+
+/** Rota de um cartão: módulo + filtro (situações separadas por "|", etapa, período). Quem lê é entity.js / documentos.js. */
+function ir(modulo, { situacao = [], etapa, de, ate, rotulo } = {}) {
+  const p = new URLSearchParams();
+  if (situacao.length) p.set('situacao', [].concat(situacao).join('|'));
+  if (etapa !== undefined) p.set('etapa', etapa);
+  if (de) p.set('de', de);
+  if (ate) p.set('ate', ate);
+  if (rotulo) p.set('rotulo', rotulo);
+  const qs = p.toString();
+  return qs ? `${modulo}?${qs}` : modulo;
+}
+const maisDias = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 // "há 5 min", "há 3 h", "há 2 dias" (só para o que está esperando; o horário exato fica na conversa).
 function haQuanto(iso) {
@@ -133,23 +148,23 @@ export async function renderDashboard(view, state) {
 
     <div class="eyebrow" style="margin:6px 0 8px">Cadastros e operação</div>
     <div class="kpi-grid">
-      ${kpiCard({ icon: 'steering', label: 'Motoristas interessados', value: k.motoristas_interessados, foot: `Novos, ainda sem contato · ${ui.fmtInt(k.motoristas_total)} no total` })}
-      ${kpiCard({ icon: 'list', label: 'Motoristas em processo de cadastro', value: k.motoristas_em_processo, foot: 'Contato até análise', tone: 'gold' })}
-      ${kpiCard({ icon: 'check', label: 'Motoristas aprovados', value: k.motoristas_aprovados + k.motoristas_contratados, foot: `${ui.fmtInt(k.motoristas_contratados)} contratado(s) · ${ui.fmtInt(k.motoristas_aprovados)} aguardando contratação`, tone: 'green' })}
-      ${kpiCard({ icon: 'users', label: 'Motoristas contratados', value: k.motoristas_contratados, foot: k.motoristas_docs_a_conferir ? `Trabalhando · ${ui.fmtInt(k.motoristas_docs_a_conferir)} aprovado(s)/contratado(s) com documentos a conferir` : 'Trabalhando · documentos em dia', tone: 'green' })}
-      ${k.entregadores_total !== undefined ? kpiCard({ icon: 'send', label: 'Entregadores e motociclistas', value: k.entregadores_total, foot: `${ui.fmtInt(k.entregadores_interessados)} novo(s) · ${ui.fmtInt(k.entregadores_em_processo)} em processo` }) : ''}
-      ${k.entregadores_total !== undefined ? kpiCard({ icon: 'check', label: 'Entregadores contratados', value: k.entregadores_contratados, foot: `${ui.fmtInt(k.entregadores_aprovados)} aprovado(s) aguardando contratação${k.entregadores_docs_a_conferir ? ` · ${ui.fmtInt(k.entregadores_docs_a_conferir)} com documentos a conferir` : ''}`, tone: 'green' }) : ''}
-      ${k.comercios_total !== undefined ? kpiCard({ icon: 'building', label: 'Comércios parceiros (entregas)', value: k.comercios_total, foot: `${ui.fmtInt(k.comercios_novos)} novo(s) · ${ui.fmtInt(k.comercios_negociacao)} em negociação` }) : ''}
-      ${k.comercios_total !== undefined ? kpiCard({ icon: 'check', label: 'Comércios ativos na plataforma', value: k.comercios_ativos, foot: 'Já pedindo entregas · separado do Clube de Vantagens', tone: 'green' }) : ''}
-      ${k.documentos_pendentes !== undefined ? kpiCard({ icon: 'file', label: 'Documentos a conferir', value: k.documentos_pendentes, foot: 'Enviados e ainda sem conferência · arquivo digital', tone: k.documentos_pendentes ? 'gold' : '' }) : ''}
-      ${k.documentos_atencao ? kpiCard({ icon: 'alert', label: 'Documentos com pendência', value: k.documentos_atencao, foot: 'Rejeitados ou precisando de atualização', tone: 'gold' }) : ''}
-      ${kpiCard({ icon: 'users', label: 'Passageiros interessados', value: k.passageiros_interessados, foot: `${ui.fmtInt(k.passageiros_cadastrados)} já cadastrados` })}
-      ${kpiCard({ icon: 'store', label: 'Parceiros em negociação', value: k.parceiros_negociacao, foot: 'Clube de Vantagens' })}
-      ${kpiCard({ icon: 'building', label: 'Parcerias confirmadas', value: k.parcerias_confirmadas, foot: 'Confirmação manual', tone: 'green' })}
-      ${kpiCard({ icon: 'headset', label: 'Registros de atendimento pendentes', value: k.atendimentos_pendentes, foot: 'Lançados à mão no módulo Atendimento', tone: k.atendimentos_pendentes ? 'gold' : '' })}
-      ${kpiCard({ icon: 'megaphone', label: 'Campanhas em andamento', value: k.campanhas_andamento, foot: 'Produção, andamento e publicadas' })}
-      ${kpiCard({ icon: 'calendar', label: 'Tarefas próximas do vencimento', value: k.tarefas_proximas, foot: `Próximos ${d.alerta_dias} dias`, tone: 'gold' })}
-      ${kpiCard({ icon: 'alert', label: 'Tarefas atrasadas', value: k.tarefas_atrasadas, foot: 'Vencidas e em aberto', tone: k.tarefas_atrasadas ? 'red' : '' })}
+      ${kpiCard({ icon: 'steering', label: 'Motoristas interessados', value: k.motoristas_interessados, foot: `Novos, ainda sem contato · ${ui.fmtInt(k.motoristas_total)} no total`, go: ir('motoristas', { situacao: ['Novo interessado'], etapa: '', rotulo: 'Motoristas interessados (novos)' }) })}
+      ${kpiCard({ icon: 'list', label: 'Motoristas em processo de cadastro', value: k.motoristas_em_processo, foot: 'Contato até análise', tone: 'gold', go: ir('motoristas', { situacao: ['Primeiro contato realizado', 'Aguardando retorno', 'Cadastro em andamento', 'Cadastro em análise'], etapa: '', rotulo: 'Motoristas em processo de cadastro' }) })}
+      ${kpiCard({ icon: 'check', label: 'Motoristas aprovados', value: k.motoristas_aprovados + k.motoristas_contratados, foot: `${ui.fmtInt(k.motoristas_contratados)} contratado(s) · ${ui.fmtInt(k.motoristas_aprovados)} aguardando contratação`, tone: 'green', go: ir('motoristas', { situacao: ['Aprovado', 'Contratado'], etapa: '', rotulo: 'Motoristas aprovados e contratados' }) })}
+      ${kpiCard({ icon: 'users', label: 'Motoristas contratados', value: k.motoristas_contratados, foot: k.motoristas_docs_a_conferir ? `Trabalhando · ${ui.fmtInt(k.motoristas_docs_a_conferir)} aprovado(s)/contratado(s) com documentos a conferir` : 'Trabalhando · documentos em dia', tone: 'green', go: ir('motoristas', { situacao: ['Contratado'], etapa: '', rotulo: 'Motoristas contratados' }) })}
+      ${k.entregadores_total !== undefined ? kpiCard({ icon: 'send', label: 'Entregadores e motociclistas', value: k.entregadores_total, foot: `${ui.fmtInt(k.entregadores_interessados)} novo(s) · ${ui.fmtInt(k.entregadores_em_processo)} em processo`, go: ir('entregadores', { etapa: '' }) }) : ''}
+      ${k.entregadores_total !== undefined ? kpiCard({ icon: 'check', label: 'Entregadores contratados', value: k.entregadores_contratados, foot: `${ui.fmtInt(k.entregadores_aprovados)} aprovado(s) aguardando contratação${k.entregadores_docs_a_conferir ? ` · ${ui.fmtInt(k.entregadores_docs_a_conferir)} com documentos a conferir` : ''}`, tone: 'green', go: ir('entregadores', { situacao: ['Contratado'], etapa: '', rotulo: 'Entregadores contratados' }) }) : ''}
+      ${k.comercios_total !== undefined ? kpiCard({ icon: 'building', label: 'Comércios parceiros (entregas)', value: k.comercios_total, foot: `${ui.fmtInt(k.comercios_novos)} novo(s) · ${ui.fmtInt(k.comercios_negociacao)} em negociação`, go: ir('comercios', { etapa: '' }) }) : ''}
+      ${k.comercios_total !== undefined ? kpiCard({ icon: 'check', label: 'Comércios ativos na plataforma', value: k.comercios_ativos, foot: 'Já pedindo entregas · separado do Clube de Vantagens', tone: 'green', go: ir('comercios', { situacao: ['Ativo na plataforma'], etapa: '', rotulo: 'Comércios ativos na plataforma' }) }) : ''}
+      ${k.documentos_pendentes !== undefined ? kpiCard({ icon: 'file', label: 'Documentos a conferir', value: k.documentos_pendentes, foot: 'Enviados e ainda sem conferência · arquivo digital', tone: k.documentos_pendentes ? 'gold' : '', go: ir('documentos', { situacao: ['pendente'] }) }) : ''}
+      ${k.documentos_atencao ? kpiCard({ icon: 'alert', label: 'Documentos com pendência', value: k.documentos_atencao, foot: 'Rejeitados ou precisando de atualização', tone: 'gold', go: ir('documentos', { situacao: ['rejeitado', 'necessita_atualizacao'] }) }) : ''}
+      ${kpiCard({ icon: 'users', label: 'Passageiros interessados', value: k.passageiros_interessados, foot: `${ui.fmtInt(k.passageiros_cadastrados)} já cadastrados`, go: ir('passageiros', { etapa: '' }) })}
+      ${kpiCard({ icon: 'store', label: 'Parceiros em negociação', value: k.parceiros_negociacao, foot: 'Clube de Vantagens', go: ir('parceiros', { situacao: ['Identificado', 'Primeiro contato', 'Aguardando resposta', 'Em negociação', 'Proposta apresentada'], etapa: '', rotulo: 'Parceiros em negociação' }) })}
+      ${kpiCard({ icon: 'building', label: 'Parcerias confirmadas', value: k.parcerias_confirmadas, foot: 'Confirmação manual', tone: 'green', go: ir('parceiros', { situacao: ['Parceria confirmada'], etapa: '', rotulo: 'Parcerias confirmadas' }) })}
+      ${kpiCard({ icon: 'headset', label: 'Registros de atendimento pendentes', value: k.atendimentos_pendentes, foot: 'Lançados à mão no módulo Atendimento', tone: k.atendimentos_pendentes ? 'gold' : '', go: ir('atendimento', { situacao: ['Aberto', 'Em andamento', 'Aguardando retorno'], rotulo: 'Registros de atendimento pendentes' }) })}
+      ${kpiCard({ icon: 'megaphone', label: 'Campanhas em andamento', value: k.campanhas_andamento, foot: 'Produção, andamento e publicadas', go: ir('marketing', { situacao: ['Em produção', 'Em andamento', 'Publicada'], rotulo: 'Campanhas em andamento' }) })}
+      ${kpiCard({ icon: 'calendar', label: 'Tarefas próximas do vencimento', value: k.tarefas_proximas, foot: `Próximos ${d.alerta_dias} dias`, tone: 'gold', go: ir('tarefas', { situacao: ['Pendente', 'Em andamento'], de: d.hoje, ate: maisDias(d.hoje, d.alerta_dias), rotulo: 'Tarefas próximas do vencimento' }) })}
+      ${kpiCard({ icon: 'alert', label: 'Tarefas atrasadas', value: k.tarefas_atrasadas, foot: 'Vencidas e em aberto', tone: k.tarefas_atrasadas ? 'red' : '', go: ir('tarefas', { situacao: ['Pendente', 'Em andamento'], ate: maisDias(d.hoje, -1), rotulo: 'Tarefas atrasadas' }) })}
     </div>
 
     <div style="margin-top:16px">
@@ -203,6 +218,11 @@ export async function renderDashboard(view, state) {
     const ir = () => { try { localStorage.setItem('fm-wa-filtro', el.dataset.wa); } catch (e) { /* sem armazenamento */ } location.hash = '#/conversas'; };
     el.addEventListener('click', ir);
     el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } });
+  });
+  view.querySelectorAll('[data-ir]').forEach((el) => {
+    const ir2 = () => { location.hash = `#/${el.dataset.ir}`; };
+    el.addEventListener('click', ir2);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir2(); } });
   });
   view.querySelectorAll('[data-conv]').forEach((el) => {
     const ir = () => { location.hash = `#/conversas?c=${el.dataset.conv}`; };

@@ -589,7 +589,7 @@ async function route() {
     else if (key === 'relatorios') await renderReports(view, state);
     else if (key === 'conversas') await renderConversas(view, state);
     else if (key === 'configuracoes') await renderSettings(view, state);
-    else if (key === 'documentos' && state.meta.documentos) await renderDocumentos(view, state);
+    else if (key === 'documentos' && state.meta.documentos) await renderDocumentos(view, state, params);
     else if (key === 'pessoas' && state.meta.etapa2) await renderPessoas(view, state, params);
     else if (key === 'empresas' && state.meta.etapa2) await renderEmpresas(view, state, params);
     else if (key === 'pessoas' || key === 'empresas' || key === 'documentos' || (key === 'entregadores' && !state.meta.entities.entregadores) || (key === 'comercios' && !state.meta.entities.comercios)) location.hash = '#/dashboard';

@@ -261,10 +261,13 @@ export function blocoProtegido(container, state, tipo, id, protegido, depois) {
 }
 
 /* ------------------------------ tela "Documentos" ------------------------------ */
-export async function renderDocumentos(view, state) {
+export async function renderDocumentos(view, state, params) {
   const admin = state.user && state.user.role === 'admin';
   const meta = await api.get('/documentos/meta');
   const f = { situacao: '', funcao: '', q: '', page: 1 };
+  // Cartões do painel: #/documentos?situacao=pendente (ou várias separadas por |, ex.: rejeitado|necessita_atualizacao).
+  const doPainel = params && params.get('situacao') ? params.get('situacao') : '';
+  if (doPainel) f.situacao = doPainel;
   view.innerHTML = `
     <div class="page-head"><div><div class="eyebrow">Documentos</div><h2>Arquivo digital</h2>
       <p class="sub">Situação da conferência de todos os documentos, por função</p></div>
@@ -280,6 +283,9 @@ export async function renderDocumentos(view, state) {
     <div class="card"><div class="card-body" id="dc-corpo"><p class="muted small">Carregando…</p></div></div>
     <div id="dc-pol"></div>`;
   const corpo = view.querySelector('#dc-corpo');
+  const selSit = view.querySelector('#dc-s');
+  if (f.situacao && !f.situacao.includes('|')) selSit.value = f.situacao;
+  else if (f.situacao) selSit.insertAdjacentHTML('afterend', `<span class="small muted">Filtro do painel: ${ui.esc(f.situacao.split('|').map((s) => meta.situacoes[s] || s).join(' ou '))}</span>`);
   let seq = 0;
   async function carregar() {
     const mine = ++seq;
