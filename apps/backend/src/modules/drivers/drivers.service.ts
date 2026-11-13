@@ -5,6 +5,7 @@ import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIR
 import { PrismaService } from '../../database/prisma.service';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { PracasService } from '../pracas/pracas.service';
+import { CATEGORIA_UTILITARIO, lerCategorias } from '../rides/categorias';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { acharContaComOsMesmosDados, erroContaExistente } from '../auth/conta-existente';
@@ -370,6 +371,14 @@ export class DriversService {
       );
     }
     const placa = input.vehicle.plate;
+    // Tipo do veiculo escolhido pela Central (Carro, Moto, Utilitario): a categoria vale na hora.
+    let categoriaDoVeiculo: string | undefined;
+    const pedida = input.vehicle.categoria?.trim().toUpperCase();
+    if (pedida) {
+      if (pedida === CATEGORIA_UTILITARIO) categoriaDoVeiculo = pedida;
+      else if ((await lerCategorias(this.prisma)).some((c) => c.codigo === pedida)) categoriaDoVeiculo = pedida;
+      else throw BusinessException.validation('Categoria nao encontrada. Escolha uma da lista.');
+    }
     if (await this.prisma.vehicle.findUnique({ where: { plate: placa } })) {
       throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
     }
@@ -421,6 +430,7 @@ export class DriversService {
           model: input.vehicle.model,
           year: input.vehicle.year,
           color: input.vehicle.color,
+          ...(categoriaDoVeiculo ? { category: categoriaDoVeiculo } : {}),
         },
       });
       return criado;

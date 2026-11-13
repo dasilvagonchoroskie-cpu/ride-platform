@@ -105,9 +105,42 @@ void main() {
     expect(corpo['cnhExpiresAt'], '2031-06-18');
     expect(corpo['aprovar'], true);
     expect((corpo['vehicle'] as Map)['plate'], 'FBP8H67');
+    expect((corpo['vehicle'] as Map)['categoria'], 'CARRO');
     final credito = pedidos.firstWhere((p) => p.$1 == 'POST /api/admin/drivers/motorista-novo/wallet/credit');
     expect(credito.$2!['amountCents'], 5000);
     expect(find.text('Motorista cadastrado'), findsOneWidget);
     expect(find.textContaining('(64) 99268-6632'), findsWidgets);
+  });
+
+  testWidgets('Tipo do veiculo: Moto e Utilitario vao para o servidor e a mensagem acompanha o tipo', (tester) async {
+    await _abrir(tester);
+    for (final (tipo, categoria) in [('Moto', 'MOTO'), ('Utilitário', 'UTILITARIO')]) {
+      pedidos.clear();
+      await tester.ensureVisible(find.byKey(const Key('tipo-do-veiculo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: find.byKey(const Key('tipo-do-veiculo')), matching: find.text(tipo)));
+      await tester.pumpAndSettle();
+
+      await _escrever(tester, 'Nome completo', 'Evandro da Silva');
+      await _escrever(tester, 'Telefone com DDD', '64992686632');
+      await _escrever(tester, 'E-mail (o código de entrada chega nele)', 'evandro@exemplo.com');
+      await _escrever(tester, 'CPF', '52998224725');
+      await _escrever(tester, 'Data de nascimento', '10051990');
+      await _escrever(tester, 'Número da CNH', '05494287230');
+      await _escrever(tester, 'Validade da CNH', '18062031');
+      await _escrever(tester, 'Marca', 'Honda');
+      await _escrever(tester, 'Modelo', 'CG 160');
+      await _escrever(tester, 'Ano', '2022');
+      await _escrever(tester, 'Cor', 'Preta');
+      await _escrever(tester, 'Placa', 'MTO1A11');
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Cadastrar motorista'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Cadastrar motorista'));
+      await tester.pumpAndSettle();
+
+      final corpo = pedidos.firstWhere((p) => p.$1 == 'POST /api/admin/drivers').$2!;
+      expect((corpo['vehicle'] as Map)['categoria'], categoria);
+      await _abrir(tester); // reabre a tela limpa para o proximo tipo
+    }
   });
 }

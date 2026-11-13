@@ -104,6 +104,13 @@ export function multiplicadorNoPonto(m: MultiplierInput, ponto?: { latitude: num
   return Math.round(valor * 100) / 100;
 }
 
+/**
+ * Utilitario (Fiorino, furgao): so o cadastro do veiculo. Nao e categoria de
+ * corrida (nao tem tarifa nem aparece para o passageiro); o veiculo fica com
+ * este codigo e nao recebe chamado de passageiro.
+ */
+export const CATEGORIA_UTILITARIO = 'UTILITARIO';
+
 /** Categoria de moto (mototaxi): o codigo tem "MOTO" (ex.: MOTO, MOTOTAXI). */
 export function ehMoto(codigo: string | null | undefined): boolean {
   return (codigo ?? '').toUpperCase().includes('MOTO');

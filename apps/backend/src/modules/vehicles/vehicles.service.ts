@@ -7,7 +7,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
 import { CreateVehicleInput, UpdateVehicleInput } from '@ride/shared';
 import { decodificarFoto, soArquivosDoBanco } from '../arquivos/arquivos.service';
-import { ehMoto, lerCategorias } from '../rides/categorias';
+import { CATEGORIA_UTILITARIO, ehMoto, lerCategorias } from '../rides/categorias';
 import { ehEntrega } from '../entregas/entregas.regras';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import {
@@ -293,7 +293,8 @@ export class VehiclesService {
     /** true = a Central cadastrou: a categoria vale na hora; false = pedido do motorista. */
     categoriaDaCentral: boolean,
   ): Promise<CarroPublico> {
-    const categoria = input.categoria ? await this.categoriaQueExiste(input.categoria) : null;
+    const utilitario = categoriaDaCentral && input.categoria?.trim().toUpperCase() === CATEGORIA_UTILITARIO;
+    const categoria = utilitario ? CATEGORIA_UTILITARIO : input.categoria ? await this.categoriaQueExiste(input.categoria) : null;
     const plate = normalizePlate(input.plate);
     const mapa = await this.mapa();
     const dados = { brand: input.brand, model: input.model, year: input.year, color: input.color };
