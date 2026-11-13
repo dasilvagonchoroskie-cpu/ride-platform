@@ -79,24 +79,31 @@ function avisoNaTela(item) {
 
 let ultimo = null;
 let timer = null;
+let buscando = false;
+// 13/11 (pedido do dono): os avisos na tela são só para o que acontece com o CRM ABERTO. O que chegou com o CRM fechado ou em
+// segundo plano já foi avisado pela notificação do celular: ao abrir/voltar, só avança o marcador, sem repetir nada na tela.
 export function iniciarAvisos() {
   if (timer) return;
-  const buscar = async () => {
+  const buscar = async ({ silencioso = false } = {}) => {
+    if (buscando) return; // duas buscas ao mesmo tempo repetiam os mesmos avisos
+    buscando = true;
     try {
       const r = await api.get(`/notificacoes${ultimo === null ? '' : `?desde=${ultimo}`}`);
-      const novos = ultimo === null ? [] : r.itens; // ao abrir o app, não repete avisos antigos
+      const novos = ultimo === null || silencioso ? [] : r.itens;
       ultimo = r.ultimo;
-      // Vários de uma vez: um som por tipo (o mais importante primeiro) e no máximo 3 avisos na tela.
-      // Ao voltar para o CRM, avisos com mais de 1 minuto já tocaram como notificação do celular: aparecem sem som.
-      const recentes = novos.filter((i) => !i.criado_em || Date.now() - new Date(i.criado_em).getTime() < 60000);
-      const tipos = new Set(recentes.map((i) => i.tipo));
-      for (const t of ['transferencia', 'mensagem', 'ia']) if (tipos.has(t) && somLigado(t)) { tocar(t); break; }
-      novos.slice(-3).forEach(avisoNaTela);
-    } catch (err) { /* sem sessão ou sem rede: tenta de novo depois */ }
+      if (!novos.length) return;
+      // Um aviso por conversa e tipo (o mais novo), no máximo 2 na tela; um som só (o mais importante).
+      const unicos = [...new Map(novos.map((i) => [`${i.conversa_id || ''}:${i.tipo}`, i])).values()];
+      const ordem = { transferencia: 0, mensagem: 1, ia: 2 };
+      unicos.sort((a, b) => (ordem[a.tipo] ?? 3) - (ordem[b.tipo] ?? 3));
+      const tipo = unicos[0].tipo;
+      if (somLigado(tipo)) tocar(tipo);
+      unicos.slice(0, 2).forEach(avisoNaTela);
+    } catch (err) { /* sem sessão ou sem rede: tenta de novo depois */ } finally { buscando = false; }
   };
   buscar();
   timer = setInterval(() => { if (!document.hidden) buscar(); }, 8000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) buscar(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) buscar({ silencioso: true }); });
 }
 export function pararAvisos() { if (timer) clearInterval(timer); timer = null; ultimo = null; }
 
