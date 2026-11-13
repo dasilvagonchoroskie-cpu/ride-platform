@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 
 import '../core/ajustes_aparelho.dart';
@@ -43,7 +45,7 @@ class _PortaoPermissoesState extends State<PortaoPermissoes> {
   static const _chaveVista = 'comercio.permissoes_vistas';
   bool? _jaVista;
 
-  bool get _ativo => widget.forcarAndroid || Platform.isAndroid;
+  bool get _ativo => widget.forcarAndroid || (!kIsWeb && Platform.isAndroid);
 
   @override
   void initState() {

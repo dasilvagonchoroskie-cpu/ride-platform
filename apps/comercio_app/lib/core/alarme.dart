@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/services.dart';
 
 /// Alarme "o motorista chegou" (mesmo assobio do aplicativo do passageiro:
@@ -20,7 +22,7 @@ class Alarme {
   static Future<void> motoristaChegou(String rideId) async {
     if (rideId.isEmpty || !_ja.add(rideId)) return;
     tocados.add(rideId);
-    if (!Platform.isAndroid) return;
+    if ((kIsWeb || !Platform.isAndroid)) return;
     try {
       await _canal.invokeMethod<dynamic>('assobio', {'chave': '$rideId:chegou'});
     } catch (_) {
@@ -29,7 +31,7 @@ class Alarme {
   }
 
   static Future<void> parar() async {
-    if (!Platform.isAndroid) return;
+    if ((kIsWeb || !Platform.isAndroid)) return;
     try {
       await _canal.invokeMethod<dynamic>('parar');
     } catch (_) {}
