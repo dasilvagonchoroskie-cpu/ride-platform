@@ -123,3 +123,18 @@ test('menu salvo sem alteração (padrão antigo de 5 opções) passa a usar o n
   mem.central_modelos = JSON.stringify({ menu: { texto: 'Menu do dono: 1. A 2. B', ativo: true } });
   assert.equal(central.texto('menu'), 'Menu do dono: 1. A 2. B');
 });
+
+test('opção 0 volta ao menu inicial do segundo menu e de qualquer opção; os números voltam a valer para o menu principal', async () => {
+  const { receber, daIA, conv } = montar();
+  await receber('Oi'); await receber('5');
+  assert.match(daIA().pop(), /0\. Voltar ao menu inicial\./);
+  await receber('0');
+  assert.match(daIA().pop(), /6\. Outros assuntos\./, '0 reabre o menu inicial');
+  assert.equal(conv().atend_assunto, null);
+  await receber('1');
+  assert.match(daIA().pop(), /7 itens/, 'depois do 0, o 1 é cadastro de motorista (não "já sou comerciante")');
+  assert.match(daIA().pop(), /Para voltar ao menu inicial, digite 0\./);
+  await receber('0');
+  assert.match(daIA().pop(), /Para direcionarmos seu atendimento/);
+  assert.equal(conv().atendimento, 'ia', '0 nunca manda para a equipe');
+});
