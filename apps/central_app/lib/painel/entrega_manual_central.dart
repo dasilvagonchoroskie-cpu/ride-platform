@@ -257,6 +257,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
     }
     final navegador = Navigator.of(context);
     final aviso = ScaffoldMessenger.of(context);
+    final estado = Provider.of<PainelState>(context, listen: false);
     setState(() {
       _ocupado = true;
       _erro = null;
@@ -276,7 +277,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
             ? 'Entrega lançada$codigo. O sistema já está procurando um motorista.'
             : 'Entrega lançada$codigo e enviada para ${_motorista!.nome}.'),
       ));
-      await Provider.of<PainelState>(context, listen: false).atualizar();
+      await estado.atualizar();
       navegador.pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
