@@ -19,7 +19,15 @@ http.Response _erro(int status, [String codigo = 'UNAUTHORIZED']) =>
     http.Response(jsonEncode({'success': false, 'error': {'code': codigo, 'message': 'x'}}), status);
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    ApiClient.aoSessaoExpirar = null;
+    ApiClient.aoRenovarToken = null;
+  });
+  tearDown(() {
+    ApiClient.aoSessaoExpirar = null;
+    ApiClient.aoRenovarToken = null;
+  });
 
   test('401: renova com o refresh que esta no cofre, repete o pedido e grava o par novo no cofre', () async {
     await AppStorage.write(AppStorage.accessToken, 'velho');
@@ -50,7 +58,8 @@ void main() {
   test('sem refresh guardado: o login acabou e o aplicativo e avisado', () async {
     await AppStorage.write(AppStorage.accessToken, 'velho');
     var expirou = false;
-    final api = ApiClient(client: MockClient((_) async => _erro(401)))..aoSessaoExpirar = () => expirou = true;
+    ApiClient.aoSessaoExpirar = () => expirou = true;
+    final api = ApiClient(client: MockClient((_) async => _erro(401)));
     await expectLater(api.request('GET', '/qualquer'), throwsA(isA<ApiException>().having((e) => e.code, 'code', 'SESSION_EXPIRED')));
     expect(expirou, isTrue);
   });
@@ -85,6 +94,7 @@ void main() {
     await AppStorage.write(AppStorage.accessToken, 'velho');
     await AppStorage.write(AppStorage.refreshToken, 'refresh-1');
     var expirou = false;
+    ApiClient.aoSessaoExpirar = () => expirou = true;
     final api = ApiClient(
       client: MockClient((req) async {
         if (req.url.path.endsWith('/auth/refresh')) {
@@ -94,7 +104,7 @@ void main() {
         }
         return req.headers['Authorization'] == 'Bearer do-vigia' ? _ok({'ok': true}) : _erro(401);
       }),
-    )..aoSessaoExpirar = () => expirou = true;
+    );
     expect(await api.request('GET', '/qualquer'), {'ok': true});
     expect(expirou, isFalse);
   });
@@ -103,7 +113,8 @@ void main() {
     await AppStorage.write(AppStorage.accessToken, 'velho');
     await AppStorage.write(AppStorage.refreshToken, 'refresh-1');
     var expirou = false;
-    final api = ApiClient(client: MockClient((_) async => _erro(401)))..aoSessaoExpirar = () => expirou = true;
+    ApiClient.aoSessaoExpirar = () => expirou = true;
+    final api = ApiClient(client: MockClient((_) async => _erro(401)));
     await expectLater(api.request('GET', '/qualquer'), throwsA(isA<ApiException>().having((e) => e.code, 'code', 'SESSION_EXPIRED')));
     expect(expirou, isTrue);
   });
@@ -112,9 +123,10 @@ void main() {
     await AppStorage.write(AppStorage.accessToken, 'velho');
     await AppStorage.write(AppStorage.refreshToken, 'refresh-1');
     var expirou = false;
+    ApiClient.aoSessaoExpirar = () => expirou = true;
     final api = ApiClient(
       client: MockClient((req) async => req.url.path.endsWith('/auth/refresh') ? http.Response('Bad gateway', 502) : _erro(401)),
-    )..aoSessaoExpirar = () => expirou = true;
+    );
     await expectLater(api.request('GET', '/qualquer'), throwsA(isA<ApiException>().having((e) => e.isNetworkError, 'rede', isTrue)));
     expect(expirou, isFalse);
     expect(await AppStorage.read(AppStorage.refreshToken), 'refresh-1');
