@@ -1,5 +1,7 @@
 # Teste de rua com dois celulares (riscos 1 a 4 do PENDENCIAS.md)
 
+> Critérios de aprovação, pré-condições resumidas e a ficha para anotar falhas: `docs/TESTE-DE-RUA-FICHA.md`.
+
 Precisa: 2 celulares Android com internet (4G de verdade, não só Wi-Fi),
 APKs da montagem mais nova, uma conta de **passageiro** num e uma conta de
 **motorista aprovado** no outro (carro em uso, saldo na carteira, cidade
@@ -186,6 +188,61 @@ consiga abrir.
 Siga `docs/DUAS-ETAPAS-DONO.md`. Depois teste: sair → **Esqueci a senha** na
 Central → código do e-mail + senha nova → a Central **pede o código do Google
 Authenticator** antes de entrar. Sem o código, a senha antiga continua valendo.
+
+## Rodada de 13/11/2026 — novos roteiros (Q a V)
+
+Valem para a versão que sair depois do merge autorizado. Os passos Q a S e V
+não acionam motorista real. **T e U só com sua autorização expressa** (chave
+geral do Comércio e Entrega ligada numa cidade de teste).
+
+### Q. Login da Central no cofre do celular
+1. Com a Central **antiga** instalada e logada, instale a nova **por cima**.
+2. Esperado: abre já logada, sem pedir senha nem código. Feche e abra de novo: continua logada.
+3. Deixe a Central parada com a tela apagada por mais de 20 minutos (o acesso vence em 15) e abra:
+   deve continuar logada (renovação automática), sem voltar à tela de entrada.
+4. Com o app fechado, peça um cadastro de motorista novo: o aviso da Central chega (o vigia nativo
+   usa o mesmo login do cofre).
+5. **Sair** na Central e abrir de novo: pede o login. Entrar de novo funciona.
+
+### R. Login que se renova sozinho (Motorista e Passageiro)
+1. Entre no app, deixe 20 minutos sem usar (tela apagada) e abra: continua logado.
+2. Repita com o app tirado dos recentes.
+3. Falha = voltou para a tela de entrada sem você ter saído. Anote o horário.
+
+### S. Mapa operacional e Motos na Central
+1. Mapa da tela inicial: motorista online perto aparece em até 15 s; ao desligar o app dele, vira
+   cinza (offline) na última posição.
+2. Cortar a internet da Central por 30 s: aparece "Sem conexão agora: mostrando os últimos dados."; ao
+   voltar, o aviso some sozinho em até o próximo ciclo.
+3. Filtros (Carros, Motocicletas, Entregas do Comércio, Veículos livres, SOS): só mudam o que se vê.
+4. Menus **Carros** e **Motos**: suspender e reativar um veículo de teste; o motorista dele sai e volta
+   do ar conforme a situação.
+5. Ao sol: as cores (azul-ciano do Comércio, vermelho do SOS) e os filtros são legíveis.
+
+### T. Entrega manual lançada pelo motorista (SÓ COM AUTORIZAÇÃO)
+Pré-condição: Entrega ligada na cidade de teste, chave geral do Comércio ligada **por você**, uma
+loja de teste aprovada, só o motorista de teste online.
+1. Motorista → **Lançar entrega manualmente** → buscar a loja → conferir o perfil → dados da encomenda,
+   de quem recebe e destino → preço oficial → confirmar.
+2. Esperado: aparece em Central → Entregas com a origem "motorista" e o nome de quem lançou.
+3. Tocar duas vezes em confirmar, ou cortar a rede e tentar de novo: só **uma** entrega nasce.
+
+### U. App do Comércio, corrida de entrega completa (SÓ COM AUTORIZAÇÃO)
+Guia: `docs/COMERCIO-TESTE.md`, Teste 3. Pré-condições iguais às de T.
+1. Loja pede entrega (carro ou moto, só o que a Central liberou) → confere o preço → confirma.
+2. O motorista de teste recebe, aceita, vai à loja, coleta, entrega. A loja vê cada etapa (a cada
+   ~8 s) e o mapa com o motorista.
+3. A Central mostra a entrega no mapa (azul-ciano) e em Entregas, com o valor cobrado igual ao confirmado.
+4. A loja cancela uma entrega ainda sem motorista: some do motorista de teste.
+
+### V. Conexão e processo (Motorista, Passageiro, Central)
+1. Com corrida em andamento, ligue o **modo avião** por 30 s e desligue: o app volta sozinho, sem sair da
+   corrida e sem duplicar aviso.
+2. Troque de app e volte (botão início → outro app → voltar): tudo continua.
+3. "Forçar parada" do app nas configurações do Android e abrir de novo: continua logado; o motorista
+   volta a ficar disponível só se tocar em disponível.
+4. Motorista parado e disponível por 3 minutos: continua recebendo chamado (a posição é reenviada a
+   cada 45 s pelo serviço nativo).
 
 ## O que me mandar
 
