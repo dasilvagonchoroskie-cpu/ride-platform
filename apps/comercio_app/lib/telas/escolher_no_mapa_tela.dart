@@ -87,6 +87,17 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
     ));
   }
 
+  /// As imagens do mapa nao chegaram (internet, chave ou limite do fornecedor): a pessoa ve o motivo em vez de um fundo vazio.
+  String? _erroImagens;
+
+  void _imagemFalhou(Object erro) {
+    if (_erroImagens != null) return;
+    final texto = erro.toString().replaceAll(RegExp(r'key=[^&\s)]+'), 'key=…');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _erroImagens = texto.length > 140 ? '${texto.substring(0, 140)}…' : texto);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     _ruas ??= EscopoSessao.ler(context).configDoMapa();
@@ -137,7 +148,7 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
                     zoomOffset: ruas.tamanho < 512 ? 0 : -1,
                     maxZoom: ruas.maxZoom,
                     panBuffer: 0,
-                    errorTileCallback: (tile, erro, pilha) {},
+                    errorTileCallback: (tile, erro, pilha) => _imagemFalhou(erro),
                   ),
                 ],
               ),
@@ -151,6 +162,13 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
                 ),
               ),
             ),
+            if (_erroImagens != null)
+              Positioned(
+                left: 12,
+                right: 12,
+                top: 28,
+                child: Faixa('As imagens do mapa não carregaram. Confira a internet e tente de novo. ($_erroImagens)', tipo: TipoFaixa.atencao, icone: Icons.map_outlined),
+              ),
             Positioned(
               right: 6,
               top: 4,

@@ -37,6 +37,9 @@ class _MapaEntregaState extends State<MapaEntrega> {
   final MapController _controle = MapController();
   bool _pronto = false;
 
+  /// As imagens do mapa nao chegaram: o motivo aparece embaixo do mapa.
+  String? _erroImagens;
+
   /// A pessoa mexeu no mapa: o app para de reenquadrar sozinho ate ela tocar em "Centralizar".
   bool _mexeu = false;
 
@@ -159,7 +162,12 @@ class _MapaEntregaState extends State<MapaEntrega> {
                     maxZoom: ruas.maxZoom,
                     panBuffer: 0,
                     errorTileCallback: (tile, erro, pilha) {
-                      // Imagem que nao veio fica no fundo, sem quebrar o mapa.
+                      // Imagem que nao veio fica no fundo, sem quebrar o mapa; a tela avisa o motivo.
+                      if (_erroImagens != null) return;
+                      final texto = erro.toString().replaceAll(RegExp(r'key=[^&\s)]+'), 'key=…');
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) setState(() => _erroImagens = texto.length > 140 ? '${texto.substring(0, 140)}…' : texto);
+                      });
                     },
                   ),
                 MarkerLayer(markers: [
@@ -220,6 +228,10 @@ class _MapaEntregaState extends State<MapaEntrega> {
         if (m.pontos.isNotEmpty) ...[_legenda(Cores.ouro, 'A entregar'), _legenda(Cores.ok, 'Entregue ✔')],
         if (motorista != null) _legenda(Colors.white, 'Motorista'),
       ]),
+      if (_erroImagens != null) ...[
+        const SizedBox(height: 8),
+        Faixa('As imagens do mapa não carregaram ($_erroImagens). Os pontos mostrados estão corretos.', tipo: TipoFaixa.atencao, icone: Icons.map_outlined),
+      ],
       if (ruas == null) ...[
         const SizedBox(height: 8),
         const Text('As ruas do mapa não estão disponíveis agora; os pontos mostrados estão corretos.', style: TextStyle(fontSize: 12, color: Cores.textoSuave)),
