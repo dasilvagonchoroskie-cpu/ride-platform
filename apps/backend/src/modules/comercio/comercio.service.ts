@@ -784,7 +784,7 @@ export class ComercioService implements OnModuleInit {
         ]
       : [];
     // Mapa: cada entrega num ponto, com o "feito" (✔ verde no app) quando o motorista confirmou o codigo.
-    let mapaFinal = mapa as (Record<string, unknown> | null);
+    let mapaFinal: (typeof mapa & { pontos?: Array<{ ordem: number; latitude: number | null; longitude: number | null; entregue: boolean }> }) | null = mapa;
     if (mapaFinal && entregas.length) {
       const stops = ((p.ride as { stops?: Array<{ sequence: number; latitude: unknown; longitude: unknown }> }).stops ?? []);
       const num = (v: unknown) => (v == null ? null : Number(v));
