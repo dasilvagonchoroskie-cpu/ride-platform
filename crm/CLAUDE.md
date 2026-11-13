@@ -47,6 +47,12 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Cartões do painel todos funcionais (13/11/2026 noite, pedido do dono; 2.1.0-rc.8, cache `fm-crm-v36`)
+- Todos os cartões do dashboard abrem a lista já filtrada (`ir(modulo,{situacao,etapa,de,ate,rotulo})` em `dashboard.js`; `data-ir`, role=button, teclado).
+  A rota aceita `#/modulo?f_situacao=A|B&etapa=&de=&ate=&rotulo=`; `entities.montarFiltro` aceita vários valores com "|" (IN parametrizado, máx. 12);
+  documentos: `consultar({situacao:'a|b'})` validado contra `SITUACOES`. Tela de lista mostra faixa "Filtro do painel" com "Ver todos".
+  Cartão novo no dashboard = `go: ir(...)` + teste. Testes: `test/cartoes-painel.test.js`.
+
 ## Menu por público e painel de atendimentos (13/11/2026 tarde, pedido do dono; 2.1.0-rc.7, cache `fm-crm-v35`)
 - Menu principal por PÚBLICO: *Passageiros e clientes* 1 passageiro, 2 enviar ou receber uma encomenda; *Comércios* 3 sou comerciante/quero entregas;
   *Motoristas* 4 cadastro, 5 Clube; *Outros* 6. `ASSUNTOS` em `central.js` (ids iguais, números novos). Opções 2 e 3 abrem SEGUNDO MENU

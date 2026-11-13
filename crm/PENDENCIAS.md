@@ -181,6 +181,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 
 - [x] 13/11 Menu do WhatsApp por público (passageiros e clientes / comércios / motoristas / outros) com segundos menus de encomendas e comércios.
 - [x] 13/11 Painel inicial com os atendimentos do WhatsApp (dependem de você, com a IA, aguardando o cliente, concluídos, por assunto).
+- [x] 13/11 (rc.8) Todos os cartões do dashboard são clicáveis e abrem a lista já filtrada (faixa "Filtro do painel" com "Ver todos").
 - [ ] Testar no WhatsApp real o menu novo (2 e 3 e seus segundos menus, 0) e conferir o painel com conversas de verdade.
 
 ## 5. Backlog (melhorias conhecidas, sem prazo)

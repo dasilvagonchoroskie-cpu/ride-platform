@@ -85,8 +85,15 @@ function montarFiltro(def, query) {
 
   for (const field of def.fields) {
     if (field.type === 'select' && query[`f_${field.key}`]) {
-      where.push(`${field.key} = ?`);
-      params.push(String(query[`f_${field.key}`]));
+      // Vários valores separados por "|" (cartões do painel: ex. "Aberto|Em andamento"). Sempre parametrizado.
+      const valores = String(query[`f_${field.key}`]).split('|').map((v) => v.trim()).filter(Boolean).slice(0, 12);
+      if (valores.length > 1) {
+        where.push(`${field.key} IN (${valores.map(() => '?').join(',')})`);
+        params.push(...valores);
+      } else if (valores.length === 1) {
+        where.push(`${field.key} = ?`);
+        params.push(valores[0]);
+      }
     }
   }
 

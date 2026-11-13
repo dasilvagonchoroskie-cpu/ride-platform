@@ -271,8 +271,10 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     const where = ['d.excluido_em IS NULL'];
     const params = [];
     if (situacao) {
-      if (!hasOwn(SITUACOES, situacao)) throw new ErroDoc(422, 'invalido', 'Situação inválida.');
-      where.push('d.situacao = ?'); params.push(situacao);
+      // Uma situação ou várias separadas por "|" (cartão "Documentos com pendência" do painel).
+      const lista = String(situacao).split('|').map((v) => v.trim()).filter(Boolean).slice(0, 8);
+      if (!lista.length || !lista.every((s) => hasOwn(SITUACOES, s))) throw new ErroDoc(422, 'invalido', 'Situação inválida.');
+      where.push(`d.situacao IN (${lista.map(() => '?').join(',')})`); params.push(...lista);
     }
     if (funcao) { exigirFuncao(funcao); where.push('d.funcao = ?'); params.push(funcao); }
     if (categoria) { if (!todasCategorias().includes(categoria)) throw new ErroDoc(422, 'invalido', 'Categoria inválida.'); where.push('d.categoria = ?'); params.push(categoria); }
