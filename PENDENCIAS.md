@@ -383,3 +383,10 @@ Limites: emulador nos EUA, não celular em Goiatuba; serve para comparar antes x
 - PENDENTE: causa do "mapa não aparece" não confirmada; o app agora mostra o motivo na tela. Testar no celular.
 - PENDENTE: aviso quando a cidade digitada difere da cidade da coleta (não feito).
 - Tabela nova `entrega_paradas` criada pelo servidor ao iniciar (RLS ligado no mesmo arquivo).
+
+## 13/11/2026 — Comércio: ajustes do teste no celular
+- Feito (ramo `comercio-ajustes-alfinete-moto`, ainda NÃO no `main`): bairro/CEP preenchidos pelo alfinete (exige servidor novo no ar), "Comércio" no app do motorista, mapa maior com "Ampliar", botões acima da barra de navegação, alarme quando o motorista avisa "cheguei", tela de autorizações (notificações, localização, bateria/fabricante), esteira liberou as permissões novas.
+- APKs entregues: Comércio 1.0.36 e Motorista 1.0.433 (mesma assinatura). Nada testado em aparelho real ainda.
+- Versão web (PWA): https://fortaleza-move-comercio.onrender.com (ramo `comercio-web-site`, Render grátis, publicada pela esteira `comercio-web.yml`). Sem alarme nativo/push no navegador; CORS do servidor já aceita este endereço.
+- Decisão do dono pendente: Moto aparece em Goiatuba porque a config de teste é `veiculos: TODOS` (preservada). Mudar para "só carro" só com OK.
+- Pendentes: OK para mesclar no `main` (servidor com bairro/CEP); domínio próprio (subdomínio de fortalezadigitalsecurity.com.br) e cabeçalhos de segurança no painel do Render; aviso de cidade diferente (Itumbiara x Goiatuba); causa do mapa em branco não confirmada.
