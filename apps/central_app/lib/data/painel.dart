@@ -253,6 +253,10 @@ class VeiculoDaFrota {
     this.enviadoEm,
     this.categoriaPedida,
     this.criadoEm,
+    this.cnhValidade,
+    this.cnhVencida,
+    this.crlvValidade,
+    this.crlvVencido,
   });
 
   final String id;
@@ -277,6 +281,14 @@ class VeiculoDaFrota {
   final String motoristaNome;
   final String? motoristaTelefone;
   final String? motoristaStatus;
+
+  /// Validade da CNH do motorista (AAAA-MM-DD, do cadastro) e se ja venceu (null = sem data).
+  final String? cnhValidade;
+  final bool? cnhVencida;
+
+  /// Validade do CRLV anotada pela Central e se ja venceu (null = nao anotada).
+  final String? crlvValidade;
+  final bool? crlvVencido;
 
   String get nome => [marca, modelo].where((x) => x.isNotEmpty).join(' ');
   String get placaBonita => placa.length == 7 ? '${placa.substring(0, 3)}-${placa.substring(3)}' : placa;
@@ -313,6 +325,10 @@ class VeiculoDaFrota {
       motoristaNome: _txt(m['name'], 'Motorista'),
       motoristaTelefone: m['phone'] as String?,
       motoristaStatus: m['status'] as String?,
+      cnhValidade: j['cnhValidade'] as String?,
+      cnhVencida: j['cnhVencida'] as bool?,
+      crlvValidade: j['crlvValidade'] as String?,
+      crlvVencido: j['crlvVencido'] as bool?,
     );
   }
 }
@@ -1669,6 +1685,10 @@ class PainelApi {
   /// Suspende (motivo obrigatorio) ou reativa o veiculo; nao mexe nas permissoes da cidade.
   Future<List<CarroDoMotorista>> suspenderCarro(String id, bool suspender, [String? motivo]) async => _carros(
       await _c.request('PATCH', '/admin/vehicles/$id/suspensao', body: {'suspender': suspender, if (motivo != null) 'motivo': motivo}));
+
+  /// Anota (ou, com null, limpa) a validade do CRLV; so registro, nao bloqueia o carro.
+  Future<void> validadeDoCrlv(String id, String? validade) =>
+      _c.request('PATCH', '/admin/vehicles/$id/validade-crlv', body: {'validade': validade});
 
   Future<List<CarroDoMotorista>> usarCarro(String id) async => _carros(await _c.request('POST', '/admin/vehicles/$id/usar'));
 

@@ -143,12 +143,20 @@ Map<String, dynamic> _vFrota(String id, String placa, String marca, String model
       'enviadoEm': '2026-11-01T10:00:00.000Z',
       'categoriaPedida': null,
       'createdAt': '2026-10-20T10:00:00.000Z',
+      // Validades: CNH do motorista (do cadastro) e CRLV (anotada pela Central).
+      'cnhValidade': '2020-01-31',
+      'cnhVencida': true,
+      'crlvValidade': id == 'm1' ? _crlvM1 : null,
+      'crlvVencido': id == 'm1' && _crlvM1 != null ? _crlvM1!.compareTo('2026-11-13') < 0 : null,
       'driver': {'id': _donoId, 'status': 'APPROVED', 'name': 'Joana Motociclista', 'phone': '+5564977776666'},
     };
 
 /// Situacao da moto m1 no servidor de mentira (muda com a suspensao).
 String _situacaoM1 = 'EM_USO';
 String? _motivoM1;
+
+/// Validade do CRLV da moto m1 no servidor de mentira (muda quando a Central anota).
+String? _crlvM1;
 final List<String> _pedidos = [];
 
 Map<String, dynamic> _carroDoMotorista() => {
@@ -240,6 +248,11 @@ MockClient _servidor({bool comercioNaFila = true}) => MockClient((http.Request r
         return _json({'total': lista.length, 'itens': lista, 'cortada': false});
       }
       if (c == '/api/admin/drivers/$_donoId/vehicles') return _json([_carroDoMotorista()]);
+      if (c == '/api/admin/vehicles/m1/validade-crlv' && r.method == 'PATCH') {
+        _pedidos.add('PATCH $c ${r.body}');
+        _crlvM1 = (jsonDecode(r.body) as Map)['validade'] as String?;
+        return _json({'id': 'm1', 'crlvValidade': _crlvM1});
+      }
       if (c == '/api/admin/vehicles/m1/suspensao' && r.method == 'PATCH') {
         final b = jsonDecode(r.body) as Map;
         _pedidos.add('PATCH $c ${r.body}');
@@ -330,6 +343,7 @@ void main() {
     mostrarRuasNoMapa = false;
     _situacaoM1 = 'EM_USO';
     _motivoM1 = null;
+    _crlvM1 = null;
     _pedidos.clear();
   });
 
@@ -641,9 +655,50 @@ void main() {
       expect(find.text('Aprovado'), findsWidgets);
       await _rolarDetalhe(tester, find.text('Documentação'));
       expect(find.text('Documentação'), findsOneWidget);
-      expect(find.textContaining('validade do documento ainda não é registrada'), findsOneWidget);
+      expect(find.textContaining('só um registro'), findsOneWidget);
+      expect(find.text('31/01/2020 · VENCIDA'), findsOneWidget);
+      expect(find.text('Não registrada'), findsWidgets);
       await _rolarDetalhe(tester, find.textContaining('não autoriza entregas'));
       expect(find.textContaining('não autoriza entregas'), findsOneWidget);
+    });
+
+    testWidgets('lista avisa CNH vencida; CRLV so avisa depois que a Central anota a data', (tester) async {
+      await _abrir(tester, const FrotaTela(moto: true));
+      await _carregar(tester);
+      expect(find.text('CNH vencida'), findsWidgets);
+      expect(find.text('CRLV vencido'), findsNothing);
+    });
+
+    testWidgets('anotar a validade do CRLV: data invalida nao vai; data valida grava, mostra VENCIDO e pode limpar', (tester) async {
+      await _abrir(tester, const FrotaTela(moto: true));
+      await _carregar(tester);
+      await tester.tap(find.textContaining('Honda CG 160'));
+      await _carregar(tester);
+      await _rolarDetalhe(tester, find.byKey(const Key('anotar-validade-crlv')));
+
+      await tester.tap(find.byKey(const Key('anotar-validade-crlv')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo-validade-crlv')), '30/02/2027');
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('erro-validade-crlv')), findsOneWidget);
+      expect(_pedidos.where((p) => p.contains('validade-crlv')), isEmpty);
+
+      await tester.tap(find.byKey(const Key('anotar-validade-crlv')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo-validade-crlv')), '10/05/2020');
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+      expect(_pedidos.last, 'PATCH /api/admin/vehicles/m1/validade-crlv {"validade":"2020-05-10"}');
+      expect(find.text('10/05/2020 · VENCIDO'), findsOneWidget);
+      expect(find.byKey(const Key('erro-validade-crlv')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('anotar-validade-crlv')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Limpar'));
+      await tester.pumpAndSettle();
+      expect(_pedidos.last, 'PATCH /api/admin/vehicles/m1/validade-crlv {"validade":null}');
+      expect(find.textContaining('· VENCIDO'), findsNothing);
     });
 
     testWidgets('suspender exige motivo, avisa o servidor e permite reativar', (tester) async {

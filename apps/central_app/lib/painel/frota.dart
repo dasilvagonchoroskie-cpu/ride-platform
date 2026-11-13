@@ -184,6 +184,8 @@ class _CartaoDoVeiculo extends StatelessWidget {
                           AppBadge(text: v.rotuloSituacao, tone: _tomDa(v.situacao)),
                           AppBadge(text: v.fotoUrl != null ? 'Foto ✓' : 'Sem foto'),
                           AppBadge(text: v.crlvUrl != null ? 'CRLV ✓' : 'Sem CRLV'),
+                          if (v.cnhVencida == true) const AppBadge(text: 'CNH vencida', tone: AppBadgeTone.danger),
+                          if (v.crlvVencido == true) const AppBadge(text: 'CRLV vencido', tone: AppBadgeTone.danger),
                         ],
                       ),
                     ],
@@ -200,11 +202,84 @@ class _CartaoDoVeiculo extends StatelessWidget {
 }
 
 /// Detalhe do veiculo: dono, dados, documentos enviados, motivo e as acoes.
-class DetalheDoVeiculo extends StatelessWidget {
+class DetalheDoVeiculo extends StatefulWidget {
   const DetalheDoVeiculo({super.key, required this.veiculo, required this.api});
 
   final VeiculoDaFrota veiculo;
   final PainelApi api;
+
+  @override
+  State<DetalheDoVeiculo> createState() => _DetalheDoVeiculoState();
+}
+
+/// AAAA-MM-DD -> DD/MM/AAAA ('Não registrada' quando nao ha data).
+String diaBonito(String? iso) {
+  if (iso == null || iso.length != 10) return 'Não registrada';
+  return '${iso.substring(8, 10)}/${iso.substring(5, 7)}/${iso.substring(0, 4)}';
+}
+
+/// DD/MM/AAAA -> AAAA-MM-DD (null se a data nao existir no calendario).
+String? diaParaServidor(String texto) {
+  final m = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(texto.trim());
+  if (m == null) return null;
+  final d = int.parse(m[1]!), mes = int.parse(m[2]!), a = int.parse(m[3]!);
+  final data = DateTime.utc(a, mes, d);
+  if (data.year != a || data.month != mes || data.day != d) return null;
+  return '${m[3]}-${m[2]}-${m[1]}';
+}
+
+class _DetalheDoVeiculoState extends State<DetalheDoVeiculo> {
+  late String? _crlvValidade = widget.veiculo.crlvValidade;
+  late bool? _crlvVencido = widget.veiculo.crlvVencido;
+  bool _gravando = false;
+  String? _erro;
+
+  VeiculoDaFrota get veiculo => widget.veiculo;
+  PainelApi get api => widget.api;
+
+  Future<void> _anotarValidade() async {
+    final controle = TextEditingController(text: _crlvValidade == null ? '' : diaBonito(_crlvValidade));
+    final resposta = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Validade do CRLV'),
+        content: TextField(
+          key: const Key('campo-validade-crlv'),
+          controller: controle,
+          keyboardType: TextInputType.datetime,
+          decoration: const InputDecoration(labelText: 'Data (DD/MM/AAAA)', hintText: '31/12/2027'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          if (_crlvValidade != null) TextButton(onPressed: () => Navigator.pop(ctx, ''), child: const Text('Limpar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, controle.text), child: const Text('Salvar')),
+        ],
+      ),
+    );
+    if (resposta == null || !mounted) return;
+    final iso = resposta.trim().isEmpty ? null : diaParaServidor(resposta);
+    if (resposta.trim().isNotEmpty && iso == null) {
+      setState(() => _erro = 'Data inválida. Use DD/MM/AAAA, por exemplo 31/12/2027.');
+      return;
+    }
+    setState(() {
+      _gravando = true;
+      _erro = null;
+    });
+    try {
+      await api.validadeDoCrlv(veiculo.id, iso);
+      if (!mounted) return;
+      final hoje = DateTime.now().toUtc().subtract(const Duration(hours: 3)).toIso8601String().substring(0, 10);
+      setState(() {
+        _crlvValidade = iso;
+        _crlvVencido = iso == null ? null : iso.compareTo(hoje) < 0;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _erro = 'Não foi possível salvar a validade. Confira a internet e tente de novo.');
+    } finally {
+      if (mounted) setState(() => _gravando = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -240,8 +315,20 @@ class DetalheDoVeiculo extends StatelessWidget {
           Linha('Foto do veículo', v.fotoUrl != null ? 'Enviada' : 'Não enviada'),
           Linha('CRLV', v.crlvUrl != null ? 'Enviado' : 'Não enviado'),
           Linha('Último envio', dataHora(v.enviadoEm)),
+          Linha('Validade da CNH do motorista', v.cnhValidade == null ? 'Não registrada' : '${diaBonito(v.cnhValidade)}${v.cnhVencida == true ? ' · VENCIDA' : ''}', destaque: v.cnhVencida == true),
+          Linha('Validade do CRLV', _crlvValidade == null ? 'Não registrada' : '${diaBonito(_crlvValidade)}${_crlvVencido == true ? ' · VENCIDO' : ''}', destaque: _crlvVencido == true),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const Key('anotar-validade-crlv'),
+              onPressed: _gravando ? null : _anotarValidade,
+              icon: const Icon(Icons.event_available_outlined),
+              label: Text(_crlvValidade == null ? 'Anotar validade do CRLV' : 'Mudar validade do CRLV'),
+            ),
+          ),
+          if (_erro != null) Text(_erro!, key: const Key('erro-validade-crlv'), style: AppText.caption.copyWith(color: AppColors.danger)),
           Text(
-            'A validade do documento ainda não é registrada pelo sistema: confira a data na foto do CRLV.',
+            'A validade do CRLV é anotada por quem conferiu a foto do documento. É só um registro: o sistema avisa quando vence, mas não bloqueia o veículo sozinho.',
             style: AppText.caption.copyWith(color: AppColors.textMuted),
           ),
           if (v.fotoUrl != null || v.crlvUrl != null) ...[

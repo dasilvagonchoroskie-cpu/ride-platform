@@ -17,6 +17,8 @@ import {
   lerMapaDeCarros,
   MapaDeCarros,
   situacaoDoCarro,
+  diaValido,
+  vencido,
 } from './vehicles.situacao';
 
 /** Carro como o aplicativo e a Central leem: dados, situacao e fotos. */
@@ -600,7 +602,7 @@ export class VehiclesService {
         where,
         orderBy: { createdAt: 'desc' },
         take: 1500,
-        include: { driver: { select: { id: true, status: true, user: { select: { name: true, phone: true } } } } },
+        include: { driver: { select: { id: true, status: true, cnhExpiresAt: true, user: { select: { name: true, phone: true } } } } },
       }),
       this.mapa(),
     ]);
@@ -625,6 +627,11 @@ export class VehiclesService {
           enviadoEm: p.enviadoEm,
           categoriaPedida: p.categoriaPedida,
           createdAt: v.createdAt,
+          // Validades (13/11/2026): CNH vem do cadastro do motorista; CRLV e anotada pela Central.
+          cnhValidade: v.driver.cnhExpiresAt ? v.driver.cnhExpiresAt.toISOString().slice(0, 10) : null,
+          cnhVencida: vencido(v.driver.cnhExpiresAt ? v.driver.cnhExpiresAt.toISOString().slice(0, 10) : null),
+          crlvValidade: mapa[v.id]?.crlvValidade ?? null,
+          crlvVencido: vencido(mapa[v.id]?.crlvValidade),
           driver: {
             id: v.driver.id,
             status: v.driver.status,
@@ -637,6 +644,36 @@ export class VehiclesService {
       .filter((i) => (f.situacao ? i.situacao === f.situacao : true));
     const limite = Math.min(Math.max(f.limite ?? 300, 1), 500);
     return { total: itens.length, itens: itens.slice(0, limite), cortada: itens.length > limite };
+  }
+
+  /**
+   * A Central anota (ou limpa) a validade do CRLV do veiculo. So registro: nao bloqueia
+   * nem libera o carro e nao mexe em permissoes da cidade.
+   */
+  async adminDefinirValidadeCrlv(vehicleId: string, adminId: string, validade: string | null) {
+    const v = await this.carroPorId(vehicleId);
+    const mapa = await this.mapa();
+    if (mapa[vehicleId]?.situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
+    if (validade !== null && !diaValido(validade)) throw BusinessException.validation('Data invalida. Use o formato AAAA-MM-DD.');
+    const antes = mapa[vehicleId]?.crlvValidade ?? null;
+    await this.mudar((m) => {
+      const ficha: FichaDoCarro = { ...(m[vehicleId] ?? {}) };
+      if (validade) ficha.crlvValidade = validade;
+      else delete ficha.crlvValidade;
+      m[vehicleId] = ficha;
+    }, adminId);
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        action: 'VEHICLE_CRLV_VALIDITY',
+        entity: 'Vehicle',
+        entityId: vehicleId,
+        before: { crlvValidade: antes },
+        after: { plate: v.plate, crlvValidade: validade },
+      },
+    });
+    return { id: vehicleId, crlvValidade: validade, crlvVencido: vencido(validade) };
   }
 
   async adminUsar(vehicleId: string) {

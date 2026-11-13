@@ -1,6 +1,6 @@
 import { UserRole } from '@ride/shared';
 import { ROLES_KEY } from '../../common/constants/metadata.constants';
-import { CHAVE_VEICULOS, lerMapaDeCarros } from './vehicles.situacao';
+import { CHAVE_VEICULOS, diaValido, hojeEmBrasilia, lerMapaDeCarros, vencido } from './vehicles.situacao';
 import { AdminVehiclesController } from './admin-vehicles.controller';
 import { VehiclesService } from './vehicles.service';
 
@@ -16,9 +16,9 @@ function montar(mapaInicial: Record<string, unknown> = {}) {
     { id: 'vOutraCidade', driverId: 'd3', plate: 'OUT0C00', brand: 'VW', model: 'Gol', year: 2019, color: 'Prata', category: 'CARRO', isActive: true, createdAt: new Date(0) },
   ];
   const motoristas: Record<string, any> = {
-    d1: { id: 'd1', status: 'APPROVED', user: { name: 'João Moto', phone: '+5564911110000' } },
-    d2: { id: 'd2', status: 'APPROVED', user: { name: 'Maria Carro', phone: '+5564922220000' } },
-    d3: { id: 'd3', status: 'APPROVED', user: { name: 'Pedro Outra', phone: '+5564933330000' } },
+    d1: { id: 'd1', status: 'APPROVED', cnhExpiresAt: new Date('2020-01-31T00:00:00Z'), user: { name: 'João Moto', phone: '+5564911110000' } },
+    d2: { id: 'd2', status: 'APPROVED', cnhExpiresAt: new Date('2099-12-31T00:00:00Z'), user: { name: 'Maria Carro', phone: '+5564922220000' } },
+    d3: { id: 'd3', status: 'APPROVED', cnhExpiresAt: null, user: { name: 'Pedro Outra', phone: '+5564933330000' } },
   };
   const settings: Record<string, any> = { [CHAVE_VEICULOS]: { value: mapaInicial } };
   const corridasAtivas: Record<string, number> = {};
@@ -153,5 +153,54 @@ describe('Suspender e reativar veiculo (Central)', () => {
   it('veiculo inexistente: 404; so o ADMIN usa as rotas', async () => {
     await expect(montar().s.adminSuspender('nao-existe', 'a', true, 'x')).rejects.toThrow('nao encontrado');
     expect(Reflect.getMetadata(ROLES_KEY, AdminVehiclesController)).toEqual([UserRole.ADMIN]);
+  });
+});
+
+
+describe('Validades na frota (CNH do motorista e CRLV do veiculo)', () => {
+  it('a lista traz a validade da CNH e se esta vencida; sem data nao inventa', async () => {
+    const { s } = montar();
+    const r = await s.adminFrota(null, {});
+    expect(r.itens.find((i) => i.id === 'vMoto')).toMatchObject({ cnhValidade: '2020-01-31', cnhVencida: true });
+    expect(r.itens.find((i) => i.id === 'vCarro')).toMatchObject({ cnhValidade: '2099-12-31', cnhVencida: false });
+    expect(r.itens.find((i) => i.id === 'vOutraCidade')).toMatchObject({ cnhValidade: null, cnhVencida: null });
+  });
+
+  it('a Central anota a validade do CRLV: guarda na ficha, audita e a lista mostra se venceu; limpar tira', async () => {
+    const { s, settings, auditoria } = montar({ vMoto: { situacao: 'SUSPENSO', motivo: 'x' } });
+    const r = await s.adminDefinirValidadeCrlv('vMoto', 'admin1', '2020-05-10');
+    expect(r).toEqual({ id: 'vMoto', crlvValidade: '2020-05-10', crlvVencido: true });
+    // a ficha anterior (suspensao) continua como estava
+    expect(settings[CHAVE_VEICULOS].value.vMoto).toMatchObject({ situacao: 'SUSPENSO', crlvValidade: '2020-05-10' });
+    expect(auditoria.at(-1)).toMatchObject({ action: 'VEHICLE_CRLV_VALIDITY', actorId: 'admin1', before: { crlvValidade: null }, after: { crlvValidade: '2020-05-10' } });
+    const lista = await s.adminFrota(null, {});
+    expect(lista.itens.find((i) => i.id === 'vMoto')).toMatchObject({ crlvValidade: '2020-05-10', crlvVencido: true });
+    await s.adminDefinirValidadeCrlv('vMoto', 'admin1', null);
+    expect(settings[CHAVE_VEICULOS].value.vMoto.crlvValidade).toBeUndefined();
+    expect((await s.adminFrota(null, {})).itens.find((i) => i.id === 'vMoto')).toMatchObject({ crlvValidade: null, crlvVencido: null });
+  });
+
+  it('data invalida ou inexistente no calendario e recusada; carro inexistente e 404', async () => {
+    const { s } = montar();
+    await expect(s.adminDefinirValidadeCrlv('vMoto', 'a', '2026-02-30')).rejects.toThrow('Data invalida');
+    await expect(s.adminDefinirValidadeCrlv('vMoto', 'a', '10/05/2026')).rejects.toThrow('Data invalida');
+    await expect(s.adminDefinirValidadeCrlv('nao-existe', 'a', '2030-01-01')).rejects.toThrow();
+  });
+
+  it('vencido: no dia da validade ainda vale; usa o dia de Brasilia', () => {
+    const agora = new Date('2026-11-13T02:30:00Z'); // em Brasilia ainda e 12/11
+    expect(hojeEmBrasilia(agora)).toBe('2026-11-12');
+    expect(vencido('2026-11-12', agora)).toBe(false);
+    expect(vencido('2026-11-11', agora)).toBe(true);
+    expect(vencido(null, agora)).toBeNull();
+    expect(diaValido('2024-02-29')).toBe(true);
+    expect(diaValido('2026-02-29')).toBe(false);
+  });
+
+  it('a rota existe, e so da Central (dono e operador, nunca motorista)', () => {
+    const roles = Reflect.getMetadata(ROLES_KEY, AdminVehiclesController) as string[];
+    expect(roles).toEqual(expect.arrayContaining([UserRole.ADMIN]));
+    expect(roles).not.toContain(UserRole.DRIVER);
+    expect(typeof AdminVehiclesController.prototype.validadeCrlv).toBe('function');
   });
 });

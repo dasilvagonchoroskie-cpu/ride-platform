@@ -17,6 +17,11 @@ const suspenderSchema = z.object({
   motivo: z.string().trim().max(300).optional(),
 });
 
+const validadeCrlvSchema = z.object({
+  /** AAAA-MM-DD, ou null para limpar. */
+  validade: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato AAAA-MM-DD.').nullable(),
+});
+
 const frotaSchema = z.object({
   praca: z.string().trim().max(60).optional(),
   tipo: z.enum(['MOTO', 'CARRO']).optional(),
@@ -98,6 +103,17 @@ export class AdminVehiclesController {
   ) {
     await this.doCarro(user, id);
     return this.vehicles.adminSuspender(id, user.id, body.suspender, body.motivo);
+  }
+
+  @Patch('vehicles/:id/validade-crlv')
+  @ApiOperation({ summary: 'Anota (ou limpa) a validade do CRLV do veiculo; so registro, nao bloqueia o carro' })
+  async validadeCrlv(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(validadeCrlvSchema)) body: z.infer<typeof validadeCrlvSchema>,
+  ) {
+    await this.doCarro(user, id);
+    return this.vehicles.adminDefinirValidadeCrlv(id, user.id, body.validade);
   }
 
   @Get('vehicles/category-requests')

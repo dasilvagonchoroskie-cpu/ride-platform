@@ -36,6 +36,31 @@ export interface FichaDoCarro {
   categoriaPedidaEm?: string | null;
   /** Motivo da ultima recusa de categoria (o motorista ve). */
   categoriaMotivo?: string | null;
+  /**
+   * Validade do CRLV (AAAA-MM-DD), anotada pela Central (13/11/2026). Informativa: o
+   * sistema mostra se esta vencida, mas nao bloqueia o carro por conta propria.
+   */
+  crlvValidade?: string;
+}
+
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Dia de hoje em Brasilia (AAAA-MM-DD). */
+export function hojeEmBrasilia(agora: Date = new Date()): string {
+  return new Date(agora.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+}
+
+/** Data valida no formato AAAA-MM-DD (e que existe no calendario)? */
+export function diaValido(v: unknown): v is string {
+  if (typeof v !== 'string' || !DIA.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
+/** Vencido = a validade e anterior a hoje (no dia da validade ainda vale). Sem data: null. */
+export function vencido(validade: string | null | undefined, agora: Date = new Date()): boolean | null {
+  if (!validade || !diaValido(validade)) return null;
+  return validade < hojeEmBrasilia(agora);
 }
 
 export type MapaDeCarros = Record<string, FichaDoCarro>;
@@ -59,6 +84,7 @@ export function lerMapaDeCarros(valor: unknown): MapaDeCarros {
       ...(typeof f.categoriaPedida === 'string' && f.categoriaPedida ? { categoriaPedida: f.categoriaPedida } : {}),
       ...(typeof f.categoriaPedidaEm === 'string' ? { categoriaPedidaEm: f.categoriaPedidaEm } : {}),
       ...(typeof f.categoriaMotivo === 'string' && f.categoriaMotivo ? { categoriaMotivo: f.categoriaMotivo } : {}),
+      ...(diaValido(f.crlvValidade) ? { crlvValidade: f.crlvValidade } : {}),
     };
   }
   return mapa;
