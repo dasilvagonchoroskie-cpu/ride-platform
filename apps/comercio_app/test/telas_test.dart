@@ -125,22 +125,21 @@ void main() {
       await fechar(tester);
     });
 
-    testWidgets('aprovado, mas a Central ainda não liberou as entregas: avisa e não abre o pedido', (tester) async {
+    testWidgets('Central com o Comércio desligado: só a tela de fora do ar, mesmo aprovado e instalado', (tester) async {
       await abrir(tester, sessaoCom(ServidorFalso(), loja: estabelecimento(liberadas: false)));
-      await tocar(tester, 'Nova entrega');
-      expect(find.text('Entregas ainda não liberadas'), findsOneWidget);
-      expect(find.text('Consultar preço'), findsNothing);
-      await tocar(tester, 'Entendi');
-      expect(find.text('Entregas ainda não liberadas'), findsNothing);
+      expect(find.text('Serviço temporariamente fora do ar'), findsOneWidget);
+      expect(find.text('Nova entrega'), findsNothing);
+      expect(find.text('Gastos'), findsNothing);
       await fechar(tester);
     });
 
-    testWidgets('a Central liberou depois que o app abriu: ao tocar, confere no servidor e abre o pedido', (tester) async {
+    testWidgets('a Central ligou o Comércio depois: "Verificar de novo" volta ao início sozinho', (tester) async {
       final servidor = ServidorFalso()..loja = estabelecimento(liberadas: true);
       await abrir(tester, sessaoCom(servidor, loja: estabelecimento(liberadas: false)));
-      await tocar(tester, 'Nova entrega');
-      expect(find.text('Entregas ainda não liberadas'), findsNothing);
-      expect(find.textContaining('Nova entrega · 1/4'), findsOneWidget);
+      expect(find.text('Serviço temporariamente fora do ar'), findsOneWidget);
+      await tocar(tester, 'Verificar de novo');
+      expect(find.text('Serviço temporariamente fora do ar'), findsNothing);
+      expect(find.text('Nova entrega'), findsOneWidget);
       await fechar(tester);
     });
 

@@ -6,6 +6,7 @@ import 'estado/escopo.dart';
 import 'estado/sessao.dart';
 import 'telas/cadastro_tela.dart';
 import 'telas/entrada_tela.dart';
+import 'telas/fora_do_ar_tela.dart';
 import 'telas/inicio_shell.dart';
 import 'telas/permissoes_tela.dart';
 import 'telas/status_tela.dart';
@@ -103,6 +104,8 @@ class _DepoisDasAutorizacoes extends StatelessWidget {
       }
       return const CadastroTela();
     }
+    // Chave geral da Central desligada: nada funciona, mesmo com o aplicativo instalado.
+    if (!s.estabelecimento!.entregasLiberadas) return const ForaDoArTela();
     if (s.estabelecimento!.situacao != Situacao.aprovado) return const StatusTela();
     return const InicioShell();
   }

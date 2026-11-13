@@ -92,10 +92,6 @@ class _TermosInicioTelaState extends State<TermosInicioTela> {
             Expanded(
               child: TabBarView(children: [
                 ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 20), children: [
-                  if (!t.revisadoPorAdvogado) ...[
-                    const Faixa('Este texto é uma minuta técnica e ainda não foi aprovado por advogado. Ele pode mudar depois da revisão jurídica.', tipo: TipoFaixa.atencao),
-                    const SizedBox(height: 14),
-                  ],
                   ...blocosDeTexto(t.conteudo),
                 ]),
                 ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 20), children: blocosDeTexto(p.conteudo)),

@@ -6,8 +6,7 @@ import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
 
 /// Termos de uso e condicoes comerciais do Comercio. O texto vem do servidor
-/// (GET /legal/comercio). Enquanto nao houver revisao de advogado, a tela diz
-/// com todas as letras que e uma minuta.
+/// (GET /legal/comercio).
 class TermosTela extends StatefulWidget {
   const TermosTela({super.key});
 
@@ -53,10 +52,6 @@ class _TermosTelaState extends State<TermosTela> {
               ? Estado(icone: Icons.cloud_off, titulo: 'Não foi possível carregar os termos', texto: _falha, botao: 'Tentar de novo', aoTocar: _carregar)
               : const Center(child: CircularProgressIndicator()))
           : ListView(padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.viewPaddingOf(context).bottom), children: [
-              if (!t.revisadoPorAdvogado) ...[
-                const Faixa('Este texto é uma minuta técnica e ainda não foi aprovado por advogado. Ele pode mudar depois da revisão jurídica.', tipo: TipoFaixa.atencao),
-                const SizedBox(height: 14),
-              ],
               ..._blocos(t.conteudo),
             ]),
     );
@@ -72,6 +67,8 @@ List<Widget> blocosDeTexto(String md) {
     final saida = <Widget>[];
     for (final bruta in md.split('\n')) {
       final linha = bruta.trimRight();
+      // Pedido do dono (13/11/2026): o aviso de "minuta" que vem no texto do servidor nao aparece na tela.
+      if (linha.startsWith('> ') && linha.toLowerCase().contains('minuta técnica')) continue;
       if (linha.isEmpty) {
         saida.add(const SizedBox(height: 6));
       } else if (linha.startsWith('# ')) {

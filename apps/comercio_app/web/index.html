@@ -32,18 +32,10 @@
     #carregando { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 16px; color: #fff; font: 600 16px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
     #carregando img { width: 96px; height: 96px; border-radius: 22px; }
-    /* Botao "Instalar" (Chrome/Edge no computador e no Android). */
-    #instalar { position: fixed; right: 16px; bottom: 16px; z-index: 10; display: none; border: 0; border-radius: 24px;
-      padding: 12px 18px; background: #E9B53D; color: #07122B; font: 700 15px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      box-shadow: 0 4px 14px rgba(0,0,0,.3); cursor: pointer; }
-    #instalar span { margin-left: 8px; font-weight: 400; opacity: .7; }
   </style>
 </head>
 <body>
   <div id="carregando"><img src="icons/Icon-192.png" alt=""><div>Abrindo o Comércio…</div></div>
-  <button id="instalar" type="button" title="Instala o Comércio como aplicativo neste aparelho">
-    Instalar o Comércio<span id="fechar-instalar" title="Agora não">✕</span>
-  </button>
   <script>
     // Alarme "o motorista chegou" no navegador (so com o site aberto): bipes + vibracao.
     (function () {
@@ -73,28 +65,18 @@
     })();
   </script>
   <script>
-    // Instalar como aplicativo (ícone na área de trabalho / tela inicial).
+    // Instalar como aplicativo (icone na area de trabalho / tela inicial). Nao ha botao solto na tela:
+    // o botao fica na aba Conta do app (13/11/2026), para nao cobrir nada.
     (function () {
       var pedido = null;
-      var botao = document.getElementById('instalar');
-      var fechar = document.getElementById('fechar-instalar');
-      window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault();
-        pedido = e;
-        try { if (localStorage.getItem('fm.instalar.depois') === '1') return; } catch (_) {}
-        botao.style.display = 'block';
-      });
-      botao.addEventListener('click', function (e) {
-        if (e.target === fechar) {
-          botao.style.display = 'none';
-          try { localStorage.setItem('fm.instalar.depois', '1'); } catch (_) {}
-          return;
-        }
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); pedido = e; });
+      window.addEventListener('appinstalled', function () { pedido = null; });
+      window.fmPodeInstalar = function () { return !!pedido; };
+      window.fmInstalar = function () {
         if (!pedido) return;
-        pedido.prompt();
-        pedido.userChoice.finally(function () { pedido = null; botao.style.display = 'none'; });
-      });
-      window.addEventListener('appinstalled', function () { botao.style.display = 'none'; });
+        var p = pedido; pedido = null;
+        p.prompt();
+      };
       // Some a tela de "abrindo" quando o Flutter desenha.
       window.addEventListener('flutter-first-frame', function () {
         var c = document.getElementById('carregando');

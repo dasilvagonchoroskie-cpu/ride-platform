@@ -337,10 +337,10 @@ void main() {
       await fechar(tester);
     });
 
-    testWidgets('a tela dos termos mostra o texto do servidor e avisa que é minuta sem revisão de advogado', (tester) async {
+    testWidgets('a tela dos termos mostra o texto do servidor, sem os avisos de minuta', (tester) async {
       await abrir(tester, sessaoCom(ServidorFalso()));
       await tocar(tester, 'Ler os termos de uso');
-      expect(find.textContaining('minuta técnica'), findsOneWidget);
+      expect(find.textContaining('minuta técnica'), findsNothing);
       expect(find.text('1. Quem somos'), findsOneWidget);
       expect(find.textContaining('importante'), findsOneWidget);
       await fechar(tester);
