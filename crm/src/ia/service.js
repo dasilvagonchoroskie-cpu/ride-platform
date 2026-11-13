@@ -26,7 +26,8 @@ const MOTIVOS = {
   atendimento_humano: 'conversa em atendimento humano', aguardando_humano: 'aguardando atendimento humano (aviso de espera já enviado)',
   em_andamento: 'outra resposta em andamento', concluida: 'atendimento concluído',
   limite_atendimento: 'limite de respostas da IA neste atendimento', mudou_estado: 'a equipe assumiu durante o processamento',
-  audio_pendente: 'áudio ainda sendo ouvido'
+  audio_pendente: 'áudio ainda sendo ouvido', contato_pessoal: 'contato pessoal (a IA não atende)',
+  filtro_promessa: 'bloqueada: confirmava cadastro/aprovação ou prometia algo não autorizado'
 };
 
 function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, setSetting, cofre, provider, todayISO, nowISO, log = console }) {
@@ -359,7 +360,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   // Nada de texto do cliente no estado: só códigos.
   const PASSAGEIROS = new Set(['indisponivel', 'timeout', 'rede', 'limite_provedor', 'resposta_invalida', 'falha_redacao', 'em_andamento', 'erro']);
   // Motivos em que a IA fica quieta de propósito (não é falha).
-  const QUIETOS = new Set(['atendimento_humano', 'concluida', 'ja_respondida', 'aguardando_humano', 'analise_desatualizada', 'humano_assumiu', 'em_andamento']);
+  const ehPessoal = (conversaId) => { const c = waStore.obterConversa(conversaId); return !!(c && c.pessoal); };
+  const QUIETOS = new Set(['contato_pessoal', 'atendimento_humano', 'concluida', 'ja_respondida', 'aguardando_humano', 'analise_desatualizada', 'humano_assumiu', 'em_andamento']);
   const esperasRepetir = () => String(process.env.IA_REPETIR_MS !== undefined ? process.env.IA_REPETIR_MS : '30000,120000,300000').split(',').filter((x) => x.trim() !== '').map(Number).filter((n) => Number.isFinite(n) && n >= 0);
   const RECUPERAR_HORAS = Number(process.env.IA_RECUPERAR_HORAS) || 12;
   const processando = new Set();
@@ -428,6 +430,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const cfg = config();
     if (!cfg.ativo || cfg.modo !== 'automatico') return;
     const ult = ultimaDoCliente(conversaId);
+    // Contato pessoal (família/amigos no número do atendimento): a IA não analisa, não cria cadastro e não responde.
+    if (ehPessoal(conversaId)) { if (ult && ult.direcao === 'in') marcarEstado(conversaId, 'sem_acao', { erro: 'contato_pessoal', msgId: ult.id }); return; }
     if (!cfg.chaveConfigurada) {
       if (ult && ult.direcao === 'in' && !(cfg.responder && transferirPorFalha(conversaId, 'sem_chave'))) marcarEstado(conversaId, 'sem_chave', { erro: 'sem_chave', msgId: ult.id });
       return;
@@ -575,6 +579,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   async function responderCentral(conversaId, { aplicacao } = {}) {
     let conv = waStore.obterConversa(conversaId);
     if (!conv) return { motivo: 'sem_resposta' };
+    if (conv.pessoal) return { motivo: 'contato_pessoal' };
     if (conv.atendimento === 'humano') {
       // Volta sozinha para a IA quando a equipe ficou um tempo sem responder (ex.: respondeu uma vez pelo celular e saiu).
       const pausa = config().humanoPausa;
@@ -767,6 +772,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const cfg = config();
     if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.responder || !cfg.chaveConfigurada) return { motivo: 'desligada' };
     const conv = waStore.obterConversa(conversaId);
+    if (conv && conv.pessoal) return { motivo: 'contato_pessoal' };
     if (!conv || conv.atendimento !== 'ia') return { motivo: 'fora_da_ia' };
     const ult = ultimaDoCliente(conversaId);
     if (!ult || ult.direcao !== 'in') return { motivo: 'ja_respondida' };

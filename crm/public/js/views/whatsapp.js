@@ -174,7 +174,8 @@ export async function renderConversas(view, state) {
       <button class="btn btn-sm btn-soft" data-act="vincular" type="button">${c.vinculo_tipo ? 'Trocar cadastro' : 'Vincular cadastro'}</button>
       <button class="btn btn-sm btn-soft" data-act="tarefa" type="button">Criar tarefa</button>
       <button class="btn btn-sm btn-ghost" data-act="historico" type="button">Histórico</button>
-      ${isAdmin ? `<button class="btn btn-sm btn-danger" data-act="ignorar" type="button">Ignorar contato</button>
+      ${isAdmin ? `<button class="btn btn-sm btn-soft" data-act="pessoal" type="button">${c.pessoal ? 'Voltar a IA para este contato' : 'Contato pessoal (sem IA)'}</button>
+      <button class="btn btn-sm btn-danger" data-act="ignorar" type="button">Ignorar contato</button>
       <button class="btn btn-sm btn-danger" data-act="excluir" type="button">Excluir</button>` : ''}`;
   }
 
@@ -191,12 +192,13 @@ export async function renderConversas(view, state) {
     const iaLigada = !!iaSt.responder;
     let curto = { ia: iaLigada ? 'IA atendendo' : 'IA (resposta automática desligada)', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' }[c.atendimento] || 'IA atendendo';
     let alertaIA = '';
-    if (c.atendimento === 'ia' && iaLigada) {
+    if (c.atendimento === 'ia' && iaLigada && !c.pessoal) {
       if (c.ia_estado === 'processando') curto = 'IA respondendo…';
       else if (c.ia_estado === 'tentando') { curto = 'IA tentando de novo'; alertaIA = `Falha do serviço de IA (${IA_ERRO[c.ia_erro] || c.ia_erro || 'erro'}). Nova tentativa ${c.ia_proxima ? `às ${ui.fmtDateTime(c.ia_proxima).split(' ').pop()}` : 'em instantes'}.`; }
       else if (c.ia_estado === 'falhou' || c.ia_estado === 'sem_chave') { curto = 'IA não respondeu'; alertaIA = `Falha: ${IA_ERRO[c.ia_erro] || c.ia_erro || 'erro'}. Assuma ou tente de novo.`; }
     }
-    if (c.atendimento === 'ia' && iaLigada && ['tentando', 'falhou', 'sem_chave'].includes(c.ia_estado) && c.ultima_direcao === 'in') botoes.unshift('<button class="btn btn-sm btn-soft" data-at="reprocessar" type="button" title="Pedir à IA para responder de novo">Tentar<span class="so-desk"> de novo</span></button>');
+    if (c.pessoal) curto = 'Contato pessoal (a IA não atende)';
+    if (c.atendimento === 'ia' && iaLigada && !c.pessoal && ['tentando', 'falhou', 'sem_chave'].includes(c.ia_estado) && c.ultima_direcao === 'in') botoes.unshift('<button class="btn btn-sm btn-soft" data-at="reprocessar" type="button" title="Pedir à IA para responder de novo">Tentar<span class="so-desk"> de novo</span></button>');
     const detalhe = alertaIA || (c.atendimento === 'aguardando' && c.atend_motivo ? c.atend_motivo : (c.atend_assunto ? ASSUNTO_MENU[c.atend_assunto] || '' : ''));
     const dica = c.atendimento === 'humano' ? 'A IA não responde enquanto a equipe atende.' : est[0];
     $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}${alertaIA ? ' ia-alerta' : ''}" title="${ui.esc(alertaIA || dica)}">
@@ -224,7 +226,7 @@ export async function renderConversas(view, state) {
       ['vincular', c.vinculo_tipo ? 'Trocar cadastro vinculado' : 'Vincular a um cadastro', 'btn-soft'],
       ['tarefa', 'Criar tarefa', 'btn-soft'],
       ['historico', 'Histórico do atendimento', 'btn-soft'],
-      ...(isAdmin ? [['ignorar', 'Ignorar contato', 'btn-danger'], ['excluir', 'Excluir conversa', 'btn-danger']] : [])
+      ...(isAdmin ? [['pessoal', c.pessoal ? 'Voltar a IA para este contato' : 'Contato pessoal (a IA não atende)', 'btn-soft'], ['ignorar', 'Ignorar contato', 'btn-danger'], ['excluir', 'Excluir conversa', 'btn-danger']] : [])
     ];
     const m = ui.modal({
       title: nomeDe(c), subtitle: c.telefone_exibicao || '', size: 'small',
@@ -542,6 +544,18 @@ export async function renderConversas(view, state) {
         await api.patch(`/wa/conversas/${c.id}`, { situacao: c.situacao === 'Aberta' ? 'Resolvida' : 'Aberta' });
         await atualizarAtual();
         carregarLista().catch(() => {});
+      } else if (nome === 'pessoal') {
+        const marcar = !c.pessoal;
+        const ok = await ui.confirmDialog({
+          title: marcar ? 'Marcar como contato pessoal?' : 'Voltar o atendimento da IA?', confirmLabel: marcar ? 'Marcar' : 'Voltar a IA',
+          message: marcar
+            ? 'Para família e amigos que escrevem neste número. A IA não lê, não analisa e não responde as mensagens deste contato. A conversa continua guardada aqui e você responde pelo celular ou pelo CRM.'
+            : 'A IA volta a atender este contato a partir da próxima mensagem dele.'
+        });
+        if (!ok) return;
+        await api.post(`/wa/contatos/${c.contato_id}/pessoal`, { pessoal: marcar });
+        await atualizarAtual();
+        ui.toast(marcar ? 'Contato marcado como pessoal: a IA não vai responder.' : 'A IA volta a atender este contato.', 'success');
       } else if (nome === 'ignorar') {
         const ok = await ui.confirmDialog({
           title: 'Ignorar este contato?', danger: true, confirmLabel: 'Ignorar e apagar',

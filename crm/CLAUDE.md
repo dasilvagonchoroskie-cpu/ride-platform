@@ -56,6 +56,14 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Seções abaixo marcadas "NÃO está em produção" agora ESTÃO (desde 13/11). Mesclar `etapa2` no `main` não mexe em nada fora de `crm/`
   (logs automáticos do monorepo são restaurados se vierem junto).
 
+## Preparação para a operação real (13/11/2026 manhã, 2.1.0-rc.2, cache `fm-crm-v29`)
+- `wa_contatos.pessoal` (db.js ADD COLUMN) + `POST /wa/contatos/:id/pessoal` (só admin, auditado): família/amigos no número do
+  atendimento. IA não lê mídia, não analisa, não confirma (aviso) e não responde (`ehPessoal`, motivo `contato_pessoal` em QUIETOS);
+  a conversa continua guardada. Front: botão na conversa e no menu "⋯".
+- Redação: regras novas em `SISTEMA_RESPOSTA` (informal → 1 frase cordial; insistiu/conhece a equipe → transfere `pediu_humano`;
+  pergunta inesperada → `sem_informacao`; nunca "aprovado/liberado/já pode"; sem link/loja/formulário de cadastro) +
+  `prometeOuConfirma` dentro de `respostaSegura` (motivo `filtro_promessa`). Testes: `test/ia-operacao.test.js`.
+
 ## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; publicado em 13/11)
 - `src/documentos/recebidos.js` + migração 007 `wa_anexos` (uma linha por mensagem, sem DELETE por gatilho). Situações: aguardando_ficha |
   pendente_classificacao | anexado | duplicado | recusado | falhou | nao_documento. Área de espera CIFRADA (`docs.guardarRecebido/lerRecebido`,

@@ -318,7 +318,7 @@ function createStore(db, opts = {}) {
     SELECT c.id, c.situacao, c.responsavel_id, c.nao_lidas, c.ultima_mensagem, c.ultima_em, c.ultima_direcao,
            c.atendimento, c.atend_assunto, c.atend_motivo, c.atend_em, c.saudado_em, c.espera_em,
            c.ia_estado, c.ia_estado_em, c.ia_erro, c.ia_tentativas, c.ia_proxima, c.atend_inicio, c.origem_contato, c.created_at,
-           k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado,
+           k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado, k.pessoal,
            CASE k.vinculo_tipo WHEN 'motoristas' THEN m.nome WHEN 'passageiros' THEN p.nome
                                WHEN 'parceiros' THEN r.nome_estabelecimento${temEntregadores ? ' WHEN \'entregadores\' THEN e.nome' : ''}${temComercios ? ' WHEN \'comercios\' THEN cm.nome_estabelecimento' : ''} END AS vinculo_nome,
            u.nome AS responsavel_nome
@@ -414,6 +414,11 @@ function createStore(db, opts = {}) {
     })();
   }
 
+  // Contato pessoal (família/amigos): a IA fica fora da conversa; nada é apagado.
+  function definirPessoal(contatoId, pessoal) {
+    return db.prepare('UPDATE wa_contatos SET pessoal = ?, updated_at = ? WHERE id = ?').run(pessoal ? 1 : 0, agora(), contatoId).changes > 0;
+  }
+
   function excluirConversa(conversaId) {
     return db.prepare('DELETE FROM wa_conversas WHERE id = ?').run(conversaId).changes > 0;
   }
@@ -432,7 +437,7 @@ function createStore(db, opts = {}) {
   return {
     acharCadastroPorTelefone, existeCadastro, obterOuCriarContato, ingerir, enfileirar, recolocarEnviando,
     reservarPendentes, concluirEnvio, falharEnvio, reenviar, registrarStatus, listarConversas, obterConversa,
-    listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, excluirConversa,
+    listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, definirPessoal, excluirConversa,
     contarNaoLidas, resumoFila, definirTranscricao,
     ouvir, mudarAtendimento, marcarSaudado, marcarEspera, definirAssunto, listarEventos, contarPorAtendimento
   };
