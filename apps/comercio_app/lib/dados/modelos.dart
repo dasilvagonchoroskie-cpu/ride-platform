@@ -160,8 +160,11 @@ class Cotacao {
     this.duracaoSegundos,
     required this.opcoes,
     this.assinatura,
+    this.totalDeEntregas = 1,
   });
 
+  /// Quantas entregas o pedido tem (1 = entrega unica).
+  final int totalDeEntregas;
   final String enderecoColeta;
   final bool coletaAlternativa;
   final String enderecoEntrega;
@@ -193,6 +196,7 @@ class Cotacao {
       duracaoSegundos: m['duracaoSegundos'] is num ? m['duracaoSegundos'] as num : null,
       opcoes: lista.map(OpcaoPreco.fromJson).toList(),
       assinatura: m['cotacao'] == null ? null : _txt(m['cotacao']),
+      totalDeEntregas: _int(m['totalDeEntregas'], 1),
     );
   }
 }
@@ -251,6 +255,7 @@ class Entrega {
     this.veiculoDoMotorista,
     this.codigoDeEntrega,
     this.mapa,
+    this.entregas = const [],
     this.repetido = false,
   });
 
@@ -279,6 +284,11 @@ class Entrega {
   final String? codigoDeEntrega;
   /// Pontos do mapa (coleta, entrega e, so durante a entrega, o motorista). null = encerrada.
   final MapaDaEntrega? mapa;
+
+  /// Varias entregas no pedido: cada uma com quem recebe, codigo e se ja foi entregue. Vazio = entrega unica.
+  final List<ItemDeEntrega> entregas;
+  int get entregasFeitas => entregas.where((e) => e.entregue).length;
+  bool get variasEntregas => entregas.length > 1;
 
   /// O servidor respondeu que este pedido ja existia (toque repetido).
   final bool repetido;
@@ -314,6 +324,7 @@ class Entrega {
       veiculoDoMotorista: m['veiculoDoMotorista'] == null ? null : _txt(m['veiculoDoMotorista']),
       codigoDeEntrega: m['codigoDeEntrega'] == null ? null : _txt(m['codigoDeEntrega']),
       mapa: m['mapa'] is Map ? MapaDaEntrega.fromJson(m['mapa']) : null,
+      entregas: m['entregas'] is List ? (m['entregas'] as List).map(ItemDeEntrega.fromJson).toList() : const [],
       repetido: m['repetido'] == true,
     );
   }
@@ -486,14 +497,75 @@ class MotoristaNoMapa extends PontoDoMapa {
   }
 }
 
+/// Uma entrega do pedido no mapa: o numero da ordem e se o motorista ja confirmou (✔ verde).
+class PontoDeEntrega {
+  const PontoDeEntrega({required this.ordem, required this.latitude, required this.longitude, required this.entregue});
+
+  final int ordem;
+  final double latitude;
+  final double longitude;
+  final bool entregue;
+
+  static PontoDeEntrega? tentar(dynamic j) {
+    final m = _mapa(j);
+    final la = _dbl(m['latitude']);
+    final lo = _dbl(m['longitude']);
+    if (la == null || lo == null) return null;
+    return PontoDeEntrega(ordem: _int(m['ordem'], 1), latitude: la, longitude: lo, entregue: m['entregue'] == true);
+  }
+}
+
+/// Uma entrega do pedido, na ordem da rota (varias entregas num pedido so).
+class ItemDeEntrega {
+  const ItemDeEntrega({
+    required this.ordem,
+    required this.encomenda,
+    required this.nome,
+    this.telefone,
+    this.endereco,
+    this.entregueEm,
+    this.codigo,
+  });
+
+  final int ordem;
+  final String encomenda;
+  final String nome;
+  final String? telefone;
+  final String? endereco;
+  final String? entregueEm;
+
+  /// Codigo de 4 numeros de quem recebe esta entrega (some quando ela e entregue).
+  final String? codigo;
+
+  bool get entregue => entregueEm != null;
+
+  factory ItemDeEntrega.fromJson(dynamic j) {
+    final m = _mapa(j);
+    final d = _mapa(m['destinatario']);
+    final tel = _txt(d['telefone']).trim();
+    return ItemDeEntrega(
+      ordem: _int(m['ordem'], 1),
+      encomenda: _txt(m['encomenda']),
+      nome: _txt(d['nome']),
+      telefone: tel.isEmpty ? null : tel,
+      endereco: m['endereco'] == null ? null : _txt(m['endereco']),
+      entregueEm: m['entregueEm'] == null ? null : _txt(m['entregueEm']),
+      codigo: m['codigoDeEntrega'] == null ? null : _txt(m['codigoDeEntrega']),
+    );
+  }
+}
+
 class MapaDaEntrega {
-  const MapaDaEntrega({this.coleta, this.entrega, this.motorista});
+  const MapaDaEntrega({this.coleta, this.entrega, this.motorista, this.pontos = const []});
 
   final PontoDoMapa? coleta;
   final PontoDoMapa? entrega;
   final MotoristaNoMapa? motorista;
 
-  bool get vazio => coleta == null && entrega == null && motorista == null;
+  /// Varias entregas: um ponto por entrega, com o "feito". Vazio = entrega unica.
+  final List<PontoDeEntrega> pontos;
+
+  bool get vazio => coleta == null && entrega == null && motorista == null && pontos.isEmpty;
 
   factory MapaDaEntrega.fromJson(dynamic j) {
     final m = _mapa(j);
@@ -501,6 +573,11 @@ class MapaDaEntrega {
       coleta: PontoDoMapa.tentar(m['coleta']),
       entrega: PontoDoMapa.tentar(m['entrega']),
       motorista: MotoristaNoMapa.tentarMotorista(m['motorista']),
+      pontos: [
+        for (final p in (m['pontos'] is List ? m['pontos'] as List : const [])) ...[
+          if (PontoDeEntrega.tentar(p) != null) PontoDeEntrega.tentar(p)!,
+        ],
+      ],
     );
   }
 }

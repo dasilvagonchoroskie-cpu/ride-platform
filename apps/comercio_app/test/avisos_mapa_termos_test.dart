@@ -14,6 +14,7 @@ Sessao sessaoCom(ServidorFalso servidor, {bool logado = true, Estabelecimento? l
   servidor.loja ??= loja; // o servidor falso responde com a mesma loja da sessao
   final s = Sessao(api: ApiClient(), servidor: servidor);
   s.iniciando = false;
+  s.termosAceitosVersao = 'teste';
   s.logado = logado;
   s.estabelecimento = loja;
   s.email = 'loja@exemplo.com';

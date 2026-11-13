@@ -25,34 +25,21 @@ class Sessao extends ChangeNotifier {
 
   bool iniciando = true;
   bool logado = false;
-  String? email;
-  Estabelecimento? estabelecimento;
 
-  /// Falha ao consultar o estabelecimento (sem rede): a tela oferece "tentar de novo".
-  String? falha;
+  /// Termos de uso e politica de privacidade: aceitos na primeira abertura, ANTES de entrar ou criar a conta.
+  /// null = ainda nao aceitou (ou os termos mudaram de versao).
+  String? termosAceitosVersao;
+  bool get aceitouTermos => termosAceitosVersao != null;
 
-  /// Imagens do mapa (pedidas ao servidor, guardadas so em memoria por 10 minutos).
-  ConfigDoMapa? _mapa;
-  DateTime? _mapaEm;
-
-  /// null = sem mapa de ruas agora (sem rede ou servidor sem fornecedor): a tela avisa, nao inventa.
-  Future<ConfigDoMapa?> configDoMapa() async {
-    final recente = _mapaEm != null && DateTime.now().difference(_mapaEm!) < const Duration(minutes: 10);
-    if (_mapa != null && recente) return _mapa;
-    try {
-      _mapa = await servidor.configDoMapa();
-      _mapaEm = DateTime.now();
-    } catch (_) {
-      // mantem o ultimo conhecido, se houver
-    }
-    return _mapa;
+  Future<void> aceitarTermos(String versao) async {
+    await Armazenamento.atual.gravar(Armazenamento.termosAceitos, versao);
+    termosAceitosVersao = versao;
+    notifyListeners();
   }
-
-  bool get cadastrado => estabelecimento != null;
-  bool get aprovado => estabelecimento?.aprovado ?? false;
 
   /// Abre o app: se ja ha login guardado, confere com o servidor.
   Future<void> iniciar() async {
+    termosAceitosVersao = await Armazenamento.atual.ler(Armazenamento.termosAceitos);
     final token = await Armazenamento.atual.ler(Armazenamento.acesso);
     logado = token != null && token.isNotEmpty;
     if (logado) {

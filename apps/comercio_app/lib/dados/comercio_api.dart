@@ -14,8 +14,12 @@ class DadosDeEntrega {
     required this.destino,
     this.referencia,
     this.veiculo,
+    this.paradas = const [],
   });
 
+  /// Varias entregas num pedido: as entregas ANTES da ultima, na ordem da rota
+  /// (a ultima e a deste objeto: descricao, destinatario e destino).
+  final List<ParadaDeEntrega> paradas;
   final String descricao;
   final String? observacoes;
 
@@ -41,23 +45,43 @@ class DadosDeEntrega {
           'longitude': coletaAlternativa!.longitude,
         },
       'destinatario': {'nome': destinatarioNome.trim(), 'telefone': destinatarioTelefone.trim()},
-      'destino': {
-        'logradouro': destino.logradouro.trim(),
-        'numero': destino.numero.trim(),
-        if ((destino.complemento ?? '').trim().isNotEmpty) 'complemento': destino.complemento!.trim(),
-        'bairro': destino.bairro.trim(),
-        'cidade': destino.cidade.trim(),
-        'uf': destino.uf.trim().toUpperCase(),
-        'cep': destino.cep.replaceAll(RegExp(r'\D'), ''),
-        'latitude': destino.latitude,
-        'longitude': destino.longitude,
-        if ((referencia ?? '').trim().isNotEmpty) 'referencia': referencia!.trim(),
-      },
+      'destino': _destinoJson(destino, referencia),
+      if (paradas.isNotEmpty) 'paradas': [for (final p in paradas) p.toJson()],
       if (veiculo != null) 'veiculo': veiculo,
       if (cotacao != null && cotacao.isNotEmpty) 'cotacao': cotacao,
       if (valorEsperadoCents != null) 'valorEsperadoCents': valorEsperadoCents,
     };
   }
+}
+
+Map<String, dynamic> _destinoJson(Endereco destino, String? referencia) => {
+      'logradouro': destino.logradouro.trim(),
+      'numero': destino.numero.trim(),
+      if ((destino.complemento ?? '').trim().isNotEmpty) 'complemento': destino.complemento!.trim(),
+      'bairro': destino.bairro.trim(),
+      'cidade': destino.cidade.trim(),
+      'uf': destino.uf.trim().toUpperCase(),
+      'cep': destino.cep.replaceAll(RegExp(r'\D'), ''),
+      'latitude': destino.latitude,
+      'longitude': destino.longitude,
+      if ((referencia ?? '').trim().isNotEmpty) 'referencia': referencia!.trim(),
+    };
+
+/// Uma entrega do pedido que NAO e a ultima (varias entregas, um veiculo, uma rota).
+class ParadaDeEntrega {
+  const ParadaDeEntrega({required this.descricao, required this.destinatarioNome, this.destinatarioTelefone = '', required this.destino, this.referencia});
+
+  final String descricao;
+  final String destinatarioNome;
+  final String destinatarioTelefone;
+  final Endereco destino;
+  final String? referencia;
+
+  Map<String, dynamic> toJson() => {
+        'encomenda': {'descricao': descricao.trim()},
+        'destinatario': {'nome': destinatarioNome.trim(), 'telefone': destinatarioTelefone.trim()},
+        'destino': _destinoJson(destino, referencia),
+      };
 }
 
 /// Dados do cadastro do estabelecimento.
@@ -248,6 +272,9 @@ class ComercioApi {
 
   /// Termos de uso do Comercio (texto publico; minuta tecnica ate a revisao juridica).
   Future<TermosDeUso> termos() async => TermosDeUso.fromJson(await api.get('/legal/comercio'));
+
+  /// Politica de Privacidade da plataforma (texto publico, igual aos outros apps).
+  Future<TermosDeUso> privacidade() async => TermosDeUso.fromJson(await api.get('/legal/privacy'));
 
   /// Endereco das imagens do mapa (a mesma fonte dos outros apps: GET /geo/mapa). null = indisponivel.
   Future<ConfigDoMapa?> configDoMapa() async => ConfigDoMapa.tentar(await api.get('/geo/mapa'));

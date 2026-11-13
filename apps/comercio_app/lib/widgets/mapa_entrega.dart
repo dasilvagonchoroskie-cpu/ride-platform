@@ -42,7 +42,8 @@ class _MapaEntregaState extends State<MapaEntrega> {
 
   List<LatLng> get _pontos => [
         if (widget.mapa.coleta != null) LatLng(widget.mapa.coleta!.latitude, widget.mapa.coleta!.longitude),
-        if (widget.mapa.entrega != null) LatLng(widget.mapa.entrega!.latitude, widget.mapa.entrega!.longitude),
+        if (widget.mapa.pontos.isEmpty && widget.mapa.entrega != null) LatLng(widget.mapa.entrega!.latitude, widget.mapa.entrega!.longitude),
+        for (final p in widget.mapa.pontos) LatLng(p.latitude, p.longitude),
         if (widget.mapa.motorista != null) LatLng(widget.mapa.motorista!.latitude, widget.mapa.motorista!.longitude),
       ];
 
@@ -89,6 +90,23 @@ class _MapaEntregaState extends State<MapaEntrega> {
           boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 4)],
         ),
         child: Icon(icone, color: Cores.sobreOuro, size: 20),
+      ),
+    );
+  }
+
+  Widget _pinoNumero(String chave, int ordem) {
+    return Semantics(
+      key: ValueKey(chave),
+      label: 'Entrega $ordem',
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Cores.ouro,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 4)],
+        ),
+        child: Text('$ordem', style: const TextStyle(color: Cores.sobreOuro, fontWeight: FontWeight.w800)),
       ),
     );
   }
@@ -147,8 +165,18 @@ class _MapaEntregaState extends State<MapaEntrega> {
                 MarkerLayer(markers: [
                   if (m.coleta != null)
                     Marker(point: LatLng(m.coleta!.latitude, m.coleta!.longitude), width: 40, height: 40, child: _pino('pino-coleta', Icons.storefront, Cores.loja, 'Loja (coleta)')),
-                  if (m.entrega != null)
+                  if (m.pontos.isEmpty && m.entrega != null)
                     Marker(point: LatLng(m.entrega!.latitude, m.entrega!.longitude), width: 40, height: 40, child: _pino('pino-entrega', Icons.flag, Cores.ouro, 'Destino da entrega')),
+                  // Varias entregas: cada uma com o numero; ✔ verde quando o motorista confirmou o codigo.
+                  for (final p in m.pontos)
+                    Marker(
+                      point: LatLng(p.latitude, p.longitude),
+                      width: 40,
+                      height: 40,
+                      child: p.entregue
+                          ? _pino('pino-feito-${p.ordem}', Icons.check, Cores.ok, 'Entrega ${p.ordem} concluída')
+                          : _pinoNumero('pino-entrega-${p.ordem}', p.ordem),
+                    ),
                   if (motorista != null)
                     Marker(
                       point: LatLng(motorista.latitude, motorista.longitude),
@@ -188,7 +216,8 @@ class _MapaEntregaState extends State<MapaEntrega> {
       const SizedBox(height: 8),
       Wrap(spacing: 14, runSpacing: 4, children: [
         if (m.coleta != null) _legenda(Cores.loja, 'Loja'),
-        if (m.entrega != null) _legenda(Cores.ouro, 'Destino'),
+        if (m.pontos.isEmpty && m.entrega != null) _legenda(Cores.ouro, 'Destino'),
+        if (m.pontos.isNotEmpty) ...[_legenda(Cores.ouro, 'A entregar'), _legenda(Cores.ok, 'Entregue ✔')],
         if (motorista != null) _legenda(Colors.white, 'Motorista'),
       ]),
       if (ruas == null) ...[
