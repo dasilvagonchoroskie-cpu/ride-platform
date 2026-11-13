@@ -119,6 +119,7 @@ function informacoesOficiais(informacoes, assuntoAtual) {
   if (info.geral) partes.push(`Sobre a Fortaleza Move (geral): ${info.geral}`);
   const ordem = [assuntoAtual, ...Object.keys(C.ASSUNTOS).filter((k) => k !== assuntoAtual)].filter(Boolean);
   for (const k of ordem) if (info[k]) partes.push(`${C.ASSUNTOS[k].nome}${k === assuntoAtual ? ' (assunto atual)' : ''}: ${info[k]}`);
+  for (const [k, nome] of Object.entries(C.INFO_EXTRAS)) if (info[k]) partes.push(`${nome}: ${info[k]}`);
   return limpar(partes.join('\n\n'), 9000) || 'nenhuma cadastrada';
 }
 

@@ -8,6 +8,7 @@ import { renderSettings } from './views/settings.js';
 import { renderConversas } from './views/whatsapp.js';
 import { renderPessoas, renderEmpresas } from './views/pessoas.js';
 import { renderDocumentos } from './documentos.js';
+import { renderCandidatos } from './views/candidatos.js';
 import { iniciarAvisos, pararAvisos, sincronizarPush } from './notificacoes.js';
 
 const NAV = [
@@ -27,6 +28,7 @@ const NAV = [
   { key: 'comercios', label: 'Comércios', icon: 'building', entity: 'comercios', title: 'Comércios parceiros', sub: 'Lojas que vão usar a plataforma para pedir entregas', etapa2: true },
   { key: 'documentos', label: 'Documentos', icon: 'file', title: 'Documentos', sub: 'Arquivo digital e conferência de documentos por função', etapa2: true },
   { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true },
+  { key: 'candidatos', label: 'Candidatos', icon: 'check', badge: 'candidaturas', title: 'Avaliação de candidatos', sub: 'Cadastros recebidos, documentos, pareceres e decisão final', etapa2: true },
   { key: 'empresas', label: 'Empresas', icon: 'building', title: 'Empresas', sub: 'Ficha central: cada empresa e as suas funções (Clube de Vantagens, comércio)', etapa2: true }
 ];
 
@@ -441,6 +443,8 @@ function navItem(item, pendentes) {
 async function enterApp() {
   state.meta = await api.get('/meta');
   state.user = state.meta.user;
+  // Avaliador de cadastros: só a avaliação de candidatos (o servidor também bloqueia todo o resto).
+  const ehAvaliador = state.user.role === 'avaliador';
 
   app.innerHTML = `
     <div class="shell" id="shell">
@@ -453,10 +457,12 @@ async function enterApp() {
           </div>
         </div>
         <nav class="nav" id="nav">
+          ${ehAvaliador ? `<div class="nav-label">Avaliação</div>${navItem(NAV.find((n) => n.key === 'candidatos'), state.meta.pendentes)}` : `
           <div class="nav-label">Gestão</div>
           ${NAV.slice(0, 1).map((i) => navItem(i, state.meta.pendentes)).join('')}
           ${state.meta.etapa2 ? ['pessoas', 'empresas'].map((k) => navItem(NAV.find((n) => n.key === k), state.meta.pendentes)).join('') : ''}
           ${NAV.slice(1, 2).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${state.meta.candidaturas ? navItem(NAV.find((n) => n.key === 'candidatos'), state.meta.pendentes) : ''}
           ${state.meta.etapa2 && state.meta.entities.entregadores ? navItem(NAV.find((n) => n.key === 'entregadores'), state.meta.pendentes) : ''}
           ${state.meta.etapa2 && state.meta.entities.comercios ? navItem(NAV.find((n) => n.key === 'comercios'), state.meta.pendentes) : ''}
           ${state.meta.documentos ? navItem(NAV.find((n) => n.key === 'documentos'), state.meta.pendentes) : ''}
@@ -464,7 +470,7 @@ async function enterApp() {
           <div class="nav-label">Análise</div>
           ${NAV.slice(8, 10).map((i) => navItem(i, state.meta.pendentes)).join('')}
           <div class="nav-label">Sistema</div>
-          ${NAV.slice(10, 11).map((i) => navItem(i, state.meta.pendentes)).join('')}
+          ${NAV.slice(10, 11).map((i) => navItem(i, state.meta.pendentes)).join('')}`}
         </nav>
         <div class="side-foot">
           <button class="btn btn-ghost btn-sm hidden" id="install-btn">${ui.icon('install', 16)} Instalar aplicativo</button>
@@ -493,7 +499,7 @@ async function enterApp() {
         </header>
         <main class="view" id="view"></main>
         <nav class="bottom-nav" id="bottom-nav">
-          ${['dashboard', 'conversas', 'motoristas', 'tarefas', 'configuracoes'].map((key) => {
+          ${(ehAvaliador ? ['candidatos'] : ['dashboard', 'conversas', 'motoristas', 'tarefas', 'configuracoes']).map((key) => {
             const item = NAV.find((n) => n.key === key);
             return `<button class="bn-item" data-route="${key}">${ui.icon(item.icon, 20)}<span>${ui.esc(item.label.split(' ')[0])}</span></button>`;
           }).join('')}
@@ -517,8 +523,8 @@ async function enterApp() {
   window.removeEventListener('hashchange', route);
   window.addEventListener('hashchange', route);
   await route();
-  iniciarAvisos();
-  sincronizarPush();
+  // Avisos de conversas e push são da equipe (o avaliador não acessa o WhatsApp).
+  if (!ehAvaliador) { iniciarAvisos(); sincronizarPush(); }
   // Lembrete só quando dá para ativar a verificação por e-mail (envio configurado) e ela ainda está desligada.
   if (state.user && state.user.role === 'admin') {
     api.get('/auth/2fa').then((st) => {
@@ -575,7 +581,10 @@ async function route() {
   host.replaceChildren(view);
   view.innerHTML = '<div class="card" style="padding:40px;text-align:center;color:#8494ab">Carregando…</div>';
   try {
-    if (key === 'dashboard') await renderDashboard(view, state);
+    if (state.user.role === 'avaliador' && key !== 'candidatos') { location.hash = '#/candidatos'; return; }
+    if (key === 'candidatos' && state.meta.candidaturas) await renderCandidatos(view, state, params);
+    else if (key === 'candidatos') location.hash = '#/dashboard';
+    else if (key === 'dashboard') await renderDashboard(view, state);
     else if (key === 'financeiro') await renderFinance(view, state);
     else if (key === 'relatorios') await renderReports(view, state);
     else if (key === 'conversas') await renderConversas(view, state);

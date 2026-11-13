@@ -47,7 +47,7 @@ export async function renderSettings(view, state) {
             ${ui.tableHtml({
               columns: [
                 { label: 'Usuário', render: (u) => `<b>${ui.esc(u.nome)}</b><span class="sub">${ui.esc(u.email)}</span>` },
-                { label: 'Perfil', render: (u) => ui.badge(u.role === 'admin' ? 'Administrador' : 'Gestor', u.role === 'admin' ? 'info' : 'neutral') },
+                { label: 'Perfil', render: (u) => ui.badge(u.role === 'admin' ? 'Administrador' : (u.role === 'avaliador' ? 'Avaliador de cadastros' : 'Gestor'), u.role === 'admin' ? 'info' : 'neutral') },
                 { label: 'Situação', render: (u) => ui.badge(u.ativo ? 'Ativo' : 'Inativo', u.ativo ? 'success' : 'danger') },
                 { label: 'Último acesso', render: (u) => u.last_login_at ? ui.fmtDateTime(u.last_login_at) : '<span class="muted">Nunca</span>' },
                 {
@@ -260,7 +260,7 @@ export async function renderSettings(view, state) {
           <div class="field full"><label for="usr-nome">Nome</label><input id="usr-nome" type="text" maxlength="120"></div>
           <div class="field full"><label for="usr-email">E-mail</label><input id="usr-email" type="email"></div>
           <div class="field"><label for="usr-senha">Senha inicial</label><input id="usr-senha" type="password"><div class="form-hint">Mínimo 10 caracteres com letras e números.</div></div>
-          <div class="field"><label for="usr-role">Perfil</label><select id="usr-role"><option value="gestor">Gestor</option><option value="admin">Administrador</option></select></div>
+          <div class="field"><label for="usr-role">Perfil</label><select id="usr-role"><option value="gestor">Gestor</option><option value="avaliador">Avaliador de cadastros (só candidatos)</option><option value="admin">Administrador</option></select></div>
         </div>`;
       const m = ui.modal({
         title: 'Novo usuário',
@@ -503,12 +503,14 @@ function setupIA(view) {
 // Códigos de recuperação: mostrados UMA vez, na hora de gerar. Gerar de novo invalida os anteriores.
 // Modelos de Comunicação da IA: textos editáveis (ativar/desativar), site oficial e base de conhecimento por assunto.
 const INFO_ASSUNTOS = [
-  ['geral', 'Informações gerais da Fortaleza Move', 'Ex.: cidades atendidas, horário de atendimento, como baixar o aplicativo.'],
-  ['cadastro', '1. Cadastro de motorista e veículo', 'Ex.: requisitos (idade, categoria da CNH, ano do veículo), documentos aceitos, etapas da análise.'],
-  ['passageiro', '2. Atendimento ao passageiro', 'Ex.: como pedir corrida, formas de pagamento, o que fazer se esquecer um objeto.'],
-  ['encomendas', '3. Coleta e entrega de encomendas', 'Ex.: o que pode ser enviado, regiões atendidas, como pedir orçamento.'],
-  ['clube', '4. Clube de Vantagens para motoristas', 'Ex.: benefícios, parceiros, carteirinha digital, quem pode participar.'],
-  ['outros', '5. Outros assuntos', 'Ex.: parcerias com comércios, imprensa, trabalhe conosco.']
+  ['geral', 'Informações gerais da empresa', 'Ex.: o que é a Fortaleza Move, cidades atendidas, horário de atendimento, como baixar o aplicativo.'],
+  ['cadastro', 'Cadastro de motoristas', 'Ex.: requisitos (idade, categoria da CNH, ano do veículo), documentos aceitos, avaliação presencial.'],
+  ['entregadores', 'Cadastro de entregadores', 'Ex.: quem pode ser entregador, modalidades (moto, bicicleta), documentos, como funciona a avaliação.'],
+  ['encomendas', 'Encomendas e entregas', 'Ex.: o que pode ser enviado, regiões atendidas, como pedir uma entrega.'],
+  ['clube', 'Clube de Vantagens', 'Ex.: benefícios, parceiros, carteirinha digital, quem pode participar.'],
+  ['comerciantes', 'Comerciantes', 'Ex.: como um comércio passa a pedir entregas pela plataforma, o que precisa enviar, quem procurar.'],
+  ['passageiro', 'Passageiros', 'Ex.: como pedir corrida, formas de pagamento, o que fazer se esquecer um objeto.'],
+  ['outros', 'Outros assuntos de atendimento', 'Ex.: imprensa, trabalhe conosco, reclamações.']
 ];
 function setupModelos(view) {
   const corpo = view.querySelector('#modelos-corpo');
@@ -528,8 +530,9 @@ function setupModelos(view) {
           <textarea id="mod-t-${ui.esc(m.id)}" class="mod-texto" rows="${Math.min(9, Math.max(3, m.texto.split('\n').length + 1))}" maxlength="1500">${ui.esc(m.texto)}</textarea>
         </div>`).join('')}
       <h4 style="margin:18px 0 4px">Informações oficiais por assunto</h4>
-      <p class="muted small">A IA só afirma o que estiver aqui. Sem informação, ela encaminha o cliente para a equipe em vez de inventar. Não coloque dados pessoais.</p>
-      ${INFO_ASSUNTOS.map(([id, nome, dica]) => `<div class="field"><label for="mod-i-${id}">${ui.esc(nome)}</label>
+      <p class="muted small">A IA só afirma o que estiver aqui. Sem informação, ela diz que precisa confirmar com a equipe e encaminha o atendimento — nunca inventa. Não coloque dados pessoais.</p>
+      ${(() => { const falta = (d.informacoes_situacao || []).filter((x) => !x.preenchida); return falta.length ? `<p class="small" style="color:#92400e">Faltam ${falta.length} de ${(d.informacoes_situacao || []).length} assuntos: ${falta.map((x) => ui.esc(x.nome)).join(', ')}.</p>` : '<p class="small" style="color:#15803d">Todos os assuntos têm informação oficial.</p>'; })()}
+      ${INFO_ASSUNTOS.map(([id, nome, dica]) => `<div class="field"><label for="mod-i-${id}">${ui.esc(nome)} ${String(d.informacoes[id] || '').trim() ? '<span class="badge success">Preenchido</span>' : '<span class="badge neutral">Falta preencher</span>'}</label>
         <textarea id="mod-i-${id}" class="mod-info" data-info="${id}" rows="3" maxlength="4000" placeholder="${ui.esc(dica)}">${ui.esc(d.informacoes[id] || '')}</textarea></div>`).join('')}
       <div class="wa-actions-row"><button class="btn btn-primary" id="mod-salvar" type="button">Salvar modelos</button></div>`;
     const padroes = Object.fromEntries(d.modelos.map((m) => [m.id, m.padrao]));

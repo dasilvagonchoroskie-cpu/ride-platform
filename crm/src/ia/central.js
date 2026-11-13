@@ -52,6 +52,13 @@ const MODELOS_PADRAO = {
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
 const MAX_MODELO = 1500;
 const MAX_INFO = 4000;
+// Conhecimento extra (não são opções do menu): a IA usa quando o cliente pergunta desses assuntos.
+const INFO_EXTRAS = { entregadores: 'Cadastro de entregadores', comerciantes: 'Comerciantes (comércios que pedem entregas)' };
+const INFO_ORDEM = [
+  ['geral', 'Informações gerais da empresa'], ['cadastro', 'Cadastro de motoristas'], ['entregadores', 'Cadastro de entregadores'],
+  ['encomendas', 'Encomendas e entregas'], ['clube', 'Clube de Vantagens'], ['comerciantes', 'Comerciantes'],
+  ['passageiro', 'Passageiros'], ['outros', 'Outros assuntos de atendimento']
+];
 
 function criarCentral({ getSetting, setSetting }) {
   function lerSalvos() {
@@ -107,16 +114,23 @@ function criarCentral({ getSetting, setSetting }) {
     setSetting('central_site_url', u);
   }
 
-  // Base de conhecimento: informações oficiais por assunto (o que a IA pode afirmar).
+  // Base de conhecimento: informações oficiais por assunto (o que a IA pode afirmar). Além dos assuntos do menu, há
+  // "entregadores" e "comerciantes" (só conhecimento: o menu do WhatsApp não muda). Nada é preenchido automaticamente.
   function informacoes() {
     const r = {};
     for (const id of ASSUNTO_IDS) r[id] = getSetting(`central_info_${id}`, '');
+    for (const id of Object.keys(INFO_EXTRAS)) r[id] = getSetting(`central_info_${id}`, '');
     r.geral = getSetting('central_info_geral', '');
     return r;
   }
+  /** Quais assuntos já têm conteúdo oficial e quais dependem do dono (para a tela e o relatório). */
+  function situacaoInformacoes() {
+    const info = informacoes();
+    return INFO_ORDEM.map(([id, nome]) => ({ id, nome, preenchida: String(info[id] || '').trim().length > 0 }));
+  }
   function salvarInformacoes(obj) {
     if (!obj || typeof obj !== 'object') throw new Error('Formato inválido.');
-    for (const id of [...ASSUNTO_IDS, 'geral']) {
+    for (const id of [...ASSUNTO_IDS, ...Object.keys(INFO_EXTRAS), 'geral']) {
       if (!Object.prototype.hasOwnProperty.call(obj, id)) continue;
       const t = String(obj[id] || '').replace(/\r\n/g, '\n').trim();
       if (t.length > MAX_INFO) throw new Error(`As informações passaram de ${MAX_INFO} caracteres.`);
@@ -124,7 +138,7 @@ function criarCentral({ getSetting, setSetting }) {
     }
   }
 
-  return { modelos, texto, salvarModelos, siteUrl, salvarSite, informacoes, salvarInformacoes };
+  return { modelos, texto, salvarModelos, siteUrl, salvarSite, informacoes, salvarInformacoes, situacaoInformacoes };
 }
 
 const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -142,4 +156,4 @@ const pediuMenu = (texto) => /^(menu|opcoes|ver (o )?menu|mostrar (o )?menu|volt
 // Pedido explícito de falar com uma pessoa (reforço sem IA).
 const pediuHumano = (texto) => /\b(atendente|atendimento humano|falar com (um|uma|alguem|algu[eé]m|uma pessoa|pessoa|humano|gente)|pessoa de verdade|ser humano|humano por favor)\b/.test(semAcento(texto));
 
-module.exports = { ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
+module.exports = { INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };

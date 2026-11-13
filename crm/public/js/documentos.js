@@ -163,6 +163,22 @@ function linhaDoc(it) {
   </div>`;
 }
 
+/** Lista SÓ DE LEITURA (tela de candidatos): ver, baixar e histórico conforme o servidor liberar; sem anexar nem conferir. */
+export function listaSomenteLeitura(container, documentos) {
+  if (!documentos || documentos.erro) { container.innerHTML = `<div class="notice warn">${ui.esc((documentos && documentos.erro) || 'Documentos indisponíveis.')}</div>`; return; }
+  const itens = documentos.itens || [];
+  container.innerHTML = itens.length
+    ? `<div class="doc-lista">${itens.map((i) => linhaDoc({ ...i, pode: { ver: !!(i.pode && i.pode.ver), conferir: false }, pode_anexar: false })).join('')}</div>`
+    : '<p class="small muted">Nenhum documento recebido ainda.</p>';
+  container.querySelectorAll('.doc-linha').forEach((linha) => {
+    const id = linha.dataset.doc;
+    const on = (sel, fn) => { const b = linha.querySelector(sel); if (b) b.addEventListener('click', fn); };
+    on('[data-ver]', () => ver(id).catch((e) => ui.toast(e.message, 'error')));
+    on('[data-baixar]', () => baixar(id).catch((e) => ui.toast(e.message, 'error')));
+    on('[data-hist]', () => janelaHistorico(id));
+  });
+}
+
 /** Painel de documentos dentro de uma ficha (motorista, entregador, parceiro do Clube, comércio). */
 export async function montarPainel(container, state, funcao, registroId) {
   container.innerHTML = '<div class="section-title">Documentos (arquivo digital)</div><p class="small muted">Carregando documentos…</p>';
@@ -315,6 +331,9 @@ async function politicaAdmin(host, hostPend) {
         <div class="pol-checks">${cats.map(([k, r]) => `<label class="check"><input type="checkbox" data-vis="${k}" ${pol.gestor.categorias_visiveis.includes(k) ? 'checked' : ''}> ${ui.esc(r)}</label>`).join('')}</div></div>
       <label class="check"><input type="checkbox" id="pl-conf" ${pol.gestor.conferir ? 'checked' : ''}> Gestor pode conferir (só os tipos que ele pode ver)</label>
       <label class="check"><input type="checkbox" id="pl-anex" ${pol.gestor.anexar ? 'checked' : ''}> Gestor pode anexar documentos</label>
+      <div><b>Avaliador de cadastros</b><p class="small muted" style="margin:2px 0 6px">Só candidatos com avaliação aberta destas funções, e só estes tipos de arquivo. Ele nunca anexa, confere nem exclui.</p>
+        <div class="pol-checks">${['motorista', 'entregador'].map((f) => `<label class="check"><input type="checkbox" data-avf="${f}" ${(pol.avaliador && pol.avaliador.funcoes || []).includes(f) ? 'checked' : ''}> ${ui.esc(ROTULO_FUNCAO[f] || f)}</label>`).join('')}</div>
+        <div class="pol-checks" style="margin-top:6px">${cats.map(([k, r]) => `<label class="check"><input type="checkbox" data-avc="${k}" ${(pol.avaliador && pol.avaliador.categorias_visiveis || []).includes(k) ? 'checked' : ''}> ${ui.esc(r)}</label>`).join('')}</div></div>
       <label class="check"><input type="checkbox" id="pl-cpf" ${pol.cpf_cnpj.cpf === 'opcional' ? 'checked' : ''}> Permitir informar CPF (pessoas) — opcional</label>
       <label class="check"><input type="checkbox" id="pl-cnpj" ${pol.cpf_cnpj.cnpj === 'opcional' ? 'checked' : ''}> Permitir informar CNPJ (empresas) — opcional</label>
       <label class="check"><input type="checkbox" id="pl-exc" ${pol.exclusao_definitiva ? 'checked' : ''}> Permitir exclusão definitiva de arquivos (só administrador, com motivo)</label>
@@ -330,7 +349,8 @@ async function politicaAdmin(host, hostPend) {
         obrigatorios,
         gestor: { categorias_visiveis: [...host.querySelectorAll('[data-vis]:checked')].map((c) => c.dataset.vis), conferir: host.querySelector('#pl-conf').checked, anexar: host.querySelector('#pl-anex').checked },
         cpf_cnpj: { cpf: host.querySelector('#pl-cpf').checked ? 'opcional' : 'desligado', cnpj: host.querySelector('#pl-cnpj').checked ? 'opcional' : 'desligado' },
-        exclusao_definitiva: host.querySelector('#pl-exc').checked
+        exclusao_definitiva: host.querySelector('#pl-exc').checked,
+        avaliador: { funcoes: [...host.querySelectorAll('[data-avf]:checked')].map((c) => c.dataset.avf), categorias_visiveis: [...host.querySelectorAll('[data-avc]:checked')].map((c) => c.dataset.avc) }
       });
       ui.toast('Política salva e registrada na auditoria.', 'success');
       politicaAdmin(host, hostPend);

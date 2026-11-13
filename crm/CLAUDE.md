@@ -47,6 +47,19 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Candidatos, avaliador, integração e Hostinger (12/11/2026, ramo `etapa2`, "requisição final"; NÃO está em produção)
+- Migração 006 (congelada): `candidaturas` (etapas em `src/candidaturas.js`, CHECK decisao↔etapa, sem DELETE), `candidatura_pareceres`
+  e `candidatura_eventos` (append-only por gatilho), `integracao_vinculos|documentos|nonces`. Docs só movem entre cadastro_recebido /
+  documentacao_pendente / documentacao_recebida. Decisão: só admin, `confirmo:true`, recusa com motivo; aprovar NÃO contrata a ficha
+  nem libera no app (a Central do backend continua liberando). NUNCA aprovação automática.
+- Perfil `avaliador` (`policy.ROTAS_AVALIADOR`, guarda logo após `requireAuth`): só candidatos, parecer e documentos no escopo
+  (`docs_politica.avaliador` + candidatura existente). Nunca admin. Rota nova para ele = entrar na lista + teste. `rotas-permissoes.test.js`
+  falha se alguma rota escapar da lista.
+- Integração: `src/integracao.js` (HMAC v1, ±300 s, nonce único, 404 sem `FM_INTEGRACAO_SEGREDO`); `req.rawBody` em server.js só para
+  `/api/integracoes/`. Usuário fictício `role:'integracao'` só passa em `docs.anexar(..., { integracao:true })`. Backend ainda não envia.
+- IA: só Gemini, sem reserva (decisão do dono); `INFO_EXTRAS` (entregadores, comerciantes) + `situacaoInformacoes()`; nada inventado.
+- Hostinger: `deploy/hostinger/` (guia + scripts, nada executado); `SNAPSHOT_MODO=copia` em `persist.js`. Cache `fm-crm-v26`.
+
 ## M2 entregadores e relatórios em PDF (12/11/2026, ramo `etapa2`, pedido do dono)
 - `entregadores`: módulo funcional como o motorista (mesmas situações, `Contratado` verde, documentos, `modalidade`), só existe em
   `ENTITIES` com `FM_ETAPA2=1` (migração 003). Mesma pessoa pode ser motorista e entregador. `POST /entregadores/:id/contratar`.
@@ -104,7 +117,7 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Regras: conferir NUNCA muda a situação da função (`sincronizarLegado` só mexe em `doc_*`/`documentos`); permissão no servidor
   (`policy.docs*`, política em setting `docs_politica`: gestor só anexa por padrão; ver/conferir por categoria liberada; exclusão definitiva
   desligada); todo acesso/negação/integridade vira evento + auditoria; CPF/CNPJ só cifrado, só admin, coleta desligada por padrão.
-- Decisões do dono ainda pendentes (nada inventado): manter originais em toda substituição; armazenamento definitivo; o que o gestor vê;
+- Decididos em 12/11: manter TODAS as versões; armazenamento definitivo no disco da VPS Hostinger (na migração). Pendentes: o que o gestor vê;
   quais CPF/CNPJ exigir; prazo de retenção. Sem exclusão automática. `FM_DOCS_KEY` precisa existir antes de qualquer uso real.
 - Front: `public/js/documentos.js` (painel por ficha, tela Documentos, política, bloco CPF/CNPJ); cache `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
 

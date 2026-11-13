@@ -199,7 +199,14 @@ export async function renderEntity(view, state, key, params) {
     const conversa = ficha.conversa
       ? `<div class="ficha-acoes"><a class="btn btn-sm btn-primary" href="#/conversas?c=${ficha.conversa.id}">${ui.icon('chat', 15)} Abrir conversa no WhatsApp</a></div>`
       : '<div class="notice" style="margin-bottom:14px">Sem conversa de WhatsApp vinculada a este cadastro.</div>';
-    return banner + docs + conversa + resumo + '<div class="section-title">Dados</div>';
+    // Avaliação do candidato (independente da situação e dos documentos; decisão final só do proprietário).
+    const av = ficha.avaliacao;
+    const avaliacao = ehCondutor && state.meta.candidaturas
+      ? (av
+        ? `<div class="ficha-acoes"><a class="btn btn-sm btn-soft" href="#/candidatos?id=${Number(av.id)}">${ui.icon('check', 15)} Avaliação: ${ui.esc(av.etapa_rotulo)}</a></div>`
+        : `<div class="ficha-acoes"><button class="btn btn-sm btn-soft" data-abrir-avaliacao type="button">${ui.icon('check', 15)} Abrir avaliação do candidato</button></div>`)
+      : '';
+    return banner + avaliacao + docs + conversa + resumo + '<div class="section-title">Dados</div>';
   }
 
   async function openDetail(id) {
@@ -251,6 +258,14 @@ export async function renderEntity(view, state, key, params) {
     // Arquivo digital de documentos (M4): só com a Etapa 2; o servidor decide o que cada perfil pode fazer.
     const painelDocs = m.dialog.querySelector('#doc-painel');
     if (painelDocs) montarPainel(painelDocs, state, FUNCAO_DA_ENTIDADE[key], item.id);
+    const abrirAv = m.dialog.querySelector('[data-abrir-avaliacao]');
+    if (abrirAv) abrirAv.addEventListener('click', async () => {
+      try {
+        const r = await api.post('/candidaturas', { funcao: key === 'motoristas' ? 'motorista' : 'entregador', registro_id: item.id });
+        m.close(); location.hash = `#/candidatos?id=${Number(r.candidatura.id)}`;
+      } catch (err) { ui.toast(err.message, 'error'); }
+    });
+    m.dialog.querySelectorAll('a[href^="#/candidatos"]').forEach((a) => a.addEventListener('click', () => m.close()));
 
     // Links para a conversa fecham a ficha antes de navegar.
     m.dialog.querySelectorAll('a[href^="#/conversas"], a[href^="#/pessoas"], a[href^="#/empresas"]').forEach((a) => a.addEventListener('click', () => m.close()));

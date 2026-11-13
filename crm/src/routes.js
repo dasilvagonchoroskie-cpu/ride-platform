@@ -397,8 +397,124 @@ function textoCodigoEmail(codigo, req, motivo) {
   return `Seu código para ${motivo}: ${codigo}\n\nVale 10 minutos. Não passe este código para ninguém: a equipe do CRM nunca pede.\n\nPedido feito de ${auth.nomeAparelhoPublico(req)} em ${horaLocal()}.\nSe não foi você, troque sua senha do CRM.`;
 }
 
+/* --------------------- integração assinada do aplicativo do motorista --------------------- */
+// Pública por natureza (o backend da plataforma não tem sessão do CRM), mas fail-closed: sem FM_ETAPA2=1 e sem
+// FM_INTEGRACAO_SEGREDO responde 404; com eles, só executa com assinatura HMAC válida, horário dentro de ±5 min e nonce
+// inédito. Ver src/integracao.js e docs/integracao-app-motorista.md.
+const integracao = require('./integracao');
+const { toWaPhone } = require('./whatsapp/phone');
+const { createLimiter: criarLimitador } = require('./limiter');
+const limiteIntegracao = criarLimitador({ max: 240, windowMs: 60 * 1000 });
+const USUARIO_INTEGRACAO = { id: null, nome: 'Aplicativo do motorista (integração)', role: 'integracao' };
+function integracaoPronta(req, res, next) {
+  if (process.env.FM_ETAPA2 !== '1' || !integracao.configurada() || !candidaturas.ativo() || !pessoas.ativa()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
+  if (limiteIntegracao.isBlocked(req.ip)) return fail(res, 429, 'muitas_requisicoes', 'Muitas requisições. Tente de novo em instantes.');
+  limiteIntegracao.fail(req.ip);
+  next();
+}
+function autenticarIntegracao(req, res, corpo) {
+  const v = integracao.verificar({ db, cabecalhos: req.headers, metodo: req.method, caminho: `/api${req.path}`, corpo });
+  if (!v.ok) {
+    if (v.status !== 404) console.warn(`[integração] recusada (${v.codigo}) de ${req.ip}`);
+    fail(res, v.status, v.codigo, v.mensagem);
+    return null;
+  }
+  req.user = USUARIO_INTEGRACAO;
+  return v;
+}
+// Acha a ficha do candidato: pelo id do aplicativo; senão, pelo mesmo telefone (não duplica quem já falou pelo WhatsApp).
+function fichaDoCandidato(c) {
+  const v = db.prepare("SELECT registro_id FROM integracao_vinculos WHERE origem = 'app_motorista' AND externo_id = ?").get(c.externo_id);
+  if (v && db.prepare('SELECT 1 FROM motoristas WHERE id = ?').get(v.registro_id)) return { id: v.registro_id, vinculado: true };
+  const tel = toWaPhone(c.telefone);
+  if (tel) {
+    const m = db.prepare('SELECT id, telefone FROM motoristas ORDER BY id DESC LIMIT 5000').all().find((x) => toWaPhone(x.telefone) === tel);
+    if (m) return { id: m.id, vinculado: false };
+  }
+  return null;
+}
+router.post('/integracoes/app-motorista/candidato', integracaoPronta, (req, res) => {
+  const corpo = Buffer.isBuffer(req.rawBody) ? req.rawBody : Buffer.from(JSON.stringify(req.body || {}));
+  if (!autenticarIntegracao(req, res, corpo)) return;
+  const c = integracao.normalizarCandidato(req.body);
+  if (c.erro) return fail(res, 422, 'invalido', c.erro);
+  try {
+    const t = new Date().toISOString();
+    let achado = fichaDoCandidato(c);
+    let criado = false;
+    if (!achado) {
+      const r = pessoas.criarRegistro('motoristas', {
+        nome: c.nome, telefone: c.telefone, cidade: c.cidade || 'Não informada', origem: 'Aplicativo do motorista', situacao: 'Novo interessado',
+        data_primeiro_contato: c.data_cadastro ? localDate(c.data_cadastro) : todayISO(), veiculo: c.veiculo, placa: c.placa, cnh_categoria: c.cnh_categoria
+      }, req);
+      achado = { id: r.item.id, vinculado: false };
+      criado = true;
+    } else {
+      // Ficha que já existia: completa só o que está vazio (nunca sobrescreve o que a equipe preencheu).
+      for (const campo of ['cidade', 'veiculo', 'placa', 'cnh_categoria']) {
+        if (c[campo]) db.prepare(`UPDATE motoristas SET ${campo} = ? WHERE id = ? AND COALESCE(${campo}, '') = ''`).run(c[campo], achado.id);
+      }
+    }
+    db.prepare(`INSERT INTO integracao_vinculos (origem, externo_id, funcao, registro_id, criado_em, atualizado_em) VALUES ('app_motorista', ?, 'motorista', ?, ?, ?)
+      ON CONFLICT (origem, externo_id) DO UPDATE SET registro_id = excluded.registro_id, atualizado_em = excluded.atualizado_em`).run(c.externo_id, achado.id, t, t);
+    const cand = candidaturas.abrir(req, 'motorista', achado.id, { origem: 'aplicativo', sistema: true });
+    audit(req, 'integracao_candidato', 'motoristas', achado.id, criado ? 'Candidato recebido do aplicativo (ficha criada)' : 'Candidato do aplicativo ligado a ficha existente');
+    return res.status(criado ? 201 : 200).json({ ok: true, registro_id: achado.id, candidatura_id: cand.candidatura.id, criado });
+  } catch (err) {
+    if (err instanceof ErroPessoa) return fail(res, err.status || 422, 'invalido', 'Dados do candidato inválidos.');
+    console.error(`[integração] candidato: ${err.message}`);
+    return fail(res, 500, 'erro', 'Não foi possível registrar o candidato.');
+  }
+});
+const lerDocumentoIntegracao = (req, res, next) => express.raw({ type: () => true, limit: require('./documentos/validacao').maxBytes() + 1048576 })(req, res, (err) => {
+  if (err) return fail(res, err.status === 413 ? 413 : 400, 'arquivo_invalido', err.status === 413 ? 'Arquivo maior que o limite permitido.' : 'Não foi possível ler o arquivo.');
+  next();
+});
+router.post('/integracoes/app-motorista/documento', integracaoPronta, lerDocumentoIntegracao, async (req, res) => {
+  const corpo = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  const v = autenticarIntegracao(req, res, corpo);
+  if (!v) return;
+  const m = v.meta;
+  const tipo = String(m.tipo || '');
+  const mapa = Object.prototype.hasOwnProperty.call(integracao.TIPOS_DOC, tipo) ? integracao.TIPOS_DOC[tipo] : null;
+  if (!integracao.ID_EXTERNO.test(String(m.externo_id || '')) || !integracao.ID_EXTERNO.test(String(m.documento_externo_id || '')) || !mapa) return fail(res, 422, 'invalido', 'Metadados do documento inválidos.');
+  if (!docs.ativo()) return fail(res, 503, 'armazenamento_indisponivel', 'Armazenamento de documentos indisponível.');
+  const vinc = db.prepare("SELECT registro_id FROM integracao_vinculos WHERE origem = 'app_motorista' AND externo_id = ?").get(String(m.externo_id));
+  if (!vinc) return fail(res, 409, 'candidato_desconhecido', 'Envie o candidato antes dos documentos.');
+  const ja = db.prepare("SELECT documento_id, versao FROM integracao_documentos WHERE origem = 'app_motorista' AND externo_id = ?").get(String(m.documento_externo_id));
+  if (ja) return res.json({ ok: true, repetido: true, documento_id: ja.documento_id, versao: ja.versao });
+  try {
+    // "Outros" com nome fixo: uma nova foto do mesmo tipo vira NOVA VERSÃO do mesmo documento (histórico preservado).
+    const existente = mapa.categoria === 'outros'
+      ? db.prepare("SELECT id FROM documentos WHERE funcao = 'motorista' AND registro_id = ? AND categoria = 'outros' AND titulo = ? AND excluido_em IS NULL").get(vinc.registro_id, mapa.titulo)
+      : null;
+    const dataEnvio = /^\d{4}-\d{2}-\d{2}T/.test(String(m.enviado_em || '')) && !Number.isNaN(Date.parse(m.enviado_em)) ? localDate(m.enviado_em) : todayISO();
+    const r = await docs.anexar(req, {
+      funcao: 'motorista', registro_id: vinc.registro_id, categoria: mapa.categoria, titulo: mapa.titulo, data_envio: dataEnvio > todayISO() ? todayISO() : dataEnvio,
+      observacoes: 'Enviado pelo aplicativo do motorista', nome: String(m.nome_arquivo || `${tipo.toLowerCase()}.bin`).slice(0, 120), conteudo: corpo,
+      documento_id: existente ? existente.id : undefined
+    }, { integracao: true });
+    db.prepare("INSERT INTO integracao_documentos (origem, externo_id, documento_id, versao, recebido_em) VALUES ('app_motorista', ?, ?, ?, ?)")
+      .run(String(m.documento_externo_id), r.documento.id, r.versao, new Date().toISOString());
+    candidaturas.atualizarPelosDocumentos('motorista', vinc.registro_id, req);
+    return res.status(201).json({ ok: true, documento_id: r.documento.id, versao: r.versao });
+  } catch (err) {
+    if (err instanceof ErroDoc) return fail(res, err.status, err.code, err.message);
+    console.error(`[integração] documento: ${err.message}`);
+    return fail(res, 500, 'erro', 'Não foi possível registrar o documento.');
+  }
+});
+
 /* ------------------------------- autenticado ------------------------------- */
 router.use(auth.requireAuth);
+
+// Avaliador de cadastros: lista FECHADA de rotas (policy.ROTAS_AVALIADOR) + as da própria conta (/auth/...).
+// Qualquer outra rota responde 403 antes de chegar ao código dela — nenhuma permissão depende de esconder botão.
+router.use((req, res, next) => {
+  if (!req.user || req.user.role !== 'avaliador') return next();
+  if (req.path.startsWith('/auth/') || policy.avaliadorPodeRota(req.method, req.path)) return next();
+  return fail(res, 403, 'forbidden', 'O perfil de avaliador só acessa a avaliação de candidatos.');
+});
 
 // Rotas administrativas: esconder a tela no navegador não é controle de segurança.
 // A autorização é validada novamente no servidor em toda requisição.
@@ -608,6 +724,16 @@ router.delete('/auth/sessions/:id', (req, res) => {
 
 /* ---------------------------------- meta ---------------------------------- */
 router.get('/meta', (req, res) => {
+  // Avaliador: só o necessário para a tela de candidatos (sem contagens nem definições de outros módulos).
+  if (req.user.role === 'avaliador') {
+    const pick = ['motoristas', 'entregadores'].filter((k) => hasOwn(ENTITIES, k));
+    return res.json({
+      user: req.user, org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') }, settings: { org_nome: getSetting('org_nome') },
+      entities: Object.fromEntries(pick.map((k) => [k, { key: k, label: ENTITIES[k].label, singular: ENTITIES[k].singular, icon: ENTITIES[k].icon, fields: ENTITIES[k].fields.filter((f) => ['nome', 'cidade', 'veiculo', 'placa', 'cnh_categoria', 'modalidade', 'origem', 'data_primeiro_contato', 'situacao', 'documentos'].includes(f.key)) }])),
+      pendentes: { candidaturas: candidaturas.ativo() ? db.prepare(`SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado') AND funcao IN (${candidaturas.escopoAvaliador().map(() => '?').join(',') || "''"})`).get(...candidaturas.escopoAvaliador()).c : 0 },
+      can: policy.permissionsFor('avaliador', []), etapa2: null, documentos: docs.ativo(), candidaturas: candidaturas.ativo(), hoje: todayISO()
+    });
+  }
   const defs = {};
   for (const [key, def] of Object.entries(ENTITIES)) {
     defs[key] = {
@@ -638,6 +764,7 @@ router.get('/meta', (req, res) => {
     wa: wa.store.contarNaoLidas()
   };
   if (hasOwn(ENTITIES, 'comercios')) pendentes.comercios = db.prepare("SELECT COUNT(*) c FROM comercios WHERE situacao NOT IN ('Ativo na plataforma','Não concretizado')").get().c;
+  if (candidaturas.ativo()) pendentes.candidaturas = db.prepare("SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado')").get().c;
   if (hasOwn(ENTITIES, 'entregadores')) pendentes.entregadores = db.prepare("SELECT COUNT(*) c FROM entregadores WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c;
 
   res.json({
@@ -658,6 +785,7 @@ router.get('/meta', (req, res) => {
     })(),
     etapa2: pessoas.ativa() ? { funcoes: pessoas.catalogo() } : null,
     documentos: docs.ativo(),
+    candidaturas: candidaturas.ativo(),
     hoje: todayISO()
   });
 });
@@ -1287,6 +1415,9 @@ function docsAtivo(req, res, next) {
   if (!docs.ativo()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
   next();
 }
+const { createCandidaturas, ErroCand } = require('./candidaturas');
+const candidaturas = createCandidaturas({ db, audit, docs, getSetting });
+docs.definirEscopoAvaliador((funcao, registroId) => candidaturas.noEscopoAvaliador(funcao, registroId));
 // Erro de regra de documentos vira resposta com o código e a mensagem certos; o resto cai no tratador geral.
 const comDoc = (fn) => seguro(async (req, res) => {
   try { await fn(req, res); } catch (err) {
@@ -1450,6 +1581,33 @@ if (hasOwn(ENTITIES, 'comercios')) {
 }
 
 
+
+/* ------------------------- Avaliação de candidatos (Etapa 2) ------------------------- */
+// Equipe (admin e gestor) acompanha e muda etapas; avaliador consulta e registra pareceres; DECISÃO FINAL só o
+// administrador (o proprietário). Tudo decidido em src/candidaturas.js (servidor) e auditado.
+function comCand(fn) {
+  return async (req, res) => {
+    try { return res.json(await fn(req)); } catch (err) {
+      if (err instanceof ErroCand || err instanceof ErroDoc) return fail(res, err.status, err.code, err.message);
+      console.error(`[candidaturas] ${err.message}`);
+      return fail(res, 500, 'erro', 'Erro ao processar a avaliação.');
+    }
+  };
+}
+const candidaturasAtivas = (req, res, next) => (candidaturas.ativo() ? next() : fail(res, 404, 'not_found', 'Recurso não encontrado.'));
+router.get('/candidaturas', candidaturasAtivas, comCand((req) => candidaturas.listar(req, {
+  etapa: req.query.etapa ? String(req.query.etapa) : '', funcao: req.query.funcao ? String(req.query.funcao) : '', q: req.query.q, pendentes: req.query.pendentes, page: req.query.page
+})));
+router.post('/candidaturas', candidaturasAtivas, comCand((req) => {
+  const r = candidaturas.abrir(req, String(req.body.funcao || ''), req.body.registro_id);
+  return { criada: r.criada, ...candidaturas.detalhe(req, r.candidatura.id) };
+}));
+router.get('/candidaturas/:id', candidaturasAtivas, comCand((req) => candidaturas.detalhe(req, req.params.id)));
+router.post('/candidaturas/:id/etapa', candidaturasAtivas, comCand((req) => candidaturas.mudarEtapa(req, req.params.id, { etapa: String(req.body.etapa || ''), observacao: req.body.observacao })));
+router.post('/candidaturas/:id/decisao', candidaturasAtivas, requireAdmin, comCand((req) => candidaturas.decidir(req, req.params.id, { decisao: req.body.decisao, motivo: req.body.motivo, confirmo: req.body.confirmo })));
+router.post('/candidaturas/:id/reabrir', candidaturasAtivas, requireAdmin, comCand((req) => candidaturas.reabrir(req, req.params.id, { motivo: req.body.motivo, confirmo: req.body.confirmo, etapa: req.body.etapa || undefined })));
+router.post('/candidaturas/:id/pareceres', candidaturasAtivas, comCand((req) => candidaturas.registrarParecer(req, req.params.id, req.body || {})));
+
 /* ------------------------------- Documentos (M4) ------------------------------- */
 // Todas as rotas exigem login e FM_ETAPA2=1. A permissão (admin/gestor, categoria liberada) é decidida no servidor em service.js.
 // Nenhum arquivo tem URL pública: o conteúdo só sai por GET /documentos/:id/arquivo, que confere permissão e registra o acesso.
@@ -1486,12 +1644,14 @@ router.get('/documentos/lista', docsAtivo, comDoc((req, res) => res.json(docs.co
   situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, page: req.query.page
 }))));
 router.get('/documentos', docsAtivo, comDoc((req, res) => res.json(docs.listar(req, String(req.query.funcao || ''), req.query.registro_id))));
+// Documento novo ou versão nova: a avaliação do candidato (se houver) só se move entre as etapas iniciais — nunca decide.
+const avisarAvaliacao = (r) => { try { if (r && r.documento) candidaturas.atualizarPelosDocumentos(r.documento.funcao, r.documento.registro_id, null); } catch (e) { console.error(`[candidaturas] ${e.message}`); } return r; };
 router.post('/documentos', docsAtivo, lerArquivo, comDoc(async (req, res) => {
-  res.status(201).json(await docs.anexar(req, metaDoEnvio(req)));
+  res.status(201).json(avisarAvaliacao(await docs.anexar(req, metaDoEnvio(req))));
 }));
 router.get('/documentos/:id', docsAtivo, comDoc((req, res) => res.json(docs.historico(req, req.params.id))));
 router.post('/documentos/:id/versoes', docsAtivo, lerArquivo, comDoc(async (req, res) => {
-  res.status(201).json(await docs.anexar(req, { ...metaDoEnvio(req), documento_id: req.params.id }));
+  res.status(201).json(avisarAvaliacao(await docs.anexar(req, { ...metaDoEnvio(req), documento_id: req.params.id })));
 }));
 router.get('/documentos/:id/arquivo', docsAtivo, comDoc(async (req, res) => {
   const r = await docs.obterArquivo(req, req.params.id, { versao: req.query.versao, acao: req.query.modo === 'ver' ? 'ver' : 'baixar' });
@@ -1546,7 +1706,8 @@ function fichaDoCadastro(tipo, id) {
   if (!['motoristas', 'passageiros', 'parceiros', 'entregadores', 'comercios'].includes(tipo)) return null;
   const conv = db.prepare(`SELECT c.id, c.atendimento, c.atend_motivo, c.ultima_em FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id
     WHERE k.vinculo_tipo = ? AND k.vinculo_id = ? ORDER BY c.ultima_em DESC LIMIT 1`).get(tipo, id);
-  const ficha = { conversa: conv || null, documentos: null, resumo_ia: null };
+  const ficha = { conversa: conv || null, documentos: null, resumo_ia: null,
+    avaliacao: tipo === 'motoristas' ? candidaturas.daFicha('motorista', id) : (tipo === 'entregadores' ? candidaturas.daFicha('entregador', id) : null) };
   if (conv) {
     const a = db.prepare('SELECT resultado, criado_em FROM ia_analises WHERE conversa_id = ? ORDER BY id DESC LIMIT 1').get(conv.id);
     if (a) { try { ficha.resumo_ia = { texto: JSON.parse(a.resultado).resumo || '', em: a.criado_em }; } catch (err) { /* análise antiga */ } }

@@ -37,8 +37,8 @@ const GERAL = {
 const LEGADO = { cnh: 'doc_cnh', crlv: 'doc_crlv', comprovante_endereco: 'doc_endereco' };
 
 const DECISOES_PENDENTES = [
-  { chave: 'versoes', texto: 'Manter os documentos ORIGINAIS em todas as substituições? (hoje: todas as versões são mantidas; nada é apagado)' },
-  { chave: 'armazenamento', texto: 'Qual será o armazenamento definitivo dos arquivos e sua configuração? (pasta em disco persistente da Hostinger ou Supabase Storage privado)' },
+  // 12/11/2026: o dono decidiu PRESERVAR TODAS AS VERSÕES (nenhuma é apagada automaticamente) — não é mais pendência.
+  { chave: 'armazenamento', texto: 'Armazenamento definitivo: decidido Hostinger (VPS), a configurar na migração. Até lá nenhum documento real é guardado.' },
   { chave: 'gestor', texto: 'Quais documentos o gestor poderá visualizar e baixar? (hoje: nenhum arquivo; só a situação)' },
   { chave: 'cpf_cnpj', texto: 'Quais dados de CPF/CNPJ serão exigidos e guardados em cada cadastro? (hoje: coleta desligada)' },
   { chave: 'retencao', texto: 'Por quanto tempo documentos e cadastros encerrados serão mantidos? (hoje: sem prazo; nenhuma exclusão automática)' }
@@ -86,6 +86,10 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
       },
       exclusao_definitiva: salva.exclusao_definitiva === true,
       cpf_cnpj: { cpf: salva.cpf_cnpj && salva.cpf_cnpj.cpf === 'opcional' ? 'opcional' : 'desligado', cnpj: salva.cpf_cnpj && salva.cpf_cnpj.cnpj === 'opcional' ? 'opcional' : 'desligado' },
+      avaliador: {
+        funcoes: Array.isArray(salva.avaliador && salva.avaliador.funcoes) ? salva.avaliador.funcoes.filter((f) => ['motorista', 'entregador'].includes(f)) : P.avaliador.funcoes,
+        categorias_visiveis: Array.isArray(salva.avaliador && salva.avaliador.categorias_visiveis) ? salva.avaliador.categorias_visiveis.filter((c) => todasCategorias().includes(c)) : P.avaliador.categorias_visiveis
+      },
       confirmada_em: salva.confirmada_em || null
     };
   }
@@ -111,6 +115,17 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
       if (g.categorias_visiveis !== undefined) {
         if (!Array.isArray(g.categorias_visiveis) || g.categorias_visiveis.some((x) => !todasCategorias().includes(x))) throw new ErroDoc(422, 'invalido', 'Categoria inválida na lista do gestor.');
         novo.gestor.categorias_visiveis = [...new Set(g.categorias_visiveis)];
+      }
+    }
+    if (c.avaliador !== undefined) {
+      const a = c.avaliador || {};
+      if (a.funcoes !== undefined) {
+        if (!Array.isArray(a.funcoes) || a.funcoes.some((f) => !['motorista', 'entregador'].includes(f))) throw new ErroDoc(422, 'invalido', 'O avaliador só pode consultar motoristas e entregadores.');
+        novo.avaliador.funcoes = [...new Set(a.funcoes)];
+      }
+      if (a.categorias_visiveis !== undefined) {
+        if (!Array.isArray(a.categorias_visiveis) || a.categorias_visiveis.some((x) => !todasCategorias().includes(x))) throw new ErroDoc(422, 'invalido', 'Categoria inválida na lista do avaliador.');
+        novo.avaliador.categorias_visiveis = [...new Set(a.categorias_visiveis)];
       }
     }
     if (c.exclusao_definitiva !== undefined) { if (typeof c.exclusao_definitiva !== 'boolean') throw new ErroDoc(422, 'invalido', 'Valor inválido.'); novo.exclusao_definitiva = c.exclusao_definitiva; }
@@ -180,6 +195,21 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     return { codigo, rotulo: GERAL[codigo], exigidos: st.length, enviados, conferidos };
   }
 
+  /* --------------------------- avaliador de cadastros (12/11) --------------------------- */
+  // Quem diz se a ficha está no escopo do avaliador (tem candidatura aberta) é o serviço de candidaturas.
+  let noEscopoAvaliador = () => false;
+  function definirEscopoAvaliador(fn) { noEscopoAvaliador = typeof fn === 'function' ? fn : () => false; }
+  /** Pode abrir o ARQUIVO deste documento? Admin/gestor pela política de sempre; avaliador só no escopo. */
+  function podeVer(req, d, pol) {
+    if (role(req) === 'avaliador') return policy.docsAvaliadorVer(d.funcao, d.categoria, pol) && noEscopoAvaliador(d.funcao, d.registro_id);
+    return policy.docsVerArquivo(role(req), d.categoria, pol);
+  }
+  function exigirFichaNoEscopo(req, funcao, registroId) {
+    if (role(req) !== 'avaliador') return;
+    const pol = politica();
+    if (!(pol.avaliador.funcoes || []).includes(funcao) || !noEscopoAvaliador(funcao, registroId)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode consultar os documentos desta ficha.');
+  }
+
   /* ------------------------------ formatos de saída ------------------------------ */
   const versaoAtual = (d) => (d.versao_atual_id ? db.prepare('SELECT * FROM documento_versoes WHERE id = ?').get(d.versao_atual_id) : null);
   function publico(d, req, pol) {
@@ -192,7 +222,7 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
       versao_atual: v ? { numero: v.numero, data_envio: v.data_envio, incluido_em: v.incluido_em, incluido_por_nome: v.incluido_por_nome, tamanho: v.tamanho, tipo_mime: v.tipo_mime, extensao: v.extensao, nome_original: v.nome_original } : null,
       total_versoes: db.prepare('SELECT COUNT(*) n FROM documento_versoes WHERE documento_id = ?').get(d.id).n,
       conferido_por_nome: d.conferido_por_nome || null, conferido_em: d.conferido_em || null, observacoes: d.observacoes || null,
-      pode: { ver: !!v && policy.docsVerArquivo(r, d.categoria, pol), conferir: !!v && policy.docsConferir(r, d.categoria, pol) }
+      pode: { ver: !!v && podeVer(req, d, pol), conferir: !!v && policy.docsConferir(r, d.categoria, pol) }
     };
   }
 
@@ -201,6 +231,7 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     exigirFuncao(funcao);
     const id = Number(registroId);
     if (!Number.isInteger(id) || id < 1) throw new ErroDoc(422, 'invalido', 'Ficha inválida.');
+    exigirFichaNoEscopo(req, funcao, id);
     const pol = politica();
     const linhas = db.prepare('SELECT * FROM documentos WHERE funcao = ? AND registro_id = ? AND excluido_em IS NULL ORDER BY id').all(funcao, id);
     const itens = [];
@@ -335,9 +366,10 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
    * Anexa um arquivo: primeira versão de um documento da ficha ou nova versão de um documento existente (documento_id).
    * Não faz nada pela metade: se o banco falhar depois de gravar o arquivo, o arquivo é removido.
    */
-  async function anexar(req, { funcao, registro_id: registroId, categoria, titulo, data_envio: dataEnvio, observacoes, nome, conteudo, documento_id: documentoId }) {
+  async function anexar(req, { funcao, registro_id: registroId, categoria, titulo, data_envio: dataEnvio, observacoes, nome, conteudo, documento_id: documentoId }, { integracao = false } = {}) {
     const pol = politica();
-    if (!policy.docsAnexar(role(req), pol)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode anexar documentos.');
+    // `integracao` só vem do código da rota assinada do aplicativo (3º argumento; nunca do corpo da requisição).
+    if (!(integracao === true && role(req) === 'integracao') && !policy.docsAnexar(role(req), pol)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode anexar documentos.');
     exigirPronto();
     let doc = null;
     if (documentoId) {
@@ -409,7 +441,7 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     const d = documentoOuErro(id);
     const pol = politica();
     if (d.excluido_em) throw new ErroDoc(410, 'excluido', 'Este documento foi excluído definitivamente.');
-    if (!policy.docsVerArquivo(role(req), d.categoria, pol)) {
+    if (!podeVer(req, d, pol)) {
       evento(d.id, null, 'acesso_negado', `tentativa de ${acao === 'ver' ? 'visualizar' : 'baixar'} sem permissão`, req);
       audit(req, 'doc_acesso_negado', 'documentos', d.id, `Acesso negado ao arquivo (${d.categoria})`);
       throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode abrir este documento.');
@@ -488,13 +520,14 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
   /** Detalhe + histórico de versões e de eventos (sem chaves nem nomes internos). */
   function historico(req, id) {
     const d = documentoOuErro(id);
+    exigirFichaNoEscopo(req, d.funcao, d.registro_id);
     const pol = politica();
     const admin = role(req) === 'admin';
     const versoes = db.prepare('SELECT * FROM documento_versoes WHERE documento_id = ? ORDER BY numero DESC').all(d.id).map((v) => ({
       numero: v.numero, atual: v.id === d.versao_atual_id, data_envio: v.data_envio, incluido_em: v.incluido_em, incluido_por_nome: v.incluido_por_nome,
       tamanho: v.tamanho, tipo_mime: v.tipo_mime, extensao: v.extensao, nome_original: v.nome_original, observacao_envio: v.observacao_envio,
       sha256: admin ? v.sha256 : null, arquivo_removido_em: v.arquivo_removido_em || null,
-      pode_ver: !v.arquivo_removido_em && !d.excluido_em && policy.docsVerArquivo(role(req), d.categoria, pol)
+      pode_ver: !v.arquivo_removido_em && !d.excluido_em && podeVer(req, d, pol)
     }));
     const eventos = db.prepare('SELECT id, versao_id, tipo, detalhe, usuario_nome, criado_em FROM documento_eventos WHERE documento_id = ? ORDER BY id DESC LIMIT 300').all(d.id);
     return {
@@ -530,7 +563,7 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
   }
 
   return {
-    ativo, ErroDoc, CATEGORIAS, SITUACOES, GERAL, DOC_FUNCOES, funcoesDisponiveis, politica, salvarPolitica, decisoesPendentes, estadoArmazenamento,
+    ativo, ErroDoc, CATEGORIAS, SITUACOES, GERAL, DOC_FUNCOES, funcoesDisponiveis, politica, salvarPolitica, decisoesPendentes, estadoArmazenamento, definirEscopoAvaliador,
     listar, consultar, contagens, resumoPeriodo, resumoDasFuncoes, anexar, obterArquivo, conferir, observar, historico, excluirDefinitivo,
     geralDe, tituloRegistro, rotuloCategoria
   };

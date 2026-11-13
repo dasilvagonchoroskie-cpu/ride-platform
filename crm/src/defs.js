@@ -1,6 +1,6 @@
 'use strict';
 
-const ORIGENS = ['WhatsApp', 'Instagram', 'Facebook', 'TikTok', 'Indicação', 'Divulgação presencial', 'Site', 'Outro'];
+const ORIGENS = ['WhatsApp', 'Instagram', 'Facebook', 'TikTok', 'Indicação', 'Divulgação presencial', 'Site', 'Aplicativo do motorista', 'Outro'];
 
 const STATUS_MOTORISTA = [
   'Novo interessado',

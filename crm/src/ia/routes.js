@@ -64,7 +64,7 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
   /* ---------------------- Modelos de Comunicação da IA (Central) ---------------------- */
   // Todos que atendem podem ver; só o administrador edita.
   router.get('/ia/modelos', (req, res) => {
-    res.json({ modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes() });
+    res.json({ modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes(), informacoes_situacao: ia.central.situacaoInformacoes() });
   });
 
   router.put('/ia/modelos', requireAdmin, (req, res) => {
@@ -77,7 +77,7 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
       return fail(res, 422, 'invalid', err.message);
     }
     audit(req, 'ia_modelos', 'ia', null, 'Modelos de Comunicação da IA alterados');
-    res.json({ ok: true, modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes() });
+    res.json({ ok: true, modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes(), informacoes_situacao: ia.central.situacaoInformacoes() });
   });
 
   router.post('/wa/conversas/:id/analisar', async (req, res) => {

@@ -145,3 +145,49 @@ test('troca de chave do cofre: retrato antigo abre com a chave anterior e o pró
   assert.throws(() => p.decifrar(cofre.estado.dados, Buffer.from(KEY, 'hex')));
   delete process.env.SNAPSHOT_KEY_ANTERIOR;
 });
+
+test('modo cópia (VPS com disco persistente): migração puxa do cofre uma vez; depois o disco local manda e o cofre só recebe cópias; Render religado volta com a última cópia', async () => {
+  const Database = require('better-sqlite3');
+  const cofre = cofreFalso();
+  // "Render" (disco temporário, modo normal) tem os dados e grava no cofre.
+  const render = fs.mkdtempSync(path.join(os.tmpdir(), 'cofre-render-'));
+  ambiente(render);
+  let p = novoPersist();
+  await p.restaurar({ fetchImpl: cofre.f, log: silencioso });
+  const dbR = new Database(path.join(render, 'crm.db'));
+  dbR.exec("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('dado do render')");
+  const cR = p.iniciar({ db: dbR, log: silencioso });
+  await cR.enviar('forcar');
+  // VPS, dia da migração: disco vazio + modo cópia → restaura do cofre e vira dono (o Render para de gravar).
+  const vps = fs.mkdtempSync(path.join(os.tmpdir(), 'cofre-vps-'));
+  ambiente(vps, { SNAPSHOT_MODO: 'copia' });
+  p = novoPersist();
+  const r1 = await p.restaurar({ fetchImpl: cofre.f, log: silencioso });
+  assert.equal(r1.novo, false);
+  let dbV = new Database(path.join(vps, 'crm.db'));
+  assert.equal(dbV.prepare('SELECT v FROM t').get().v, 'dado do render');
+  dbV.exec("INSERT INTO t VALUES ('dado novo na vps')");
+  const cV = p.iniciar({ db: dbV, log: silencioso });
+  await cV.parar();
+  dbV.close();
+  dbR.exec("INSERT INTO t VALUES ('escrita atrasada do render')");
+  await cR.enviar('forcar');
+  dbR.close();
+  // VPS reinicia: disco local vale; o cofre não sobrescreve.
+  ambiente(vps, { SNAPSHOT_MODO: 'copia' });
+  p = novoPersist();
+  const r2 = await p.restaurar({ fetchImpl: cofre.f, log: silencioso });
+  assert.equal(r2.local, true);
+  dbV = new Database(path.join(vps, 'crm.db'));
+  assert.deepEqual(dbV.prepare('SELECT v FROM t ORDER BY rowid').all().map((x) => x.v), ['dado do render', 'dado novo na vps']);
+  dbV.close();
+  // Rollback: Render religado (modo normal, disco vazio) restaura a ÚLTIMA cópia da VPS; a escrita atrasada do Render não entrou.
+  const render2 = fs.mkdtempSync(path.join(os.tmpdir(), 'cofre-render2-'));
+  ambiente(render2, { SNAPSHOT_MODO: '' });
+  p = novoPersist();
+  await p.restaurar({ fetchImpl: cofre.f, log: silencioso });
+  const dbR2 = new Database(path.join(render2, 'crm.db'));
+  assert.deepEqual(dbR2.prepare('SELECT v FROM t ORDER BY rowid').all().map((x) => x.v), ['dado do render', 'dado novo na vps']);
+  dbR2.close();
+  delete process.env.SNAPSHOT_MODO;
+});

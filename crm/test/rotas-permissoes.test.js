@@ -47,15 +47,17 @@ async function subir() {
       return r.status;
     };
   };
-  const anon = cliente(); const adm = cliente(); const ges = cliente();
+  const anon = cliente(); const adm = cliente(); const ges = cliente(); const ava = cliente();
   assert.equal(await adm('POST', '/auth/setup', { chave: 'FM-TEST-CHAV-E123', nome: 'Adm', email: 'adm@x.com', senha: 'senhaforte123' }), 201);
   assert.equal(await adm('POST', '/users', { nome: 'Gestor', email: 'g@x.com', senha: 'senhaforte123', role: 'gestor' }), 201);
   assert.equal(await ges('POST', '/auth/login', { email: 'g@x.com', senha: 'senhaforte123' }), 200);
-  return { proc, anon, adm, ges };
+  assert.equal(await adm('POST', '/users', { nome: 'Avaliador', email: 'av@x.com', senha: 'senhaforte123', role: 'avaliador' }), 201);
+  assert.equal(await ava('POST', '/auth/login', { email: 'av@x.com', senha: 'senhaforte123' }), 200);
+  return { proc, anon, adm, ges, ava };
 }
 
 test('autorização: todas as rotas protegidas exigem login e as de administrador recusam o gestor', async (t) => {
-  const { proc, anon, ges, adm } = await subir();
+  const { proc, anon, ges, adm, ava } = await subir();
   t.after(() => proc.kill());
   const lista = rotas();
   assert.ok(lista.length > 100, `esperava mais de 100 rotas, achei ${lista.length}`);
@@ -73,6 +75,17 @@ test('autorização: todas as rotas protegidas exigem login e as de administrado
     if (s !== 403) vazou.push(`${r.metodo} ${r.caminho} → ${s}`);
   }
   assert.deepEqual(vazou, [], 'rotas de administrador que o gestor alcança');
+  // Avaliador: lista fechada. Tudo fora dela (e fora da própria conta) responde 403 — inclusive o que o gestor alcança.
+  const { avaliadorPodeRota } = require('../src/policy');
+  const escapou = [];
+  for (const r of lista) {
+    const c = concreto(r.caminho);
+    if (c.startsWith('/auth/') || avaliadorPodeRota(r.metodo, c)) continue;
+    if (r.metodo === 'POST' && c === '/auth/logout') continue;
+    const s = await ava(r.metodo, c);
+    if (s !== 403) escapou.push(`${r.metodo} ${r.caminho} → ${s}`);
+  }
+  assert.deepEqual(escapou, [], 'rotas que o avaliador alcança fora da lista fechada');
   // O gestor continua conseguindo usar o que é dele (não bloqueamos demais).
   assert.equal(await ges('GET', '/meta'), 200);
   assert.equal(await ges('GET', '/motoristas'), 200);

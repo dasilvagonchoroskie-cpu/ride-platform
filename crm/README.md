@@ -303,6 +303,34 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Front: painel "Documentos (arquivo digital)" em cada ficha, menu **Documentos** (lista, filtros, política e decisões pendentes do dono).
   Cache do app `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
 
+## Candidatos a motorista, avaliador e integração com o app (12/11/2026, ramo `etapa2`, só desenvolvimento)
+- **Fluxo de candidatura** (migração 006, congelada): `candidaturas` com etapas Cadastro recebido → Documentação pendente/recebida
+  (sozinha, pelos documentos) → Documentação em análise → Necessidade de complementação → Avaliação presencial pendente/realizada →
+  Aprovado / Recusado. Independente da situação da ficha do motorista (aprovar **não** contrata nem libera no aplicativo).
+  Decisão final **só do administrador**, com `confirmo:true` (recusa exige motivo); reabrir só admin, com motivo.
+  Pareceres e eventos só acrescentam (gatilhos impedem alterar/apagar); correção = parecer novo que "substitui" o anterior.
+- **Perfil `avaliador`** (ex.: o profissional que faz a avaliação presencial): lista FECHADA de rotas (`policy.ROTAS_AVALIADOR`):
+  `GET /meta`, `GET /candidaturas`, `GET /candidaturas/:id`, `POST /candidaturas/:id/pareceres`, `GET /documentos/:id[/arquivo]`
+  e a própria conta (`/auth/*`). Todo o resto: 403 no servidor. Vê nome, cidade, veículo, placa, categoria da CNH e documentos
+  liberados na política (`docs_politica.avaliador`, padrão CNH, CRLV, comprovante e outros), sem telefone nem anotações internas.
+  Não aprova, não recusa, não exclui, não altera documento, não exporta. Toda consulta e parecer são auditados (sem conteúdo pessoal).
+  Parecer: conclusão, texto, pendências, verificação de antecedentes **feita por profissional autorizado fora do CRM** (só registra
+  o resultado e a fonte; o CRM não faz consulta externa automática), observações.
+- **Rotas:** `GET|POST /candidaturas`, `GET /candidaturas/:id`, `POST /candidaturas/:id/etapa` (admin/gestor),
+  `POST /candidaturas/:id/decisao` e `/reabrir` (admin), `POST /candidaturas/:id/pareceres` (admin/avaliador).
+- **Integração assinada com o aplicativo do motorista:** `POST /api/integracoes/app-motorista/candidato|documento` — HMAC-SHA256,
+  janela de 5 min, nonce de uso único, limite por IP; sem `FM_INTEGRACAO_SEGREDO` respondem 404. Protocolo em
+  `docs/integracao-app-motorista.md` (o envio pelo backend ainda não existe).
+- Front: menu **Candidatos** (`public/js/views/candidatos.js`), botão "Avaliação do candidato" na ficha. Cache `fm-crm-v26`.
+  Testes: `test/candidaturas.test.js` + avaliador em `test/rotas-permissoes.test.js`.
+- **Informações oficiais da IA**: 8 assuntos (gerais, cadastro de motoristas, entregadores, encomendas, Clube, comerciantes,
+  passageiros, outros) com "preenchido / falta preencher" na tela. Nada é preenchido sozinho.
+
+## Hospedagem definitiva: VPS da Hostinger (preparado, NÃO executado)
+Guia simples e scripts em `deploy/hostinger/` (provisionamento, systemd endurecido, Nginx + HTTPS, firewall, cópia diária cifrada,
+teste de restauração, verificação de saúde, migração controlada e volta atrás). `SNAPSHOT_MODO=copia`: com banco no disco, o CRM usa
+o disco como fonte e manda só cópias cifradas ao cofre; sem banco (dia da migração), traz o retrato uma vez.
+
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados
   (aprovados + contratados, com o detalhe) e contratados. Documento pendente não muda a etapa (aparece à parte).

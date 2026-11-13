@@ -1,0 +1,10 @@
+[Unit]
+Description=CRM Fortaleza Move — cópia de segurança diária (03h15, horário do servidor)
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

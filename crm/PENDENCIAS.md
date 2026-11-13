@@ -18,7 +18,8 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] Trocar a senha inicial do administrador e gerar os códigos de recuperação.
 - [ ] Conferir em Configurações se a chave do Gemini está salva e o "Testar conexão" passa.
 - [ ] Verificação em duas etapas no Render, Supabase e GitHub (quando tiver o próprio celular).
-- [ ] Decidir a hospedagem definitiva: KVM2 da Hostinger (decidido como destino; falta contratar e migrar).
+- [x] 12/11 Hospedagem definitiva decidida: VPS da Hostinger, antes do lançamento. Preparação pronta em `deploy/hostinger/`.
+- [ ] **Contratar a VPS e o domínio** e marcar o dia da migração (guia `deploy/hostinger/README.md`). Nada foi contratado nem migrado.
 - [ ] Gestão de frota: auditoria no chat próprio (inclui apagar o projeto Supabase vazio myfktvjbdczfxgppnbua).
 
 ## 2. Ordem de desenvolvimento de 11/11 (executar uma etapa por vez, com relatório)
@@ -79,13 +80,27 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] 12/11 Proteção contra troca acidental da FM_DOCS_KEY; auditoria automática de todas as rotas (401/403/CSRF).
 - [ ] **Dono:** cadastrar as informações oficiais da Central (Configurações > Modelos de Comunicação da IA: geral, cadastro, encomendas,
       clube). Sem elas a IA só apresenta os serviços do menu e passa para a equipe — não inventa.
-- [ ] **Dono:** configurar um provedor de IA RESERVA (ex.: Groq grátis) em Configurações > Inteligência (IA): é o que evita a transferência
-      quando o Gemini cai (não consegui confirmar daqui se já existe reserva configurada em produção).
+- [x] 12/11 Decisão do dono: a IA continua só no Gemini, **sem segundo provedor** (sem Groq). Quando o Gemini falha, a conversa passa
+      para a equipe (comportamento da auditoria). Futuro: contratar a API paga do Gemini e só trocar a chave em Configurações.
 - [ ] **Dono:** testar no celular real: falha da IA vira "IA tentando de novo"/transferência; compartilhar e imprimir um PDF pelo Android;
       conferir o logotipo na abertura do app e do navegador depois da publicação.
 - [ ] Gerar um APK novo a partir do etapa2 quando for publicar (o app-twa do etapa2 foi igualado ao main; nenhuma mudança de app nesta auditoria).
 - Observação (fora do escopo, sem mudança): o WhatsApp de produção reconecta a cada ~50 min (log "Reconectando…"); funciona, mas vale
   acompanhar. `/auth/status` e `/api/health` continuam públicos (backlog).
+
+### Requisição final de 12/11/2026 (ramo `etapa2`, NÃO está em produção)
+- [x] 12/11 Fluxo de candidatos a motorista (9 etapas, decisão só do administrador com confirmação, nada automático).
+- [x] 12/11 Perfil "Avaliador de cadastros" (lista fechada de rotas, sem acesso administrativo), parecer com histórico imutável.
+- [x] 12/11 Integração assinada app do motorista → CRM (lado do CRM). Documentos: todas as versões guardadas (decisão do dono).
+- [x] 12/11 Informações oficiais da IA organizadas em 8 assuntos com situação "preenchido/falta" (nada inventado).
+- [x] 12/11 Preparação da migração para a Hostinger (scripts + guia + `SNAPSHOT_MODO=copia`), sem executar nada. 175/175 testes.
+- [ ] **Desenvolvimento:** envio do backend da plataforma para o CRM (candidato + documentos) — protocolo em
+      `docs/integracao-app-motorista.md`; precisa de autorização (mexe no sistema no ar) e de ambiente que monte o backend.
+- [ ] **Dono:** criar o usuário do avaliador (Configurações → Usuários → perfil "Avaliador de cadastros") quando for usar.
+- [ ] **Dono:** escrever as informações oficiais dos 8 assuntos da IA (hoje vazias: a IA não inventa).
+- [ ] **Configuração futura (na migração):** `FM_DOCS_KEY`, `FM_DADOS_KEY`, `FM_INTEGRACAO_SEGREDO` geradas na VPS e guardadas no cofre
+      de senhas; armazenamento dos documentos no disco da VPS; desligar o cron `crm-manter-acordado`; APK com o domínio novo.
+- [ ] **Validação física:** testar o fluxo do avaliador e dos candidatos no celular real (verificado só em Chrome emulando celular).
 
 ## 3. Riscos e avisos em aberto
 

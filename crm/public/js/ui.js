@@ -139,7 +139,7 @@ export function modal({ title, subtitle = '', body, footer = '', size = '', onCl
   document.getElementById('modal-root').appendChild(dialog);
   let fechado = false;
   const close = () => { if (fechado) return; fechado = true; try { dialog.close(); } catch (err) { /* ignore */ } dialog.remove(); if (onClose) onClose(); };
-  dialog.querySelector('[data-modal-close]').addEventListener('click', close);
+  dialog.querySelectorAll('[data-modal-close]').forEach((b) => b.addEventListener('click', close));
   dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
   dialog.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
   if (typeof dialog.showModal === 'function') dialog.showModal();
