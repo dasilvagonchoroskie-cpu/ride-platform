@@ -65,21 +65,27 @@ function montar({ confirmacaoMs = '0', atraso = '0', repetir = '0,0' } = {}) {
 }
 
 /* ------------------------------------- 2.1 resposta rápida ------------------------------------- */
-test('confirmação rápida: sai antes da resposta lenta, uma vez por fala, não conta como resposta nem notifica', async () => {
-  const { chegar, ia, respostas, avisos, conv, estado, eventos, espere, logs } = montar({ confirmacaoMs: '30' });
+test('confirmação rápida (regra de 13/11): só para mídia, uma vez por atendimento, nunca na abertura; não conta como resposta', async () => {
+  const { chegar, receber, ia, respostas, avisos, conv, estado, eventos, espere, logs } = montar({ confirmacaoMs: '30' });
   estado.atrasoMs = 80; // IA lenta (cada chamada 80 ms; análise + redação)
-  const r = chegar('Quero saber como funciona o Clube de Vantagens');
-  chegar('e quanto custa?'); // segunda mensagem do mesmo "turno": nada de segunda confirmação
+  await receber('Quero saber como funciona o Clube de Vantagens'); // abertura do atendimento: saudação, nada de "recebemos"
+  assert.equal(avisos().length, 0, 'na abertura vai a saudação, não a confirmação');
+  await receber('e quanto custa?');
+  assert.equal(avisos().length, 0, 'texto não recebe confirmação');
+  const r = chegar('[mensagem de voz] 🎤 tem desconto em oficina?', { tipo: 'audio' });
   const execucao = ia.executarAutomatico(r.conversaId);
   await espere(60);
-  assert.deepEqual(avisos(), ['Recebemos a sua mensagem! Estamos verificando e já respondemos.'], 'confirmação enviada enquanto processa');
-  assert.equal(respostas().length, 0, 'a confirmação não é a resposta definitiva');
+  assert.deepEqual(avisos(), ['Recebemos a sua mensagem! Estamos verificando e já respondemos.'], 'mídia: confirmação enquanto processa');
   assert.equal(conv().ultima_direcao, 'in', 'a lista continua mostrando a mensagem do cliente como pendente');
   await execucao;
-  assert.equal(respostas().length, 1, `a resposta de verdade vem depois da confirmação (não foi bloqueada como "já respondida") ${JSON.stringify(logs)}`);
-  assert.equal(avisos().length, 1, 'uma confirmação só');
-  await espere(10); // os avisos do store saem no próximo ciclo
-  assert.equal(eventos.filter((e) => e.tipo === 'ia').length, 1, 'só a resposta definitiva gera notificação "IA respondeu"');
+  assert.equal(respostas().length, 3, `a resposta de verdade vem depois da confirmação ${JSON.stringify(logs)}`);
+  const r2 = chegar('[mensagem de voz] 🎤 e em lava-jato?', { tipo: 'audio' });
+  const exec2 = ia.executarAutomatico(r2.conversaId);
+  await espere(60);
+  await exec2;
+  assert.equal(avisos().length, 1, 'no máximo uma confirmação por atendimento');
+  await espere(10);
+  assert.equal(eventos.filter((e) => e.tipo === 'ia').length, 4, 'só as respostas definitivas geram notificação "IA respondeu"');
 });
 
 test('confirmação rápida: não sai quando a IA responde a tempo, com a equipe atendendo, ou com a IA desligada', async () => {
@@ -99,8 +105,9 @@ test('confirmação rápida: não sai quando a IA responde a tempo, com a equipe
 });
 
 test('eco da confirmação que chega pelo celular antes do fim do envio não vira "equipe respondeu"', async () => {
-  const { chegar, ia, waStore, db, conv, espere } = montar({ confirmacaoMs: '20' });
-  const r = chegar('preciso de ajuda');
+  const { chegar, receber, ia, waStore, db, conv, espere } = montar({ confirmacaoMs: '20' });
+  await receber('oi');
+  const r = chegar('[mensagem de voz] 🎤 preciso de ajuda', { tipo: 'audio' });
   await espere(50);
   const aviso = db.prepare("SELECT * FROM wa_mensagens WHERE tipo = 'aviso'").get();
   assert.ok(aviso);
@@ -111,7 +118,7 @@ test('eco da confirmação que chega pelo celular antes do fim do envio não vir
   waStore.concluirEnvio(aviso.id, 'ECO1');
   assert.equal(db.prepare("SELECT tipo, origem FROM wa_mensagens WHERE externo_id = 'ECO1'").get().tipo, 'aviso');
   await ia.executarAutomatico(r.conversaId);
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND tipo = 'text'").get().n, 1, 'a IA ainda responde');
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND tipo = 'text'").get().n, 2, 'a IA ainda responde');
 });
 
 /* --------------------------------------- 2.2 áudio --------------------------------------- */

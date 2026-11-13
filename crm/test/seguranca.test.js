@@ -182,7 +182,7 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
 
   const lidos = await g('GET', '/ia/modelos');
   assert.equal(lidos.s, 200);
-  assert.equal(lidos.j.modelos.length, 11, '8 modelos + confirmação rápida + áudio não ouvido (12/11) + arquivo não aceito (13/11)');
+  assert.equal(lidos.j.modelos.length, 17, '8 modelos + confirmação + áudio (12/11) + arquivo não aceito + saudação de retorno + 5 aberturas de opção (13/11)');
   assert.equal((await g('PUT', '/ia/modelos', { modelos: [{ id: 'saudacao', texto: 'oi', ativo: true }] })).s, 403, 'gestor não edita');
   const salvo = await adm('PUT', '/ia/modelos', { modelos: [{ id: 'saudacao', texto: 'Olá, Fortaleza Move!', ativo: true }], site_url: 'https://fortalezamove.com.br', informacoes: { clube: 'Desconto em lavagem.' } });
   assert.equal(salvo.s, 200);

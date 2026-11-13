@@ -176,6 +176,11 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   Para família e amigos que escrevem no número do atendimento, o administrador usa **Contato pessoal (sem IA)**
   (`POST /api/wa/contatos/:id/pessoal`, `{ "pessoal": true|false }`, auditado): a IA não lê, não analisa, não confirma e não responde;
   a conversa continua guardada. Desmarcar devolve o contato ao atendimento da IA a partir da próxima mensagem.
+  Novo atendimento (13/11): a conversa parada há mais que "Novo atendimento depois de quantas horas sem conversa" (Configurações →
+  IA, padrão 12 h, 0 = desligado) é encerrada sozinha (menos as transferidas aguardando a equipe), e a próxima mensagem começa um
+  atendimento novo com a saudação de retorno e o menu; o mesmo vale quando a pessoa clica de novo num botão do site. Cada opção do
+  menu tem uma resposta de abertura própria (Modelos de Comunicação da IA). A confirmação "Recebemos a sua mensagem…" só sai para
+  áudio, foto, documento ou vídeo, no máximo uma vez por atendimento.
   Barreira final da redação da IA (`prometeOuConfirma` em `src/ia/prompt.js`): resposta que confirma cadastro/aprovação/liberação,
   diz que a pessoa "já pode" rodar ou garante algo não é enviada (a conversa segue para a equipe se a IA não conseguir responder).
 - A pasta `data/wa-auth` guarda a sessão pareada: **quem a tiver controla o WhatsApp**. Nunca a copie, envie ou

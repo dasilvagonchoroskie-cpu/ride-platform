@@ -105,6 +105,26 @@ function createStore(db, opts = {}) {
     setImmediate(() => { for (const fn of ouvintes) { try { fn(evento); } catch (err) { /* notificação nunca derruba o WhatsApp */ } } });
   }
 
+  const horasNovaConversa = () => {
+    const r = db.prepare("SELECT value FROM settings WHERE key = 'ia_nova_conversa_h'").get();
+    const n = Number(r ? r.value : 12);
+    return Number.isFinite(n) && n >= 0 ? n : 12;
+  };
+  function motivoNovoAtendimento(conversa, texto) {
+    if (conversa.atendimento === 'concluido') return 'Cliente voltou a escrever (novo atendimento)';
+    const h = horasNovaConversa();
+    if (h > 0 && conversa.ultima_em && conversa.ultima_em < new Date(Date.now() - h * 3600000).toISOString()) {
+      return `Novo atendimento: mais de ${h} h sem conversa${conversa.atendimento === 'aguardando' ? ' (o anterior estava aguardando a equipe)' : ''}`;
+    }
+    const { ehBotaoDoSite } = require('../ia/central');
+    if (ehBotaoDoSite(texto)) {
+      const inicio = conversa.atend_inicio || '';
+      const jaRespondido = db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso' AND created_at >= ? LIMIT 1").get(conversa.id, inicio);
+      if (jaRespondido) return 'Novo atendimento: contato novo pelo site';
+    }
+    return null;
+  }
+
   function ingerir(evt) {
     if (!evt || !evt.jid || JID_IGNORADO.test(evt.jid)) return { ignorado: 'grupo_ou_canal' };
     return db.transaction(() => {
@@ -140,12 +160,12 @@ function createStore(db, opts = {}) {
         db.prepare(
           `UPDATE wa_conversas SET nao_lidas = nao_lidas + 1, situacao = 'Aberta', updated_at = ? WHERE id = ?`
         ).run(agora(), conversa.id);
-        if (conversa.atendimento === 'concluido') {
-          // Novo contato depois de concluído = NOVO atendimento com a IA (mesmo 1 minuto depois): o histórico fica, o assunto e
-          // o estado da IA do atendimento anterior não são reaproveitados. Saudação de novo só se acabou há mais de 12 h.
-          const antigo = !conversa.atend_em || conversa.atend_em < new Date(Date.now() - 12 * 3600000).toISOString();
-          mudarAtendimento(conversa.id, 'ia', { detalhe: 'Cliente voltou a escrever (novo atendimento)', novoAtendimento: antigo, reaberto: true, inicio: criada });
-        }
+        // NOVO atendimento (13/11, pedido do dono): o histórico fica, mas o assunto, a saudação e o estado da IA do atendimento
+        // anterior não são reaproveitados. Acontece quando (1) a conversa estava concluída; (2) ficou parada mais que o tempo
+        // configurado (ia_nova_conversa_h, padrão 12 h; 0 = desligado), mesmo sem ninguém ter concluído; ou (3) a pessoa
+        // clicou de novo num botão do site no meio de um atendimento que já tinha respostas.
+        const motivoNovo = motivoNovoAtendimento(conversa, texto);
+        if (motivoNovo) mudarAtendimento(conversa.id, 'ia', { detalhe: motivoNovo, novoAtendimento: true, reaberto: true, inicio: criada });
       }
       if (!deMim) avisar({ tipo: 'mensagem', conversaId: conversa.id, mensagemId: Number(info.lastInsertRowid) });
       return { inserido: true, conversaId: conversa.id, contatoId: contato.id, mensagemId: Number(info.lastInsertRowid) };
@@ -187,12 +207,12 @@ function createStore(db, opts = {}) {
       if (!novoAtendimento) sets.push('atend_assunto = NULL');
     }
     if (assunto !== undefined) { sets.push('atend_assunto = ?'); params.push(assunto); }
-    if (c.atendimento === estado && !assunto && !motivo) return false;
+    if (c.atendimento === estado && !assunto && !motivo && !reaberto) return false;
     db.prepare(`UPDATE wa_conversas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conversaId);
-    if (c.atendimento !== estado) {
-      avisar({ tipo: 'atendimento', conversaId, de: c.atendimento, para: estado, motivo: motivo || null, usuarioId: usuarioId || null });
+    if (c.atendimento !== estado) avisar({ tipo: 'atendimento', conversaId, de: c.atendimento, para: estado, motivo: motivo || null, usuarioId: usuarioId || null });
+    if (c.atendimento !== estado || reaberto) {
       db.prepare('INSERT INTO wa_eventos (conversa_id, tipo, detalhe, usuario_id, criado_em) VALUES (?, ?, ?, ?, ?)')
-        .run(conversaId, c.atendimento === 'concluido' && estado === 'ia' ? 'reaberta' : TIPO_EVENTO[estado], String(detalhe || motivo || '').slice(0, 200) || null, usuarioId || null, t);
+        .run(conversaId, reaberto && estado === 'ia' ? 'reaberta' : TIPO_EVENTO[estado], String(detalhe || motivo || '').slice(0, 200) || null, usuarioId || null, t);
     }
     return true;
   }

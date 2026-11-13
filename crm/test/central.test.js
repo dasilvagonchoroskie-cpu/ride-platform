@@ -57,8 +57,13 @@ test('primeiro contato: saudação + menu uma vez; número escolhe o assunto e a
   await receber('1');
   enviadas = daIA();
   assert.equal(enviadas.length, 2);
-  assert.equal(enviadas[1], 'Certo! Posso ajudar com isso.', 'sem saudação repetida e sem menu');
+  // 13/11: a opção escolhida recebe a abertura fixa da opção (Modelos), sem saudação repetida e sem menu.
+  assert.match(enviadas[1], /^Ótimo! Para a avaliação do seu cadastro de motorista/);
   assert.equal(conv().atend_assunto, 'cadastro');
+
+  await receber('Tenho carro próprio');
+  enviadas = daIA();
+  assert.equal(enviadas[2], 'Certo! Posso ajudar com isso.', 'depois da abertura, a IA redige seguindo o assunto');
   const ctx = estado.prompts.filter((p) => p.redigir).pop().user;
   assert.match(ctx, /Cadastro de motorista e veículo/);
   assert.match(ctx, /"ja_saudou":true/);

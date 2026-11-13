@@ -21,7 +21,7 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
     const base = { ativo: c.ativo, modo: c.modo, pronta: c.ativo && c.chaveConfigurada, responder: c.ativo && c.modo === 'automatico' && c.responder };
     if (req.user.role !== 'admin') return res.json(base);
     res.json({ ...base, provedor: c.provedor, reserva: c.reserva, provedor_nome: c.provedorNome, url_base: c.urlBase, provedores: c.provedores,
-      criar_cadastro: c.criarCadastro, responder: c.responder, limite_dia: c.limiteDia, humano_pausa: c.humanoPausa, transcrever: c.transcrever, transcricoes_hoje: c.transcricoesHoje, modelo: c.modelo, chave_configurada: c.chaveConfigurada,
+      criar_cadastro: c.criarCadastro, responder: c.responder, limite_dia: c.limiteDia, humano_pausa: c.humanoPausa, novo_atendimento_h: c.novoAtendimentoHoras, transcrever: c.transcrever, transcricoes_hoje: c.transcricoesHoje, modelo: c.modelo, chave_configurada: c.chaveConfigurada,
       chave_final4: c.chaveFinal4, chave_origem: c.chaveOrigem, uso: c.uso });
   });
 
@@ -45,6 +45,7 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
         responder: b.responder === undefined ? undefined : b.responder === true,
         limiteDia: b.limite_dia,
         humanoPausa: b.humano_pausa,
+        novoAtendimentoHoras: b.novo_atendimento_h,
         modelo: b.modelo
       });
     } catch (err) {
