@@ -214,7 +214,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       let vinculo = null;
       if (tipoAlvo) vinculo = { tipo: tipoAlvo, atual: valoresAtuais(tipoAlvo, conv.vinculo_id).atual };
       const camposEspec = tipoAlvo ? P.especificarCampos(tipoAlvo, ENTITIES[tipoAlvo]) : [];
-      const { system, user } = P.montarPrompt({ contato: { nome: conv.nome }, vinculo, tipoAlvo, camposEspec, mensagens });
+      // 13/11 (teste real do dono): a análise vê SÓ o atendimento atual. Com o histórico inteiro, um "quero falar com um
+      // atendente" de ontem fazia o novo atendimento ("Vim pelo site") ir direto para a equipe.
+      const inicioAt = inicioDe(conv);
+      const doAtendimento = mensagens.filter((m) => String(m.created_at || '') >= inicioAt);
+      const paraIA = doAtendimento.length ? doAtendimento : mensagens.slice(-1);
+      const { system, user } = P.montarPrompt({ contato: { nome: conv.nome }, vinculo, tipoAlvo, camposEspec, mensagens: paraIA });
 
       const resp = await provedor.completar({ system, user, maxTokens: 1200 });
       let bruto;
@@ -225,7 +230,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       // Reforço sem IA: dados de CNH/CRLV lidos (📎) que a IA não devolveu entram aqui; e valores no formato do cadastro.
       const perfilFinal = tipoAlvo ? tipoParaPerfil[tipoAlvo] : resultado.perfil;
       if (perfilFinal === 'motorista' || (!tipoAlvo && resultado.perfil === 'desconhecido')) {
-        const doc = extrairDadosDocumentos(mensagens);
+        const doc = extrairDadosDocumentos(paraIA);
         for (const [k, v] of Object.entries(doc)) if (chavesPermitidas.includes(k) && !resultado.campos[k]) resultado.campos[k] = v;
         if (Object.keys(doc).length && resultado.perfil === 'desconhecido' && !tipoAlvo) resultado.perfil = 'motorista';
       }
@@ -237,10 +242,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (tipoAlvo) resultado.perfil = tipoParaPerfil[tipoAlvo]; // com cadastro vinculado, o perfil é o do cadastro
       // Origem do contato NÃO é intenção (12/11 noite): "Vim pelo site" não faz de ninguém candidato a motorista. Enquanto o
       // cliente (neste atendimento) só cumprimentou ou disse de onde veio, perfil e assunto ficam indefinidos.
-      if (!tipoAlvo && semIntencaoNoAtendimento(conv, mensagens)) {
-        resultado.perfil = 'desconhecido';
-        resultado.campos = {};
-        if (resultado.atendimento) resultado.atendimento.opcao = 'indefinido';
+      if (semIntencaoNoAtendimento(conv, mensagens)) {
+        // Também com cadastro vinculado: sem intenção neste atendimento não há assunto nem transferência deduzidos.
+        if (!tipoAlvo) { resultado.perfil = 'desconhecido'; resultado.campos = {}; }
+        if (resultado.atendimento) { resultado.atendimento.opcao = 'indefinido'; resultado.atendimento.transferir = false; }
       }
 
       const info = db.prepare(
@@ -683,8 +688,17 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const jaSaudou = !!conv.saudado_em;
     if (!jaSaudou && waStore.marcarSaudado(conversaId)) {
       // Primeira vez com a Fortaleza Move → saudação inicial; quem já foi atendido antes → saudação de retorno.
-      const jaAtendido = !!db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso' AND created_at < ? LIMIT 1").get(conversaId, inicio);
+      // Pelo id (ordem real de gravação): comparar horário falhava quando tudo acontecia no mesmo milissegundo.
+      const jaAtendido = !!db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso' AND id < ? LIMIT 1").get(conversaId, ultima.id);
       partes.push(central.texto(jaAtendido ? 'saudacao_retorno' : 'saudacao') || central.texto('saudacao'));
+    }
+
+    // Botões do site (textos prontos): resposta fixa e profissional, sem depender da análise da IA.
+    const botao = C.botaoDoSite(textoUlt);
+    if (botao) {
+      if (botao.assunto && botao.assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, botao.assunto);
+      const fixo = botao.modelo === 'menu' ? central.texto('menu') : central.texto(botao.modelo);
+      if (fixo) return enviar([...partes, fixo], { tipo: botao.modelo === 'menu' ? 'menu' : 'botão do site' });
     }
 
     // Escolheu uma opção do menu: resposta imediata e profissional da opção (texto dos Modelos, editável), sem redação da IA.
@@ -694,7 +708,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (abertura && !(ultimaIA && ultimaIA.texto.endsWith(abertura))) return enviar([...partes, abertura], { tipo: 'opção do menu' });
     }
 
-    const motivoTransf = C.pediuHumano(textoUlt) ? 'pediu_humano' : (at.transferir ? at.motivo_transferencia : null);
+    // Sem intenção ainda (só cumprimentou ou disse de onde veio): o menu vem antes de qualquer transferência sugerida pela análise.
+    const motivoTransf = C.pediuHumano(textoUlt) ? 'pediu_humano' : (at.transferir && intencaoClara ? at.motivo_transferencia : null);
     if (motivoTransf) return transferir(motivoTransf, partes);
 
     // Documento recebido (foto/PDF): só conta o que tem ARQUIVO guardado (cifrado) — na ficha ou esperando a ficha.

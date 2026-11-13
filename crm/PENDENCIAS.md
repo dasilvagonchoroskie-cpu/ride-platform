@@ -23,6 +23,11 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       Configurações → Modelos de Comunicação da IA (saudação de retorno e as 5 aberturas são editáveis).
 - [x] 13/11 Avisos dentro do CRM: ao abrir ou voltar para o CRM, nada do que já foi notificado no celular aparece de novo na tela
       (antes acumulava e repetia em dobro); com o CRM aberto, no máximo 2 avisos por vez, um por conversa. Cache `fm-crm-v31`.
+- [x] 13/11 2.1.0-rc.4 (teste real das 12h20): a análise da IA via o histórico de atendimentos antigos e mandava o novo
+      atendimento para a equipe; agora vê só o atendimento atual. Botões do site com resposta fixa (menu / cadastro / comércio).
+      Lista de conversas abre em "Todas" (conversa concluída não "some"). Teste que reproduz a conversa real (falha na rc.3).
+- [ ] Dono: repetir pelo número da mãe: concluir no CRM e clicar "Vim pelo site" (saudação de retorno + menu, sem equipe);
+      depois o botão "Tenho um comércio" (saudação + pedido dos dados do comércio).
 - [ ] Opcional: "Health Check Path" `/api/health` no painel do Render (a ferramenta do Claude não altera essa opção).
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)

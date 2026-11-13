@@ -74,6 +74,18 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   nunca na abertura. `respostaSegura(..., { publicos })`: trecho que também está na conversa/modelos/informações não é "dado interno"
   (falso positivo real: "coleta e entrega de encomendas"). Testes: `test/ia-operacao.test.js`.
 
+## Teste real das 12h20 de 13/11 (2.1.0-rc.4, cache `fm-crm-v32`)
+- Causa real: `analisar` mandava ao Gemini as 60 últimas mensagens (histórico de atendimentos ANTERIORES). Um "quero falar com
+  um atendente" de ontem → `atendimento.transferir` → novo "Vim pelo site" ia para a equipe. Agora a análise recebe SÓ o
+  atendimento atual (`inicioDe`); sem intenção no atendimento → `transferir=false` e `opcao=indefinido` (também com ficha vinculada);
+  `responderCentral` só aceita transferência da análise com `intencaoClara`. NÃO voltar a mandar o histórico inteiro.
+- Botões do site (`C.botaoDoSite`): resposta fixa (Vim pelo site / corridas e encomendas → menu; motorista → `abertura_cadastro`;
+  comércio → `abertura_comercio`, assunto encomendas). Saudação de retorno decidida por id (`id < ultima.id`), não por horário.
+- `test/ia-vida-real.test.js`: modelo falso que se comporta como o real (vê "atendente" no texto → transfere); 3 dos 4 testes
+  FALHAM na rc.3 (conferido) e passam na rc.4. Teste novo de atendimento deve simular o histórico real, não conversa limpa.
+- Lista de conversas abre em "Todas" e lembra o filtro (`fm-wa-filtro`); filtro vazio mostra "Ver todas as conversas".
+  Nada é apagado: concluída (inclusive pelo encerramento automático) só sai do filtro "Abertas".
+
 ## Avisos na tela (13/11/2026, pedido do dono; cache `fm-crm-v31`)
 - `iniciarAvisos` (public/js/notificacoes.js): aviso na tela SÓ para o que chega com o CRM aberto. Ao voltar do segundo plano
   (`visibilitychange`) a busca é silenciosa (só avança `ultimo`): o celular já notificou. Trava `buscando` (duas buscas juntas

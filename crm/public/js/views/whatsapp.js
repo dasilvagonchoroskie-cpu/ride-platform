@@ -35,7 +35,11 @@ function quando(iso) {
 
 export async function renderConversas(view, state) {
   const isAdmin = state.user.role === 'admin';
-  const filtro = { modo: 'Aberta', q: '' };
+  // 13/11 (pedido do dono): a lista abre em "Todas" (conversa concluída não some da tela) e lembra o filtro escolhido.
+  const FILTROS = ['todas', 'Aberta', 'at:aguardando', 'at:humano', 'at:ia', 'naolidas', 'at:concluido'];
+  let salvo = null;
+  try { salvo = localStorage.getItem('fm-wa-filtro'); } catch (e) { salvo = null; }
+  const filtro = { modo: FILTROS.includes(salvo) ? salvo : 'todas', q: '' };
   let eventos = [];
   let assinaturaAtual = '';
   let atual = null;      // conversa aberta
@@ -55,12 +59,13 @@ export async function renderConversas(view, state) {
           <div class="wa-list-head">
             <div class="search">${ui.icon('search', 16)}<input type="search" id="wa-q" placeholder="Buscar nome, telefone ou mensagem" maxlength="80"></div>
             <select id="wa-f" aria-label="Filtrar conversas">
+              <option value="todas">Todas</option>
               <option value="Aberta">Abertas</option>
               <option value="at:aguardando">Aguardando humano</option>
               <option value="at:humano">Em atendimento humano</option>
               <option value="at:ia">IA atendendo</option>
               <option value="naolidas">Não lidas</option>
-              <option value="at:concluido">Concluídas</option><option value="todas">Todas</option>
+              <option value="at:concluido">Concluídas</option>
             </select>
           </div>
           <div class="wa-items" id="wa-items"></div>
@@ -145,7 +150,10 @@ export async function renderConversas(view, state) {
     }
     box.innerHTML = data.items.length
       ? data.items.map(itemHtml).join('') + (data.total > data.items.length ? `<p class="wa-more">Mostrando ${data.items.length} de ${data.total}. Use a busca para achar as demais.</p>` : '')
-      : `<div class="wa-none">${ui.esc(filtro.q ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa aqui.')}</div>`;
+      : `<div class="wa-none">${ui.esc(filtro.q ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa neste filtro.')}${filtro.modo !== 'todas'
+        ? '<br><button class="btn btn-sm btn-soft" type="button" id="wa-ver-todas">Ver todas as conversas</button>' : ''}</div>`;
+    const verTodas = $('#wa-ver-todas');
+    if (verTodas) verTodas.addEventListener('click', () => { $('#wa-f').value = 'todas'; $('#wa-f').dispatchEvent(new Event('change')); });
   }
 
   /* --------------------------------- conversa aberta -------------------------------- */
@@ -594,7 +602,12 @@ export async function renderConversas(view, state) {
     if (b) abrir(Number(b.dataset.id)).catch((err) => ui.toast(err.message, 'error'));
   });
   $('#wa-q').addEventListener('input', ui.debounce((e) => { filtro.q = e.target.value.trim(); carregarLista().catch(() => {}); }, 300));
-  $('#wa-f').addEventListener('change', (e) => { filtro.modo = e.target.value; carregarLista().catch(() => {}); });
+  $('#wa-f').value = filtro.modo;
+  $('#wa-f').addEventListener('change', (e) => {
+    filtro.modo = e.target.value;
+    try { localStorage.setItem('fm-wa-filtro', filtro.modo); } catch (err) { /* sem armazenamento */ }
+    carregarLista().catch(() => {});
+  });
   $('#wa-send').addEventListener('click', enviar);
   $('#wa-text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); enviar(); } });
   $('#wa-back').addEventListener('click', fecharConversa);
