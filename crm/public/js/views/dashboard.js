@@ -2,13 +2,61 @@ import { api } from '../api.js';
 import * as ui from '../ui.js';
 import * as notif from '../notificacoes.js';
 
-function kpiCard({ icon, label, value, foot, tone = '' }) {
-  return `<div class="kpi ${tone}">
+function kpiCard({ icon, label, value, foot, tone = '', wa = '' }) {
+  return `<div class="kpi ${tone}"${wa ? ` data-wa="${ui.esc(wa)}" role="button" tabindex="0" style="cursor:pointer"` : ''}>
     <div class="kpi-icon">${ui.icon(icon, 17)}</div>
     <div class="kpi-value">${ui.fmtInt(value)}</div>
     <div class="kpi-label">${ui.esc(label)}</div>
     ${foot ? `<div class="kpi-foot">${ui.esc(foot)}</div>` : ''}
   </div>`;
+}
+
+// "há 5 min", "há 3 h", "há 2 dias" (só para o que está esperando; o horário exato fica na conversa).
+function haQuanto(iso) {
+  const t = Date.parse(iso || '');
+  if (!Number.isFinite(t)) return '';
+  const min = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (min < 1) return 'agora há pouco';
+  if (min < 60) return `há ${min} min`;
+  if (min < 48 * 60) return `há ${Math.round(min / 60)} h`;
+  return `há ${Math.round(min / 1440)} dias`;
+}
+
+function blocoWhatsapp(w) {
+  if (!w) return '';
+  const vazio = !w.abertos && !w.concluidos_total;
+  const esperando = w.esperando_voce.length
+    ? w.esperando_voce.map((e) => `
+      <div class="spread" data-conv="${e.id}" role="button" tabindex="0" style="padding:9px 0;border-bottom:1px dashed #eef2f9;cursor:pointer">
+        <div style="min-width:0">
+          <div style="font-size:13.5px;font-weight:600">${ui.esc(e.nome)}</div>
+          <div class="small muted">${ui.esc(e.assunto)} · ${ui.esc(e.motivo)}</div>
+        </div>
+        <div style="text-align:right;flex:none"><span class="badge ${e.estado === 'aguardando' ? 'danger' : 'warn'}">${e.estado === 'aguardando' ? 'Equipe' : 'Respondendo'}</span>
+          <div class="small muted">${ui.esc(haQuanto(e.desde))}</div></div>
+      </div>`).join('')
+    : '<div class="empty" style="padding:22px 12px"><p>Nada esperando por você agora. 👍</p></div>';
+  const assuntos = w.por_assunto.length
+    ? ui.bars(w.por_assunto.map((a) => ({ label: `${a.rotulo}${a.dependem ? ` (${a.dependem} com você)` : ''}`, value: a.total })))
+    : '<p class="small muted">Nenhum atendimento em aberto.</p>';
+  return `
+    <div class="eyebrow" style="margin:6px 0 8px">Atendimento pelo WhatsApp · ao vivo</div>
+    <div class="kpi-grid">
+      ${kpiCard({ icon: 'alert', label: 'Dependem de você', value: w.dependem_de_voce, foot: w.dependem_de_voce ? `${ui.fmtInt(w.aguardando_equipe)} encaminhado(s) à equipe · ${ui.fmtInt(w.cliente_esperando)} cliente(s) esperando resposta${w.mais_antigo_desde ? ` · o mais antigo ${haQuanto(w.mais_antigo_desde)}` : ''}` : 'Nada esperando por você', tone: w.dependem_de_voce ? 'red' : 'green', wa: 'at:aguardando' })}
+      ${kpiCard({ icon: 'headset', label: 'Com a IA', value: w.com_a_ia, foot: 'Não dependem de você agora', wa: 'at:ia' })}
+      ${kpiCard({ icon: 'list', label: 'Aguardando o cliente', value: w.aguardando_cliente, foot: 'Atendimento humano; a próxima fala é do cliente', wa: 'at:humano' })}
+      ${kpiCard({ icon: 'check', label: 'Concluídos hoje', value: w.concluidos_hoje, foot: `${ui.fmtInt(w.abertos)} em aberto · ${ui.fmtInt(w.concluidos_total)} concluído(s) no total`, tone: 'green', wa: 'at:concluido' })}
+    </div>
+    <div class="grid-2" style="margin-top:16px;margin-bottom:18px">
+      <div class="card">
+        <div class="card-head"><div><h3>Esperando por você</h3><p class="sub">Toque para abrir a conversa${vazio ? ' · ainda sem conversas' : ''}</p></div></div>
+        <div class="card-body">${esperando}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3>Em aberto por assunto</h3><p class="sub">Cada atendimento conta uma vez, no assunto escolhido no menu</p></div></div>
+        <div class="card-body">${assuntos}${w.por_motivo.length ? `<div class="small muted" style="margin-top:12px"><b>Encaminhados à equipe:</b> ${w.por_motivo.map((m) => `${ui.esc(m.rotulo)} (${ui.fmtInt(m.total)})`).join(' · ')}</div>` : ''}</div>
+      </div>
+    </div>`;
 }
 
 export async function renderDashboard(view, state) {
@@ -81,6 +129,9 @@ export async function renderDashboard(view, state) {
       </div>
     </div>` : ''}
 
+    ${blocoWhatsapp(d.atendimento_wa)}
+
+    <div class="eyebrow" style="margin:6px 0 8px">Cadastros e operação</div>
     <div class="kpi-grid">
       ${kpiCard({ icon: 'steering', label: 'Motoristas interessados', value: k.motoristas_interessados, foot: `Novos, ainda sem contato · ${ui.fmtInt(k.motoristas_total)} no total` })}
       ${kpiCard({ icon: 'list', label: 'Motoristas em processo de cadastro', value: k.motoristas_em_processo, foot: 'Contato até análise', tone: 'gold' })}
@@ -95,7 +146,7 @@ export async function renderDashboard(view, state) {
       ${kpiCard({ icon: 'users', label: 'Passageiros interessados', value: k.passageiros_interessados, foot: `${ui.fmtInt(k.passageiros_cadastrados)} já cadastrados` })}
       ${kpiCard({ icon: 'store', label: 'Parceiros em negociação', value: k.parceiros_negociacao, foot: 'Clube de Vantagens' })}
       ${kpiCard({ icon: 'building', label: 'Parcerias confirmadas', value: k.parcerias_confirmadas, foot: 'Confirmação manual', tone: 'green' })}
-      ${kpiCard({ icon: 'headset', label: 'Atendimentos pendentes', value: k.atendimentos_pendentes, foot: 'Abertos e em andamento', tone: k.atendimentos_pendentes ? 'gold' : '' })}
+      ${kpiCard({ icon: 'headset', label: 'Registros de atendimento pendentes', value: k.atendimentos_pendentes, foot: 'Lançados à mão no módulo Atendimento', tone: k.atendimentos_pendentes ? 'gold' : '' })}
       ${kpiCard({ icon: 'megaphone', label: 'Campanhas em andamento', value: k.campanhas_andamento, foot: 'Produção, andamento e publicadas' })}
       ${kpiCard({ icon: 'calendar', label: 'Tarefas próximas do vencimento', value: k.tarefas_proximas, foot: `Próximos ${d.alerta_dias} dias`, tone: 'gold' })}
       ${kpiCard({ icon: 'alert', label: 'Tarefas atrasadas', value: k.tarefas_atrasadas, foot: 'Vencidas e em aberto', tone: k.tarefas_atrasadas ? 'red' : '' })}
@@ -147,6 +198,17 @@ export async function renderDashboard(view, state) {
 
   view.querySelector('#dash-refresh').addEventListener('click', () => renderDashboard(view, state));
   view.querySelector('#dash-new-driver').addEventListener('click', () => { location.hash = '#/motoristas?novo=1'; });
+  // Cartões do WhatsApp: abrem a lista de conversas já no filtro certo; linhas abrem a conversa.
+  view.querySelectorAll('[data-wa]').forEach((el) => {
+    const ir = () => { try { localStorage.setItem('fm-wa-filtro', el.dataset.wa); } catch (e) { /* sem armazenamento */ } location.hash = '#/conversas'; };
+    el.addEventListener('click', ir);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } });
+  });
+  view.querySelectorAll('[data-conv]').forEach((el) => {
+    const ir = () => { location.hash = `#/conversas?c=${el.dataset.conv}`; };
+    el.addEventListener('click', ir);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } });
+  });
   view.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { location.hash = `#/${b.dataset.go}`; }));
   avisoPush(view);
 }

@@ -130,7 +130,7 @@ function informacoesOficiais(informacoes, assuntoAtual) {
 }
 
 function montarPromptResposta({ mensagens, perfil, faltando, assunto, informacoes, jaSaudou, confirmacaoEnviada }) {
-  const assuntoOk = Object.prototype.hasOwnProperty.call(C.FLUXOS, assunto) ? assunto : null;
+  const assuntoOk = C.fluxoDe(assunto);
   const contexto = {
     perfil_identificado: PERFIS.includes(perfil) ? perfil : 'desconhecido',
     assunto_atual: assuntoOk ? C.nomeDoAssunto(assuntoOk) : 'ainda não definido (descubra o que a pessoa precisa)',

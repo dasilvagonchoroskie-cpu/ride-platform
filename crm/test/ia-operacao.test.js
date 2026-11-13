@@ -98,7 +98,7 @@ test('barreira: resposta da IA que confirma cadastro/aprovação ou promete não
     assert.deepEqual(P.respostaSegura(t), { ok: true }, t);
   }
   const { receber, daIA, estado } = montar();
-  await receber('1'); // escolhe cadastro de motorista
+  await receber('4'); // escolhe cadastro de motorista
   const antes = daIA().length;
   estado.redacao = { resposta: 'Pronto, seu cadastro foi aprovado e você já pode rodar!' };
   const r = await receber('E aí, já posso começar?');
@@ -111,7 +111,7 @@ test('conversa parada há mais de 12 h (sem ninguém concluir): a próxima mensa
   const { receber, daIA, conv, db, waStore } = montar();
   await receber('Oi'); // 1º contato da vida: saudação inicial + menu
   assert.match(daIA()[0].texto, /^Olá! Seja bem-vindo/);
-  await receber('1');
+  await receber('4');
   assert.equal(conv().atend_assunto, 'cadastro');
   // Simula: ficou parada 13 h (a conversa continua "com a IA", ninguém concluiu)
   db.prepare('UPDATE wa_conversas SET ultima_em = ?').run(new Date(Date.now() - 13 * 3600000).toISOString());
@@ -128,12 +128,14 @@ test('conversa parada há mais de 12 h (sem ninguém concluir): a próxima mensa
 test('clicou de novo no botão do site no meio de um atendimento: novo atendimento com saudação de retorno + menu', async () => {
   const { receber, daIA, conv } = montar();
   await receber('Oi');
-  await receber('3');
-  assert.match(daIA().pop().texto, /^Certo! Para a coleta e entrega/, 'opção 3: abertura profissional da opção');
+  await receber('2');
+  assert.match(daIA().pop().texto, /Sobre encomendas, escolha uma das opções/, 'opção 2: segundo menu de encomendas');
+  await receber('1');
+  assert.match(daIA().pop().texto, /^Certo! Para a coleta e entrega/, 'opção 2.1: abertura profissional da opção');
   await receber('Olá! Vim pelo site da Fortaleza Move.');
   const ultima = daIA().pop().texto;
   assert.match(ultima, /^Olá! A Fortaleza Move agradece por entrar em contato conosco novamente/);
-  assert.match(ultima, /1\. Cadastro de motorista e veículo\./);
+  assert.match(ultima, /4\. Cadastro de motorista e veículo\./);
   assert.equal(conv().atend_assunto, null);
 });
 
@@ -157,7 +159,7 @@ test('configuração 0 desliga o novo atendimento por tempo e o encerramento aut
   const { receber, ia, conv, db } = montar();
   ia.salvarConfig({ novoAtendimentoHoras: 0 });
   await receber('Oi');
-  await receber('2');
+  await receber('1');
   db.prepare('UPDATE wa_conversas SET ultima_em = ?').run(new Date(Date.now() - 48 * 3600000).toISOString());
   assert.equal(ia.encerrarInativas().length, 0);
   await receber('E aí, como faço para chamar uma corrida?');

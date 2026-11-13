@@ -75,7 +75,9 @@ test('vida real: histórico antigo com "quero falar com um atendente" NÃO derru
   const analise = vistos.filter((v) => !v.redigir).pop();
   if (analise) assert.doesNotMatch(analise.user, /atendente/, 'a análise do novo atendimento não recebe o histórico antigo');
 
-  await receber('3');
+  await receber('2');
+  assert.match(daIA().pop(), /Sobre encomendas, escolha uma das opções/);
+  await receber('1');
   assert.match(daIA().pop(), /^Certo! Para a coleta e entrega/);
   assert.equal(conv().atendimento, 'ia');
 });

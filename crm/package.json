@@ -1,6 +1,6 @@
 {
   "name": "crm-fortaleza-move",
-  "version": "2.1.0-rc.6",
+  "version": "2.1.0-rc.7",
   "private": true,
   "description": "CRM Fortaleza Move - gestão de motoristas, passageiros, parceiros, atendimento, marketing, tarefas e planejamento financeiro.",
   "main": "server.js",

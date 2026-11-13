@@ -7,6 +7,7 @@ const path = require('path');
 const { db, nowISO, getSetting, setSetting, DATA_DIR } = require('./db');
 const { ENTITIES } = require('./defs');
 const auth = require('./auth');
+const { resumoAtendimentos } = require('./atendimento-painel');
 const { todayISO, addDaysISO, isDateISO, fail, sendCsv, audit, localDate } = require('./http');
 const entities = require('./entities');
 const policy = require('./policy');
@@ -874,6 +875,7 @@ router.get('/dashboard', (req, res) => {
     serie,
     funil_motoristas: funnel('motoristas', ENTITIES.motoristas.statuses),
     funil_parceiros: funnel('parceiros', ENTITIES.parceiros.statuses),
+    atendimento_wa: resumoAtendimentos({ db, hoje, localDate }),
     proximas_acoes: proximas,
     ultimos_atendimentos: db.prepare('SELECT id, assunto, tipo, prioridade, situacao, data FROM atendimentos ORDER BY data DESC, id DESC LIMIT 5').all(),
     ultimos_cadastros: db.prepare("SELECT id, nome, cidade, created_at FROM motoristas ORDER BY id DESC LIMIT 5").all(),

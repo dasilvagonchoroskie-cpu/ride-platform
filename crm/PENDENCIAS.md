@@ -177,6 +177,12 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] Contatos do WhatsApp com identificador LID sem telefone (vínculo manual).
 - [ ] Restauração de uma versão antiga do cofre (histórico existe; restauração nunca foi ensaiada).
 
+## 4b. Entregue em 13/11/2026 (rc.7)
+
+- [x] 13/11 Menu do WhatsApp por público (passageiros e clientes / comércios / motoristas / outros) com segundos menus de encomendas e comércios.
+- [x] 13/11 Painel inicial com os atendimentos do WhatsApp (dependem de você, com a IA, aguardando o cliente, concluídos, por assunto).
+- [ ] Testar no WhatsApp real o menu novo (2 e 3 e seus segundos menus, 0) e conferir o painel com conversas de verdade.
+
 ## 5. Backlog (melhorias conhecidas, sem prazo)
 
 - [ ] WhatsApp: enviar foto/áudio/documento pelo CRM; histórico opcional de contatos.
