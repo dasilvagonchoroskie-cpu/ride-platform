@@ -109,9 +109,13 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
           if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           final ruas = snap.data;
           if (ruas == null) {
-            return const Padding(
-              padding: EdgeInsets.all(20),
-              child: Estado(icone: Icons.map_outlined, titulo: 'Mapa indisponível agora', texto: 'Digite o endereço e use "Buscar no mapa". Nenhum pedido foi feito.'),
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Estado(
+                icone: Icons.map_outlined,
+                titulo: 'Mapa indisponível agora',
+                texto: '${EscopoSessao.ler(context).erroDoMapa ?? ''}\nDigite o endereço e use "Buscar no mapa". Nenhum pedido foi feito.'.trim(),
+              ),
             );
           }
           final semNome = (_lugar?.endereco ?? '').startsWith('Ponto no mapa');

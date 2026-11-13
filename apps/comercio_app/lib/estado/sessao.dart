@@ -37,6 +37,39 @@ class Sessao extends ChangeNotifier {
     notifyListeners();
   }
 
+  String? email;
+  Estabelecimento? estabelecimento;
+
+  /// Falha ao consultar o estabelecimento (sem rede): a tela oferece "tentar de novo".
+  String? falha;
+
+  /// Imagens do mapa (pedidas ao servidor, guardadas so em memoria por 10 minutos).
+  ConfigDoMapa? _mapa;
+  DateTime? _mapaEm;
+
+  /// Por que o mapa de ruas nao esta disponivel (para a tela explicar).
+  String? erroDoMapa;
+
+  /// null = sem mapa de ruas agora (sem rede ou servidor sem fornecedor): a tela avisa, nao inventa.
+  Future<ConfigDoMapa?> configDoMapa() async {
+    final recente = _mapaEm != null && DateTime.now().difference(_mapaEm!) < const Duration(minutes: 10);
+    if (_mapa != null && recente) return _mapa;
+    try {
+      _mapa = await servidor.configDoMapa();
+      _mapaEm = DateTime.now();
+      erroDoMapa = null;
+    } catch (e) {
+      // mantem o ultimo conhecido, se houver; o motivo aparece na tela do mapa
+      erroDoMapa = e is ApiException ? e.message : 'Sem resposta do servidor.';
+    }
+    if (_mapa == null && erroDoMapa == null) erroDoMapa = 'O servidor não mandou o endereço das imagens do mapa.';
+    return _mapa;
+  }
+
+  bool get cadastrado => estabelecimento != null;
+  bool get aprovado => estabelecimento?.aprovado ?? false;
+
+
   /// Abre o app: se ja ha login guardado, confere com o servidor.
   Future<void> iniciar() async {
     termosAceitosVersao = await Armazenamento.atual.ler(Armazenamento.termosAceitos);
