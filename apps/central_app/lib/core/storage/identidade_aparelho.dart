@@ -10,7 +10,7 @@ import 'app_storage.dart';
 class IdentidadeDoAparelho {
   const IdentidadeDoAparelho._();
 
-  static const String chave = 'ride.idDoAparelho';
+  static const String chave = AppStorage.idDoAparelho;
   static Map<String, dynamic>? _dados;
 
   static Future<Map<String, dynamic>> dados() async {

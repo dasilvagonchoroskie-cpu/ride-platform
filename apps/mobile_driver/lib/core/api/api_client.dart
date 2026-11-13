@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../storage/app_storage.dart';
@@ -56,20 +55,19 @@ class ApiClient {
       caminho.startsWith('/auth/login');
 
   /// Uma renovacao por vez: varios pedidos com 401 ao mesmo tempo esperam a mesma.
-  Future<bool> _renovarLogin() => _renovacao ??= _fazerRenovacao().whenComplete(() => _renovacao = null);
+  Future<bool> _renovarLogin(String? usado) => _renovacao ??= _fazerRenovacao(usado).whenComplete(() => _renovacao = null);
 
-  Future<bool> _fazerRenovacao() async {
-    final prefs = await SharedPreferences.getInstance();
-    final acessoAntes = prefs.getString(AppStorage.accessToken);
-    await prefs.reload();
-    // O vigia nativo (chamados com o app fechado) pode ter renovado o login
-    // por conta propria: usa o acesso novo que ele gravou.
-    final acessoGravado = prefs.getString(AppStorage.accessToken);
-    if (acessoGravado != null && acessoGravado.isNotEmpty && acessoGravado != acessoAntes) {
-      aoRenovarToken?.call(acessoGravado);
+  /// [usado] e o acesso que o servidor acabou de recusar. O login fica no
+  /// cofre do celular (Cofre/AppStorage), e o vigia nativo grava no mesmo
+  /// cofre: se la ja houver um acesso DIFERENTE do recusado, alguem
+  /// (o vigia ou outro pedido) ja renovou e basta repetir o pedido.
+  Future<bool> _fazerRenovacao(String? usado) async {
+    final atual = await AppStorage.read(AppStorage.accessToken);
+    if (atual != null && atual.isNotEmpty && atual != usado) {
+      aoRenovarToken?.call(atual);
       return true;
     }
-    final refresh = prefs.getString(AppStorage.refreshToken);
+    final refresh = await AppStorage.read(AppStorage.refreshToken);
     if (refresh == null || refresh.isEmpty) return false;
     try {
       final r = await _client
@@ -86,8 +84,7 @@ class ApiClient {
       final acesso = dados?['accessToken'] as String?;
       if (d['success'] != true || acesso == null || acesso.isEmpty) {
         // Recusado: o vigia nativo pode ter trocado o refresh agora mesmo.
-        await prefs.reload();
-        final outro = prefs.getString(AppStorage.refreshToken);
+        final outro = await AppStorage.read(AppStorage.refreshToken);
         return outro != null && outro.isNotEmpty && outro != refresh;
       }
       await AppStorage.write(AppStorage.accessToken, acesso);
@@ -109,11 +106,12 @@ class ApiClient {
     Map<String, dynamic>? body,
     Map<String, String>? query,
   }) async {
+    String? usado;
     try {
-      return await _enviar(method, path, body: body, query: query);
+      return await _enviar(method, path, body: body, query: query, aoLerAcesso: (t) => usado = t);
     } on ApiException catch (e) {
       if (e.statusCode == 401 && !_semRenovar(path)) {
-        if (await _renovarLogin()) {
+        if (await _renovarLogin(usado)) {
           final repetido = await _enviar(method, path, body: body, query: query, ultimaVez: true);
           return repetido;
         }
@@ -137,12 +135,14 @@ class ApiClient {
     Map<String, dynamic>? body,
     Map<String, String>? query,
     bool ultimaVez = false,
+    void Function(String?)? aoLerAcesso,
   }) async {
     final base = Uri.parse('${AppConfig.apiUrl}/api$path');
     final uri = query == null ? base : base.replace(queryParameters: query);
 
     final headers = <String, String>{'Content-Type': 'application/json'};
     final token = await AppStorage.read(AppStorage.accessToken);
+    aoLerAcesso?.call(token);
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }

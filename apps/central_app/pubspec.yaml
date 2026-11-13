@@ -15,6 +15,9 @@ dependencies:
   provider: ^6.1.2
   http: ^1.5.0
   shared_preferences: ^2.3.3
+  # Cofre do celular (13/11/2026): login da Central fora do arquivo comum.
+  # Versao TRAVADA: o lado nativo (CofreNativo.java) usa a API interna do plugin.
+  flutter_secure_storage: 10.0.0
   # A versao certa e a que o flutter_localizations exige.
   intl: any
   flutter_map: ^8.3.2
