@@ -1,9 +1,20 @@
 # PENDÊNCIAS — Fortaleza Move
 
-Atualizado em 13/11/2026: situação consolidada (seção 00000003, a primeira) — vale mais que as linhas antigas. Antes, 05/11/2026: Clube de Vantagens (seção 0). Antes, 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
+Atualizado em 13/11/2026 (manhã): integração e APKs (seção 00000004, a primeira); situação consolidada (seção 00000003) — vale mais que as linhas antigas. Antes, 05/11/2026: Clube de Vantagens (seção 0). Antes, 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**.
 
 Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou esteira) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
+
+---
+
+## 00000004. INTEGRAÇÃO, PUBLICAÇÃO E APKs PARA TESTE REAL (13/11/2026) — vale mais que a seção abaixo onde divergir
+- **PR #59 integrada na `main`** (merge `54725a1`, por ordem expressa do dono às 06:42; auditoria final feita antes: sem conflito, sem segredo, sem SQL destrutivo, todas as verificações verdes no código final `7f5c572`). **Deploy do servidor autorizado às 06:44** e feito pelo próprio Render (publicação automática por commit); o segredo `RENDER_DEPLOY_HOOK` do GitHub continua vazio (item do dono, não bloqueia). Inicialização sem erro e rotas novas no ar conferidas nos registros do Render.
+- **APKs gerados da `main` (`4e32644`)**: Central, Passageiro e Motorista 1.0.426; Comércio 1.0.17. Mesma chave de release nos quatro (CN Fortaleza Digital Security, válida até 2054), ids distintos e inalterados, zip íntegro, permissões coerentes, sem segredo dentro. A parte nativa (Java) do cofre da Central **compilou** e está no APK. Detalhes e instruções: `ENTREGA-APKS-TESTES.md`.
+- **Servidor usado pelos APKs:** produção (`fortaleza-mov-backend.onrender.com`); **não existe ambiente de homologação**. Compatível com a versão integrada.
+- **Continua sem prova em aparelho:** todos os roteiros de `docs/TESTE-DE-RUA.md` (A–V). Instalação em emulador/aparelho **não** foi feita. Etapa do dono.
+- **Risco operacional anotado:** cada commit na `main` (inclusive relatórios dos robôs) republica o servidor no Render (reinício de cerca de 1 min). Durante o teste de rua, não enviar nada para a `main`. Separar relatórios dos robôs com filtro de pastas do Render está adiado por decisão anterior.
+- **Não alterados:** tarifas, comissões, carteiras, regras comerciais, Moto/Entregas/chave global do Comércio, configuração de teste de moto em Goiatuba, `OTP_DEBUG_RETURN`, duas etapas do dono, `db-bootstrap.yml` (não executado), CRM.
+- **Esta seção troca o que diz o texto abaixo:** onde se lê "PR #59 em rascunho, sem merge, sem deploy, nenhum APK", leia "integrada, publicada e com APKs 426/17".
 
 ---
 
