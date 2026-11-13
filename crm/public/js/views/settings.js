@@ -115,6 +115,8 @@ export async function renderSettings(view, state) {
             <label class="check"><input type="checkbox" id="ia-transcrever"> Ler as mídias que chegam: áudio vira texto; fotos, PDFs e vídeos são lidos pelo Gemini (inclusive documentos como CNH e CRLV); Word, Excel e PowerPoint são lidos aqui no servidor. Assim a IA consegue usar tudo para preencher o cadastro.</label>
             <div class="field"><label for="ia-pausa">Voltar para a IA depois de quantos minutos sem resposta da equipe</label><input id="ia-pausa" type="number" min="0" max="1440" step="5">
               <div class="form-hint">Quando você responde (pelo CRM ou pelo celular) a IA para. Passado esse tempo sem nova resposta sua, ela volta a atender sozinha. 0 = só volta pelo botão "Devolver à IA".</div></div>
+            <div class="field"><label for="ia-novo">Novo atendimento depois de quantas horas sem conversa</label><input id="ia-novo" type="number" min="0" max="168" step="1">
+              <div class="form-hint">Conversa parada por esse tempo (com a IA ou com a equipe) é encerrada sozinha, e a próxima mensagem do cliente começa um atendimento novo: saudação de retorno e menu. Conversas transferidas aguardando a equipe não são encerradas. 0 = desligado.</div></div>
             <div class="field"><label for="ia-limite">Limite de análises por dia</label><input id="ia-limite" type="number" min="1" max="2000" step="1"></div>
             <div class="field"><label for="ia-modelo">Modelo (opcional)</label><input id="ia-modelo" type="text" maxlength="100" autocomplete="off"></div>
             <div class="field"><label for="ia-reserva">Provedor reserva (opcional)</label><select id="ia-reserva"></select>
@@ -456,6 +458,7 @@ function setupIA(view) {
     $('#ia-transcrever').checked = st.transcrever !== false;
     $('#ia-limite').value = st.limite_dia;
     $('#ia-pausa').value = st.humano_pausa === undefined ? 30 : st.humano_pausa;
+    $('#ia-novo').value = st.novo_atendimento_h === undefined ? 12 : st.novo_atendimento_h;
     $('#ia-ativo').checked = !!st.ativo;
   }
 
@@ -464,7 +467,7 @@ function setupIA(view) {
   async function salvar(extra = {}) {
     const corpo = {
       ativo: $('#ia-ativo').checked, modo: $('#ia-modo').value, criar_cadastro: $('#ia-criar').checked, responder: $('#ia-responder').checked, transcrever: $('#ia-transcrever').checked,
-      limite_dia: Number($('#ia-limite').value), humano_pausa: Number($('#ia-pausa').value), provedor: $('#ia-provedor').value, reserva: $('#ia-reserva').value, ...extra
+      limite_dia: Number($('#ia-limite').value), humano_pausa: Number($('#ia-pausa').value), novo_atendimento_h: Number($('#ia-novo').value), provedor: $('#ia-provedor').value, reserva: $('#ia-reserva').value, ...extra
     };
     const modelo = $('#ia-modelo').value.trim();
     corpo.modelo = modelo; // vazio = o CRM descobre o modelo sozinho

@@ -171,7 +171,7 @@ function prometeOuConfirma(texto) {
 }
 
 // Filtro final antes de enviar sozinha: bloqueia números de documento, links, contatos e qualquer trecho de anotação interna.
-function respostaSegura(texto, { internos = [] } = {}) {
+function respostaSegura(texto, { internos = [], publicos = [] } = {}) {
   const t = String(texto || '');
   if (!t.trim()) return { ok: false, motivo: 'vazia' };
   if (t.length > 600) return { ok: false, motivo: 'longa' };
@@ -180,10 +180,14 @@ function respostaSegura(texto, { internos = [] } = {}) {
   if (prometeOuConfirma(t)) return { ok: false, motivo: 'promessa' };
   const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
   const alvo = norm(t);
+  // Trecho que também está na conversa, nos modelos ou nas informações oficiais não é segredo (13/11: "coleta e entrega de
+  // encomendas" vinha do menu e do resumo da análise e bloqueava a resposta à toa).
+  const aberto = publicos.map(norm).join(' | ');
   for (const interno of internos) {
     const palavras = norm(interno).split(' ').filter(Boolean);
     for (let i = 0; i + 4 <= palavras.length; i += 1) {
-      if (alvo.includes(palavras.slice(i, i + 4).join(' '))) return { ok: false, motivo: 'dado_interno' };
+      const trecho = palavras.slice(i, i + 4).join(' ');
+      if (alvo.includes(trecho) && !aberto.includes(trecho)) return { ok: false, motivo: 'dado_interno' };
     }
   }
   return { ok: true };

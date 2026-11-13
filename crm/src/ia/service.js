@@ -112,6 +112,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       // Minutos sem resposta da equipe para a conversa voltar sozinha para a IA (0 = só pelo botão).
       humanoPausa: Math.max(0, Number(getSetting('ia_humano_pausa_min', '30')) || 0),
       transcrever: getSetting('ia_transcrever', '1') === '1',
+      // Horas sem conversa para o próximo contato virar NOVO atendimento e para encerrar sozinho (0 = desligado).
+      novoAtendimentoHoras: Math.max(0, Number(getSetting('ia_nova_conversa_h', '12')) || 0),
       transcricoesHoje: transcricoesDoDia(),
       modelo: obterModelo(id),
       chaveConfigurada: !!cofre.ler(id),
@@ -147,6 +149,11 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       const n = Math.round(Number(p.humanoPausa));
       if (!Number.isFinite(n) || n < 0 || n > 1440) throw new ErroIA('invalido', 'O tempo para voltar para a IA deve ficar entre 0 e 1440 minutos.');
       setSetting('ia_humano_pausa_min', String(n));
+    }
+    if (p.novoAtendimentoHoras !== undefined) {
+      const n = Math.round(Number(p.novoAtendimentoHoras));
+      if (!Number.isFinite(n) || n < 0 || n > 168) throw new ErroIA('invalido', 'O tempo para novo atendimento deve ficar entre 0 e 168 horas.');
+      setSetting('ia_nova_conversa_h', String(n));
     }
     if (p.limiteDia !== undefined) {
       const n = Math.round(Number(p.limiteDia));
@@ -532,9 +539,27 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     return feitas;
   }
   let varredura = null;
+  // Encerramento automático (13/11, pedido do dono): conversa com a IA ou com a equipe parada há mais que o tempo configurado
+  // vira "concluída" (sem mensagem ao cliente). Transferida aguardando a equipe NÃO é encerrada: a equipe precisa ver.
+  function encerrarInativas() {
+    const h = config().novoAtendimentoHoras;
+    if (!(h > 0)) return [];
+    const limite = new Date(Date.now() - h * 3600000).toISOString();
+    const ids = db.prepare("SELECT id FROM wa_conversas WHERE atendimento IN ('ia', 'humano') AND ultima_em IS NOT NULL AND ultima_em < ?").all(limite).map((r) => r.id);
+    for (const id of ids) {
+      if (processando.has(id) || timers.has(id)) continue;
+      waStore.mudarAtendimento(id, 'concluido', { detalhe: `Encerrada automaticamente após ${h} h sem conversa` });
+    }
+    if (ids.length) log.log(`[ia] ${ids.length} conversa(s) encerrada(s) automaticamente por inatividade (${h} h)`);
+    return ids;
+  }
+
   function iniciarRecuperacao(intervaloMs = Number(process.env.IA_VARREDURA_MS) || 60000) {
     if (varredura) return;
-    const rodar = () => { try { recuperarPendentes(); } catch (err) { log.error(`[ia] recuperação: ${err.message}`); } };
+    const rodar = () => {
+      try { recuperarPendentes(); } catch (err) { log.error(`[ia] recuperação: ${err.message}`); }
+      try { encerrarInativas(); } catch (err) { log.error(`[ia] encerramento automático: ${err.message}`); }
+    };
     const primeira = setTimeout(rodar, Math.min(intervaloMs, 20000));
     if (primeira.unref) primeira.unref();
     varredura = setInterval(rodar, intervaloMs);
@@ -656,7 +681,18 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
     const partes = [];
     const jaSaudou = !!conv.saudado_em;
-    if (!jaSaudou && waStore.marcarSaudado(conversaId)) partes.push(central.texto('saudacao'));
+    if (!jaSaudou && waStore.marcarSaudado(conversaId)) {
+      // Primeira vez com a Fortaleza Move → saudação inicial; quem já foi atendido antes → saudação de retorno.
+      const jaAtendido = !!db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso' AND created_at < ? LIMIT 1").get(conversaId, inicio);
+      partes.push(central.texto(jaAtendido ? 'saudacao_retorno' : 'saudacao') || central.texto('saudacao'));
+    }
+
+    // Escolheu uma opção do menu: resposta imediata e profissional da opção (texto dos Modelos, editável), sem redação da IA.
+    const opcaoEscolhida = C.opcaoDoMenu(textoUlt);
+    if (opcaoEscolhida) {
+      const abertura = central.texto(`abertura_${opcaoEscolhida}`);
+      if (abertura && !(ultimaIA && ultimaIA.texto.endsWith(abertura))) return enviar([...partes, abertura], { tipo: 'opção do menu' });
+    }
 
     const motivoTransf = C.pediuHumano(textoUlt) ? 'pediu_humano' : (at.transferir ? at.motivo_transferencia : null);
     if (motivoTransf) return transferir(motivoTransf, partes);
@@ -725,7 +761,9 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     }
     if (r.transferir) return transferir(r.motivo, partes);
     if (!r.texto) return partes.length ? enviar(partes, { tipo: 'saudação' }) : { motivo: 'sem_resposta' };
-    const filtro = P.respostaSegura(r.texto, { internos });
+    const publicos = [...msgs.map((m) => m.texto), ...central.modelos().map((m) => m.texto), ...Object.values(central.informacoes() || {}),
+      ...Object.values(C.ASSUNTOS).map((x) => x.nome)];
+    const filtro = P.respostaSegura(r.texto, { internos, publicos });
     if (!filtro.ok) {
       const motivo = `filtro_${filtro.motivo}`;
       return partes.length ? { ...enviar(partes, { tipo: 'saudação' }), motivo } : { motivo };
@@ -776,8 +814,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (!conv || conv.atendimento !== 'ia') return { motivo: 'fora_da_ia' };
     const ult = ultimaDoCliente(conversaId);
     if (!ult || ult.direcao !== 'in') return { motivo: 'ja_respondida' };
-    const ultSaida = db.prepare("SELECT MAX(id) id FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso'").get(conversaId).id || 0;
-    if (db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND tipo = 'aviso' AND id > ? LIMIT 1").get(conversaId, ultSaida)) return { motivo: 'ja_confirmada' };
+    // 13/11 (pedido do dono): a confirmação não se repete a cada mensagem. Só para mídia (áudio, foto, documento, vídeo: a
+    // leitura demora), no máximo uma vez por atendimento e nunca na abertura do atendimento (lá vai a saudação).
+    if (!['audio', 'image', 'document', 'video'].includes(ult.tipo)) return { motivo: 'texto' };
+    const inicio = inicioDe(conv);
+    if (!db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso' AND created_at >= ? LIMIT 1").get(conversaId, inicio)) return { motivo: 'abertura_do_atendimento' };
+    if (db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND tipo = 'aviso' AND created_at >= ? LIMIT 1").get(conversaId, inicio)) return { motivo: 'ja_confirmada' };
     const texto = central.texto('recebimento');
     if (!texto) return { motivo: 'modelo_desligado' };
     const dia = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
@@ -827,7 +869,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   const usarProvedor = (novo) => { provedor = novo; };
 
-  return { central, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
+  return { central, encerrarInativas, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
     recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar, registrarChegada, enviarConfirmacao, marcarLeitura, definirRecebidos };
 }
 

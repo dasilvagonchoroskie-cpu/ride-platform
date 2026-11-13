@@ -105,3 +105,72 @@ test('barreira: resposta da IA que confirma cadastro/aprovação ou promete não
   assert.ok(!daIA().slice(antes).some((m) => /aprovado|já pode/.test(m.texto)), 'a promessa não foi enviada ao cliente');
   assert.ok(r);
 });
+
+/* --------------- 13/11 (teste real do dono): novo atendimento, saudação de retorno, abertura da opção --------------- */
+test('conversa parada há mais de 12 h (sem ninguém concluir): a próxima mensagem abre NOVO atendimento com saudação de retorno + menu', async () => {
+  const { receber, daIA, conv, db, waStore } = montar();
+  await receber('Oi'); // 1º contato da vida: saudação inicial + menu
+  assert.match(daIA()[0].texto, /^Olá! Seja bem-vindo/);
+  await receber('1');
+  assert.equal(conv().atend_assunto, 'cadastro');
+  // Simula: ficou parada 13 h (a conversa continua "com a IA", ninguém concluiu)
+  db.prepare('UPDATE wa_conversas SET ultima_em = ?').run(new Date(Date.now() - 13 * 3600000).toISOString());
+  await receber('Olá! Vim pelo site da Fortaleza Move.');
+  const ultima = daIA().pop().texto;
+  assert.match(ultima, /^Olá! A Fortaleza Move agradece por entrar em contato conosco novamente/, 'saudação de retorno');
+  assert.match(ultima, /Para direcionarmos seu atendimento/, 'e o menu');
+  assert.equal(conv().atend_assunto, null, 'o assunto antigo (cadastro) não é reaproveitado');
+  const ev = db.prepare("SELECT tipo, detalhe FROM wa_eventos WHERE tipo = 'reaberta'").all();
+  assert.ok(ev.some((e) => /mais de 12 h sem conversa/.test(e.detalhe)), 'fica registrado no histórico');
+  assert.ok(waStore);
+});
+
+test('clicou de novo no botão do site no meio de um atendimento: novo atendimento com saudação de retorno + menu', async () => {
+  const { receber, daIA, conv } = montar();
+  await receber('Oi');
+  await receber('3');
+  assert.match(daIA().pop().texto, /^Certo! Para a coleta e entrega/, 'opção 3: abertura profissional da opção');
+  await receber('Olá! Vim pelo site da Fortaleza Move.');
+  const ultima = daIA().pop().texto;
+  assert.match(ultima, /^Olá! A Fortaleza Move agradece por entrar em contato conosco novamente/);
+  assert.match(ultima, /1\. Cadastro de motorista e veículo\./);
+  assert.equal(conv().atend_assunto, null);
+});
+
+test('encerramento automático: conversa com a IA parada vira concluída; transferida aguardando a equipe não', async () => {
+  const { receber, ia, conv, db, waStore } = montar();
+  await receber('Oi');
+  db.prepare('UPDATE wa_conversas SET ultima_em = ?').run(new Date(Date.now() - 13 * 3600000).toISOString());
+  assert.equal(ia.encerrarInativas().length, 1);
+  assert.equal(conv().atendimento, 'concluido');
+  assert.match(db.prepare("SELECT detalhe FROM wa_eventos WHERE tipo = 'concluida'").get().detalhe, /automaticamente após 12 h/);
+  // Volta a escrever: novo atendimento; depois, transferida e parada → continua aguardando a equipe.
+  await receber('quero falar com um atendente');
+  assert.equal(conv().atendimento, 'aguardando');
+  db.prepare('UPDATE wa_conversas SET ultima_em = ?').run(new Date(Date.now() - 13 * 3600000).toISOString());
+  assert.equal(ia.encerrarInativas().length, 0);
+  assert.equal(conv().atendimento, 'aguardando');
+  assert.ok(waStore);
+});
+
+test('configuração 0 desliga o novo atendimento por tempo e o encerramento automático', async () => {
+  const { receber, ia, conv, db } = montar();
+  ia.salvarConfig({ novoAtendimentoHoras: 0 });
+  await receber('Oi');
+  await receber('2');
+  db.prepare('UPDATE wa_conversas SET ultima_em = ?').run(new Date(Date.now() - 48 * 3600000).toISOString());
+  assert.equal(ia.encerrarInativas().length, 0);
+  await receber('E aí, como faço para chamar uma corrida?');
+  assert.equal(conv().atend_assunto, 'passageiro', 'continua o mesmo atendimento');
+  assert.throws(() => ia.salvarConfig({ novoAtendimentoHoras: 500 }), /entre 0 e 168/);
+});
+
+test('filtro de anotação interna: trecho que também está na conversa ou no menu não bloqueia a resposta (falso positivo de 13/11)', () => {
+  const P = require('../src/ia/prompt');
+  const internos = ['Cliente escolheu a opção coleta e entrega de encomendas e quer enviar uma caixa'];
+  const t = 'Certo! Para a coleta e entrega de encomendas, me diga o endereço de coleta.';
+  assert.deepEqual(P.respostaSegura(t, { internos }), { ok: false, motivo: 'dado_interno' }, 'sem os textos públicos, bloqueava');
+  assert.deepEqual(P.respostaSegura(t, { internos, publicos: ['3. Coleta e entrega de encomendas.'] }), { ok: true });
+  assert.deepEqual(P.respostaSegura('Anotação: cliente devedor de multa antiga', { internos: ['cliente devedor de multa antiga na Central'], publicos: ['oi'] }),
+    { ok: false, motivo: 'dado_interno' }, 'anotação de verdade continua bloqueada');
+});

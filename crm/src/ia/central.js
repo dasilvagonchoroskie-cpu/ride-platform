@@ -42,6 +42,8 @@ const MOTIVOS_TRANSFERENCIA = {
 
 const MODELOS_PADRAO = {
   saudacao: { nome: 'Saudação inicial', texto: 'Olá! Seja bem-vindo(a) à Fortaleza Move!\n\nAgradecemos pelo seu contato. Será um prazer ajudar você!' },
+  // 13/11 (pedido do dono): quem já falou com a Fortaleza Move antes recebe uma saudação de retorno a cada novo atendimento.
+  saudacao_retorno: { nome: 'Saudação de retorno (novo atendimento de quem já falou conosco)', texto: 'Olá! A Fortaleza Move agradece por entrar em contato conosco novamente. Em que podemos ajudar desta vez?' },
   menu: { nome: 'Apresentação do menu', texto: 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Outros assuntos.\n\nDigite o número da opção desejada.' },
   confirmacao_documentos: { nome: 'Confirmação de recebimento de documentos', texto: 'Recebemos o seu documento. Obrigado!' },
   confirmacao_informacoes: { nome: 'Confirmação de recebimento de informações', texto: 'Recebemos as suas informações. Obrigado!' },
@@ -53,6 +55,12 @@ const MODELOS_PADRAO = {
   recebimento: { nome: 'Confirmação rápida de recebimento (enquanto a IA processa)', texto: 'Recebemos a sua mensagem! Estamos verificando e já respondemos.' },
   audio_nao_compreendido: { nome: 'Áudio que não pôde ser ouvido', texto: 'Desculpe, não consegui ouvir o seu áudio. Pode escrever a sua mensagem, por favor?' },
   // 13/11: arquivo que não pôde ser aceito (formato, tamanho ou PDF com conteúdo ativo). Nada é guardado.
+  // 13/11: resposta imediata e profissional quando a pessoa escolhe uma opção do menu (antes de qualquer redação da IA).
+  abertura_cadastro: { nome: 'Opção 1 escolhida (cadastro de motorista e veículo)', texto: 'Ótimo! Para a avaliação do seu cadastro de motorista, a nossa equipe precisa de 7 itens: foto da CNH, documento do veículo (CRLV), comprovante de residência, certidão de antecedentes criminais e três fotos do veículo (frente, lado e traseira).\n\nPode começar enviando a foto da sua CNH.' },
+  abertura_passageiro: { nome: 'Opção 2 escolhida (atendimento ao passageiro)', texto: 'Certo! Conte, por favor, como podemos ajudar com a sua viagem ou com o aplicativo.' },
+  abertura_encomendas: { nome: 'Opção 3 escolhida (coleta e entrega de encomendas)', texto: 'Certo! Para a coleta e entrega, informe, por favor:\n\n• o que deseja enviar;\n• o endereço de coleta;\n• o endereço de entrega.\n\nCom essas informações, a nossa equipe dá sequência ao seu pedido.' },
+  abertura_clube: { nome: 'Opção 4 escolhida (Clube de Vantagens)', texto: 'Certo! Conte, por favor, o que você gostaria de saber sobre o Clube de Vantagens para motoristas.' },
+  abertura_outros: { nome: 'Opção 5 escolhida (outros assuntos)', texto: 'Certo! Escreva, por favor, o assunto do seu contato para direcionarmos o seu atendimento.' },
   documento_recusado: { nome: 'Arquivo de documento não aceito', texto: 'Não consegui receber esse arquivo. Pode enviar de novo como foto (JPG ou PNG) ou PDF, com até 10 MB, por favor?' }
 };
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
@@ -177,6 +185,8 @@ const ORIGENS_CONTATO = [
   ['TikTok', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+tik ?tok\b/],
   ['Indicação', /\b(fui indicad[oa]|me indicaram|indicacao de)\b/]
 ];
+/** Texto pronto de um dos botões de WhatsApp do site (a pessoa clicou no site de novo). */
+const ehBotaoDoSite = (texto) => TEXTOS_DO_SITE.some((re) => re.test(semAcento(texto).trim()));
 function origemDoContato(texto) {
   const t = semAcento(texto);
   const achada = ORIGENS_CONTATO.find(([, re]) => (typeof re === 'function' ? re(t) : re.test(t)));
@@ -201,4 +211,4 @@ function semIntencao(texto) {
 // Pedido explícito de falar com uma pessoa (reforço sem IA).
 const pediuHumano = (texto) => /\b(atendente|atendimento humano|falar com (um|uma|alguem|algu[eé]m|uma pessoa|pessoa|humano|gente)|pessoa de verdade|ser humano|humano por favor)\b/.test(semAcento(texto));
 
-module.exports = { origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
+module.exports = { ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };

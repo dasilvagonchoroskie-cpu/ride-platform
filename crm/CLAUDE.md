@@ -64,6 +64,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   pergunta inesperada → `sem_informacao`; nunca "aprovado/liberado/já pode"; sem link/loja/formulário de cadastro) +
   `prometeOuConfirma` dentro de `respostaSegura` (motivo `filtro_promessa`). Testes: `test/ia-operacao.test.js`.
 
+## Novo atendimento e abertura profissional (13/11/2026 manhã, teste real do dono; 2.1.0-rc.3, cache `fm-crm-v30`)
+- Store `motivoNovoAtendimento`: NOVO atendimento (saudação + assunto zerados, `atend_inicio` = mensagem) quando a conversa estava
+  concluída, OU parada há mais de `ia_nova_conversa_h` (padrão 12; 0 = desligado; tela Configurações → IA), OU o cliente clicou de novo
+  num botão do site (`C.ehBotaoDoSite`) com o atendimento já respondido. `mudarAtendimento` aceita `reaberto` com o mesmo estado (evento `reaberta`).
+- `encerrarInativas` (varredura da IA): 'ia'/'humano' parados > N h → concluído sem mensagem; 'aguardando' NUNCA (a equipe precisa ver).
+- Saudação: 1º contato da vida = `saudacao`; quem já foi atendido = `saudacao_retorno` (todo novo atendimento). Opção do menu escolhida =
+  `abertura_<assunto>` (5 modelos editáveis) antes de qualquer redação. Confirmação rápida ("Recebemos…"): só mídia, 1 por atendimento,
+  nunca na abertura. `respostaSegura(..., { publicos })`: trecho que também está na conversa/modelos/informações não é "dado interno"
+  (falso positivo real: "coleta e entrega de encomendas"). Testes: `test/ia-operacao.test.js`.
+
 ## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; publicado em 13/11)
 - `src/documentos/recebidos.js` + migração 007 `wa_anexos` (uma linha por mensagem, sem DELETE por gatilho). Situações: aguardando_ficha |
   pendente_classificacao | anexado | duplicado | recusado | falhou | nao_documento. Área de espera CIFRADA (`docs.guardarRecebido/lerRecebido`,

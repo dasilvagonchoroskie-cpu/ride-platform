@@ -16,6 +16,11 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       pergunta inesperada; barreira que impede a IA de confirmar cadastro/aprovação ou prometer. 202/202 testes.
 - [ ] Dono: marcar como "Contato pessoal (sem IA)" (Conversas → conversa → botão ou menu ⋯) as pessoas da família/amigos que já
       aparecem no CRM; depois testar com um número conhecido e um desconhecido (roteiro abaixo).
+- [x] 13/11 2.1.0-rc.3 (teste real do dono com o número da mãe): novo atendimento sozinho após 12 h parada ou novo clique no
+      site; encerramento automático; saudação de retorno + menu; abertura profissional de cada opção; "Recebemos…" só para mídia
+      e uma vez por atendimento; falso positivo do filtro (opção 3 transferida à toa) corrigido. 207/207 testes.
+- [ ] Dono: repetir o teste pelo site (sem precisar concluir no CRM) e escolher cada opção do menu; conferir os textos em
+      Configurações → Modelos de Comunicação da IA (saudação de retorno e as 5 aberturas são editáveis).
 - [ ] Opcional: "Health Check Path" `/api/health` no painel do Render (a ferramenta do Claude não altera essa opção).
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)
