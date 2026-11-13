@@ -33,6 +33,7 @@ const MOTIVOS_TRANSFERENCIA = {
   pediu_humano: 'O cliente pediu atendimento humano',
   aprovacao: 'Precisa de aprovação ou autorização',
   documentos: 'Documentos para análise',
+  documento_sem_arquivo: 'Documento recebido, mas o arquivo não foi guardado (conferir no celular)',
   reclamacao: 'Reclamação que precisa de providência',
   valores: 'Negociação ou definição de valores',
   sem_informacao: 'A IA não tem informação suficiente para responder com segurança',
@@ -50,7 +51,9 @@ const MODELOS_PADRAO = {
   site: { nome: 'Divulgação do site oficial', texto: 'Aproveite para conhecer nosso site oficial e conferir informações sobre a plataforma, nossos serviços, benefícios e canais de suporte.\n\nAcesse: {site}' },
   // 12/11 noite (pedido do dono): retorno rápido enquanto a IA processa, e aviso honesto quando um áudio não pôde ser ouvido.
   recebimento: { nome: 'Confirmação rápida de recebimento (enquanto a IA processa)', texto: 'Recebemos a sua mensagem! Estamos verificando e já respondemos.' },
-  audio_nao_compreendido: { nome: 'Áudio que não pôde ser ouvido', texto: 'Desculpe, não consegui ouvir o seu áudio. Pode escrever a sua mensagem, por favor?' }
+  audio_nao_compreendido: { nome: 'Áudio que não pôde ser ouvido', texto: 'Desculpe, não consegui ouvir o seu áudio. Pode escrever a sua mensagem, por favor?' },
+  // 13/11: arquivo que não pôde ser aceito (formato, tamanho ou PDF com conteúdo ativo). Nada é guardado.
+  documento_recusado: { nome: 'Arquivo de documento não aceito', texto: 'Não consegui receber esse arquivo. Pode enviar de novo como foto (JPG ou PNG) ou PDF, com até 10 MB, por favor?' }
 };
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
 const MAX_MODELO = 1500;
@@ -158,7 +161,16 @@ const pediuMenu = (texto) => /^(menu|opcoes|ver (o )?menu|mostrar (o )?menu|volt
 
 // ORIGEM do contato ≠ INTENÇÃO (12/11 noite). "Olá! Vim pelo site da Fortaleza Move." diz de onde a pessoa veio, não o que
 // ela quer: não pode virar cadastro de motorista. A origem fica registrada (relatórios) e a conversa recebe o menu geral.
+// Textos prontos dos 4 botões de WhatsApp do site público (repo fortaleza-move-site, conferidos em 13/11/2026): todos
+// identificam a ORIGEM "Site"; só "Vim pelo site" é sem intenção (os outros três já dizem o que a pessoa quer).
+const TEXTOS_DO_SITE = [
+  /^ola!? vim pelo site da fortaleza move\.?$/,
+  /^ola!? quero ser motorista da fortaleza move\.?$/,
+  /^ola!? quero saber mais sobre corridas e encomendas da fortaleza move\.?$/,
+  /^ola!? tenho um comercio e quero entregas pela fortaleza move\.?$/
+];
 const ORIGENS_CONTATO = [
+  ['Site', (t) => TEXTOS_DO_SITE.some((re) => re.test(t.trim()))],
   ['Site', /\b(vim|cheguei|venho|vindo|achei|encontrei|vi)\b[^.!?\n]{0,25}\b(pelo|do|no|atraves do|via)\s+(seu |o |nosso )?site\b|\bpelo site\b/],
   ['Instagram', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+(insta|instagram)\b/],
   ['Facebook', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+(face|facebook)\b/],
@@ -167,7 +179,7 @@ const ORIGENS_CONTATO = [
 ];
 function origemDoContato(texto) {
   const t = semAcento(texto);
-  const achada = ORIGENS_CONTATO.find(([, re]) => re.test(t));
+  const achada = ORIGENS_CONTATO.find(([, re]) => (typeof re === 'function' ? re(t) : re.test(t)));
   return achada ? achada[0] : null;
 }
 // Mensagem sem intenção clara: só saudação, origem do contato ou "quero saber mais" genérico (sem citar um serviço).

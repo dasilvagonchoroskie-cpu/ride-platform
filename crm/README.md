@@ -343,6 +343,20 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   vira assunto nem perfil: a pessoa recebe o menu geral. O fluxo de cadastro só começa quando ela escolhe ou diz o que quer.
 - Testes: `test/ia-atendimento.test.js` (provedor e canal FALSOS: não comprovam WhatsApp/Gemini reais).
 
+## Arquivos do WhatsApp na ficha e versão candidata 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, só desenvolvimento)
+- **Fotos e PDFs do cliente** (`src/documentos/recebidos.js`, migração 007 `wa_anexos`): baixados pelo conector, validados pelas
+  mesmas regras do envio pela tela, **cifrados** (mesma `FM_DOCS_KEY`, nome interno aleatório, nunca em pasta pública). Leitura disse
+  com segurança qual dos 7 itens é → vai para a ficha (ou espera cifrado até a conversa ter ficha). Sem certeza → **pendente de
+  classificação** (a equipe escolhe em Documentos → "Arquivos recebidos pelo WhatsApp"). Mesmo arquivo de novo → "repetido". Formato
+  não aceito → recusado (nada guardado; a equipe vê; o cliente é convidado a reenviar). Falha → registrada e a conversa vai para a equipe.
+- **Só conta o que tem arquivo:** campos `doc_*` da ficha mudam só pelo arquivo digital; com ele ligado, `PATCH` manual desses campos
+  devolve 422. A IA não marca documento por texto; sem arquivo digital ligado, documento vira transferência para a equipe.
+- Rotas: `GET /wa/anexos`, `POST /wa/anexos/:id/classificar`, `POST /wa/anexos/:id/resolver` (quem pode anexar documentos);
+  `GET /wa/anexos/:id/arquivo` (só admin, auditado). `GET /admin/saude` (admin): versão, banco, migrações e prova real de gravar/ler
+  um arquivo cifrado. Origem "Site" reconhece os 4 botões do site público.
+- Versão `2.1.0-rc.1`, cache `fm-crm-v28`. Publicação: `docs/PUBLICACAO-ETAPA2.md`. Testes reais: `docs/ROTEIRO-TESTES-REAIS.md`.
+  Testes: `test/wa-anexos.test.js` (rotas, banco, disco e cifra reais; WhatsApp e Gemini simulados).
+
 ## Hospedagem definitiva: VPS da Hostinger (preparado, NÃO executado)
 Guia simples e scripts em `deploy/hostinger/` (provisionamento, systemd endurecido, Nginx + HTTPS, firewall, cópia diária cifrada,
 teste de restauração, verificação de saúde, migração controlada e volta atrás). `SNAPSHOT_MODO=copia`: com banco no disco, o CRM usa

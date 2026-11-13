@@ -47,6 +47,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- `src/documentos/recebidos.js` + migração 007 `wa_anexos` (uma linha por mensagem, sem DELETE por gatilho). Situações: aguardando_ficha |
+  pendente_classificacao | anexado | duplicado | recusado | falhou | nao_documento. Área de espera CIFRADA (`docs.guardarRecebido/lerRecebido`,
+  numero 0); cópia descartada só depois de `docs.anexarRecebido` (usuário de sistema `REQ_WHATSAPP`, só código chama) com SHA-256 conferido.
+- Transcritor (routes.js) guarda foto/documento do CLIENTE (nunca `deMim`) mesmo sem leitura; `pareceDocumento` evita guardar foto comum.
+  Categoria só por `tipoDocumento` (frente/lado/traseira separados); dúvida = pendente. Evento `vinculo` do store → `recebidos.processar`.
+- REGRA: texto NUNCA é comprovante. `marcarDocumentos` só resume/avança etapa a partir dos `doc_*` (que só o arquivo digital muda);
+  Central conta `recebidos.categoriasGuardadas` + `doc_*`; sem `recebidos` ativo → transfere `documento_sem_arquivo`. PATCH de `doc_*` = 422.
+- Testes da IA usam `test/apoio/recebidos-falso.js` (SIMULAÇÃO); o fluxo real está em `test/wa-anexos.test.js`. `GET /admin/saude`.
+
 ## Correções do atendimento por IA e 7 documentos (12/11/2026 noite, ramo `etapa2`, pedido do dono; NÃO está em produção)
 - Diagnóstico pelo log de produção (só leitura): áudios caíam com "IA indisponível" na LEITURA (sem nova tentativa) e a conversa ficava
   sem resposta; cada fala levava 2 chamadas ao Gemini + espera de 15 s; `inicioDe(conv)` dependia de colunas que `SELECT_CONVERSA` não trazia.

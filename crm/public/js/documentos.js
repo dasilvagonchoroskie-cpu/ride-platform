@@ -271,6 +271,7 @@ export async function renderDocumentos(view, state) {
       <div class="page-actions no-print">${podePdf(state, 'documentos') ? `<button class="btn btn-ghost" id="dc-exp" type="button">${ui.icon('download', 16)} Exportar</button>` : ''}</div></div>
     ${meta.armazenamento.pronto ? '' : `<div class="notice warn" style="margin-bottom:12px">${ui.icon('alert', 15)} <span>Armazenamento não está pronto: ${ui.esc(meta.armazenamento.motivo || '')}</span></div>`}
     <div id="dc-pend"></div>
+    <div id="dc-wa"></div>
     <div class="toolbar no-print">
       <div class="field" style="flex:1;min-width:150px"><label for="dc-q">Buscar pelo nome</label><input id="dc-q" type="search" placeholder="Nome na ficha"></div>
       <div class="field"><label for="dc-s">Situação</label><select id="dc-s"><option value="">Todas</option>${Object.entries(meta.situacoes).map(([k, v]) => `<option value="${k}">${ui.esc(v)}</option>`).join('')}</select></div>
@@ -313,7 +314,75 @@ export async function renderDocumentos(view, state) {
     abrirExportacao(state, { titulo: 'Exportar documentos', tipo: 'documentos', pdf: q.toString(), csv: q.toString(), csvNome: 'documentos.csv' });
   });
   if (admin) politicaAdmin(view.querySelector('#dc-pol'), view.querySelector('#dc-pend'));
+  anexosWhatsapp(view.querySelector('#dc-wa'), admin, carregar);
   await carregar();
+}
+
+/* ------------- arquivos que chegaram pelo WhatsApp e precisam da equipe (13/11/2026) ------------- */
+const SITUACAO_WA = {
+  pendente_classificacao: ['Classificar: qual documento é?', 'warn'], aguardando_ficha: ['Guardado: falta ligar a conversa a uma ficha', 'warn'],
+  recusado: ['Recusado (não guardado)', 'danger'], falhou: ['Não foi guardado', 'danger'], anexado: ['Na ficha', 'success'],
+  duplicado: ['Repetido', 'neutral'], nao_documento: ['Não é documento', 'neutral']
+};
+const CATEGORIAS_MOTORISTA = [['cnh', 'CNH'], ['crlv', 'Documento do veículo (CRLV)'], ['comprovante_endereco', 'Comprovante de residência'],
+  ['antecedentes_criminais', 'Certidão de antecedentes criminais'], ['foto_veiculo_frente', 'Foto do veículo — frente'],
+  ['foto_veiculo_lado', 'Foto do veículo — lado'], ['foto_veiculo_traseira', 'Foto do veículo — traseira'], ['outros', 'Outro documento']];
+
+async function verArquivoWa(id) {
+  let res;
+  try { res = await fetch(`/api/wa/anexos/${Number(id)}/arquivo`, { credentials: 'same-origin' }); } catch (err) { ui.toast('Falha de conexão com o servidor.', 'error'); return; }
+  if (!res.ok) { let msg = 'Não foi possível abrir o arquivo.'; try { const j = await res.json(); if (j && j.error) msg = j.error.message; } catch (e) { /* sem corpo */ } ui.toast(msg, 'error'); return; }
+  const url = URL.createObjectURL(await res.blob());
+  if (!window.open(url, '_blank')) ui.toast('O navegador bloqueou a nova aba.', 'error');
+  setTimeout(() => URL.revokeObjectURL(url), 120000);
+}
+
+async function anexosWhatsapp(host, admin, depois) {
+  let r;
+  try { r = await api.get('/wa/anexos'); } catch (err) { host.innerHTML = ''; return; } // perfil sem permissão: nada aparece
+  if (!r.itens.length) { host.innerHTML = ''; return; }
+  host.innerHTML = `<div class="card" style="margin-bottom:14px"><div class="card-head"><h3>${ui.icon('chat', 16)} Arquivos recebidos pelo WhatsApp</h3>
+    <span class="muted small">${ui.fmtInt(r.pendentes)} precisam da equipe</span></div><div class="card-body"><div class="doc-lista">${r.itens.map((a) => {
+    const [txt, tom] = SITUACAO_WA[a.situacao] || [a.situacao, 'neutral'];
+    return `<div class="doc-linha"><div class="doc-info"><div><b>${ui.esc(a.contato || 'Contato')}</b> · ${ui.esc(a.tipo_midia === 'document' ? 'Documento' : 'Foto')} ${a.extensao ? `(${ui.esc(a.extensao.toUpperCase())})` : ''}</div>
+      <div style="margin:3px 0">${badge(txt, tom)} ${a.categoria_rotulo ? `<span class="small muted">leitura: ${ui.esc(a.categoria_rotulo)}</span>` : ''}</div>
+      <span class="small muted">${ui.esc(ui.fmtDateTime(a.criado_em))}${a.motivo ? ` · ${ui.esc(a.motivo)}` : ''}</span></div>
+      <div class="doc-acoes"><a class="btn btn-sm btn-ghost" href="#/conversas?c=${Number(a.conversa_id)}">Conversa</a>
+        ${admin && a.na_espera ? `<button class="btn btn-sm btn-ghost" data-wa-ver="${a.id}" type="button">Ver arquivo</button>` : ''}
+        ${a.na_espera ? `<button class="btn btn-sm btn-primary" data-wa-class="${a.id}" type="button">Classificar</button>` : ''}
+        ${a.situacao === 'pendente_classificacao' ? `<button class="btn btn-sm btn-ghost" data-wa-res="${a.id}:nao_documento" type="button">Não é documento</button>` : ''}
+        ${['recusado', 'falhou'].includes(a.situacao) ? `<button class="btn btn-sm btn-ghost" data-wa-res="${a.id}:ciente" type="button">Ciente</button>` : ''}</div></div>`;
+  }).join('')}</div></div></div>`;
+  const recarregar = () => { anexosWhatsapp(host, admin, depois); if (depois) depois(); };
+  host.querySelectorAll('[data-wa-ver]').forEach((b) => b.addEventListener('click', () => verArquivoWa(b.dataset.waVer)));
+  host.querySelectorAll('[data-wa-res]').forEach((b) => b.addEventListener('click', async () => {
+    const [id, acao] = b.dataset.waRes.split(':');
+    try { await api.post(`/wa/anexos/${Number(id)}/resolver`, { acao }); ui.toast('Registrado.', 'success'); recarregar(); } catch (err) { ui.toast(err.message, 'error'); }
+  }));
+  host.querySelectorAll('[data-wa-class]').forEach((b) => b.addEventListener('click', () => {
+    const a = r.itens.find((x) => String(x.id) === b.dataset.waClass);
+    const m = ui.modal({
+      title: 'Classificar arquivo do WhatsApp', subtitle: a.contato || '', size: 'small',
+      body: `<form id="wa-cl" class="form-grid" novalidate>
+        <div class="field full"><label for="wa-cat">Qual documento é?</label><select id="wa-cat" required><option value="">Escolha…</option>
+          ${CATEGORIAS_MOTORISTA.map(([k, v]) => `<option value="${k}" ${a.categoria === k ? 'selected' : ''}>${ui.esc(v)}</option>`).join('')}</select></div>
+        <div class="field full" id="wa-tit-campo" style="display:none"><label for="wa-tit">Nome do documento</label><input id="wa-tit" type="text" maxlength="80"></div>
+        ${a.ficha_da_conversa ? `<p class="small muted full">Vai para a ficha do motorista ligada à conversa (nº ${Number(a.ficha_da_conversa)}).</p>`
+          : '<div class="field full"><label for="wa-reg">Nº da ficha do motorista</label><input id="wa-reg" type="text" inputmode="numeric" placeholder="Ex.: 12"><span class="small muted">A conversa ainda não está ligada a uma ficha.</span></div>'}
+        <div id="wa-err" class="small" style="color:#b42318"></div></form>`,
+      footer: '<button class="btn btn-ghost" data-modal-close type="button">Cancelar</button><button class="btn btn-primary" form="wa-cl" type="submit">Guardar na ficha</button>'
+    });
+    const sel = m.dialog.querySelector('#wa-cat');
+    sel.addEventListener('change', () => { m.dialog.querySelector('#wa-tit-campo').style.display = sel.value === 'outros' ? '' : 'none'; });
+    m.dialog.querySelector('#wa-cl').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const reg = m.dialog.querySelector('#wa-reg');
+      try {
+        await api.post(`/wa/anexos/${Number(a.id)}/classificar`, { categoria: sel.value, titulo: m.dialog.querySelector('#wa-tit').value.trim(), registro_id: reg ? Number(reg.value) || null : null });
+        ui.toast('Arquivo guardado na ficha.', 'success'); m.close(); recarregar();
+      } catch (err) { m.dialog.querySelector('#wa-err').textContent = err.message; }
+    });
+  }));
 }
 
 /** Política de documentos (somente administrador) e as decisões que ainda dependem do dono. */

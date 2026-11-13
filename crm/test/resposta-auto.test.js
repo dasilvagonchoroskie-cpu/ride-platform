@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { recebidosFalso, tipoDoTexto } = require('./apoio/recebidos-falso');
 
 function montar() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-auto-'));
@@ -22,8 +23,9 @@ function montar() {
   const provider = { completar: async () => ({ texto: JSON.stringify(resposta), modelo: 'falso', tokensEntrada: 1, tokensSaida: 1 }) };
   const cofre = { ler: () => 'chave-falsa-0000000000000', final4: () => '0000', origem: () => 'arquivo', salvar() {}, apagar() {} };
   const ia = createIaService({ db, waStore, entities, ENTITIES, audit: () => {}, getSetting, setSetting, cofre, provider, todayISO, nowISO, log: { log() {}, error() {} } });
+  ia.definirRecebidos(recebidosFalso(db)); // SIMULAÇÃO do armazenamento (o real: test/wa-anexos.test.js)
   setSetting('ia_ativo', '1'); setSetting('ia_modo', 'automatico'); setSetting('ia_criar_cadastro', '1'); setSetting('ia_responder', '1');
-  const receber = (texto, id, extra = {}) => waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Evandro', externoId: id, texto, tipo: 'text', quando: new Date().toISOString(), deMim: false, ...extra });
+  const receber = (texto, id, extra = {}) => waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Evandro', externoId: id, texto, tipo: tipoDoTexto(texto), quando: new Date().toISOString(), deMim: false, ...extra });
   return { db, ia, waStore, receber, setResposta: (r) => { resposta = r; } };
 }
 

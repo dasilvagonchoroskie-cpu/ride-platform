@@ -2,6 +2,8 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { db, nowISO, getSetting, setSetting, DATA_DIR } = require('./db');
 const { ENTITIES } = require('./defs');
 const auth = require('./auth');
@@ -14,6 +16,7 @@ const { createIaService } = require('./ia/service');
 const { criarCofre } = require('./ia/secret');
 const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provider');
 const { criarTranscritor, lerComTentativas } = require('./ia/transcricao');
+const { createRecebidos } = require('./documentos/recebidos');
 const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
@@ -49,6 +52,9 @@ const notificacoes = createNotificacoes({
   publicUrl: String(process.env.PUBLIC_URL || '').replace(/\/+$/, '')
 });
 
+// Arquivos (fotos/PDFs) que chegam pelo WhatsApp → arquivo digital protegido da ficha (criado junto com os documentos, abaixo).
+let recebidos = null;
+
 // Leitura das mídias do WhatsApp: áudio (Gemini; Groq como reserva), foto/PDF/vídeo (Gemini), Office/texto (no servidor).
 const LIMITE_TRANSCRICOES_DIA = Number(process.env.IA_LIMITE_TRANSCRICOES) || 300;
 const MAX_MIDIA_BYTES = 15 * 1024 * 1024;
@@ -61,25 +67,37 @@ const transcritor = criarTranscritor({
     return descobrirModelo({ urlBase: PROVEDORES.gemini.urlBase, chave: cofreIA.ler('gemini'), fetchImpl: globalThis.fetch, timeoutMs: 30000 });
   }
 });
-wa.definirTranscritor(async ({ mensagemId, midia }) => {
+wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
   const cfg = ia.config();
   const pular = (motivo) => { console.log(`[ia] mídia da mensagem ${mensagemId} (${midia && midia.tipo}) não lida: ${motivo}`); return false; };
   if (!midia || typeof midia.baixar !== 'function') return pular('sem arquivo para baixar');
-  if (!cfg.ativo) return pular('IA desativada');
-  if (!cfg.transcrever) return pular('leitura de mídias desligada');
-  if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return pular('limite diário');
-  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) return pular('arquivo maior que 15 MB'); // nem baixa
-  // Um contato sozinho não esgota a cota de leitura de todos.
-  const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-  const doContato = db.prepare(`SELECT COUNT(*) n FROM ia_transcricoes t JOIN wa_mensagens m ON m.id = t.mensagem_id
-    WHERE m.conversa_id = (SELECT conversa_id FROM wa_mensagens WHERE id = ?) AND t.criado_em >= ?`).get(mensagemId, desde).n;
-  if (doContato >= LEITURAS_CONTATO_DIA) return pular('limite diário deste contato');
+  // Foto/documento é GUARDADO (cifrado) mesmo quando a IA não vai ler: o arquivo não pode se perder.
+  // Só o que o CLIENTE manda (foto enviada pela equipe pelo celular não é documento do candidato).
+  const guardar = !deMim && ['image', 'document'].includes(midia.tipo) && recebidos && recebidos.ativo();
+  const motivoSemLeitura = (() => {
+    if (!cfg.ativo) return 'IA desativada';
+    if (!cfg.transcrever) return 'leitura de mídias desligada';
+    if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return 'limite diário';
+    // Um contato sozinho não esgota a cota de leitura de todos.
+    const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const doContato = db.prepare(`SELECT COUNT(*) n FROM ia_transcricoes t JOIN wa_mensagens m ON m.id = t.mensagem_id
+      WHERE m.conversa_id = (SELECT conversa_id FROM wa_mensagens WHERE id = ?) AND t.criado_em >= ?`).get(mensagemId, desde).n;
+    if (doContato >= LEITURAS_CONTATO_DIA) return 'limite diário deste contato';
+    return null;
+  })();
+  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) { // nem baixa
+    if (guardar) await recebidos.receber({ mensagemId, tipoMidia: midia.tipo, nome: midia.nome, arquivo: null, leituraFalhou: true }).catch(() => {});
+    return pular('arquivo maior que 15 MB');
+  }
+  if (motivoSemLeitura && !guardar) return pular(motivoSemLeitura);
+  if (motivoSemLeitura) return guardarSemLer(mensagemId, midia, motivoSemLeitura);
   const registrar = (ok, provedor, erro) => db.prepare(
     'INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(mensagemId, provedor ? `${provedor}:${midia.tipo}` : midia.tipo, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
   ia.marcarLeitura(mensagemId, true);
+  let arquivo = null;
   try {
-    const arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES));
+    arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES));
     // Falha passageira do Gemini (fora do ar, tempo esgotado, rede, cota): tenta de novo algumas vezes, com espera curta.
     const esperas = String(process.env.IA_MIDIA_REPETIR_MS !== undefined ? process.env.IA_MIDIA_REPETIR_MS : '3000,8000').split(',').map(Number).filter((n) => Number.isFinite(n) && n >= 0);
     const r = await lerComTentativas(
@@ -92,9 +110,12 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
     wa.store.definirTranscricao(mensagemId, novo);
     registrar(true, r.provedor);
     console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}, ${midia.mime}) lida por ${r.provedor}: ${r.texto.length} caracteres`);
+    if (guardar) await guardarArquivo(mensagemId, midia, arquivo, r.texto, false);
     return true;
   } catch (err) {
     registrar(false, null, err.message);
+    // Leitura falhou (ou o download): o arquivo é guardado assim mesmo, como "pendente de classificação" (nunca se perde calado).
+    if (guardar) await guardarArquivo(mensagemId, midia, arquivo, null, true);
     console.error(`[ia] leitura de ${midia.tipo} da mensagem ${mensagemId}: ${err.message}`);
     // A equipe vê que o áudio não foi ouvido (a IA avisa o cliente com franqueza e pede o texto).
     if (midia.tipo === 'audio') {
@@ -106,6 +127,20 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
     ia.marcarLeitura(mensagemId, false);
   }
 });
+
+async function guardarArquivo(mensagemId, midia, arquivo, textoLido, leituraFalhou) {
+  try {
+    const r = await recebidos.receber({ mensagemId, tipoMidia: midia.tipo, nome: midia.nome, arquivo, textoLido, leituraFalhou });
+    if (r) console.log(`[documentos] arquivo da mensagem ${mensagemId}: ${r.situacao}${r.categoria ? ` (${r.categoria})` : ''}`);
+  } catch (err) { console.error(`[documentos] arquivo da mensagem ${mensagemId}: ${err.message}`); }
+}
+async function guardarSemLer(mensagemId, midia, motivo) {
+  console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}) não lida: ${motivo} — arquivo guardado para a equipe classificar`);
+  let arquivo = null;
+  try { arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES)); } catch (err) { console.error(`[documentos] download da mensagem ${mensagemId}: ${err.message}`); }
+  await guardarArquivo(mensagemId, midia, arquivo, null, true);
+  return false;
+}
 
 /* ------------------------- retenção de dados (LGPD) ------------------------ */
 // Conversas sem cadastro vinculado e sem movimento há RETENCAO_DIAS são apagadas (mensagens, análises e leituras juntas).
@@ -677,6 +712,7 @@ router.get('/meta', (req, res) => {
   if (hasOwn(ENTITIES, 'comercios')) pendentes.comercios = db.prepare("SELECT COUNT(*) c FROM comercios WHERE situacao NOT IN ('Ativo na plataforma','Não concretizado')").get().c;
   if (candidaturas.ativo()) pendentes.candidaturas = db.prepare("SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado')").get().c;
   if (hasOwn(ENTITIES, 'entregadores')) pendentes.entregadores = db.prepare("SELECT COUNT(*) c FROM entregadores WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c;
+  if (recebidos && docs.ativo() && policy.docsAnexar(req.user.role, docs.politica())) pendentes.anexos_wa = recebidos.contarPendentes();
 
   res.json({
     user: req.user,
@@ -1328,6 +1364,12 @@ function docsAtivo(req, res, next) {
 }
 const { createCandidaturas, ErroCand } = require('./candidaturas');
 const candidaturas = createCandidaturas({ db, audit, docs, getSetting });
+recebidos = createRecebidos({ db, docs, candidaturas, audit });
+ia.definirRecebidos(recebidos);
+// Ficha ligada à conversa depois (pela equipe ou pela IA): os arquivos que esperavam vão para ela.
+wa.store.ouvir((evt) => {
+  if (evt && evt.tipo === 'vinculo' && evt.vinculoTipo === 'motoristas') recebidos.processar(evt.conversaId).catch((err) => console.error(`[documentos] conversa ${evt.conversaId}: ${err.message}`));
+});
 docs.definirEscopoAvaliador((funcao, registroId) => candidaturas.noEscopoAvaliador(funcao, registroId));
 // Erro de regra de documentos vira resposta com o código e a mensagem certos; o resto cai no tratador geral.
 const comDoc = (fn) => seguro(async (req, res) => {
@@ -1433,6 +1475,41 @@ router.get('/admin/migracoes', requireAdmin, (req, res) => {
   const m = require('./migracoes');
   res.json({ etapa2_ligada: process.env.FM_ETAPA2 === '1', ...m.estado(db), integridade: m.verificarIntegridade(db) });
 });
+
+// Verificação de saúde depois de publicar (só administrador): versão no ar, banco, migrações, documentos (gravação e
+// leitura reais de um arquivo de prova, cifrado e apagado em seguida), WhatsApp, IA e cópia de segurança. Nenhum segredo sai.
+router.get('/admin/saude', requireAdmin, seguro(async (req, res) => {
+  const m = require('./migracoes');
+  const pkg = require('../package.json');
+  let cache = null;
+  try { cache = (/const CACHE = '([^']+)'/.exec(fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8')) || [])[1] || null; } catch (_) { /* sem sw */ }
+  let commit = process.env.RENDER_GIT_COMMIT || null;
+  try { if (!commit) commit = fs.readFileSync(path.join(__dirname, '..', 'VERSAO'), 'utf8').trim().slice(0, 40) || null; } catch (_) { /* sem arquivo */ }
+  const banco = db.prepare('PRAGMA quick_check').get();
+  const documentos = { ativo: docs.ativo(), ...docs.estadoArmazenamento(), prova: null };
+  if (docs.ativo() && documentos.pronto) {
+    const prova = Buffer.from(`prova-${crypto.randomUUID()}`);
+    try {
+      const g = await docs.guardarRecebido(prova);
+      const lido = await docs.lerRecebido(g);
+      await docs.descartarGuardado(g.chave);
+      documentos.prova = lido.equals(prova) ? 'ok' : 'conteúdo diferente';
+    } catch (err) { documentos.prova = `falhou: ${String(err.message).slice(0, 120)}`; }
+  }
+  const est = wa.estado();
+  const cfgIa = ia.config();
+  audit(req, 'saude_ver', 'sistema', null, 'verificação de saúde');
+  res.json({
+    versao: pkg.version, commit, cache, node: process.version, etapa2: process.env.FM_ETAPA2 === '1',
+    banco: { quick_check: banco ? Object.values(banco)[0] : null },
+    migracoes: { ...m.estado(db) },
+    documentos,
+    anexos_whatsapp: recebidos && recebidos.ativo() ? { ativo: true, pendentes: recebidos.contarPendentes() } : { ativo: false },
+    whatsapp: { ativo: est.ativo, estado: est.canal.state, fila: est.fila },
+    ia: { ativa: cfgIa.ativo, modo: cfgIa.modo, responde_sozinha: cfgIa.responder, provedor: cfgIa.provedor, chave_configurada: cfgIa.chaveConfigurada },
+    cofre: { configurado: !!process.env.SNAPSHOT_URL, modo: process.env.SNAPSHOT_MODO || 'render' }
+  });
+}));
 
 router.get('/audit', requireAdmin, (req, res) => {
   const limit = Math.min(300, Math.max(1, parseInt(req.query.limit, 10) || 100));
@@ -1543,6 +1620,39 @@ router.get('/documentos/meta', docsAtivo, (req, res) => res.json({
   situacoes: docs.SITUACOES, geral: docs.GERAL, armazenamento: docs.estadoArmazenamento(),
   pode: { politica: req.user.role === 'admin', anexar: policy.docsAnexar(req.user.role, docs.politica()) }
 }));
+/* ------------------ arquivos recebidos pelo WhatsApp (fotos/PDFs → arquivo digital da ficha) ------------------ */
+// Lista e ações: quem pode anexar documentos (admin; gestor se a política deixar). Ver o arquivo da área de espera (ainda
+// sem classificação): só o administrador, auditado. Nada é apagado: "não é documento" e "ciente" só registram a decisão.
+function podeAnexarDocs(req, res, next) {
+  if (!policy.docsAnexar(req.user.role, docs.politica())) return fail(res, 403, 'forbidden', 'Seu perfil não pode cuidar de documentos.');
+  next();
+}
+const comAnexo = (fn) => comDoc(async (req, res) => {
+  try { await fn(req, res); } catch (err) {
+    if (err && err.status && err.codigo) return res.status(err.status).json({ error: { code: err.codigo, message: err.message } });
+    throw err;
+  }
+});
+router.get('/wa/anexos', docsAtivo, podeAnexarDocs, (req, res) => {
+  res.json({ itens: recebidos.listar({ pendentes: req.query.todos !== '1' }), pendentes: recebidos.contarPendentes() });
+});
+router.get('/wa/anexos/:id/arquivo', docsAtivo, requireAdmin, comAnexo(async (req, res) => {
+  const a = await recebidos.arquivoDaEspera(req, req.params.id);
+  res.set('Content-Type', a.mime || 'application/octet-stream');
+  res.set('Content-Disposition', `inline; filename="arquivo-whatsapp.${String(a.nome || '').split('.').pop().replace(/[^a-z0-9]/gi, '') || 'bin'}"`);
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; sandbox");
+  res.send(a.conteudo);
+}));
+router.post('/wa/anexos/:id/classificar', docsAtivo, podeAnexarDocs, comAnexo(async (req, res) => {
+  const b = req.body || {};
+  const r = await recebidos.classificar(req, req.params.id, { categoria: String(b.categoria || ''), registro_id: b.registro_id, titulo: b.titulo });
+  res.json({ anexo: recebidos.publico(r) });
+}));
+router.post('/wa/anexos/:id/resolver', docsAtivo, podeAnexarDocs, comAnexo(async (req, res) => {
+  res.json({ anexo: recebidos.publico(recebidos.resolver(req, req.params.id, { acao: String((req.body || {}).acao || '') })) });
+}));
+
 router.get('/documentos/politica', docsAtivo, requireAdmin, (req, res) => {
   const pol = docs.politica();
   res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol), armazenamento: docs.estadoArmazenamento(), categorias: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo }))])), fixos: docs.OBRIGATORIOS_FIXOS });
@@ -1594,9 +1704,19 @@ router.get('/:entity', (req, res) => {
   res.json(entities.listEntity(def, req.query));
 });
 
+// 13/11 (pedido do dono): com o arquivo digital ligado, a situação de cada documento do motorista/entregador vem SÓ do
+// arquivo guardado (anexar, conferir e rejeitar no painel de documentos). Ninguém marca "recebido" ou "conferido" à mão.
+const CAMPOS_DOC_FICHA = new Set(['doc_cnh', 'doc_crlv', 'doc_endereco', 'doc_antecedentes', 'doc_foto_frente', 'doc_foto_lado', 'doc_foto_traseira', 'documentos']);
+function docsDaFichaBloqueados(def, body, atual) {
+  if (!docs.ativo() || !['motoristas', 'entregadores'].includes(def.table) || !body || typeof body !== 'object') return false;
+  return Object.keys(body).some((k) => CAMPOS_DOC_FICHA.has(k) && String(body[k] == null ? '' : body[k]) !== String((atual && atual[k]) == null ? '' : atual[k]));
+}
+const MSG_DOCS_FICHA = 'A situação dos documentos é atualizada pelo arquivo digital: anexe, confira ou rejeite o arquivo no painel "Documentos" da ficha.';
+
 router.post('/:entity', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
+  if (docsDaFichaBloqueados(def, req.body, {})) return fail(res, 422, 'documentos_pelo_arquivo', MSG_DOCS_FICHA);
   if (pessoas.ativa() && Object.prototype.hasOwnProperty.call(pessoas.FUNCAO_DA_TABELA, def.table)) {
     // O usuário pode escolher o titular já existente (pessoa_id para pessoa, empresa_id para empresa); sem escolha = novo.
     const ehEmpresa = pessoas.FUNCAO_DA_TABELA[def.table] === 'parceiro_clube' || pessoas.FUNCAO_DA_TABELA[def.table] === 'comercio';
@@ -1651,6 +1771,7 @@ router.get('/:entity/:id', (req, res) => {
 router.patch('/:entity/:id', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
+  if (docsDaFichaBloqueados(def, req.body, db.prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(Number(req.params.id)))) return fail(res, 422, 'documentos_pelo_arquivo', MSG_DOCS_FICHA);
   const result = entities.updateEntity(def, Number(req.params.id), req.body, req);
   if (result.errors) return res.status(result.status).json({ error: { code: 'validation', message: 'Verifique os campos destacados.', fields: result.errors } });
   if (result.error) return fail(res, result.status, 'error', result.error);
@@ -1710,4 +1831,4 @@ router.post('/:entity/:id/interacoes', (req, res) => {
   res.status(201).json({ item: db.prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(id) });
 });
 
-module.exports = { buildRouter: () => router, computeCenario, wa, ia };
+module.exports = { buildRouter: () => router, computeCenario, wa, ia, docs, recebidos: () => recebidos };

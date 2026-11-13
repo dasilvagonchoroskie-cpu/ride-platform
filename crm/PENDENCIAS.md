@@ -116,6 +116,16 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] **Dono (opcional):** revisar os textos dos 2 modelos novos (confirmação rápida e áudio não ouvido) em Modelos de Comunicação da IA.
 - Observação: a cota grátis do Gemini continua sendo o maior risco de demora/falha (log de 12/11: vários "IA indisponível").
 
+### Etapa final: arquivos do WhatsApp e versão candidata (13/11/2026, ramo `etapa2`, NÃO está em produção)
+- [x] 13/11 Fotos/PDFs do WhatsApp guardados cifrados na ficha (ou na espera / pendentes de classificação); texto não conta mais.
+- [x] 13/11 Botões do site: os 4 textos reconhecidos como origem "Site"; "Vim pelo site" → menu geral (testado com o texto real do site).
+- [x] 13/11 Versão candidata 2.1.0-rc.1, `/api/admin/saude`, procedimento de publicação/rollback e roteiro de testes reais. 199/199 testes.
+- [ ] **Dono — decidir o destino:** Render agora (precisa de bucket PRIVADO no Supabase Storage + chave de serviço) ou VPS Hostinger.
+- [ ] **Dono — gerar e guardar** `FM_DOCS_KEY` e `FM_DADOS_KEY` (cofre de senhas) e autorizar a publicação (`docs/PUBLICACAO-ETAPA2.md`).
+- [ ] **Dono — testes reais** (`docs/ROTEIRO-TESTES-REAIS.md`): WhatsApp, Gemini, áudio, troca IA/equipe, site, 7 documentos, PWA,
+      PDF e notificação no celular. Nada disso foi testado com WhatsApp/Gemini reais nem em aparelho físico.
+- [ ] Decisão pendente (LGPD): prazo de guarda dos arquivos do WhatsApp que nunca viraram documento (hoje: nada é apagado sozinho).
+
 ## 3. Riscos e avisos em aberto
 
 - [ ] **Horas grátis do Render**: CRM e servidor da plataforma acordados 24 h na mesma conta. Estimativa: as 750 h

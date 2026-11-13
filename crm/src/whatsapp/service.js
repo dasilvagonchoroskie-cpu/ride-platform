@@ -140,12 +140,14 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
 
   // Para testes: troca o canal por um falso.
   function usarCanal(novo) { canal = novo; }
+  // Para testes: o canal FALSO em uso (o canal real nunca é exposto).
+  function canalFalso() { return canal && canal.nome === 'falso' ? canal : null; }
   function definirGancho(fn) { gancho = fn; }
   function definirChegada(fn) { aoChegar = fn; }
   let transcritor = null;
   function definirTranscritor(fn) { transcritor = fn; }
 
-  return { store, iniciar, definirAtivo, estado, parear, desconectar, conectado, processarFila, cutucar, usarCanal, definirGancho, definirChegada, definirTranscritor, desligar };
+  return { store, iniciar, definirAtivo, estado, parear, desconectar, conectado, processarFila, cutucar, usarCanal, canalFalso, definirGancho, definirChegada, definirTranscritor, desligar };
 }
 
 module.exports = { createService };

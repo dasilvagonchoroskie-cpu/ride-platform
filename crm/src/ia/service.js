@@ -319,12 +319,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const def = ENTITIES.motoristas;
     const { linha } = valoresAtuais('motoristas', motoristaId);
     if (!linha || !linha.id) return null;
-    const rec = documentosRecebidos(waStore.listarMensagens(conversaId, { limite: 500 }));
+    // 13/11 (pedido do dono): texto NÃO é comprovante. Os campos doc_* só mudam quando o ARQUIVO entra no arquivo digital
+    // da ficha (documentos.sincronizarLegado). Aqui só se resume a situação e se avança a etapa a partir deles.
     const corpo = {};
-    for (const [tipo, campo] of Object.entries(CAMPO_DOC)) {
-      if (rec[tipo] && (!preenchido(linha[campo]) || linha[campo] === 'Não enviado')) corpo[campo] = 'Recebido — conferir';
-    }
-    const estado = { ...linha, ...corpo };
+    const estado = { ...linha };
     const ok = (v) => v === 'Recebido — conferir' || v === 'Conferido';
     const recebidos = Object.values(CAMPO_DOC).filter((c) => ok(estado[c])).length;
     const conferidos = Object.values(CAMPO_DOC).filter((c) => estado[c] === 'Conferido').length;
@@ -346,6 +344,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   /* ------------------------------------------ automático ------------------------------------------ */
   const reqIA = () => ({ app: { locals: { db } }, user: { id: null, nome: 'Assistente IA' }, headers: {}, ip: '', socket: {} });
+  // Arquivos recebidos pelo WhatsApp (documentos/recebidos.js): ligado pelas rotas depois que o arquivo digital existe.
+  let recebidos = null;
+  function definirRecebidos(r) { recebidos = r; }
+  const arquivosAtivos = () => !!(recebidos && recebidos.ativo());
 
   /* ------------------------- estado do processamento e recuperação (12/11) ------------------------- */
   // Problema real observado em produção (12/11, 12:27): o provedor de IA devolveu erro 5xx, a falha só foi para o log e a
@@ -451,7 +453,13 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
         return;
       }
       const a = await analisar(conversaId, { origem: 'automatica', forcar: forcar || tentativa > 0 });
-      const ap = aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
+      let ap = aplicar(conversaId, { criar: cfg.criarCadastro }, reqIA());
+      // Ficha que acabou de nascer (ou já existia): os arquivos que esperavam vão para ela ANTES de responder.
+      if (arquivosAtivos()) {
+        const feitos = await recebidos.processar(conversaId);
+        const c2 = waStore.obterConversa(conversaId);
+        if (feitos.length && c2 && c2.vinculo_tipo === 'motoristas') ap = { ...ap, documentos: marcarDocumentos(conversaId, c2.vinculo_id, reqIA()) };
+      }
       let resp = 'resposta automática desligada';
       let estadoFinal = 'analisada';
       if (cfg.responder) {
@@ -648,21 +656,34 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const motivoTransf = C.pediuHumano(textoUlt) ? 'pediu_humano' : (at.transferir ? at.motivo_transferencia : null);
     if (motivoTransf) return transferir(motivoTransf, partes);
 
-    // Documento recebido (foto/PDF lido): confirma o RECEBIMENTO uma vez; com CNH e CRLV, o cadastro vai para análise.
-    const ehDocumento = /📎/u.test(textoUlt) && (tipoDocumento(textoUlt) !== null || Object.keys(extrairDadosDocumentos([ultima])).length > 0);
+    // Documento recebido (foto/PDF): só conta o que tem ARQUIVO guardado (cifrado) — na ficha ou esperando a ficha.
+    // Texto sozinho nunca é comprovante. Sem armazenamento de documentos ligado, o arquivo não tem onde ficar: equipe.
+    const ehMidiaDoc = ['image', 'document'].includes(ultima.tipo);
+    const anexo = ehMidiaDoc && arquivosAtivos() ? recebidos.daMensagem(ultima.id) : null;
+    const ehDocumento = ehMidiaDoc && (anexo ? anexo.situacao !== 'nao_documento' : (/📎/u.test(textoUlt) && (tipoDocumento(textoUlt) !== null || Object.keys(extrairDadosDocumentos([ultima])).length > 0)));
     const confirmaDoc = ehDocumento ? central.texto('confirmacao_documentos') : '';
+    if (ehDocumento && !anexo) {
+      return transferir('documento_sem_arquivo', [...partes, confirmaDoc, 'Nossa equipe vai conferir o arquivo e dar sequência ao seu atendimento.'].filter(Boolean));
+    }
+    if (ehDocumento && anexo && anexo.situacao === 'recusado') {
+      return enviar([...partes, central.texto('documento_recusado')], { tipo: 'documento recusado' });
+    }
+    if (ehDocumento && anexo && anexo.situacao === 'falhou') {
+      return transferir('documento_sem_arquivo', [...partes, confirmaDoc, 'Nossa equipe vai conferir o arquivo e dar sequência ao seu atendimento.'].filter(Boolean));
+    }
     if (confirmaDoc) {
-      // O que já chegou: documentos lidos nesta conversa + o que a ficha do motorista já registra.
-      const rec = documentosRecebidos(waStore.listarMensagens(conversaId, { limite: 500 }));
+      // O que já chegou COM ARQUIVO: ficha do motorista (campos atualizados pelo arquivo digital) + arquivos esperando a ficha.
+      const guardadas = recebidos.categoriasGuardadas(conversaId);
       const linha = conv.vinculo_tipo === 'motoristas' ? valoresAtuais('motoristas', conv.vinculo_id).linha : {};
-      const tem = (tipo, campo) => !!rec[tipo] || ['Recebido — conferir', 'Conferido'].includes(linha[campo]);
+      const tem = (tipo, campo) => guardadas.has(DOCUMENTOS_MOTORISTA.find((d) => d.tipo === tipo).categoria) || ['Recebido — conferir', 'Conferido'].includes(linha[campo]);
+      const aClassificar = anexo && anexo.situacao === 'pendente_classificacao' ? ' Nossa equipe vai conferir qual documento é esse arquivo.' : '';
       // Os 7 itens obrigatórios; nada conta como completo enquanto faltar um. Pede até 2 por vez (mensagem curta).
       const faltaTodos = DOCUMENTOS_MOTORISTA.filter((d) => !tem(d.tipo, d.campo)).map((d) => d.pedido);
       const falta = faltaTodos.slice(0, 2);
       if (!falta.length) return transferir('documentos', [...partes, `${confirmaDoc} Com isso, seu cadastro está aguardando análise da nossa equipe.`]);
       const lista = falta.length > 1 ? `${falta.slice(0, -1).join(', ')} e ${falta[falta.length - 1]}` : falta[0];
       const resto = faltaTodos.length > falta.length ? ` Depois disso, ainda faltarão ${faltaTodos.length - falta.length} item(ns) da lista.` : '';
-      return enviar([...partes, `${confirmaDoc} Agora, envie também ${lista}.${resto}`], { tipo: 'confirmação de documento' });
+      return enviar([...partes, `${confirmaDoc}${aClassificar} Agora, envie também ${lista}.${resto}`], { tipo: 'confirmação de documento' });
     }
 
     // Menu: no primeiro contato sem assunto claro, ou quando o cliente pede.
@@ -801,7 +822,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   const usarProvedor = (novo) => { provedor = novo; };
 
   return { central, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
-    recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar, registrarChegada, enviarConfirmacao, marcarLeitura };
+    recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar, registrarChegada, enviarConfirmacao, marcarLeitura, definirRecebidos };
 }
 
 module.exports = { createIaService, MODELO_PADRAO, PROVEDOR_PADRAO };

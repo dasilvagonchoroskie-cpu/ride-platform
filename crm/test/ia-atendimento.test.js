@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { recebidosFalso, tipoDoTexto } = require('./apoio/recebidos-falso');
 
 function montar({ confirmacaoMs = '0', atraso = '0', repetir = '0,0' } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-atend-'));
@@ -42,6 +43,7 @@ function montar({ confirmacaoMs = '0', atraso = '0', repetir = '0,0' } = {}) {
   const auditados = [];
   const logs = [];
   const ia = createIaService({ db, waStore, entities, ENTITIES, audit: (req, acao, t, id, det) => auditados.push({ acao, det }), getSetting, setSetting, cofre, provider, todayISO, nowISO, log: { log: (m) => logs.push(m), error: (m) => logs.push(m) } });
+  ia.definirRecebidos(recebidosFalso(db)); // SIMULAÇÃO do armazenamento (o real: test/wa-anexos.test.js)
   setSetting('ia_ativo', '1'); setSetting('ia_modo', 'automatico'); setSetting('ia_responder', '1');
   db.prepare("INSERT INTO users (id, nome, email, senha_hash, role, created_at, updated_at) VALUES (1, 'Dono Fictício', 'dono@x.com', 'x', 'admin', ?, ?)").run(nowISO(), nowISO());
   const eventos = [];
@@ -50,7 +52,7 @@ function montar({ confirmacaoMs = '0', atraso = '0', repetir = '0,0' } = {}) {
   // Mensagem do cliente: grava (como o WhatsApp faria) e avisa a chegada (confirmação rápida + origem).
   const chegar = (texto, extra = {}) => {
     n += 1;
-    const r = waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Cliente', externoId: `E${n}`, texto, tipo: 'text', quando: new Date(Date.now() + n).toISOString(), deMim: false, ...extra });
+    const r = waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Cliente', externoId: `E${n}`, texto, tipo: tipoDoTexto(texto), quando: new Date(Date.now() + n).toISOString(), deMim: false, ...extra });
     if (!extra.deMim) ia.registrarChegada(r.conversaId, r.mensagemId);
     return r;
   };
@@ -333,4 +335,52 @@ test('documentos pela conversa: só completa com os 7 itens (fotos do veículo s
   assert.match(ultima, /aguardando análise/);
   assert.doesNotMatch(ultima, /aprovad/i);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM motoristas WHERE situacao IN ('Aprovado', 'Contratado')").get().n, 0);
+});
+
+/* ------------------------- 13/11: documento só conta com ARQUIVO guardado ------------------------- */
+test('documento sem armazenamento ligado: não finge que guardou — confirma o recebimento e passa para a equipe', async () => {
+  const { receber, ia, respostas, conv, db } = montar();
+  await receber('oi');
+  ia.definirRecebidos(null); // arquivo digital desligado (sem FM_DOCS_KEY ou sem Etapa 2)
+  await receber('[imagem] 📎 Tipo: CNH\nCategoria da CNH: B');
+  assert.equal(conv().atendimento, 'aguardando');
+  assert.match(conv().atend_motivo, /arquivo não foi guardado/);
+  assert.match(respostas().join('\n'), /Recebemos o seu documento/);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM motoristas').get().n, 0);
+});
+
+test('arquivo recusado: pede para reenviar em formato aceito; pendente de classificação: avisa que a equipe confere', async () => {
+  const { receber, ia, respostas, conv, db } = montar();
+  await receber('oi');
+  const base = recebidosFalsoDe(db);
+  ia.definirRecebidos({ ...base, daMensagem: () => ({ situacao: 'recusado', categoria: null }) });
+  await receber('[documento] arquivo.pdf');
+  assert.match(respostas().pop(), /Não consegui receber esse arquivo/);
+  assert.equal(conv().atendimento, 'ia');
+  ia.definirRecebidos({ ...base, daMensagem: () => ({ situacao: 'pendente_classificacao', categoria: null }) });
+  await receber('[imagem] 📎 Tipo: Foto do veículo\nCor: Prata');
+  const m = respostas().pop();
+  assert.match(m, /Nossa equipe vai conferir qual documento é esse arquivo/);
+  assert.match(m, /Agora, envie também a foto da CNH/);
+});
+function recebidosFalsoDe(db) { return recebidosFalso(db); }
+
+test('os 4 botões do site: todos registram origem "Site"; só "Quero ser motorista" abre o cadastro; "Vim pelo site" recebe o menu', async () => {
+  const casos = [
+    ['Olá! Vim pelo site da Fortaleza Move.', 'cadastro', null],
+    ['Olá! Quero ser motorista da Fortaleza Move.', 'cadastro', 'cadastro'],
+    ['Olá! Quero saber mais sobre corridas e encomendas da Fortaleza Move.', 'encomendas', 'encomendas'],
+    ['Olá! Tenho um comércio e quero entregas pela Fortaleza Move.', 'encomendas', 'encomendas']
+  ];
+  for (const [texto, opcaoDaIA, esperado] of casos) {
+    const { receber, conv, estado, respostas } = montar();
+    estado.analise = { resumo: 'x', perfil: 'desconhecido', campos: {}, atendimento: { opcao: opcaoDaIA, transferir: false } };
+    estado.redacao = { resposta: 'Certo! Vou te ajudar com isso.' };
+    await receber(texto);
+    assert.equal(conv().origem_contato, 'Site', texto);
+    assert.equal(conv().atend_assunto || null, esperado, texto);
+    const m = respostas().pop();
+    if (!esperado) assert.match(m, /Para direcionarmos seu atendimento/, texto);
+    if (esperado !== 'cadastro') assert.doesNotMatch(m, /CNH|antecedentes|CRLV/, texto);
+  }
 });

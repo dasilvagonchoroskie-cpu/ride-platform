@@ -20,7 +20,8 @@ const LISTA = [
   require('./003_entregadores'),
   require('./004_comercios'),
   require('./005_documentos'),
-  require('./006_candidaturas')
+  require('./006_candidaturas'),
+  require('./007_wa_anexos')
 ];
 
 const checksum = (m) => crypto.createHash('sha256').update(`${m.versao}|${m.nome}|${m.up.toString()}|${m.verificar ? m.verificar.toString() : ''}`).digest('hex');

@@ -380,9 +380,15 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
    * Anexa um arquivo: primeira versão de um documento da ficha ou nova versão de um documento existente (documento_id).
    * Não faz nada pela metade: se o banco falhar depois de gravar o arquivo, o arquivo é removido.
    */
-  async function anexar(req, { funcao, registro_id: registroId, categoria, titulo, data_envio: dataEnvio, observacoes, nome, conteudo, documento_id: documentoId }) {
+  async function anexar(req, dados) { return anexarInterno(req, dados, false); }
+  // Arquivo que chegou pelo WhatsApp: só o código do recebimento chama (nenhuma rota HTTP chega aqui). Mesmas validações,
+  // mesma cifra e mesmo histórico de qualquer envio; quem aparece no histórico é "WhatsApp (recebimento automático)".
+  const REQ_WHATSAPP = Object.freeze({ app: { locals: { db } }, user: Object.freeze({ id: null, nome: 'WhatsApp (recebimento automático)', role: 'sistema' }), headers: {}, ip: '', socket: {} });
+  async function anexarRecebido(dados) { return anexarInterno(REQ_WHATSAPP, dados, true); }
+
+  async function anexarInterno(req, { funcao, registro_id: registroId, categoria, titulo, data_envio: dataEnvio, observacoes, nome, conteudo, documento_id: documentoId }, sistema) {
     const pol = politica();
-    if (!policy.docsAnexar(role(req), pol)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode anexar documentos.');
+    if (!(sistema === true && req === REQ_WHATSAPP) && !policy.docsAnexar(role(req), pol)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode anexar documentos.');
     exigirPronto();
     let doc = null;
     if (documentoId) {
@@ -440,6 +446,30 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     acompanhamento(req, funcao, rid, `Documento ${rotulo}: ${novoDoc ? 'enviado' : `nova versão (v${numero})`} por ${u.nome}; aguarda conferência.`);
     audit(req, novoDoc ? 'doc_enviar' : 'doc_substituir', 'documentos', resultado.id, `${rotulo} v${numero} (${v.ext}) da ficha ${funcao} #${rid}`);
     return { documento: publico(db.prepare('SELECT * FROM documentos WHERE id = ?').get(resultado.id), req, pol), versao: numero };
+  }
+
+  /* ------------- área de espera dos arquivos do WhatsApp (cifrada, mesmo armazenamento e mesma chave) ------------- */
+  // Arquivo que ainda não tem ficha ou classificação: guardado CIFRADO (nunca em claro, nunca em pasta pública), com
+  // nome interno aleatório. Só sai daqui para o arquivo digital da ficha (anexarRecebido) ou para quem pode classificar.
+  async function guardarRecebido(conteudo) {
+    exigirPronto();
+    const uid = crypto.randomUUID();
+    const { blob, chaveEmbrulhada } = cifra.cifrar(conteudo, uid, 0);
+    const chave = novaChave();
+    await armazenamento.gravar(chave, blob);
+    return { uid, chave, chaveEmbrulhada, armazenamento: armazenamento.nome };
+  }
+  async function lerRecebido({ uid, chave, chaveEmbrulhada }) {
+    exigirPronto();
+    return cifra.decifrar(await armazenamento.ler(chave), chaveEmbrulhada, uid, 0);
+  }
+  // Só depois de o arquivo estar no arquivo digital da ficha (cópia conferida pelo SHA-256): a cópia da espera sai.
+  async function descartarGuardado(chave) { await armazenamento.remover(chave); }
+  /** SHA-256 da versão atual de um documento da ficha (para não criar versão repetida do mesmo arquivo). */
+  function hashAtual(funcao, registroId, categoria) {
+    const r = db.prepare(`SELECT v.sha256 FROM documentos d JOIN documento_versoes v ON v.id = d.versao_atual_id
+      WHERE d.funcao = ? AND d.registro_id = ? AND d.categoria = ? AND d.excluido_em IS NULL`).get(funcao, Number(registroId), categoria);
+    return r ? r.sha256 : null;
   }
 
   /* ------------------------------------ acesso ------------------------------------ */
@@ -577,7 +607,8 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
 
   return {
     ativo, ErroDoc, CATEGORIAS, OBRIGATORIOS_FIXOS, SITUACOES, GERAL, DOC_FUNCOES, funcoesDisponiveis, politica, salvarPolitica, decisoesPendentes, estadoArmazenamento, definirEscopoAvaliador,
-    listar, consultar, contagens, resumoPeriodo, resumoDasFuncoes, anexar, obterArquivo, conferir, observar, historico, excluirDefinitivo,
+    listar, consultar, contagens, resumoPeriodo, resumoDasFuncoes, anexar, anexarRecebido, guardarRecebido, lerRecebido, descartarGuardado, hashAtual,
+    obterArquivo, conferir, observar, historico, excluirDefinitivo,
     geralDe, tituloRegistro, rotuloCategoria
   };
 }

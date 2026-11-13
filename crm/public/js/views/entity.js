@@ -189,14 +189,20 @@ export async function renderEntity(view, state, key, params) {
     }
     let docs = '';
     if (ehCondutor && ficha.documentos) {
-      const faltam = DOCS.filter(([tipo, campo]) => !['Recebido — conferir', 'Conferido'].includes(item[campo] || (ficha.documentos[tipo] ? 'Recebido — conferir' : 'Não enviado'))).length;
-      docs = `<div class="section-title">Documentos ${faltam ? `<span class="muted small">— faltam ${faltam} de ${DOCS.length} (incompleto)</span>` : `<span class="muted small">— ${DOCS.length} de ${DOCS.length} recebidos</span>`}</div><div class="ficha-docs">${DOCS.map(([tipo, campo, nome]) => {
+      // Com o arquivo digital ligado, a situação vem só do ARQUIVO guardado; a menção na conversa é só uma pista.
+      const situacaoDe = (tipo, campo) => item[campo] || (!state.meta.documentos && ficha.documentos[tipo] ? 'Recebido — conferir' : 'Não enviado');
+      const faltam = DOCS.filter(([tipo, campo]) => !['Recebido — conferir', 'Conferido'].includes(situacaoDe(tipo, campo))).length;
+      docs = `<div class="section-title">Documentos ${faltam ? `<span class="muted small">— faltam ${faltam} de ${DOCS.length} (incompleto)</span>` : `<span class="muted small">— ${DOCS.length} de ${DOCS.length} recebidos</span>`}</div>
+        ${state.meta.documentos ? '<p class="muted small" style="margin:-4px 0 8px">Conta só o que tem arquivo guardado (painel "Documentos" abaixo). Fotos e PDFs do WhatsApp entram sozinhos quando a leitura identifica o documento.</p>' : ''}
+        <div class="ficha-docs">${DOCS.map(([tipo, campo, nome]) => {
         const rec = ficha.documentos[tipo];
-        const st = item[campo] || (rec ? 'Recebido — conferir' : 'Não enviado');
+        const st = situacaoDe(tipo, campo);
+        const semArquivo = state.meta.documentos && rec && st === 'Não enviado';
         return `<div class="ficha-doc"><span class="nome">${ui.esc(nome)}</span>${ui.badge(st)}
-          ${rec && rec.recebido_em ? `<span class="quando">recebido em ${ui.fmtDateTime(rec.recebido_em)}</span>` : ''}
+          ${rec && rec.recebido_em && !semArquivo ? `<span class="quando">recebido em ${ui.fmtDateTime(rec.recebido_em)}</span>` : ''}
+          ${semArquivo ? '<span class="quando">mencionado na conversa, sem arquivo guardado</span>' : ''}
           ${rec && ficha.conversa ? `<a class="btn btn-sm btn-ghost" href="#/conversas?c=${ficha.conversa.id}">Ver na conversa</a>` : ''}
-          ${st === 'Recebido — conferir' ? `<button class="btn btn-sm btn-soft" data-conferir="${campo}" type="button">Marcar conferido</button>` : ''}</div>`;
+          ${st === 'Recebido — conferir' && !state.meta.documentos ? `<button class="btn btn-sm btn-soft" data-conferir="${campo}" type="button">Marcar conferido</button>` : ''}</div>`;
       }).join('')}</div>`;
     }
     const resumo = ficha.resumo_ia && ficha.resumo_ia.texto

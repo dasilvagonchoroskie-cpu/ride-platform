@@ -399,6 +399,8 @@ function createStore(db, opts = {}) {
     }
     if (!existeCadastro(tipo, Number(id))) return { erro: 'Cadastro não encontrado.' };
     db.prepare('UPDATE wa_contatos SET vinculo_tipo = ?, vinculo_id = ?, updated_at = ? WHERE id = ?').run(tipo, Number(id), agora(), contatoId);
+    // Quem cuida dos arquivos recebidos (fotos/PDFs esperando a ficha) é avisado para levá-los à ficha recém-ligada.
+    for (const c of db.prepare('SELECT id FROM wa_conversas WHERE contato_id = ?').all(contatoId)) avisar({ tipo: 'vinculo', conversaId: c.id, vinculoTipo: tipo, vinculoId: Number(id) });
     return { ok: true };
   }
 

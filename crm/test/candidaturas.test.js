@@ -235,6 +235,22 @@ test('sete documentos obrigatórios do candidato: itens separados, completude, p
   assert.equal((await ava('GET', `/documentos/${ant.id}/arquivo`)).s, 200, 'avaliador do candidato vê a certidão');
   assert.equal((await ges('GET', '/reports/pdf?type=documentos')).s, 403);
   assert.equal((await ges('GET', '/reports/export?type=documentos')).s, 403);
+  // Verificação de saúde (pós-publicação): versão, banco, migrações e PROVA real de gravar/ler um arquivo cifrado.
+  const saude = await adm('GET', '/admin/saude');
+  assert.equal(saude.s, 200);
+  assert.equal(saude.j.versao, require('../package.json').version);
+  assert.equal(saude.j.banco.quick_check, 'ok');
+  assert.equal(saude.j.migracoes.versao_atual, 7);
+  assert.equal(saude.j.documentos.prova, 'ok');
+  assert.equal(saude.j.anexos_whatsapp.ativo, true);
+  assert.ok(!JSON.stringify(saude.j).match(/[0-9a-f]{64}/), 'nenhuma chave na resposta');
+  assert.equal((await ges('GET', '/admin/saude')).s, 403);
+  // Arquivos do WhatsApp: gestor (pode anexar) lista; só o administrador abre o arquivo da espera.
+  assert.equal((await ges('GET', '/wa/anexos')).s, 200);
+  assert.equal((await ges('GET', '/wa/anexos/1/arquivo')).s, 403);
+  assert.equal((await ava('GET', '/wa/anexos')).s, 403);
+  // Ninguém marca documento "recebido/conferido" à mão: a situação vem do arquivo guardado.
+  assert.equal((await adm('PATCH', `/motoristas/${mot.id}`, { doc_cnh: 'Conferido' })).s, 422);
   // Gestor não exclui documento e ninguém exclui sem a opção ligada.
   assert.equal((await ges('POST', `/documentos/${ant.id}/excluir-definitivo`, { motivo: 'teste', confirmo: true })).s, 403);
 });

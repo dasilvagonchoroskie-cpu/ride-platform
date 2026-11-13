@@ -26,7 +26,7 @@ const NAV = [
   // Etapa 2 (só aparece com a Etapa 2 ligada no servidor): ficha central de cada pessoa e as suas funções.
   { key: 'entregadores', label: 'Entregadores', icon: 'send', entity: 'entregadores', title: 'Entregadores e motociclistas', sub: 'Interessados, cadastros e aprovações de quem faz entregas e mototáxi', etapa2: true },
   { key: 'comercios', label: 'Comércios', icon: 'building', entity: 'comercios', title: 'Comércios parceiros', sub: 'Lojas que vão usar a plataforma para pedir entregas', etapa2: true },
-  { key: 'documentos', label: 'Documentos', icon: 'file', title: 'Documentos', sub: 'Arquivo digital e conferência de documentos por função', etapa2: true },
+  { key: 'documentos', label: 'Documentos', icon: 'file', badge: 'anexos_wa', title: 'Documentos', sub: 'Arquivo digital e conferência de documentos por função', etapa2: true },
   { key: 'pessoas', label: 'Pessoas', icon: 'users', title: 'Pessoas', sub: 'Ficha central: cada pessoa e as suas funções na Fortaleza Move', etapa2: true },
   { key: 'candidatos', label: 'Candidatos', icon: 'check', badge: 'candidaturas', title: 'Avaliação de candidatos', sub: 'Cadastros recebidos, documentos, pareceres e decisão final', etapa2: true },
   { key: 'empresas', label: 'Empresas', icon: 'building', title: 'Empresas', sub: 'Ficha central: cada empresa e as suas funções (Clube de Vantagens, comércio)', etapa2: true }
