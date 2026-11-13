@@ -13,6 +13,7 @@ import { acharContaComOsMesmosDados, DadosDaPessoa, liberarTelefoneDeContaVazia 
 import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
 import { AvisosDeSeguranca } from './avisos-de-seguranca';
 import { randomToken } from '../../common/utils/crypto.util';
+import { encerrarComercios } from '../comercio/comercio.conta';
 
 /** Genero informado no cadastro do passageiro. */
 export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
@@ -463,6 +464,7 @@ export class AuthService {
     if (u.role === UserRole.ADMIN || u.driver || usada || minutos > 30) {
       throw BusinessException.validation('Esta conta ja tem uso e nao pode ser desfeita. Toque em Sair para trocar de numero.');
     }
+    await encerrarComercios(this.prisma, [userId], { apagarTudo: true }, (m) => this.logger.warn(m));
     await this.prisma.user.delete({ where: { id: userId } });
     this.logger.log(`Conta nova desfeita (numero digitado errado): ${userId}`);
   }

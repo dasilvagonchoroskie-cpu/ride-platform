@@ -108,6 +108,18 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
     await _fazer(() => widget.api.revisarCategoria(c.id, false, motivo), 'Categoria recusada. O motorista vê o motivo.');
   }
 
+  Future<void> _suspender(CarroDoMotorista c) async {
+    final motivo = await pedirTexto(
+      context,
+      titulo: 'Suspender ${c.nome} (${c.placaBonita})',
+      rotulo: 'Motivo (o motorista vê)',
+      explicacao: 'O veículo suspenso não roda até ser reativado. Isso não muda as permissões da cidade.',
+      confirmar: 'Suspender',
+    );
+    if (motivo == null || !mounted) return;
+    await _fazer(() => widget.api.suspenderCarro(c.id, true, motivo), 'Veículo suspenso. O motorista vê o motivo.');
+  }
+
   Future<void> _remover(CarroDoMotorista c) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -157,6 +169,8 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
           usar: () => _fazer(() => widget.api.usarCarro(c.id), '${c.nome} agora é o carro em uso.'),
           editar: () => _editar(c),
           remover: () => _remover(c),
+          suspender: () => _suspender(c),
+          reativar: () => _fazer(() => widget.api.suspenderCarro(c.id, false), 'Veículo reativado. O motorista já pode usar.'),
           foto: (tipo) => _foto(c, tipo),
           categorias: _categorias,
           aprovarCategoria: () => _fazer(
@@ -189,6 +203,8 @@ class _Carro extends StatelessWidget {
     required this.usar,
     required this.editar,
     required this.remover,
+    required this.suspender,
+    required this.reativar,
     required this.foto,
     required this.aprovarCategoria,
     required this.recusarCategoria,
@@ -206,6 +222,8 @@ class _Carro extends StatelessWidget {
   final VoidCallback usar;
   final VoidCallback editar;
   final VoidCallback remover;
+  final VoidCallback suspender;
+  final VoidCallback reativar;
   final void Function(String tipo) foto;
 
   @override
@@ -215,6 +233,7 @@ class _Carro extends StatelessWidget {
       'EM_USO' => AppColors.success,
       'PENDENTE' => AppColors.warning,
       'RECUSADO' => AppColors.danger,
+      'SUSPENSO' => AppColors.danger,
       _ => AppColors.textMuted,
     };
     return Container(
@@ -254,15 +273,18 @@ class _Carro extends StatelessWidget {
                       foto('FOTO');
                     case 'crlv':
                       foto('CRLV');
+                    case 'suspender':
+                      suspender();
                     default:
                       remover();
                   }
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'editar', child: Text('Corrigir dados')),
-                  PopupMenuItem(value: 'foto', child: Text('Foto do carro')),
-                  PopupMenuItem(value: 'crlv', child: Text('Foto do CRLV')),
-                  PopupMenuItem(value: 'remover', child: Text('Tirar este carro')),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'editar', child: Text('Corrigir dados')),
+                  const PopupMenuItem(value: 'foto', child: Text('Foto do carro')),
+                  const PopupMenuItem(value: 'crlv', child: Text('Foto do CRLV')),
+                  if (!c.suspenso) const PopupMenuItem(value: 'suspender', child: Text('Suspender veículo')),
+                  const PopupMenuItem(value: 'remover', child: Text('Tirar este carro')),
                 ],
               ),
             ],
@@ -303,6 +325,13 @@ class _Carro extends StatelessWidget {
             ),
           ] else if (c.categoriaMotivo != null)
             Text('Categoria recusada: ${c.categoriaMotivo}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+          if (c.suspenso) ...[
+            const SizedBox(height: Spacing.xs),
+            Wrap(
+              spacing: Spacing.sm,
+              children: [OutlinedButton(onPressed: ocupado ? null : reativar, child: const Text('Reativar veículo'))],
+            ),
+          ],
           if (c.paraConferir || (!c.emUso && c.situacao == 'GUARDADO')) ...[
             const SizedBox(height: Spacing.xs),
             Wrap(

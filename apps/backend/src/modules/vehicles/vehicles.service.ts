@@ -17,6 +17,8 @@ import {
   lerMapaDeCarros,
   MapaDeCarros,
   situacaoDoCarro,
+  diaValido,
+  vencido,
 } from './vehicles.situacao';
 
 /** Carro como o aplicativo e a Central leem: dados, situacao e fotos. */
@@ -72,7 +74,7 @@ export class VehiclesService {
     return {
       ...v,
       situacao: situacaoDoCarro(v, mapa),
-      motivo: f.situacao === 'RECUSADO' ? (f.motivo ?? null) : null,
+      motivo: f.situacao === 'RECUSADO' || f.situacao === 'SUSPENSO' ? (f.motivo ?? null) : null,
       fotoUrl: f.foto ?? null,
       crlvUrl: f.crlv ?? null,
       enviadoEm: f.em ?? null,
@@ -384,6 +386,7 @@ export class VehiclesService {
     const s = mapa[vehicle.id]?.situacao;
     if (s === 'PENDENTE') throw BusinessException.validation('Este carro ainda espera a Central conferir a foto e o documento.');
     if (s === 'RECUSADO') throw BusinessException.validation('A Central recusou este carro. Corrija os dados ou mande as fotos de novo.');
+    if (s === 'SUSPENSO') throw BusinessException.validation('A Central suspendeu este veiculo. Fale com a Central para reativar.');
     if (s === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
     if (vehicle.isActive) return;
     if (await this.emCorrida(vehicle.driverId)) {
@@ -483,6 +486,7 @@ export class VehiclesService {
     const v = await this.carroPorId(vehicleId);
     const mapa = await this.mapa();
     if (mapa[vehicleId]?.situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
+    if (mapa[vehicleId]?.situacao === 'SUSPENSO') throw BusinessException.validation('Este veiculo esta suspenso. Use "Reativar".');
     if (!aprovar && !motivo?.trim()) throw BusinessException.validation('Escreva o motivo da recusa (o motorista ve).');
     const novo = await this.mudar((m) => {
       const f = m[vehicleId] ?? {};
@@ -514,6 +518,162 @@ export class VehiclesService {
       { tipo: 'carro', abrir: 'carros' },
     );
     return this.carrosDoMotorista(v.driverId);
+  }
+
+  /**
+   * A Central suspende ou reativa o VEICULO (nao a autorizacao da cidade).
+   * Suspender: motivo obrigatorio, nao pode estar em corrida, sai de uso e o
+   * motorista e avisado. Reativar: volta a ser um carro liberado (a ficha,
+   * fotos e categoria ficam como estavam).
+   */
+  async adminSuspender(vehicleId: string, adminId: string, suspender: boolean, motivo?: string | null) {
+    const v = await this.carroPorId(vehicleId);
+    const mapa = await this.mapa();
+    const atual = mapa[vehicleId]?.situacao;
+    if (atual === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
+    if (suspender) {
+      if (atual === 'SUSPENSO') throw BusinessException.conflict('Este veiculo ja esta suspenso.');
+      if (!motivo?.trim()) throw BusinessException.validation('Escreva o motivo da suspensao (o motorista ve).');
+      const emCorrida = await this.prisma.ride.count({
+        where: { vehicleId, status: { in: [...ACTIVE_RIDE_STATUSES] } },
+      });
+      if (emCorrida > 0) throw BusinessException.conflict('Veiculo em uma corrida ativa. Espere terminar para suspender.');
+      const novo = await this.mudar((m) => {
+        m[vehicleId] = { ...(m[vehicleId] ?? {}), situacao: 'SUSPENSO', motivo: motivo.trim(), em: new Date().toISOString() };
+      }, adminId);
+      if (v.isActive) await this.prisma.vehicle.update({ where: { id: vehicleId }, data: { isActive: false } });
+      await this.garantirCarroEmUso(v.driverId, novo);
+    } else {
+      if (atual !== 'SUSPENSO') throw BusinessException.validation('Este veiculo nao esta suspenso.');
+      const novo = await this.mudar((m) => {
+        const ficha: FichaDoCarro = { ...(m[vehicleId] ?? {}), em: new Date().toISOString() };
+        delete ficha.situacao;
+        ficha.motivo = null;
+        m[vehicleId] = ficha;
+      }, adminId);
+      await this.garantirCarroEmUso(v.driverId, novo);
+    }
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        action: suspender ? 'VEHICLE_SUSPENDED' : 'VEHICLE_REACTIVATED',
+        entity: 'Vehicle',
+        entityId: vehicleId,
+        before: { situacao: atual ?? 'LIBERADO' },
+        after: { plate: v.plate, situacao: suspender ? 'SUSPENSO' : 'LIBERADO', motivo: suspender ? motivo!.trim() : null },
+      },
+    });
+    await this.caixa.avisarMotorista(
+      v.driverId,
+      suspender ? `Veículo ${v.plate} suspenso` : `Veículo ${v.plate} reativado`,
+      suspender ? motivo!.trim() : `${v.model} liberado novamente pela Central.`,
+      { tipo: 'carro', abrir: 'carros' },
+    );
+    this.logger.log(`Veiculo ${v.plate}: Central ${suspender ? 'suspendeu' : 'reativou'}`);
+    return this.carrosDoMotorista(v.driverId);
+  }
+
+  /**
+   * Frota para a Central (Carros e Motos): um veiculo por linha, da cidade do
+   * operador. O tipo (MOTO/CARRO) sai da categoria do veiculo, a mesma regra
+   * que o despacho usa. Nao inclui os removidos.
+   */
+  async adminFrota(
+    driverIds: string[] | null,
+    f: { tipo?: 'MOTO' | 'CARRO'; busca?: string; situacao?: string; limite?: number },
+  ) {
+    const busca = f.busca?.trim();
+    const where = {
+      ...(driverIds ? { driverId: { in: driverIds } } : {}),
+      ...(busca
+        ? {
+            OR: [
+              { plate: { contains: busca.toUpperCase().replace(/[^A-Z0-9]/g, '') || busca.toUpperCase() } },
+              { brand: { contains: busca, mode: 'insensitive' as const } },
+              { model: { contains: busca, mode: 'insensitive' as const } },
+              { driver: { user: { name: { contains: busca, mode: 'insensitive' as const } } } },
+            ],
+          }
+        : {}),
+    };
+    const [carros, mapa] = await Promise.all([
+      this.prisma.vehicle.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 1500,
+        include: { driver: { select: { id: true, status: true, cnhExpiresAt: true, user: { select: { name: true, phone: true } } } } },
+      }),
+      this.mapa(),
+    ]);
+    const itens = carros
+      .filter((v) => mapa[v.id]?.situacao !== 'REMOVIDO')
+      .map((v) => {
+        const p = this.publico(v, mapa);
+        return {
+          id: v.id,
+          plate: v.plate,
+          brand: v.brand,
+          model: v.model,
+          year: v.year,
+          color: v.color,
+          category: v.category,
+          tipo: ehMoto(v.category) ? ('MOTO' as const) : ('CARRO' as const),
+          situacao: p.situacao,
+          motivo: p.motivo,
+          emUso: v.isActive,
+          fotoUrl: p.fotoUrl,
+          crlvUrl: p.crlvUrl,
+          enviadoEm: p.enviadoEm,
+          categoriaPedida: p.categoriaPedida,
+          createdAt: v.createdAt,
+          // Validades (13/11/2026): CNH vem do cadastro do motorista; CRLV e anotada pela Central.
+          cnhValidade: v.driver.cnhExpiresAt ? v.driver.cnhExpiresAt.toISOString().slice(0, 10) : null,
+          cnhVencida: vencido(v.driver.cnhExpiresAt ? v.driver.cnhExpiresAt.toISOString().slice(0, 10) : null),
+          crlvValidade: mapa[v.id]?.crlvValidade ?? null,
+          crlvVencido: vencido(mapa[v.id]?.crlvValidade),
+          driver: {
+            id: v.driver.id,
+            status: v.driver.status,
+            name: v.driver.user?.name ?? null,
+            phone: v.driver.user?.phone ?? null,
+          },
+        };
+      })
+      .filter((i) => (f.tipo ? i.tipo === f.tipo : true))
+      .filter((i) => (f.situacao ? i.situacao === f.situacao : true));
+    const limite = Math.min(Math.max(f.limite ?? 300, 1), 500);
+    return { total: itens.length, itens: itens.slice(0, limite), cortada: itens.length > limite };
+  }
+
+  /**
+   * A Central anota (ou limpa) a validade do CRLV do veiculo. So registro: nao bloqueia
+   * nem libera o carro e nao mexe em permissoes da cidade.
+   */
+  async adminDefinirValidadeCrlv(vehicleId: string, adminId: string, validade: string | null) {
+    const v = await this.carroPorId(vehicleId);
+    const mapa = await this.mapa();
+    if (mapa[vehicleId]?.situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
+    if (validade !== null && !diaValido(validade)) throw BusinessException.validation('Data invalida. Use o formato AAAA-MM-DD.');
+    const antes = mapa[vehicleId]?.crlvValidade ?? null;
+    await this.mudar((m) => {
+      const ficha: FichaDoCarro = { ...(m[vehicleId] ?? {}) };
+      if (validade) ficha.crlvValidade = validade;
+      else delete ficha.crlvValidade;
+      m[vehicleId] = ficha;
+    }, adminId);
+    await this.prisma.auditLog.create({
+      data: {
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        action: 'VEHICLE_CRLV_VALIDITY',
+        entity: 'Vehicle',
+        entityId: vehicleId,
+        before: { crlvValidade: antes },
+        after: { plate: v.plate, crlvValidade: validade },
+      },
+    });
+    return { id: vehicleId, crlvValidade: validade, crlvVencido: vencido(validade) };
   }
 
   async adminUsar(vehicleId: string) {

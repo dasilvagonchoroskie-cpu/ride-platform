@@ -14,6 +14,7 @@ import 'package:central_app/painel/ao_vivo.dart';
 import 'package:central_app/painel/carteiras.dart';
 import 'package:central_app/painel/categorias.dart';
 import 'package:central_app/painel/clube.dart';
+import 'package:central_app/painel/comercios.dart';
 import 'package:central_app/painel/cidades_equipe.dart';
 import 'package:central_app/painel/limpeza.dart';
 import 'package:central_app/painel/comuns.dart';
@@ -561,6 +562,50 @@ Object? _resposta(String metodo, String caminho, Map<String, String> q) {
       ],
     };
   }
+  if (caminho == '/api/admin/comercios') {
+    final filtro = q['situacao'];
+    return {
+      'itens': [
+        for (final c in _comerciosDeTeste.values)
+          if (filtro == null || c['situacao'] == filtro) c,
+      ],
+    };
+  }
+  if (caminho == '/api/admin/comercios/config') return {'ativo': _comercioLiberado};
+  if (caminho == '/api/admin/comercios/entregas') {
+    return {
+      'itens': [
+        {
+          'id': '88888888-8888-4888-8888-888888888888',
+          'codigo': 'FM900',
+          'origem': 'COMERCIO',
+          'comercio': 'Pizzaria Boa',
+          'etapa': 'A_CAMINHO_DA_COLETA',
+          'situacao': 'Motorista a caminho da coleta',
+          'final': false,
+          'criadaEm': '2026-11-12T15:00:00.000Z',
+          'encomenda': '1 pizza grande',
+          'destinatario': {'nome': 'Maria Silva', 'telefone': '5564999990000'},
+          'enderecoDeColeta': 'Rua B, 20, Centro, Goiatuba/GO',
+          'enderecoDeEntrega': 'Rua A, 10, Centro, Goiatuba/GO',
+          'veiculo': 'MOTO',
+          'valorEstimadoCents': 700,
+          'valorCobradoCents': 0,
+          'motoristaNome': 'Joao',
+          'praca': 'goiatuba',
+          'comissaoCents': 0,
+        },
+      ],
+    };
+  }
+  if (caminho.startsWith('/api/admin/comercios/') && !caminho.endsWith('/decisao')) {
+    final c = _comerciosDeTeste[caminho.split('/').last];
+    if (c == null) return null;
+    return {
+      ...c,
+      'gastos': {'periodo': {}, 'realizadas': 3, 'canceladas': 1, 'emAndamento': 1, 'totalCents': 2100, 'cobrancas': []},
+    };
+  }
   if (caminho == '/api/admin/entregas-config') {
     return {
       'cidades': [
@@ -689,6 +734,52 @@ Object? _clubeResposta(http.Request r) {
   return _clube[i];
 }
 
+
+const _idComercioA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const _idComercioB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+Map<String, dynamic> _novoComercio(String id, String nome, String situacao, {String? motivo}) => {
+      'id': id,
+      'nomeFantasia': nome,
+      'razaoSocial': null,
+      'cnpj': '11222333000181',
+      'responsavelNome': 'Ana Souza',
+      'responsavelCpf': '***.982.***-**',
+      'telefone': '+5564999998888',
+      'email': 'loja@exemplo.com',
+      'endereco': {
+        'logradouro': 'Rua B',
+        'numero': '20',
+        'bairro': 'Centro',
+        'cidade': 'Goiatuba',
+        'uf': 'GO',
+        'cep': '75600000',
+        'porExtenso': 'Rua B, 20, Centro, Goiatuba/GO, CEP 75600-000',
+        'temLocalizacao': true,
+      },
+      'situacao': situacao,
+      'situacaoRotulo': situacao,
+      'motivo': motivo,
+      'decididoEm': null,
+      'criadoEm': '2026-11-10T12:00:00.000Z',
+      'praca': 'goiatuba',
+    };
+
+final Map<String, Map<String, dynamic>> _comerciosDeTeste = {};
+final List<String> _pedidosDeComercio = [];
+
+/// Chave geral do Comercio no servidor falso (nasce bloqueada).
+bool _comercioLiberado = false;
+
+void _zerarComercios() {
+  _comerciosDeTeste
+    ..clear()
+    ..[_idComercioA] = _novoComercio(_idComercioA, 'Pizzaria Boa', 'AGUARDANDO')
+    ..[_idComercioB] = _novoComercio(_idComercioB, 'Padaria Central', 'APROVADO');
+  _pedidosDeComercio.clear();
+  _comercioLiberado = false;
+}
+
 /// Passageiros que a Central mandou excluir.
 final List<String> _passageirosExcluidos = [];
 
@@ -719,6 +810,25 @@ MockClient _servidor() => MockClient((http.Request r) async {
       }
       if (r.url.path.startsWith('/api/admin/dados/') && r.method != 'GET') {
         _pedidosDeDados.add('${r.method} ${r.url.path} ${r.body}');
+      }
+      if (r.url.path == '/api/admin/comercios/config' && r.method == 'PUT') {
+        final b = jsonDecode(r.body) as Map;
+        _pedidosDeComercio.add('${r.method} ${r.url.path} ${r.body}');
+        _comercioLiberado = b['ativo'] == true;
+      }
+      if (r.url.path.startsWith('/api/admin/comercios/') && r.url.path.endsWith('/decisao') && r.method == 'POST') {
+        final id = r.url.path.split('/')[4];
+        final b = jsonDecode(r.body) as Map;
+        _pedidosDeComercio.add('${r.method} ${r.url.path} ${r.body}');
+        final c = _comerciosDeTeste[id]!;
+        final acao = '${b['acao']}';
+        c['situacao'] = switch (acao) {
+          'APROVAR' || 'REATIVAR' => 'APROVADO',
+          'REJEITAR' => 'REJEITADO',
+          _ => 'SUSPENSO',
+        };
+        c['motivo'] = b['motivo'];
+        return http.Response(jsonEncode({'success': true, 'data': c}), 200, headers: {'content-type': 'application/json; charset=utf-8'});
       }
       if ((r.url.path == '/api/admin/entregas-config' && r.method == 'PUT') || r.url.path.endsWith('/liberar')) {
         _pedidosDeEntrega.add('${r.method} ${r.url.path} ${r.body}');
@@ -976,7 +1086,7 @@ void main() {
     expect(find.textContaining('1.234,56'), findsOneWidget);
     expect(find.textContaining('mensalidades R\$'), findsOneWidget);
     expect(find.text('Parte dos motoristas'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
+    Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
     await tester.pumpAndSettle();
     // Online (verde) e offline (cinza, na ultima posicao).
     expect(find.byIcon(Icons.local_taxi), findsNWidgets(2));
@@ -987,14 +1097,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Joao Batista da Silva'), findsOneWidget);
     expect(find.text('Livre'), findsWidgets);
-    await tester.tapAt(const Offset(10, 10));
+    Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.local_taxi).last);
     await tester.pumpAndSettle();
     expect(find.text('Carla Offline'), findsOneWidget);
     expect(find.textContaining('Offline · visto há 7 min'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10));
+    Navigator.of(tester.element(find.byType(BottomSheet).last)).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.person_pin_circle));
@@ -1313,6 +1423,7 @@ void main() {
     ('clube', const ClubeTela()),
     ('carteiras', const CarteirasTela()),
     ('entregas', const EntregasTela()),
+    ('comercios', const ComerciosTela()),
     ('cidades e equipe', const CidadesEquipeTela()),
   ]) {
     testWidgets('Tela pequena e letra grande: ${caso.$1} sem estourar', (tester) async {
@@ -1548,7 +1659,7 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
-    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Motoristas', 'Passageiros', 'Categorias', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Clube de Vantagens', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
+    for (final aba in ['Visão Geral', 'Ao vivo', 'Despacho', 'Entregas', 'Comércios', 'Motoristas', 'Passageiros', 'Categorias', 'Tarifas', 'Financeiro', 'Alertas', 'Cupons', 'Clube de Vantagens', 'Carteiras / Recargas', 'Cidades e equipe', 'Limpeza de dados', 'Configurações']) {
       await _mostrarNoMenu(tester, aba);
       expect(_noMenu(aba), findsOneWidget, reason: 'aba $aba no menu');
     }
@@ -1597,6 +1708,68 @@ void main() {
     await _carregar(tester);
     expect(find.textContaining('Recarga confirmada'), findsOneWidget);
     expect(find.textContaining('98,50'), findsWidgets);
+  });
+
+  // 4o aplicativo (Comercio): lista, filtro, decisao so do dono e entregas com origem.
+  testWidgets('Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem', (tester) async {
+    _zerarComercios();
+    await _abrir(tester, const ComerciosTela());
+    // Janela alta: a lista e preguicosa e so monta o que cabe na tela.
+    tester.view.physicalSize = const Size(1080, 6000);
+    await _carregar(tester);
+    expect(find.text('Pizzaria Boa'), findsWidgets);
+    expect(find.text('Padaria Central'), findsOneWidget);
+    expect(find.text('Aguardando aprovação'), findsOneWidget);
+
+    // Chave geral: nasce bloqueada; so liga depois de confirmar, e grava.
+    expect(find.textContaining('Bloqueado: nenhuma loja consulta preço'), findsOneWidget);
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Tarifas, comissões e carteiras não mudam'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Liberar'));
+    await _carregar(tester);
+    expect(_pedidosDeComercio.single, 'PUT /api/admin/comercios/config {"ativo":true}');
+    expect(find.textContaining('Lojas aprovadas podem pedir entrega'), findsOneWidget);
+    _pedidosDeComercio.clear();
+
+    // Entrega pedida pelo aplicativo Comercio, com a origem identificada.
+    await tester.ensureVisible(find.text('Comércio: Pizzaria Boa'));
+    expect(find.text('Comércio: Pizzaria Boa'), findsOneWidget);
+    expect(find.text('Motorista a caminho da coleta'), findsOneWidget);
+
+    // Filtro por situacao.
+    await tester.ensureVisible(find.text('Aprovados'));
+    await tester.tap(find.text('Aprovados'));
+    await _carregar(tester);
+    expect(find.text('Padaria Central'), findsOneWidget);
+    expect(find.text('Aguardando aprovação'), findsNothing);
+    await tester.ensureVisible(find.text('Todos'));
+    await tester.tap(find.text('Todos'));
+    await _carregar(tester);
+
+    // Aprovar: confirma, avisa que nao liga entrega, grava a decisao.
+    await tester.tap(find.text('Pizzaria Boa').first);
+    await _carregar(tester);
+    expect(find.text('3'), findsOneWidget); // realizadas no mes
+    await tester.tap(find.text('Aprovar'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Nenhuma tarifa ou comissão muda'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Aprovar').last);
+    await _carregar(tester);
+    expect(_pedidosDeComercio.single, 'POST /api/admin/comercios/$_idComercioA/decisao {"acao":"APROVAR"}');
+    expect(find.text('Aprovado'), findsWidgets);
+
+    // Suspender exige motivo.
+    await tester.tap(find.text('Suspender'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Documento vencido');
+    await tester.tap(find.widgetWithText(FilledButton, 'Suspender').last);
+    await _carregar(tester);
+    expect(_pedidosDeComercio.last, 'POST /api/admin/comercios/$_idComercioA/decisao {"acao":"SUSPENDER","motivo":"Documento vencido"}');
+    expect(find.text('Suspenso'), findsWidgets);
+    expect(find.text('Reativar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
   });
 
   // Etapa 5 (30/10/2026): entregas por cidade e pedidos com o status.

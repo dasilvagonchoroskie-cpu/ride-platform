@@ -18,8 +18,10 @@ import '../painel/dados_pessoais.dart';
 import '../painel/pedidos_categoria.dart';
 import '../painel/pedidos_exclusao.dart';
 import '../painel/despacho.dart';
+import '../painel/comercios.dart';
 import '../painel/entregas.dart';
 import '../painel/financeiro.dart';
+import '../painel/frota.dart';
 import '../painel/motoristas.dart';
 import '../painel/painel_state.dart';
 import '../painel/passageiros.dart';
@@ -64,7 +66,12 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     _Aba('despacho', 'Despacho', Icons.support_agent),
     // Etapa 5 (30/10/2026): entregas de encomendas (desligadas ate o dono ligar).
     _Aba('entregas', 'Entregas', Icons.inventory_2_outlined),
+    // 4o aplicativo (Comercio): lojas que pedem entregas; so o dono decide.
+    _Aba('comercios', 'Comércios', Icons.storefront_outlined),
     _Aba('motoristas', 'Motoristas', Icons.badge_outlined),
+    // Frota (12/11/2026): os mesmos veiculos em duas visoes administrativas.
+    _Aba('carros', 'Carros', Icons.directions_car_outlined),
+    _Aba('motos', 'Motos', Icons.two_wheeler),
     _Aba('passageiros', 'Passageiros', Icons.people_outline, soDono: true),
     _Aba('categorias', 'Categorias', Icons.category_outlined),
     _Aba('tarifas', 'Tarifas', Icons.price_change_outlined, soDono: true),
@@ -380,6 +387,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         return const Despacho();
       case 'motoristas':
         return const Motoristas();
+      case 'carros':
+        return const FrotaTela(moto: false);
+      case 'motos':
+        return const FrotaTela(moto: true);
       case 'passageiros':
         return const Passageiros();
       case 'categorias':
@@ -398,6 +409,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         return const CarteirasTela();
       case 'entregas':
         return const EntregasTela();
+      case 'comercios':
+        return const ComerciosTela();
       case 'cidades':
         return const CidadesEquipeTela();
       case 'limpeza':

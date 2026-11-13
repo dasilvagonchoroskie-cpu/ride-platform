@@ -149,8 +149,8 @@ gm.CameraPosition cameraInicial({
 /// Guardado por cor/icone/tamanho (desenha uma vez so).
 final Map<String, Future<gm.BitmapDescriptor>> _pinos = {};
 
-Future<gm.BitmapDescriptor> pinoGoogle(Color cor, IconData icone, {double tamanho = 40}) {
-  final chave = '${cor.toARGB32()}|${icone.codePoint}|$tamanho';
+Future<gm.BitmapDescriptor> pinoGoogle(Color cor, IconData icone, {double tamanho = 40, IconData? selo, Color? corDoSelo}) {
+  final chave = '${cor.toARGB32()}|${icone.codePoint}|$tamanho|${selo?.codePoint}|${corDoSelo?.toARGB32()}';
   return _pinos[chave] ??= () async {
     const escala = 3.0;
     final lado = tamanho * escala;
@@ -169,6 +169,21 @@ Future<gm.BitmapDescriptor> pinoGoogle(Color cor, IconData icone, {double tamanh
       textDirection: TextDirection.ltr,
     )..layout();
     texto.paint(tela, centro - Offset(texto.width / 2, texto.height / 2));
+    if (selo != null) {
+      // Selo no canto de cima, a direita (o mesmo desenho do pino do flutter_map).
+      final r = lado * 0.17;
+      final c = Offset(lado - r - 1 * escala, r + 1 * escala);
+      tela.drawCircle(c, r + 1.5 * escala, Paint()..color = Colors.white);
+      tela.drawCircle(c, r, Paint()..color = corDoSelo ?? cor);
+      final mini = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(selo.codePoint),
+          style: TextStyle(fontFamily: selo.fontFamily, package: selo.fontPackage, fontSize: r * 1.3, color: Colors.white),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      mini.paint(tela, c - Offset(mini.width / 2, mini.height / 2));
+    }
     final imagem = await gravador.endRecording().toImage(lado.round(), lado.round());
     final bytes = await imagem.toByteData(format: ui.ImageByteFormat.png);
     return gm.BitmapDescriptor.bytes(bytes!.buffer.asUint8List(), width: tamanho, height: tamanho);

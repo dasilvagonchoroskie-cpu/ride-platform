@@ -369,10 +369,22 @@ export class RidesService {
   // Passageiro chama
   // ------------------------------------------------------------------
 
-  async pedir(passengerId: string, input: RequestRideInput) {
-    const jaTem = await this.prisma.ride.findFirst({
-      where: { passengerId, status: { in: EM_ABERTO } },
-    });
+  /**
+   * `opcoes` e so do aplicativo Comercio (12/11/2026): a loja pode ter varias
+   * entregas abertas ao mesmo tempo (`varias`) e grava o pedido comercial na
+   * MESMA transacao da corrida (`aoCriar`), para que um toque repetido nao
+   * crie duas entregas. Sem `opcoes`, nada muda para o passageiro.
+   */
+  async pedir(
+    passengerId: string,
+    input: RequestRideInput,
+    opcoes: { varias?: boolean; aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void> } = {},
+  ) {
+    const jaTem = opcoes.varias
+      ? null
+      : await this.prisma.ride.findFirst({
+          where: { passengerId, status: { in: EM_ABERTO } },
+        });
     if (jaTem) {
       throw BusinessException.conflict(
         'Voce ja tem uma corrida em andamento.',
@@ -463,6 +475,7 @@ export class RidesService {
         },
       });
       if (entrega && daEntrega) await this.entregas.criar(tx, criada.id, entrega, daEntrega.veiculos);
+      if (opcoes.aoCriar) await opcoes.aoCriar(tx, criada.id);
       if (paradas.length > 0) {
         await tx.rideStop.createMany({
           data: paradas.map((p, i) => ({

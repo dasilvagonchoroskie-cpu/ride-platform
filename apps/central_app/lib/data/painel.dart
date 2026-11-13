@@ -190,7 +190,7 @@ class CarroDoMotorista {
   final String cor;
   final String categoria;
 
-  /// EM_USO, GUARDADO, PENDENTE ou RECUSADO.
+  /// EM_USO, GUARDADO, PENDENTE, RECUSADO ou SUSPENSO.
   final String situacao;
   final String? motivo;
   final String? fotoUrl;
@@ -198,6 +198,7 @@ class CarroDoMotorista {
 
   bool get emUso => situacao == 'EM_USO';
   bool get paraConferir => situacao == 'PENDENTE';
+  bool get suspenso => situacao == 'SUSPENSO';
 
   String get nome => [marca, modelo].where((x) => x.isNotEmpty).join(' ');
 
@@ -207,6 +208,7 @@ class CarroDoMotorista {
         'EM_USO' => 'Em uso',
         'PENDENTE' => 'Carro novo para conferir',
         'RECUSADO' => 'Recusado',
+        'SUSPENSO' => 'Suspenso',
         _ => 'Guardado',
       };
 
@@ -224,6 +226,125 @@ class CarroDoMotorista {
         crlvUrl: j['crlvUrl'] as String?,
         categoriaPedida: j['categoriaPedida'] as String?,
         categoriaMotivo: j['categoriaMotivo'] as String?,
+      );
+}
+
+/// Um veiculo na frota da Central (telas Motos e Carros): dados do veiculo,
+/// situacao, documentos enviados e o motorista dono.
+class VeiculoDaFrota {
+  const VeiculoDaFrota({
+    required this.id,
+    required this.placa,
+    required this.marca,
+    required this.modelo,
+    required this.ano,
+    required this.cor,
+    required this.categoria,
+    required this.moto,
+    required this.situacao,
+    required this.emUso,
+    required this.motoristaId,
+    required this.motoristaNome,
+    this.motoristaTelefone,
+    this.motoristaStatus,
+    this.motivo,
+    this.fotoUrl,
+    this.crlvUrl,
+    this.enviadoEm,
+    this.categoriaPedida,
+    this.criadoEm,
+    this.cnhValidade,
+    this.cnhVencida,
+    this.crlvValidade,
+    this.crlvVencido,
+  });
+
+  final String id;
+  final String placa;
+  final String marca;
+  final String modelo;
+  final int ano;
+  final String cor;
+  final String categoria;
+  final bool moto;
+
+  /// EM_USO, GUARDADO, PENDENTE, RECUSADO ou SUSPENSO.
+  final String situacao;
+  final bool emUso;
+  final String? motivo;
+  final String? fotoUrl;
+  final String? crlvUrl;
+  final DateTime? enviadoEm;
+  final String? categoriaPedida;
+  final DateTime? criadoEm;
+  final String motoristaId;
+  final String motoristaNome;
+  final String? motoristaTelefone;
+  final String? motoristaStatus;
+
+  /// Validade da CNH do motorista (AAAA-MM-DD, do cadastro) e se ja venceu (null = sem data).
+  final String? cnhValidade;
+  final bool? cnhVencida;
+
+  /// Validade do CRLV anotada pela Central e se ja venceu (null = nao anotada).
+  final String? crlvValidade;
+  final bool? crlvVencido;
+
+  String get nome => [marca, modelo].where((x) => x.isNotEmpty).join(' ');
+  String get placaBonita => placa.length == 7 ? '${placa.substring(0, 3)}-${placa.substring(3)}' : placa;
+  String get tipo => moto ? 'Moto' : 'Carro';
+
+  String get rotuloSituacao => switch (situacao) {
+        'EM_USO' => 'Em uso',
+        'PENDENTE' => 'Para conferir',
+        'RECUSADO' => 'Recusado',
+        'SUSPENSO' => 'Suspenso',
+        _ => 'Guardado',
+      };
+
+  factory VeiculoDaFrota.fromJson(Map<String, dynamic> j) {
+    final m = (j['driver'] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+    return VeiculoDaFrota(
+      id: _txt(j['id']),
+      placa: _txt(j['plate']).toUpperCase(),
+      marca: _txt(j['brand']),
+      modelo: _txt(j['model']),
+      ano: _int(j['year']),
+      cor: _txt(j['color']),
+      categoria: _txt(j['category'], 'CARRO'),
+      moto: j['tipo'] == 'MOTO',
+      situacao: _txt(j['situacao'], 'GUARDADO'),
+      emUso: j['emUso'] == true,
+      motivo: j['motivo'] as String?,
+      fotoUrl: j['fotoUrl'] as String?,
+      crlvUrl: j['crlvUrl'] as String?,
+      enviadoEm: _data(j['enviadoEm']),
+      categoriaPedida: j['categoriaPedida'] as String?,
+      criadoEm: _data(j['createdAt']),
+      motoristaId: _txt(m['id']),
+      motoristaNome: _txt(m['name'], 'Motorista'),
+      motoristaTelefone: m['phone'] as String?,
+      motoristaStatus: m['status'] as String?,
+      cnhValidade: j['cnhValidade'] as String?,
+      cnhVencida: j['cnhVencida'] as bool?,
+      crlvValidade: j['crlvValidade'] as String?,
+      crlvVencido: j['crlvVencido'] as bool?,
+    );
+  }
+}
+
+/// Resposta da frota: a lista (cortada em 300) e o total.
+class FrotaLista {
+  const FrotaLista({required this.itens, required this.total, required this.cortada});
+
+  final List<VeiculoDaFrota> itens;
+  final int total;
+  final bool cortada;
+
+  factory FrotaLista.fromJson(Map<String, dynamic> j) => FrotaLista(
+        itens: [for (final v in (j['itens'] as List? ?? const []).whereType<Map<String, dynamic>>()) VeiculoDaFrota.fromJson(v)],
+        total: _int(j['total']),
+        cortada: j['cortada'] == true,
       );
 }
 
@@ -336,11 +457,24 @@ class CorridaAtiva {
     required this.categoria,
     required this.pagamento,
     required this.posicaoMotorista,
+    this.servico = 'PASSAGEIRO',
+    this.origemDoServico,
+    this.comercio,
   });
 
   final String id;
   final String codigo;
   final String status;
+
+  /// PASSAGEIRO, ENTREGA (pedida no app do passageiro) ou COMERCIO (loja do app
+  /// Comercio). Vem estruturado do servidor, nunca da descricao.
+  final String servico;
+
+  /// Comercio: APP (a loja pediu) ou MOTORISTA (lancada manualmente).
+  final String? origemDoServico;
+
+  /// Comercio: nome do estabelecimento.
+  final String? comercio;
   final String passageiro;
   final String? telefonePassageiro;
   final String? motoristaId;
@@ -407,6 +541,9 @@ class CorridaAtiva {
       categoria: _txt(j['category'], 'CARRO'),
       pagamento: _txt(j['paymentMethodType'], 'CASH'),
       posicaoMotorista: pos is Map ? ponto(pos) : null,
+      servico: _txt(j['servico'], 'PASSAGEIRO'),
+      origemDoServico: j['origemDoServico'] as String?,
+      comercio: j['comercio'] as String?,
     );
   }
 }
@@ -426,12 +563,37 @@ class MotoristaOnline {
     required this.nota,
     this.online = true,
     this.vistoEm,
+    this.servico,
+    this.origemDoServico,
+    this.comercio,
+    this.corridaId,
+    this.corridaCodigo,
+    this.corridaStatus,
+    this.sos = false,
   });
 
   final String id;
   final String nome;
   final String? telefone;
   final bool ocupado;
+
+  /// O que faz agora (null = nada): PASSAGEIRO, ENTREGA ou COMERCIO.
+  final String? servico;
+
+  /// Comercio: APP ou MOTORISTA (lancada manualmente pelo motorista).
+  final String? origemDoServico;
+
+  /// Comercio: nome do estabelecimento.
+  final String? comercio;
+  final String? corridaId;
+  final String? corridaCodigo;
+  final String? corridaStatus;
+
+  /// SOS aberto deste motorista (ou na corrida dele).
+  final bool sos;
+
+  /// Moto (categoria do veiculo em uso); o resto e carro.
+  bool get moto => categoria.toUpperCase().contains('MOTO');
 
   /// Offline aparece cinza no mapa, na ultima posicao conhecida.
   final bool online;
@@ -461,6 +623,13 @@ class MotoristaOnline {
       nota: _num(j['rating']) ?? 5,
       online: j['online'] != false,
       vistoEm: DateTime.tryParse('${j['lastSeenAt'] ?? ''}')?.toLocal(),
+      servico: j['servico'] as String?,
+      origemDoServico: j['origemDoServico'] as String?,
+      comercio: j['comercio'] as String?,
+      corridaId: (j['corrida'] as Map?)?['id'] as String?,
+      corridaCodigo: (j['corrida'] as Map?)?['code'] as String?,
+      corridaStatus: (j['corrida'] as Map?)?['status'] as String?,
+      sos: j['sos'] == true,
     );
   }
 }
@@ -1249,12 +1418,22 @@ class MotoristaAoVivo {
     this.vistoEm,
     this.corridaCodigo,
     this.corridaPassageiro,
+    this.servico,
+    this.origemDoServico,
+    this.comercio,
+    this.sos = false,
   });
 
   final String id;
   final String nome;
   final String? telefone;
   final String situacao;
+
+  /// PASSAGEIRO, ENTREGA ou COMERCIO (null = livre/offline).
+  final String? servico;
+  final String? origemDoServico;
+  final String? comercio;
+  final bool sos;
   final String veiculo;
   final String cor;
   final String placa;
@@ -1287,6 +1466,10 @@ class MotoristaAoVivo {
       vistoEm: DateTime.tryParse('${j['lastSeenAt'] ?? ''}')?.toLocal(),
       corridaCodigo: r?['code'] as String?,
       corridaPassageiro: r?['passengerName'] as String?,
+      servico: j['servico'] as String?,
+      origemDoServico: j['origemDoServico'] as String?,
+      comercio: j['comercio'] as String?,
+      sos: j['sos'] == true,
     );
   }
 }
@@ -1306,11 +1489,17 @@ class CorridaDoDia {
     this.passageiroTelefone,
     this.motorista,
     this.placa,
+    this.servico = 'PASSAGEIRO',
+    this.origemDoServico,
+    this.comercio,
   });
 
   final String id;
   final String codigo;
   final String status;
+  final String servico;
+  final String? origemDoServico;
+  final String? comercio;
   final bool moto;
   final DateTime? pedidaEm;
   final int valorCents;
@@ -1334,6 +1523,9 @@ class CorridaDoDia {
         passageiroTelefone: j['passengerPhone'] as String?,
         motorista: j['driverName'] as String?,
         placa: j['driverPlate'] as String?,
+        servico: '${j['servico'] ?? 'PASSAGEIRO'}',
+        origemDoServico: j['origemDoServico'] as String?,
+        comercio: j['comercio'] as String?,
       );
 }
 
@@ -1480,6 +1672,23 @@ class PainelApi {
 
   Future<List<CarroDoMotorista>> revisarCarro(String id, bool aprovar, [String? motivo]) async => _carros(
       await _c.request('PATCH', '/admin/vehicles/$id/review', body: {'aprovar': aprovar, if (motivo != null) 'motivo': motivo}));
+
+  /// Frota da cidade (telas Motos e Carros). [tipo]: MOTO ou CARRO.
+  Future<FrotaLista> frota({String? tipo, String? busca, String? situacao}) async => FrotaLista.fromJson(
+      await _c.request('GET', '/admin/frota', query: {
+        if (tipo != null) 'tipo': tipo,
+        if (busca != null && busca.trim().isNotEmpty) 'busca': busca.trim(),
+        if (situacao != null) 'situacao': situacao,
+        ..._naPraca,
+      }) as Map<String, dynamic>);
+
+  /// Suspende (motivo obrigatorio) ou reativa o veiculo; nao mexe nas permissoes da cidade.
+  Future<List<CarroDoMotorista>> suspenderCarro(String id, bool suspender, [String? motivo]) async => _carros(
+      await _c.request('PATCH', '/admin/vehicles/$id/suspensao', body: {'suspender': suspender, if (motivo != null) 'motivo': motivo}));
+
+  /// Anota (ou, com null, limpa) a validade do CRLV; so registro, nao bloqueia o carro.
+  Future<void> validadeDoCrlv(String id, String? validade) =>
+      _c.request('PATCH', '/admin/vehicles/$id/validade-crlv', body: {'validade': validade});
 
   Future<List<CarroDoMotorista>> usarCarro(String id) async => _carros(await _c.request('POST', '/admin/vehicles/$id/usar'));
 

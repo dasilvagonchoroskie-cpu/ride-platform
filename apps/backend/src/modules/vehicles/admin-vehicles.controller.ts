@@ -12,6 +12,23 @@ import { PracasService } from '../pracas/pracas.service';
 import { VehiclesService } from './vehicles.service';
 import { fotoDoCarroSchema } from './vehicles.controller';
 
+const suspenderSchema = z.object({
+  suspender: z.boolean(),
+  motivo: z.string().trim().max(300).optional(),
+});
+
+const validadeCrlvSchema = z.object({
+  /** AAAA-MM-DD, ou null para limpar. */
+  validade: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato AAAA-MM-DD.').nullable(),
+});
+
+const frotaSchema = z.object({
+  praca: z.string().trim().max(60).optional(),
+  tipo: z.enum(['MOTO', 'CARRO']).optional(),
+  busca: z.string().trim().max(60).optional(),
+  situacao: z.enum(['EM_USO', 'GUARDADO', 'PENDENTE', 'RECUSADO', 'SUSPENSO']).optional(),
+});
+
 const revisarSchema = z.object({
   aprovar: z.boolean(),
   motivo: z.string().trim().max(300).optional(),
@@ -34,6 +51,17 @@ export class AdminVehiclesController {
   @ApiOperation({ summary: 'Lista todos os veiculos cadastrados' })
   listVehicles(@Query(new ZodValidationPipe(paginationSchema)) query: never) {
     return this.vehicles.adminListVehicles(query as never);
+  }
+
+  @Get('frota')
+  @ApiOperation({ summary: 'Frota (Carros e Motos) da cidade do operador: busca, tipo e situacao' })
+  async frota(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(frotaSchema)) query: z.infer<typeof frotaSchema>,
+  ) {
+    // Operador: sempre a cidade dele. Dono: a cidade escolhida no topo (ou todas).
+    const ids = await this.pracas.idsDeMotoristas(await this.pracas.filtro(user, query.praca));
+    return this.vehicles.adminFrota(ids, query);
   }
 
   @Get('drivers/:id/vehicles')
@@ -64,6 +92,28 @@ export class AdminVehiclesController {
   ) {
     await this.doCarro(user, id);
     return this.vehicles.adminRevisar(id, user.id, body.aprovar, body.motivo);
+  }
+
+  @Patch('vehicles/:id/suspensao')
+  @ApiOperation({ summary: 'Suspende (motivo obrigatorio) ou reativa o veiculo; nao mexe nas permissoes da cidade' })
+  async suspender(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(suspenderSchema)) body: z.infer<typeof suspenderSchema>,
+  ) {
+    await this.doCarro(user, id);
+    return this.vehicles.adminSuspender(id, user.id, body.suspender, body.motivo);
+  }
+
+  @Patch('vehicles/:id/validade-crlv')
+  @ApiOperation({ summary: 'Anota (ou limpa) a validade do CRLV do veiculo; so registro, nao bloqueia o carro' })
+  async validadeCrlv(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(validadeCrlvSchema)) body: z.infer<typeof validadeCrlvSchema>,
+  ) {
+    await this.doCarro(user, id);
+    return this.vehicles.adminDefinirValidadeCrlv(id, user.id, body.validade);
   }
 
   @Get('vehicles/category-requests')

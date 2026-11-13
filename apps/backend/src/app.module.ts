@@ -39,6 +39,7 @@ import { RelatoriosModule } from './modules/relatorios/relatorios.module';
 import { ContaModule } from './modules/conta/conta.module';
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { ClubeModule } from './modules/clube/clube.module';
+import { ComercioModule } from './modules/comercio/comercio.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { ClubeModule } from './modules/clube/clube.module';
     ContaModule,
     NotificacoesModule,
     ClubeModule,
+    ComercioModule,
   ],
   providers: [
     // A ordem importa: throttle -> autenticacao -> papeis

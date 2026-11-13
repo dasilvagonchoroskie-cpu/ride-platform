@@ -23,6 +23,8 @@ export interface ItemDaCaixa {
   abrir: DestinoDaNotificacao | null;
   criadaEm: string;
   lida: boolean;
+  /** Aviso de uma entrega do Comercio: qual (o app abre o acompanhamento). */
+  rideId?: string;
 }
 
 /** O minimo do Prisma que a caixa usa (facilita o teste sem banco). */
@@ -58,7 +60,7 @@ export class CaixaDeEntradaService {
     userId: string,
     titulo: string,
     texto: string,
-    extra: { tipo: string; abrir?: DestinoDaNotificacao | null },
+    extra: { tipo: string; abrir?: DestinoDaNotificacao | null; dados?: Record<string, string> },
   ): Promise<void> {
     try {
       const n = await this.db.notification.create({
@@ -68,7 +70,7 @@ export class CaixaDeEntradaService {
           status: 'SENT',
           title: titulo.slice(0, 160),
           body: texto.slice(0, 500),
-          data: { tipo: extra.tipo, ...(extra.abrir ? { abrir: extra.abrir } : {}) },
+          data: { ...(extra.dados ?? {}), tipo: extra.tipo, ...(extra.abrir ? { abrir: extra.abrir } : {}) },
           sentAt: new Date(),
         },
         select: { id: true },
@@ -108,7 +110,7 @@ export class CaixaDeEntradaService {
     });
     return {
       itens: itens.map((n) => {
-        const d = (n.data && typeof n.data === 'object' && !Array.isArray(n.data) ? n.data : {}) as { tipo?: unknown; abrir?: unknown };
+        const d = (n.data && typeof n.data === 'object' && !Array.isArray(n.data) ? n.data : {}) as { tipo?: unknown; abrir?: unknown; rideId?: unknown };
         return {
           id: n.id,
           titulo: n.title,
@@ -117,6 +119,7 @@ export class CaixaDeEntradaService {
           abrir: typeof d.abrir === 'string' ? (d.abrir as DestinoDaNotificacao) : null,
           criadaEm: n.createdAt.toISOString(),
           lida: n.readAt != null,
+          ...(typeof d.rideId === 'string' ? { rideId: d.rideId } : {}),
         };
       }),
       naoLidas: await this.contarNaoLidas(user.id),

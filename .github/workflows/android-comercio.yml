@@ -1,0 +1,208 @@
+name: Android Comercio
+
+# ============================================================
+# 4o aplicativo (Fortaleza Move Comercio). Esteira PROPRIA, para nao
+# mexer na dos outros tres (Passageiro, Motorista e Central).
+#
+# - Envio de codigo: so analise (flutter analyze) e testes (flutter test).
+# - Botao (workflow_dispatch): alem disso, monta o APK assinado e publica
+#   no Release "apk-fortaleza-comercio-mais-recente".
+# ============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipo de build'
+        required: true
+        default: 'release'
+        type: choice
+        options: ['release', 'debug']
+      publicar:
+        description: 'Publicar o APK no Release? (desmarque para so conferir o build: nada e publicado)'
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches: ['**']
+    paths:
+      - 'apps/comercio_app/**'
+      - 'scripts/conferir-rotas.py'
+      - '.github/workflows/android-comercio.yml'
+
+concurrency:
+  group: android-comercio-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+  JAVA_VERSION: '17'
+
+jobs:
+  validar:
+    name: Validar Comercio
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Conferir chamadas do aplicativo contra as rotas do servidor
+        run: python3 scripts/conferir-rotas.py
+
+      - name: Resolver dependencias
+        working-directory: apps/comercio_app
+        run: flutter pub get
+
+      - name: Analise estatica (flutter analyze)
+        working-directory: apps/comercio_app
+        run: flutter analyze
+
+      - name: Testes automaticos (flutter test)
+        working-directory: apps/comercio_app
+        run: flutter test --reporter expanded
+
+  apk:
+    name: APK Comercio
+    runs-on: ubuntu-latest
+    needs: validar
+    if: github.event_name == 'workflow_dispatch'
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Configurar JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Resolver dependencias
+        working-directory: apps/comercio_app
+        run: flutter pub get
+
+      # Mesma assinatura dos outros apps (segredos do repositorio).
+      - name: Preparar a assinatura de producao
+        env:
+          CHAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SENHA_LOJA: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SENHA_CHAVE: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APELIDO: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CHAVE" ]; then
+            echo "::error::Falta o segredo ANDROID_KEYSTORE_BASE64 — o APK sairia sem assinatura de producao."
+            exit 1
+          fi
+          echo "$CHAVE" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/assinatura.jks" "$SENHA_LOJA" "$APELIDO" "$SENHA_CHAVE" \
+            > apps/comercio_app/android/key.properties
+
+      - name: Compilar o APK
+        working-directory: apps/comercio_app
+        run: |
+          set -euo pipefail
+          BUILD_TYPE="${{ inputs.build_type || 'release' }}"
+          OFUSCAR=""
+          if [ "$BUILD_TYPE" = release ]; then OFUSCAR="--obfuscate --split-debug-info=$GITHUB_WORKSPACE/simbolos/comercio_app"; fi
+          flutter build apk --$BUILD_TYPE --split-per-abi --build-number=${{ github.run_number }} \
+            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} $OFUSCAR \
+            2>&1 | tail -n 40
+
+      - name: Localizar o APK
+        id: apk
+        run: |
+          set -euo pipefail
+          SRC="$GITHUB_WORKSPACE/apps/comercio_app/build/app/outputs/flutter-apk"
+          APK_PATH="$(find "$SRC" -name '*arm64-v8a*.apk' -print -quit)"
+          APK_32="$(find "$SRC" -name '*armeabi-v7a*.apk' -print -quit)"
+          test -n "$APK_PATH" || { echo "::error::Nenhum APK em $SRC"; exit 1; }
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          FINAL="$GITHUB_WORKSPACE/dist/fortaleza-comercio-${{ github.run_number }}.apk"
+          cp "$APK_PATH" "$FINAL"
+          FINAL_32=""
+          if [ -n "$APK_32" ]; then
+            FINAL_32="$GITHUB_WORKSPACE/dist/fortaleza-comercio-${{ github.run_number }}-32bits.apk"
+            cp "$APK_32" "$FINAL_32"
+          fi
+          echo "path=$FINAL" >> "$GITHUB_OUTPUT"
+          echo "path32=$FINAL_32" >> "$GITHUB_OUTPUT"
+          echo "size=$(du -h "$FINAL" | cut -f1)" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum "$FINAL" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      # Confere no APK pronto o nome que aparece no celular e o icone.
+      - name: Conferir nome e icones no APK
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          AAPT2="$(ls -d "$SDK"/build-tools/*/aapt2 | sort -V | tail -n 1)"
+          APK="${{ steps.apk.outputs.path }}"
+          "$AAPT2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
+          grep -q "application-label:'Fortaleza Move Comércio'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Nome no celular nao e 'Fortaleza Move Comércio'"; grep application-label "$RUNNER_TEMP/badging.txt" || true; exit 1; }
+          grep -q "package: name='br.com.fortalezamov.comercio'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Pacote inesperado"; grep '^package' "$RUNNER_TEMP/badging.txt" || true; exit 1; }
+          grep -q "application-icon-" "$RUNNER_TEMP/badging.txt" || { echo "::error::APK sem icone"; exit 1; }
+          echo "OK: nome, pacote e icone"
+
+      # Conferencias de seguranca do pacote: so o que o app realmente usa.
+      # Se alguem adicionar uma permissao (ou o build sair depuravel), a
+      # esteira falha antes de publicar qualquer coisa.
+      - name: Conferir permissoes, depuracao e versao do Android
+        run: |
+          set -euo pipefail
+          B="$RUNNER_TEMP/badging.txt"
+          PERMITIDAS="android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE br.com.fortalezamov.comercio.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+          for P in $(grep -o "^uses-permission: name='[^']*'" "$B" | sed "s/.*name='//; s/'$//"); do
+            case " $PERMITIDAS " in *" $P "*) ;; *) echo "::error::Permissao nao prevista no app: $P"; exit 1;; esac
+          done
+          TARGET="$(grep -o "targetSdkVersion:'[0-9]*'" "$B" | grep -o '[0-9]*')"
+          test "${TARGET:-0}" -ge 35 || { echo "::error::targetSdk $TARGET abaixo de 35 (exigencia da Play)"; exit 1; }
+          if [ "${{ inputs.build_type || 'release' }}" = release ]; then
+            if grep -q "application-debuggable" "$B"; then echo "::error::Build de release esta marcado como depuravel"; exit 1; fi
+          fi
+          echo "OK: permissoes dentro da lista, targetSdk $TARGET"
+
+      - name: Publicar no Release
+        if: ${{ inputs.publicar }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="apk-fortaleza-comercio-mais-recente"
+          if ! gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "${{ github.repository }}" \
+              --title "Comercio - APK mais recente" \
+              --notes "Gerado automaticamente pelo GitHub Actions (esteira android-comercio)." \
+              --latest=false
+          fi
+          if [ -n "${{ steps.apk.outputs.path32 }}" ]; then
+            gh release upload "$TAG" "${{ steps.apk.outputs.path32 }}" --repo "${{ github.repository }}" --clobber
+          fi
+          gh release upload "$TAG" "${{ steps.apk.outputs.path }}" --repo "${{ github.repository }}" --clobber
+
+      - name: Resumo do build
+        if: ${{ always() && steps.apk.outputs.path != '' }}
+        run: |
+          {
+            echo "### APK Comercio conferido (publicado: ${{ inputs.publicar }})"
+            echo "| Item | Valor |"
+            echo "|---|---|"
+            echo "| Arquivo | \`$(basename "${{ steps.apk.outputs.path }}")\` |"
+            echo "| Tamanho | ${{ steps.apk.outputs.size }} |"
+            echo "| SHA-256 | \`${{ steps.apk.outputs.sha256 }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,119 @@
+name: AAB Comercio (Play Store) - PREPARADO, NAO EXECUTADO
+
+# ============================================================
+# Gera o pacote .aab do Fortaleza Move Comercio para a Google Play.
+#
+# ESTA ESTEIRA ESTA PREPARADA, MAS NAO DEVE SER EXECUTADA ANTES de:
+#   1. a auditoria ser aprovada pelo dono;
+#   2. os testes praticos em celulares reais terem sido feitos;
+#   3. o dono AUTORIZAR por escrito a geracao do pacote definitivo.
+#
+# So roda por botao (workflow_dispatch) e exige digitar a frase de
+# confirmacao. O .aab NAO vai para o Release publico: fica como arquivo
+# temporario da execucao (7 dias), visivel so a quem tem acesso ao
+# repositorio. A publicacao na Play e feita manualmente pelo dono.
+# ============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacao:
+        description: 'Digite exatamente: AUTORIZADO PELO DONO'
+        required: true
+        type: string
+      versao:
+        description: 'Nome da versao (ex.: 1.0.0). O numero de build vem da execucao.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+  JAVA_VERSION: '17'
+
+jobs:
+  aab:
+    name: AAB Comercio
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Conferir a autorizacao
+        env:
+          CONFIRMACAO: ${{ inputs.confirmacao }}
+          VERSAO: ${{ inputs.versao }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMACAO" != "AUTORIZADO PELO DONO" ]; then
+            echo "::error::Frase de confirmacao incorreta. Nada foi gerado."
+            exit 1
+          fi
+          echo "$VERSAO" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Versao deve ser no formato 1.2.3"; exit 1; }
+
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Configurar JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Resolver dependencias
+        working-directory: apps/comercio_app
+        run: flutter pub get
+
+      - name: Analise e testes antes de empacotar
+        working-directory: apps/comercio_app
+        run: |
+          flutter analyze
+          flutter test
+
+      # Assinatura de envio (upload key) guardada nos segredos do repositorio.
+      - name: Preparar a assinatura
+        env:
+          CHAVE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SENHA_LOJA: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          SENHA_CHAVE: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          APELIDO: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CHAVE" ]; then
+            echo "::error::Falta o segredo ANDROID_KEYSTORE_BASE64."
+            exit 1
+          fi
+          echo "$CHAVE" | base64 -d > "$RUNNER_TEMP/assinatura.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/assinatura.jks" "$SENHA_LOJA" "$APELIDO" "$SENHA_CHAVE" \
+            > apps/comercio_app/android/key.properties
+
+      - name: Compilar o AAB (release, ofuscado)
+        working-directory: apps/comercio_app
+        env:
+          VERSAO: ${{ inputs.versao }}
+        run: |
+          set -euo pipefail
+          flutter build appbundle --release --build-number=${{ github.run_number }} \
+            --build-name="$VERSAO" --dart-define=APP_VERSION="$VERSAO" \
+            --obfuscate --split-debug-info="$GITHUB_WORKSPACE/simbolos/comercio_app" 2>&1 | tail -n 30
+          test -f build/app/outputs/bundle/release/app-release.aab
+
+      - name: Guardar o AAB e os simbolos (7 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab-comercio-${{ inputs.versao }}-${{ github.run_number }}
+          path: |
+            apps/comercio_app/build/app/outputs/bundle/release/app-release.aab
+            simbolos/comercio_app
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Limpar a chave do executor
+        if: always()
+        run: rm -f "$RUNNER_TEMP/assinatura.jks" apps/comercio_app/android/key.properties

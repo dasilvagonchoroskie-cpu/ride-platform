@@ -21,6 +21,16 @@ on:
         default: 'release'
         type: choice
         options: ['release', 'debug']
+      publicar_servidor:
+        description: 'Conferir e mandar o Render publicar o servidor junto? (desmarque para NAO publicar nada)'
+        required: false
+        default: true
+        type: boolean
+      gerar_aab:
+        description: 'Gerar tambem o pacote da loja (AAB) de passageiro e motorista? (desmarque para so APK)'
+        required: false
+        default: true
+        type: boolean
   # Envio de codigo (main ou a branch de trabalho): so analise e testes dos
   # apps que mudaram. APK/AAB so pelo botao (economia de minutos, 29/10/2026).
   push:
@@ -98,7 +108,7 @@ jobs:
   # segredo RENDER_DEPLOY_HOOK). Roda em paralelo e nao atrasa os APKs.
   servidor:
     name: Servidor em dia
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.publicar_servidor
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -393,7 +403,7 @@ jobs:
       # (so a equipe usa). Mesma assinatura do APK = chave de envio da Play.
       - name: Compilar o pacote da loja (AAB)
         id: aab
-        if: (matrix.app == 'mobile_passenger' || matrix.app == 'mobile_driver') && (inputs.build_type || 'release') == 'release'
+        if: (matrix.app == 'mobile_passenger' || matrix.app == 'mobile_driver') && (inputs.build_type || 'release') == 'release' && inputs.gerar_aab
         working-directory: apps/${{ matrix.app }}
         run: |
           set -euo pipefail

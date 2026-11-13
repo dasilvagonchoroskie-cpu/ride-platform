@@ -45,6 +45,21 @@ export function isValidCpf(value: string): boolean {
   return d1 === Number(cpf[9]) && d2 === Number(cpf[10]);
 }
 
+/** Valida CNPJ pelos digitos verificadores (12/11/2026, aplicativo Comercio). */
+export function isValidCnpj(value: string): boolean {
+  const cnpj = onlyDigits(value);
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  const calc = (base: string): number => {
+    const pesos = base.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const soma = base.split('').reduce((acc, d, i) => acc + Number(d) * pesos[i]!, 0);
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+  const d1 = calc(cnpj.slice(0, 12));
+  const d2 = calc(cnpj.slice(0, 12) + String(d1));
+  return d1 === Number(cnpj[12]) && d2 === Number(cnpj[13]);
+}
+
 /** Formata CPF: 000.000.000-00 */
 export function formatCpf(value: string): string {
   const cpf = onlyDigits(value).padStart(11, '0').slice(0, 11);

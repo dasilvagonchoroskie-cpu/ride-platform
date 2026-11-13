@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ERROR_CODES, OtpPurpose } from '@ride/shared';
+import { ERROR_CODES, OtpPurpose, UserRole } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { AppConfigService } from '../../config/app-config.service';
 import { BusinessException } from '../../common/errors/business.exception';
@@ -35,6 +35,22 @@ export class OtpService {
   }
 
   /**
+   * Conta de REVISAO da loja (Google Play): entrada por e-mail com codigo fixo, so para os
+   * e-mails da lista OTP_CONTAS_REVISAO. Nunca para telefone, para Central (dono/operador)
+   * nem para trocar telefone/senha. Sem a variavel, nada disso existe.
+   */
+  private async codigoDeRevisao(target: OtpTarget): Promise<string | null> {
+    const { phone, email, purpose } = target;
+    if (phone || !email) return null;
+    if (purpose !== OtpPurpose.LOGIN && purpose !== OtpPurpose.EMAIL_VERIFICATION) return null;
+    const fixo = this.config.otp.contasRevisao?.[email.trim().toLowerCase()];
+    if (!fixo) return null;
+    const dono = await this.prisma.user.findUnique({ where: { email }, select: { role: true } });
+    if (dono && dono.role !== UserRole.PASSENGER && dono.role !== UserRole.DRIVER) return null;
+    return fixo;
+  }
+
+  /**
    * O codigo chega de verdade ao dono do contato? Por e-mail, sim, quando a
    * Brevo esta configurada. Por telefone, ainda nao (sem SMS).
    */
@@ -67,6 +83,36 @@ export class OtpService {
     chaveTeste?: string,
   ): Promise<{ expiresIn: number; debugCode?: string; enviadoPor: 'email' | 'tela'; destino?: string }> {
     const { phone, email, purpose } = target;
+    const fixo = await this.codigoDeRevisao(target);
+    if (fixo) {
+      // Conta de revisao: grava o codigo fixo (mesmas regras de validade e tentativas do
+      // verify) e NAO envia e-mail nem devolve codigo na resposta. O limite de 6 pedidos
+      // por hora continua valendo: sem ele, pedir codigo novo zeraria as tentativas e
+      // daria para adivinhar o codigo fixo.
+      const umaHoraRev = new Date(Date.now() - 60 * 60 * 1000);
+      const pedidosRev = await this.prisma.otpCode.count({ where: { email, createdAt: { gte: umaHoraRev } } });
+      if (pedidosRev >= 6) {
+        throw BusinessException.tooManyRequests(
+          'Muitos codigos pedidos para esta conta. Espere uma hora ou fale com a Central.',
+          ERROR_CODES.OTP_COOLDOWN,
+        );
+      }
+      await this.prisma.$transaction([
+        this.prisma.otpCode.updateMany({ where: { email, purpose, consumedAt: null }, data: { consumedAt: new Date() } }),
+        this.prisma.otpCode.create({
+          data: {
+            email,
+            purpose,
+            codeHash: hashToken(fixo, this.pepper),
+            expiresAt: new Date(Date.now() + this.config.otp.ttlSeconds * 1000),
+            maxAttempts: this.config.otp.maxAttempts,
+            ip,
+          },
+        }),
+      ]);
+      this.logger.warn(`Conta de revisao da loja pediu entrada (${this.mascararEmail(email!)}).`);
+      return { expiresIn: this.config.otp.ttlSeconds, enviadoPor: 'email', destino: `e-mail ${this.mascararEmail(email!)}` };
+    }
     // Teste automatico: o codigo volta na resposta e nenhum e-mail sai
     // (os enderecos do teste nao existem).
     const teste = this.chaveTesteValida(chaveTeste);

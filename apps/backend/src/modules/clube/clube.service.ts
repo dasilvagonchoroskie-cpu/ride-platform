@@ -51,6 +51,9 @@ const CRIAR_TABELAS = [
   CONSTRAINT "clube_beneficios_parceiro_id_fkey" FOREIGN KEY ("parceiro_id") REFERENCES "clube_parceiros"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`,
   `CREATE INDEX IF NOT EXISTS "clube_beneficios_parceiro_id_idx" ON "clube_beneficios"("parceiro_id")`,
+  // RLS ja na criacao (ver Comercio): idempotente.
+  `ALTER TABLE "clube_parceiros" ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE "clube_beneficios" ENABLE ROW LEVEL SECURITY`,
 ];
 
 type ParceiroComBeneficios = ClubeParceiro & { beneficios: ClubeBeneficio[] };

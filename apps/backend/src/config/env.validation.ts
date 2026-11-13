@@ -32,6 +32,13 @@ export const envSchema = z.object({
   OTP_DEBUG_RETURN: booleanFromEnv(false),
   /** Chave do teste automatico: com ela no cabecalho x-chave-teste o codigo volta na resposta. */
   OTP_CHAVE_TESTE: z.string().optional(),
+  /**
+   * Contas de REVISAO da loja (Google Play, "Acesso ao app"): `email=codigo,email=codigo`.
+   * So passageiro/motorista, so entrada por e-mail, codigo fixo com o tamanho de OTP_LENGTH.
+   * Desligado por padrao (vazio). Com isso, o OTP_DEBUG_RETURN pode ser desligado sem
+   * trancar o revisor. Valor so no Render, nunca no repositorio.
+   */
+  OTP_CONTAS_REVISAO: z.string().optional(),
 
   S3_ENDPOINT: z.string().optional(),
   S3_REGION: z.string().default('us-east-1'),

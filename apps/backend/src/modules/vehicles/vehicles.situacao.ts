@@ -8,13 +8,16 @@
  * - PENDENTE: carro novo de motorista ja aprovado — a Central confere a
  *   foto e o documento (CRLV) antes de ele poder usar.
  * - RECUSADO: a Central recusou (motivo aparece para o motorista).
+ * - SUSPENSO: a Central suspendeu o carro (nao roda ate ser reativado; o
+ *   motivo aparece para o motorista). A suspensao e do VEICULO: nao mexe na
+ *   autorizacao da cidade para a categoria nem para entregas.
  * - REMOVIDO: o motorista tirou o carro, mas ele tem corridas no historico
  *   (fica guardado no banco, escondido das listas).
  *
  * Guardado na tabela settings (chave "veiculos"), sem mudar o banco: um
  * mapa id do carro -> situacao, fotos e data. Carro fora do mapa = aprovado.
  */
-export type SituacaoGuardada = 'PENDENTE' | 'RECUSADO' | 'REMOVIDO';
+export type SituacaoGuardada = 'PENDENTE' | 'RECUSADO' | 'SUSPENSO' | 'REMOVIDO';
 
 export interface FichaDoCarro {
   situacao?: SituacaoGuardada;
@@ -33,6 +36,31 @@ export interface FichaDoCarro {
   categoriaPedidaEm?: string | null;
   /** Motivo da ultima recusa de categoria (o motorista ve). */
   categoriaMotivo?: string | null;
+  /**
+   * Validade do CRLV (AAAA-MM-DD), anotada pela Central (13/11/2026). Informativa: o
+   * sistema mostra se esta vencida, mas nao bloqueia o carro por conta propria.
+   */
+  crlvValidade?: string;
+}
+
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Dia de hoje em Brasilia (AAAA-MM-DD). */
+export function hojeEmBrasilia(agora: Date = new Date()): string {
+  return new Date(agora.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+}
+
+/** Data valida no formato AAAA-MM-DD (e que existe no calendario)? */
+export function diaValido(v: unknown): v is string {
+  if (typeof v !== 'string' || !DIA.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
+/** Vencido = a validade e anterior a hoje (no dia da validade ainda vale). Sem data: null. */
+export function vencido(validade: string | null | undefined, agora: Date = new Date()): boolean | null {
+  if (!validade || !diaValido(validade)) return null;
+  return validade < hojeEmBrasilia(agora);
 }
 
 export type MapaDeCarros = Record<string, FichaDoCarro>;
@@ -45,7 +73,8 @@ export function lerMapaDeCarros(valor: unknown): MapaDeCarros {
   for (const [id, v] of Object.entries(valor as Record<string, unknown>)) {
     if (!v || typeof v !== 'object') continue;
     const f = v as Record<string, unknown>;
-    const situacao = f.situacao === 'PENDENTE' || f.situacao === 'RECUSADO' || f.situacao === 'REMOVIDO' ? f.situacao : undefined;
+    const situacao =
+      f.situacao === 'PENDENTE' || f.situacao === 'RECUSADO' || f.situacao === 'SUSPENSO' || f.situacao === 'REMOVIDO' ? f.situacao : undefined;
     mapa[id] = {
       ...(situacao ? { situacao } : {}),
       motivo: typeof f.motivo === 'string' ? f.motivo : null,
@@ -55,6 +84,7 @@ export function lerMapaDeCarros(valor: unknown): MapaDeCarros {
       ...(typeof f.categoriaPedida === 'string' && f.categoriaPedida ? { categoriaPedida: f.categoriaPedida } : {}),
       ...(typeof f.categoriaPedidaEm === 'string' ? { categoriaPedidaEm: f.categoriaPedidaEm } : {}),
       ...(typeof f.categoriaMotivo === 'string' && f.categoriaMotivo ? { categoriaMotivo: f.categoriaMotivo } : {}),
+      ...(diaValido(f.crlvValidade) ? { crlvValidade: f.crlvValidade } : {}),
     };
   }
   return mapa;

@@ -9,6 +9,7 @@ import '../core/alarme.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
+import 'mapa_operacional.dart' show rotuloDaOrigem, rotuloDoServico;
 import 'painel_state.dart';
 import 'visao_geral.dart' show PinoDaCidade;
 import '../core/mapa_config.dart';
@@ -27,6 +28,22 @@ Color corDaSituacao(String s) => switch (s) {
       'EM_VIAGEM' => const Color(0xFF8E44AD),
       _ => const Color(0xFF8E8E93),
     };
+
+/// Cor do veiculo no painel ao vivo: SOS vermelho vence tudo; entrega do Comercio e
+/// azul-ciano (exclusivo); o resto segue a cor da situacao de sempre.
+Color corDoVeiculoAoVivo(MotoristaAoVivo m) {
+  if (m.sos) return AppColors.danger;
+  if (m.servico == 'COMERCIO' && m.situacao != 'OFFLINE') return AppColors.comercio;
+  return corDaSituacao(m.situacao);
+}
+
+/// Texto do servico para a etiqueta (null = nao precisa: passageiro/livre/offline).
+String? servicoEmTexto(String? servico, {bool sos = false}) {
+  if (sos) return 'SOS';
+  if (servico == 'COMERCIO') return 'Comércio';
+  if (servico == 'ENTREGA') return 'Entrega';
+  return null;
+}
 
 String nomeDaSituacao(String s) => switch (s) {
       'LIVRE' => 'Livre',
@@ -415,9 +432,18 @@ class _AoVivoState extends State<AoVivo> {
                 style: AppText.body.copyWith(color: AppColors.textMuted),
               ),
               if (m.telefone != null) Text(telefoneBonito(m.telefone), style: AppText.body.copyWith(color: AppColors.textMuted)),
+              if (m.sos) ...[
+                const SizedBox(height: Spacing.sm),
+                Text('SOS ABERTO', style: AppText.bodyStrong.copyWith(color: AppColors.danger)),
+              ],
+              if (m.servico != null) ...[
+                const SizedBox(height: Spacing.sm),
+                Linha('Serviço', rotuloDoServico(m.servico, origem: m.origemDoServico), destaque: m.servico == 'COMERCIO'),
+                if (m.servico == 'COMERCIO') Linha('Origem', rotuloDaOrigem(m.origemDoServico)),
+              ],
               if (m.corridaCodigo != null) ...[
                 const SizedBox(height: Spacing.sm),
-                Text('Corrida ${m.corridaCodigo}${m.corridaPassageiro == null ? '' : ' · ${m.corridaPassageiro}'}', style: AppText.bodyStrong),
+                Text('${m.servico == 'PASSAGEIRO' || m.servico == null ? 'Corrida' : 'Entrega'} ${m.corridaCodigo}${m.corridaPassageiro == null ? '' : ' · ${m.comercio ?? m.corridaPassageiro}'}', style: AppText.bodyStrong),
               ],
               if (m.situacao == 'OFFLINE' && m.vistoEm != null)
                 Text('Última posição: ${dataHora(m.vistoEm)}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
@@ -474,13 +500,14 @@ class _AoVivoState extends State<AoVivo> {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Corrida ${c.codigo}', style: AppText.heading)),
+                  Expanded(child: Text('${c.servico == 'PASSAGEIRO' ? 'Corrida' : 'Entrega'} ${c.codigo}', style: AppText.heading)),
                   _Pilula(texto: nome, cor: cor),
                 ],
               ),
               const SizedBox(height: Spacing.sm),
+              Linha('Serviço', rotuloDoServico(c.servico, origem: c.origemDoServico), destaque: c.servico == 'COMERCIO'),
               Linha('Pedida às', dataHora(c.pedidaEm)),
-              Linha('Passageiro', c.passageiro),
+              Linha(c.servico == 'COMERCIO' ? 'Estabelecimento' : 'Passageiro', c.comercio ?? c.passageiro),
               Linha('Motorista', c.motorista == null ? '—' : '${c.motorista}${c.placa == null || c.placa!.isEmpty ? '' : ' · ${c.placa}'}'),
               Linha('Embarque', c.embarque),
               Linha('Destino', c.destino),
@@ -565,7 +592,8 @@ class _Etiqueta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cor = corDaSituacao(motorista.situacao);
+    final cor = corDoVeiculoAoVivo(motorista);
+    final selo = motorista.sos ? Icons.sos : (motorista.servico == 'COMERCIO' ? Icons.inventory_2 : null);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -591,6 +619,11 @@ class _Etiqueta extends StatelessWidget {
                   style: AppText.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
                 ),
               ),
+              // Selo: nunca so a cor (caixa = Comercio, SOS = socorro).
+              if (selo != null) ...[
+                const SizedBox(width: 4),
+                Icon(selo, color: Colors.white, size: 13),
+              ],
             ],
           ),
         ),
@@ -674,7 +707,7 @@ class _LinhaMotorista extends StatelessWidget {
                 Container(
                   width: 10,
                   height: 10,
-                  decoration: BoxDecoration(color: corDaSituacao(m.situacao), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: corDoVeiculoAoVivo(m), shape: BoxShape.circle),
                 ),
                 const SizedBox(width: Spacing.sm),
                 Expanded(
@@ -687,11 +720,15 @@ class _LinhaMotorista extends StatelessWidget {
                       Row(
                         children: [
                           _EtiquetaSituacao(situacao: m.situacao),
+                          if (servicoEmTexto(m.servico, sos: m.sos) != null) ...[
+                            const SizedBox(width: Spacing.xs),
+                            _Pilula(texto: servicoEmTexto(m.servico, sos: m.sos)!, cor: corDoVeiculoAoVivo(m)),
+                          ],
                           if (m.corridaCodigo != null) ...[
                             const SizedBox(width: Spacing.xs),
                             Flexible(
                               child: Text(
-                                m.corridaPassageiro == null ? m.corridaCodigo! : '${m.corridaCodigo} · ${m.corridaPassageiro}',
+                                m.corridaPassageiro == null ? m.corridaCodigo! : '${m.corridaCodigo} · ${m.comercio ?? m.corridaPassageiro}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppText.caption.copyWith(color: AppColors.textMuted),
@@ -766,11 +803,12 @@ class _LinhaCorrida extends StatelessWidget {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           _Pilula(texto: nome, cor: cor),
+                          if (c.servico == 'COMERCIO') const _Pilula(texto: 'Comércio', cor: AppColors.comercio),
                           Text(c.codigo, style: AppText.caption.copyWith(color: AppColors.textMuted)),
                         ],
                       ),
                       const SizedBox(height: 2),
-                      Text(c.passageiro, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.bodyStrong),
+                      Text(c.comercio ?? c.passageiro, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.bodyStrong),
                       Text(
                         c.motorista == null ? 'Sem motorista' : 'Motorista: ${c.motorista}',
                         maxLines: 1,

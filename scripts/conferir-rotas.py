@@ -73,6 +73,28 @@ for app in APPS:
         if f"case '{metodo}'" not in cliente:
             erros.append(f'{app}: o cliente do aplicativo nao sabe enviar {metodo} (api_client.dart)')
 
+# ---------------- app Comercio (cliente proprio: api.get/post/patch) ----------------
+# Mesmo teste, outro estilo de chamada: api.get('/comercio/meu'), api.post('/x', ...).
+comercio_lib = RAIZ / 'apps' / 'comercio_app' / 'lib'
+if comercio_lib.exists():
+    padrao_comercio = re.compile(r"\bapi\.(get|post|patch|put|delete)\(\s*'(/[^']*)'")
+    for arq in comercio_lib.rglob('*.dart'):
+        texto = arq.read_text(encoding='utf-8')
+        for m in padrao_comercio.finditer(texto):
+            metodo = m.group(1).upper()
+            caminho = m.group(2)
+            total += 1
+            if not existe(metodo, normalizar(caminho)):
+                linha = texto[: m.start()].count('\n') + 1
+                erros.append(f'comercio_app: {metodo} {caminho}  ({arq.relative_to(RAIZ)}:{linha})')
+    # O cliente do Comercio precisa saber enviar os metodos que usa.
+    cliente = (comercio_lib / 'core' / 'api.dart').read_text(encoding='utf-8')
+    for arq in comercio_lib.rglob('*.dart'):
+        for m in padrao_comercio.finditer(arq.read_text(encoding='utf-8')):
+            metodo = m.group(1).upper()
+            if f"case '{metodo}'" not in cliente:
+                erros.append(f'comercio_app: o cliente nao sabe enviar {metodo} (core/api.dart)')
+
 print(f'Rotas no servidor: {len(rotas)} | chamadas dos aplicativos conferidas: {total}')
 if erros:
     print('CHAMADAS SEM ROTA NO SERVIDOR:')
