@@ -1272,6 +1272,35 @@ if [ -n "${OPID:-}" ]; then
     falha "Operador: comecar a ligar as duas etapas" "$X"
   fi
 fi
+# ================= Rotas novas do PR #59 (13/11/2026): SO LEITURA =================
+# Frota (Carros/Motos), Comercio na Central e chave geral. Se o servidor no ar ainda
+# nao tem a rota (404), o passo e PULADO, nao falha: o teste continua valendo para o
+# servidor antigo. Nada aqui grava, aprova, suspende, lanca entrega nem liga chave.
+rota_nova() {  # $1=rota $2=token  -> imprime o corpo; retorna 1 se a rota nao existe (404)
+  local saida codigo
+  saida=$(curl -s -m 90 -o /tmp/rota-nova.json -w '%{http_code}' "$API$1" ${2:+-H "Authorization: Bearer $2"}); codigo="$saida"
+  [ "$codigo" = "404" ] && return 1
+  cat /tmp/rota-nova.json; return 0
+}
+pulou() { echo "PULADO $1 (o servidor no ar ainda nao tem esta rota: so existe depois do merge e do deploy autorizados)" | tee -a "$REL"; }
+if X=$(rota_nova "/admin/frota" "$TA"); then
+  [ "$(echo "$X" | jq -r '(.data.itens|type)+"/"+(.data.total|type)')" = "array/number" ] && ok "Central: Carros e Motos (frota) responde com lista e total ($(echo "$X" | jq -r '.data.total'))" || falha "Central: frota" "$X"
+  [ "$(echo "$X" | jq -r '[.data.itens[]? | select(has("crlvValidade") and has("cnhVencida"))] | length')" = "$(echo "$X" | jq -r '.data.itens|length')" ] && ok "Central: frota traz as validades (CNH/CRLV) em todos os veiculos" || pulou "validades da frota (versao anterior do servidor)"
+else pulou "Central: frota (Carros e Motos)"; fi
+if X=$(rota_nova "/admin/comercios" "$TA"); then
+  [ "$(echo "$X" | jq -r '.data.itens|type')" = "array" ] && ok "Central: lista de Comercios responde" || falha "Central: lista de Comercios" "$X"
+else pulou "Central: lista de Comercios"; fi
+if X=$(rota_nova "/admin/comercios/entregas" "$TA"); then
+  [ "$(echo "$X" | jq -r '.data.itens|type')" = "array" ] && ok "Central: entregas do Comercio respondem (com origem e quem lancou)" || falha "Central: entregas do Comercio" "$X"
+else pulou "Central: entregas do Comercio"; fi
+if X=$(rota_nova "/admin/comercios/config" "$TA"); then
+  [ "$(echo "$X" | jq -r '.data.ativo|type')" = "boolean" ] && ok "Central: chave geral do Comercio lida (so leitura; ativo=$(echo "$X" | jq -r '.data.ativo'))" || falha "Central: chave geral do Comercio" "$X"
+else pulou "Central: chave geral do Comercio"; fi
+# Sem login nenhuma delas abre.
+for R in /admin/frota /admin/comercios /admin/comercios/config; do
+  C=$(curl -s -m 60 -o /dev/null -w '%{http_code}' "$API$R")
+  case "$C" in 401|403) ok "Seguranca: $R recusa quem nao entrou ($C)";; 404) pulou "Seguranca: $R sem login";; *) falha "Seguranca: $R sem login devia recusar" "HTTP $C";; esac
+done
 # Limpeza: o teste apaga o que criou (contas de teste, corridas, cupons) e a
 # conta de operador, para nada de teste ficar no financeiro da Central.
 if [ -n "${OPID:-}" ]; then
