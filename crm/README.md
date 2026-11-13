@@ -105,6 +105,8 @@ Execute `npm test` para rodar os testes automatizados incluídos (CSV, limitador
 | Excluir tarefas | sim | sim |
 | Excluir cenários e simulações financeiras | sim | não |
 | Exportar CSV (dados pessoais) | sim | não |
+| Exportar PDF de listas de pessoas (motoristas, entregadores, passageiros, parceiros, atendimentos) | sim | não |
+| Exportar PDF de tarefas, campanhas, relatório geral e planejamento financeiro | sim | sim |
 | Usuários, dados da organização, trilha de auditoria e atividade recente | sim | não |
 | Alterar a própria senha e ver/encerrar as próprias sessões (tela Configurações) | sim | sim |
 | Ver e responder conversas de WhatsApp, vincular a cadastro, criar tarefa a partir da conversa | sim | sim |
@@ -152,7 +154,7 @@ test/                  testes automatizados (+ offline-harness/)
 ## Limitações desta versão
 - Sem envio automático de mensagens, cobranças ou integração com os aplicativos operacionais.
 - Recuperação de senha exige acesso ao servidor (não há e-mail configurado).
-- PDF é gerado pela impressão do navegador; CSV é exportado pelo servidor.
+- PDF e CSV são gerados pelo servidor (ver "Relatórios em PDF"). A tela "Relatórios" ainda tem "Imprimir tela" (impressão do navegador).
 - Não há envio de notificações push.
 
 ## WhatsApp: conversas dentro do CRM
@@ -191,6 +193,174 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - `POST /api/motoristas/:id/contratar` (`{ "confirmo": true }`, admin e gestor): passa para "Contratado", grava
   `contratado_em`, registra no histórico e na auditoria. `GET /api/motoristas/:id` devolve também `ficha`
   (conversa, documentos recebidos, último resumo da IA).
+
+## Etapa 2 (em preparação, fora de produção)
+- Migrações versionadas em `src/migracoes/` — só rodam com `FM_ETAPA2=1`. Para testar numa cópia sem mexer no
+  original: `node scripts/simular-migracao.js caminho/crm.db` (mostra contagens antes/depois, se algum registro antigo
+  mudou e os possíveis duplicados).
+- `GET /api/admin/duplicados` e `GET /api/admin/migracoes` (só administrador; somente leitura).
+- Com `FM_ETAPA2=1`: menu **Pessoas** (ficha central de cada pessoa com todas as funções, "Adicionar função", aviso de
+  telefone já cadastrado ao criar motorista/passageiro e, só para o administrador, "Possíveis duplicados" com
+  comparação e junção confirmada). Rotas em `/api/pessoas*`; sem a variável elas não existem.
+- Também com `FM_ETAPA2=1`: menu **Empresas** (mesma ficha central para parceiros do Clube; rotas `/api/empresas*`). As
+  fichas centrais mostram os históricos originais de cada função (acompanhamentos, tarefas, WhatsApp e, para o
+  administrador, auditoria), sem copiar nem substituir nada.
+
+## Relatórios em PDF (12/11/2026, ramo `etapa2`)
+- PDF é o formato principal de exportação; o CSV continua como alternativa (só administrador). Gerador central **sem dependência
+  nova** (`src/pdf/`: escritor de PDF próprio, A4, Helvetica, logotipo da Fortaleza Move, rodapé "Página X de N") e modelos por setor
+  em `src/relatorios-pdf.js`.
+- `GET /api/reports/pdf?type=<motoristas|entregadores|passageiros|parceiros|atendimentos|campanhas|tarefas|resumo|financeiro|cenario>`
+  com os MESMOS filtros da lista (`q`, `f_<campo>`, `etapa`, `de`, `ate`; `id` para `cenario`). Cabeçalho `X-Linhas` = nº de registros
+  (só nas listas). Sem registros o PDF sai assim mesmo, dizendo "Nenhum registro encontrado para os filtros aplicados." Máx. 5.000 linhas.
+- CSV: `GET /api/reports/export?type=…` (por período) ou `&modo=lista` (filtros da lista; sem período, todo o histórico).
+- Permissões (decididas no servidor; `meta.can.exportar_pdf` só orienta os botões): administrador exporta tudo; gestor só tarefas,
+  campanhas, resumo, financeiro e cenário (listas de pessoas têm dados pessoais: LGPD). Toda exportação é auditada ("Exportação PDF/CSV"),
+  sem gravar dados pessoais.
+- Tela: botão **Exportar** nas listas, em Relatórios (por cartão e "Relatório geral (PDF)") e em Financeiro. Abre uma janela com
+  **Baixar PDF**, **Abrir para imprimir** (nova aba, por causa da CSP), **Compartilhar** (Web Share, quando o aparelho permite) e, para o
+  administrador, **Baixar CSV**.
+
+### Auditoria geral de 12/11/2026 (ramo `etapa2`)
+- **IA do WhatsApp — falha real de 12/11 (12:27):** o provedor de IA (Gemini) respondeu "indisponível"; o CRM só registrava no log e a
+  conversa ficava "IA atendendo" sem resposta. Agora cada mensagem do cliente é acompanhada até a resposta ou a falha (`wa_conversas.ia_estado`):
+  erro passageiro → novas tentativas (`IA_REPETIR_MS`, padrão 30 s, 2 min, 5 min); esgotou, erro definitivo (chave recusada, sem saldo) ou a IA
+  não pode responder (limites, filtro de segurança) → transfere para a equipe com o modelo de transferência e o motivo "A IA não conseguiu
+  responder" (notificação urgente). Varredura a cada 60 s (`IA_VARREDURA_MS`; `IA_VARREDURA=0` desliga) recupera mensagens que ficaram sem
+  tratamento (reinício, temporizador perdido; até `IA_RECUPERAR_HORAS`=12 h). Mensagem nova durante o processamento não se perde. Rota
+  `POST /api/wa/conversas/:id/ia/reprocessar` (admin e gestor, auditada). A tela mostra o estado real ("IA respondendo…", "IA tentando de
+  novo", "IA não respondeu", "IA (resposta automática desligada)") e o botão "Tentar de novo".
+- **Respostas da IA:** a redação recebe os serviços do menu oficial e as informações oficiais de TODOS os assuntos (o cliente pode perguntar
+  do Clube no meio de um cadastro); continua proibido inventar preço, benefício ou regra; sem informação, encaminha para a equipe.
+- **Identidade visual:** a tela de carregamento e a de erro de inicialização desenhavam um quadrado com "FM" (identidade antiga) — agora
+  usam o logotipo oficial (`/icons/logo.png`). `favicon.svg` antigo removido; `/favicon.ico` gerado do ícone oficial; selo de notificação
+  `badge-96.png` (silhueta do logotipo); metadados de compartilhamento; ícones revalidam no navegador (antes ficavam 1 dia em cache); cache v25.
+- **Documentos:** impressão digital da `FM_DOCS_KEY` (`docs_chave_impressao`, nunca a chave) — chave trocada por engano bloqueia novos envios
+  com aviso claro; troca planejada com `FM_DOCS_KEY_ANTERIOR`.
+- **Interface:** lupa sobre o texto em todas as buscas (regra genérica de `input` vencia) corrigida; botões com área de toque ≥ 36 px no
+  celular; faixa do atendimento quebra em duas linhas quando há alerta.
+- **Segurança:** teste automático `test/rotas-permissoes.test.js` lê todas as rotas do código e confere no servidor real: sem login → 401;
+  rotas de administrador → 403 para o gestor; mutação de outra origem → 403.
+
+### Revisão dos Relatórios e exportação PDF/CSV em todos os blocos (12/11/2026, ramo `etapa2`)
+- Auditoria: todos os pontos de exportação (listas de cada módulo, Relatórios, Financeiro, Documentos) já usam o mesmo componente
+  (`public/js/exportar.js`) e o mesmo gerador (`src/relatorios-pdf.js`). Não existe mais ponto só-CSV. A tela de produção (`main`) ainda
+  só tem CSV: o PDF só existe no ramo `etapa2`.
+- Em Relatórios, cada cartão tem um botão **PDF / CSV** (administrador) ou **PDF** (gestor, nos blocos permitidos). O PDF sai com a lista do
+  período e totais; o CSV, os mesmos registros. Tela, PDF e CSV usam o mesmo critério de data por módulo (campanhas: data de publicação ou,
+  na falta, a planejada) e o fuso de Fortaleza.
+- Corrigido: datas de simulações nos PDFs resumo/financeiro (usavam o dia em UTC; passam a usar o dia de Fortaleza); período do bloco
+  Documentos passa a valer no PDF e no CSV (pela data de inclusão, UTC-3); resumo em PDF ganhou Comércios e Documentos; relatórios
+  financeiros dizem "estimado/estimada" nos títulos de colunas (PDF e CSV); nomes de arquivo levam o período
+  (`fortaleza-move_motoristas_2026-11-01_a_2026-11-30.pdf`, `motoristas_2026-11-01_a_2026-11-30.csv`).
+- Testes: `test/relatorios-exportacao.test.js` (6 testes contra o servidor real: tela × PDF × CSV por módulo e período, vazio,
+  financeiro/UTC-3, permissões por HTTP, relatório de 140 linhas em várias páginas, documentos por período).
+
+## M3 — Comércios parceiros que pedem entregas (12/11/2026, ramo `etapa2`, só desenvolvimento)
+- Módulo **Comércios** (só com `FM_ETAPA2=1`, migração 004, tabela `comercios`): loja que usa a plataforma para pedir entregas.
+  É uma função **independente** do "Parceiro do Clube" (estabelecimento que dá desconto aos motoristas): a mesma empresa pode ter
+  as duas, cada uma com a própria situação, e mudar uma nunca altera a outra.
+- Titular é a **empresa central** (M1): ao cadastrar, o aviso de telefone repetido deixa escolher a empresa existente
+  (`empresa_id`) em vez de criar outra; repetir a função na mesma empresa devolve 409. Razão social e endereço são copiados para a
+  empresa quando ela ainda não os tem. Não há campo de CNPJ (documentos só no M4).
+- Situações: Identificado → Primeiro contato → Aguardando resposta → Em negociação → Proposta apresentada → Cadastro em andamento →
+  **Ativo na plataforma** (verde, "fechado") · Não concretizado. Acompanhamentos (histórico), tarefas, WhatsApp, busca e filtros
+  funcionam como nos demais módulos. `POST /api/comercios/:id/ativar` (admin e gestor, `confirmo:true`) marca como ativo.
+- Excluir encerra só o vínculo da função; a empresa, as outras funções e o histórico permanecem.
+- Dashboard: cartões de comércios (total, novos, em negociação, ativos); Relatórios: cartão "Comércios parceiros (entregas)".
+  PDF (`type=comercios`) e CSV só para administrador (dados pessoais; LGPD); gestor consulta e gerencia, sem auditoria e sem junção.
+- A IA não cria comércios nem marca documentos; o vínculo da conversa com um comércio é manual.
+
+## M4 — Documentos e armazenamento seguro (12/11/2026, ramo `etapa2`, só desenvolvimento, dados fictícios)
+- **Arquivo digital por função** (só com `FM_ETAPA2=1`, migração 005): cada ficha de motorista, entregador, parceiro do Clube e comércio
+  tem os seus documentos (`funcao` + `registro_id`). A mesma pessoa/empresa com várias funções tem documentos separados por função;
+  nada é copiado. Categorias: pessoa (CNH, CRLV, comprovante de endereço, outro) e empresa (cartão CNPJ, contrato social, comprovante
+  de endereço, alvará, documento do responsável, outro).
+- **Situação de cada documento** (independente): Não enviado, Pendente de conferência, Conferido, Rejeitado, Necessita atualização.
+  Conferir/rejeitar **nunca** contrata, ativa ou encerra a função: só muda o documento (e os campos antigos `doc_cnh/doc_crlv/doc_endereco`).
+  A situação geral da ficha vem dos documentos exigidos (`docs_politica.obrigatorios`; motorista/entregador: CNH, CRLV e comprovante).
+- **Versões:** enviar de novo cria versão nova (volta a "Pendente"); todas as versões ficam guardadas e acessíveis ao administrador.
+  Nada é apagado sozinho. Exclusão definitiva só administrador, política ligada, `confirmo:true` e motivo; o histórico permanece.
+- **Armazenamento (`src/documentos/`):** cada arquivo é cifrado antes de sair do servidor (AES-256-GCM, chave por arquivo embrulhada
+  pela chave mestra `FM_DOCS_KEY`, 64 hex, **fora do repositório e do servidor de código**), com nome interno aleatório, em área privada
+  (sem URL pública). Adaptadores: `local` (pasta `DOCS_DIR` ou `data/documentos`; recusa disco efêmero do Render/produção a menos que
+  `FM_DOCS_LOCAL_PERSISTENTE=1`) e `supabase` (Storage privado, `DOCS_STORAGE=supabase`, `DOCS_SUPABASE_URL/KEY/BUCKET`). Os arquivos
+  ficam **fora** do retrato cifrado do cofre; os metadados (com as chaves embrulhadas) ficam no banco.
+- **Validação:** PDF/JPG/PNG/WEBP pelo conteúdo (assinatura), extensão coerente, tamanho até `DOCS_MAX_MB` (10), PDF com JavaScript/ação
+  automática recusado, nome enviado só vira rótulo. Não há antivírus.
+- **Acesso:** `GET /api/documentos/:id/arquivo` confere perfil, integridade (tamanho + SHA-256) e registra o acesso. Administrador
+  vê/baixa/confere tudo; **gestor, por padrão, só anexa e vê a situação**. O administrador libera por tipo de documento (política).
+  Tentativas negadas e falhas de integridade ficam no histórico do documento e na auditoria.
+- **CPF/CNPJ:** só cifrados (`src/protegidos.js`, `FM_DADOS_KEY`), com finalidade; ficha mostra máscara; "mostrar número" é auditado;
+  só administrador; coleta **desligada** até o dono decidir (`docs_politica.cpf_cnpj`).
+- **Rotas:** `/documentos/meta|politica|lista`, `/documentos?funcao=&registro_id=`, `POST /documentos` e `/documentos/:id/versoes`
+  (corpo bruto; metadados nos cabeçalhos `X-Documento`/`X-Nome-Arquivo`), `/documentos/:id[/arquivo|/conferir|/excluir-definitivo]`,
+  `PUT /pessoas/:id/cpf`, `PUT /empresas/:id/cnpj` (+ `/remover`, `/revelar`). Relatório `type=documentos` (PDF e CSV, só admin,
+  sem CPF/CNPJ nem conteúdo), cartões do dashboard e de Relatórios.
+- **Manutenção:** `npm run docs:verificar` (abre cada versão, confere hash, acha órfãos), `docs:backup <pasta>` (arquivos cifrados +
+  manifesto cifrado, incremental) e `docs:restaurar <pasta>` (só repõe o que falta, confere hash). Guarde o backup **e** a `FM_DOCS_KEY`
+  em lugares separados: sem a chave os arquivos não abrem.
+- Front: painel "Documentos (arquivo digital)" em cada ficha, menu **Documentos** (lista, filtros, política e decisões pendentes do dono).
+  Cache do app `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
+
+## Candidatos a motorista e avaliador (12/11/2026, ramo `etapa2`, só desenvolvimento)
+- **Fluxo de candidatura** (migração 006, congelada): `candidaturas` com etapas Cadastro recebido → Documentação pendente/recebida
+  (sozinha, pelos documentos) → Documentação em análise → Necessidade de complementação → Avaliação presencial pendente/realizada →
+  Aprovado / Recusado. Independente da situação da ficha do motorista (aprovar **não** contrata nem libera no aplicativo).
+  Decisão final **só do administrador**, com `confirmo:true` (recusa exige motivo); reabrir só admin, com motivo.
+  Pareceres e eventos só acrescentam (gatilhos impedem alterar/apagar); correção = parecer novo que "substitui" o anterior.
+- **Perfil `avaliador`** (ex.: o profissional que faz a avaliação presencial): lista FECHADA de rotas (`policy.ROTAS_AVALIADOR`):
+  `GET /meta`, `GET /candidaturas`, `GET /candidaturas/:id`, `POST /candidaturas/:id/pareceres`, `GET /documentos/:id[/arquivo]`
+  e a própria conta (`/auth/*`). Todo o resto: 403 no servidor. Vê nome, cidade, veículo, placa, categoria da CNH e documentos
+  liberados na política (`docs_politica.avaliador`, padrão os 7 itens do candidato e outros), sem telefone nem anotações internas.
+  Não aprova, não recusa, não exclui, não altera documento, não exporta. Toda consulta e parecer são auditados (sem conteúdo pessoal).
+  Parecer: conclusão, texto, pendências, verificação de antecedentes **feita por profissional autorizado fora do CRM** (só registra
+  o resultado e a fonte; o CRM não faz consulta externa automática), observações.
+- **Rotas:** `GET|POST /candidaturas`, `GET /candidaturas/:id`, `POST /candidaturas/:id/etapa` (admin/gestor),
+  `POST /candidaturas/:id/decisao` e `/reabrir` (admin), `POST /candidaturas/:id/pareceres` (admin/avaliador).
+- **Sem integração com o aplicativo do motorista** (decisão do dono, 12/11 noite): o cadastro pelo app continua indo para a Central
+  (aprovação lá); o CRM é um caminho independente (ficha + documentos + avaliação) que o dono usa para preencher o cadastro na Central.
+- **Documentação obrigatória do candidato a motorista (7 itens independentes):** CNH; documento do veículo (CRLV ou equivalente);
+  comprovante de residência; certidão de antecedentes criminais; foto do veículo de frente; de lado; de traseira. Cada um tem o seu
+  espaço de envio no arquivo digital e o seu campo na ficha (`doc_*`); "completo" só com os 7 (a política não deixa retirar nenhum).
+- Front: menu **Candidatos** (`public/js/views/candidatos.js`), botão "Avaliação do candidato" na ficha. Cache `fm-crm-v27`.
+  Testes: `test/candidaturas.test.js` + avaliador em `test/rotas-permissoes.test.js`.
+- **Informações oficiais da IA**: 8 assuntos (gerais, cadastro de motoristas, entregadores, encomendas, Clube, comerciantes,
+  passageiros, outros) com "preenchido / falta preencher" na tela. Nada é preenchido sozinho.
+
+## Atendimento por IA no WhatsApp: correções de 12/11/2026 noite (ramo `etapa2`, só desenvolvimento)
+- **Confirmação rápida:** se a resposta não sair em `IA_CONFIRMACAO_MS` (padrão 6 s), vai UMA confirmação por fala do cliente (modelo
+  "Confirmação rápida de recebimento", editável/desligável). É `tipo='aviso'`: não conta como resposta, não notifica, não muda a lista.
+  Espera para juntar mensagens seguidas (`IA_ATRASO_MS`) caiu de 15 s para 7 s. O registro do servidor mostra o tempo de cada resposta.
+- **Áudio:** leitura com novas tentativas curtas (`IA_MIDIA_REPETIR_MS`, padrão 3 s e 8 s); a IA espera a leitura terminar; áudio que
+  não pôde ser ouvido recebe o modelo "Áudio que não pôde ser ouvido" (pede para escrever) sem chamar a IA; dois seguidos → equipe.
+- **Novo atendimento depois do encerramento:** mensagem nova numa conversa concluída abre NOVO atendimento (`atend_inicio`): assunto,
+  estado da IA, limites e "repetida" contam só a partir daí; o histórico continua. Limites: 40 respostas/60 análises por atendimento,
+  80/120 por conversa em 24 h (`IA_RESPOSTAS_ATENDIMENTO`, `IA_ANALISES_ATENDIMENTO`, `IA_RESPOSTAS_CONVERSA_DIA`, `IA_ANALISES_CONVERSA_DIA`).
+- **IA ⇄ equipe:** assumir/concluir cancela tentativas e confirmações pendentes; a IA confere o estado de novo antes de enviar (não fala
+  se a equipe assumiu durante a redação); devolver faz a IA responder a mensagem pendente; trocas feitas pelo sistema são auditadas.
+- **Origem ≠ intenção:** "Vim pelo site" (e Instagram, Facebook, TikTok, indicação) é guardado em `wa_conversas.origem_contato` e NÃO
+  vira assunto nem perfil: a pessoa recebe o menu geral. O fluxo de cadastro só começa quando ela escolhe ou diz o que quer.
+- Testes: `test/ia-atendimento.test.js` (provedor e canal FALSOS: não comprovam WhatsApp/Gemini reais).
+
+## Arquivos do WhatsApp na ficha e versão candidata 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, só desenvolvimento)
+- **Fotos e PDFs do cliente** (`src/documentos/recebidos.js`, migração 007 `wa_anexos`): baixados pelo conector, validados pelas
+  mesmas regras do envio pela tela, **cifrados** (mesma `FM_DOCS_KEY`, nome interno aleatório, nunca em pasta pública). Leitura disse
+  com segurança qual dos 7 itens é → vai para a ficha (ou espera cifrado até a conversa ter ficha). Sem certeza → **pendente de
+  classificação** (a equipe escolhe em Documentos → "Arquivos recebidos pelo WhatsApp"). Mesmo arquivo de novo → "repetido". Formato
+  não aceito → recusado (nada guardado; a equipe vê; o cliente é convidado a reenviar). Falha → registrada e a conversa vai para a equipe.
+- **Só conta o que tem arquivo:** campos `doc_*` da ficha mudam só pelo arquivo digital; com ele ligado, `PATCH` manual desses campos
+  devolve 422. A IA não marca documento por texto; sem arquivo digital ligado, documento vira transferência para a equipe.
+- Rotas: `GET /wa/anexos`, `POST /wa/anexos/:id/classificar`, `POST /wa/anexos/:id/resolver` (quem pode anexar documentos);
+  `GET /wa/anexos/:id/arquivo` (só admin, auditado). `GET /admin/saude` (admin): versão, banco, migrações e prova real de gravar/ler
+  um arquivo cifrado. Origem "Site" reconhece os 4 botões do site público.
+- Versão `2.1.0-rc.1`, cache `fm-crm-v28`. Publicação: `docs/PUBLICACAO-ETAPA2.md`. Testes reais: `docs/ROTEIRO-TESTES-REAIS.md`.
+  Testes: `test/wa-anexos.test.js` (rotas, banco, disco e cifra reais; WhatsApp e Gemini simulados).
+
+## Hospedagem definitiva: VPS da Hostinger (preparado, NÃO executado)
+Guia simples e scripts em `deploy/hostinger/` (provisionamento, systemd endurecido, Nginx + HTTPS, firewall, cópia diária cifrada,
+teste de restauração, verificação de saúde, migração controlada e volta atrás). `SNAPSHOT_MODO=copia`: com banco no disco, o CRM usa
+o disco como fonte e manda só cópias cifradas ao cofre; sem banco (dia da migração), traz o retrato uma vez.
 
 ## Dashboard, notificações e planejamento (11/11/2026)
 - Indicadores de motoristas por etapa, sem somar duas vezes: interessados (só "Novo interessado"), em processo, aprovados

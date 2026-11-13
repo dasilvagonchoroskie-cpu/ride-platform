@@ -2,6 +2,8 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { db, nowISO, getSetting, setSetting, DATA_DIR } = require('./db');
 const { ENTITIES } = require('./defs');
 const auth = require('./auth');
@@ -13,13 +15,15 @@ const whatsappRoutes = require('./whatsapp/routes');
 const { createIaService } = require('./ia/service');
 const { criarCofre } = require('./ia/secret');
 const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provider');
-const { criarTranscritor } = require('./ia/transcricao');
+const { criarTranscritor, lerComTentativas } = require('./ia/transcricao');
+const { createRecebidos } = require('./documentos/recebidos');
 const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
 const { createNotificacoes } = require('./notificacoes');
 const { documentosRecebidos } = require('./ia/documentos');
 const { gerarCodigoRecuperacao } = require('./reset');
+const hasOwn = (obj, chave) => Object.prototype.hasOwnProperty.call(obj, chave);
 // Rota assíncrona: erro vira resposta 500 do Express (sem rejeição solta que derrubaria o processo).
 const seguro = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -37,12 +41,19 @@ const ia = createIaService({
 });
 ia.usarProvedor(criarProvedorMulti({ resolver: ia.resolverProvedor }));
 wa.definirGancho((conversaId, opcoes) => ia.agendarAutomatico(conversaId, opcoes));
+// Na chegada: registra a origem (site, Instagram...) e agenda a confirmação rápida de recebimento.
+wa.definirChegada((conversaId, mensagemId) => ia.registrarChegada(conversaId, mensagemId));
+// Recupera mensagens de cliente que ficaram sem tratamento da IA (reinício, temporizador perdido, nova tentativa vencida).
+if (process.env.IA_VARREDURA !== '0') ia.iniciarRecuperacao();
 
 // Notificações (mensagem nova, IA respondeu, IA transferiu): feed do CRM + push nos aparelhos inscritos.
 const notificacoes = createNotificacoes({
   db, dataDir: DATA_DIR, waStore: wa.store, webpush: require('web-push'),
   publicUrl: String(process.env.PUBLIC_URL || '').replace(/\/+$/, '')
 });
+
+// Arquivos (fotos/PDFs) que chegam pelo WhatsApp → arquivo digital protegido da ficha (criado junto com os documentos, abaixo).
+let recebidos = null;
 
 // Leitura das mídias do WhatsApp: áudio (Gemini; Groq como reserva), foto/PDF/vídeo (Gemini), Office/texto (no servidor).
 const LIMITE_TRANSCRICOES_DIA = Number(process.env.IA_LIMITE_TRANSCRICOES) || 300;
@@ -56,25 +67,42 @@ const transcritor = criarTranscritor({
     return descobrirModelo({ urlBase: PROVEDORES.gemini.urlBase, chave: cofreIA.ler('gemini'), fetchImpl: globalThis.fetch, timeoutMs: 30000 });
   }
 });
-wa.definirTranscritor(async ({ mensagemId, midia }) => {
+wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
   const cfg = ia.config();
   const pular = (motivo) => { console.log(`[ia] mídia da mensagem ${mensagemId} (${midia && midia.tipo}) não lida: ${motivo}`); return false; };
   if (!midia || typeof midia.baixar !== 'function') return pular('sem arquivo para baixar');
-  if (!cfg.ativo) return pular('IA desativada');
-  if (!cfg.transcrever) return pular('leitura de mídias desligada');
-  if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return pular('limite diário');
-  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) return pular('arquivo maior que 15 MB'); // nem baixa
-  // Um contato sozinho não esgota a cota de leitura de todos.
-  const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-  const doContato = db.prepare(`SELECT COUNT(*) n FROM ia_transcricoes t JOIN wa_mensagens m ON m.id = t.mensagem_id
-    WHERE m.conversa_id = (SELECT conversa_id FROM wa_mensagens WHERE id = ?) AND t.criado_em >= ?`).get(mensagemId, desde).n;
-  if (doContato >= LEITURAS_CONTATO_DIA) return pular('limite diário deste contato');
+  // Foto/documento é GUARDADO (cifrado) mesmo quando a IA não vai ler: o arquivo não pode se perder.
+  // Só o que o CLIENTE manda (foto enviada pela equipe pelo celular não é documento do candidato).
+  const guardar = !deMim && ['image', 'document'].includes(midia.tipo) && recebidos && recebidos.ativo();
+  const motivoSemLeitura = (() => {
+    if (!cfg.ativo) return 'IA desativada';
+    if (!cfg.transcrever) return 'leitura de mídias desligada';
+    if (cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return 'limite diário';
+    // Um contato sozinho não esgota a cota de leitura de todos.
+    const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const doContato = db.prepare(`SELECT COUNT(*) n FROM ia_transcricoes t JOIN wa_mensagens m ON m.id = t.mensagem_id
+      WHERE m.conversa_id = (SELECT conversa_id FROM wa_mensagens WHERE id = ?) AND t.criado_em >= ?`).get(mensagemId, desde).n;
+    if (doContato >= LEITURAS_CONTATO_DIA) return 'limite diário deste contato';
+    return null;
+  })();
+  if (midia.bytes && midia.bytes > MAX_MIDIA_BYTES) { // nem baixa
+    if (guardar) await recebidos.receber({ mensagemId, tipoMidia: midia.tipo, nome: midia.nome, arquivo: null, leituraFalhou: true }).catch(() => {});
+    return pular('arquivo maior que 15 MB');
+  }
+  if (motivoSemLeitura && !guardar) return pular(motivoSemLeitura);
+  if (motivoSemLeitura) return guardarSemLer(mensagemId, midia, motivoSemLeitura);
   const registrar = (ok, provedor, erro) => db.prepare(
     'INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(mensagemId, provedor ? `${provedor}:${midia.tipo}` : midia.tipo, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
+  ia.marcarLeitura(mensagemId, true);
+  let arquivo = null;
   try {
-    const arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES));
-    const r = await transcritor.lerMidia({ tipo: midia.tipo, arquivo, mime: midia.mime, nome: midia.nome, segundos: midia.segundos });
+    arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES));
+    // Falha passageira do Gemini (fora do ar, tempo esgotado, rede, cota): tenta de novo algumas vezes, com espera curta.
+    const esperas = String(process.env.IA_MIDIA_REPETIR_MS !== undefined ? process.env.IA_MIDIA_REPETIR_MS : '3000,8000').split(',').map(Number).filter((n) => Number.isFinite(n) && n >= 0);
+    const r = await lerComTentativas(
+      () => transcritor.lerMidia({ tipo: midia.tipo, arquivo, mime: midia.mime, nome: midia.nome, segundos: midia.segundos }), esperas,
+      (err, ms, n) => console.log(`[ia] leitura de ${midia.tipo} da mensagem ${mensagemId}: ${err.message} — nova tentativa ${n} em ${Math.round(ms / 1000)} s`));
     const atual = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
     const rotulo = atual && atual.texto ? atual.texto : `[${midia.tipo}]`;
     const lido = r.simbolo === '🎤' ? r.texto : mascararNumeros(r.texto);
@@ -82,13 +110,37 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
     wa.store.definirTranscricao(mensagemId, novo);
     registrar(true, r.provedor);
     console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}, ${midia.mime}) lida por ${r.provedor}: ${r.texto.length} caracteres`);
+    if (guardar) await guardarArquivo(mensagemId, midia, arquivo, r.texto, false);
     return true;
   } catch (err) {
     registrar(false, null, err.message);
+    // Leitura falhou (ou o download): o arquivo é guardado assim mesmo, como "pendente de classificação" (nunca se perde calado).
+    if (guardar) await guardarArquivo(mensagemId, midia, arquivo, null, true);
     console.error(`[ia] leitura de ${midia.tipo} da mensagem ${mensagemId}: ${err.message}`);
+    // A equipe vê que o áudio não foi ouvido (a IA avisa o cliente com franqueza e pede o texto).
+    if (midia.tipo === 'audio') {
+      const atual = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
+      if (atual && !/🎤/u.test(String(atual.texto || ''))) wa.store.definirTranscricao(mensagemId, `${atual.texto || '[áudio]'} (não foi possível ouvir o áudio)`);
+    }
     return false;
+  } finally {
+    ia.marcarLeitura(mensagemId, false);
   }
 });
+
+async function guardarArquivo(mensagemId, midia, arquivo, textoLido, leituraFalhou) {
+  try {
+    const r = await recebidos.receber({ mensagemId, tipoMidia: midia.tipo, nome: midia.nome, arquivo, textoLido, leituraFalhou });
+    if (r) console.log(`[documentos] arquivo da mensagem ${mensagemId}: ${r.situacao}${r.categoria ? ` (${r.categoria})` : ''}`);
+  } catch (err) { console.error(`[documentos] arquivo da mensagem ${mensagemId}: ${err.message}`); }
+}
+async function guardarSemLer(mensagemId, midia, motivo) {
+  console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}) não lida: ${motivo} — arquivo guardado para a equipe classificar`);
+  let arquivo = null;
+  try { arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES)); } catch (err) { console.error(`[documentos] download da mensagem ${mensagemId}: ${err.message}`); }
+  await guardarArquivo(mensagemId, midia, arquivo, null, true);
+  return false;
+}
 
 /* ------------------------- retenção de dados (LGPD) ------------------------ */
 // Conversas sem cadastro vinculado e sem movimento há RETENCAO_DIAS são apagadas (mensagens, análises e leituras juntas).
@@ -394,8 +446,21 @@ function textoCodigoEmail(codigo, req, motivo) {
   return `Seu código para ${motivo}: ${codigo}\n\nVale 10 minutos. Não passe este código para ninguém: a equipe do CRM nunca pede.\n\nPedido feito de ${auth.nomeAparelhoPublico(req)} em ${horaLocal()}.\nSe não foi você, troque sua senha do CRM.`;
 }
 
+/* ---------------- sem integração automática com o aplicativo do motorista (12/11 noite) ---------------- */
+// Decisão do dono: o cadastro pelo APLICATIVO continua indo para a Central (aprovação lá) e o CRM é um caminho
+// INDEPENDENTE (ficha + documentos registrados pela equipe). Nenhuma rota recebe dados do aplicativo nem sincroniza nada.
+// As tabelas integracao_* da migração 006 (congelada) ficam vazias e sem uso.
+
 /* ------------------------------- autenticado ------------------------------- */
 router.use(auth.requireAuth);
+
+// Avaliador de cadastros: lista FECHADA de rotas (policy.ROTAS_AVALIADOR) + as da própria conta (/auth/...).
+// Qualquer outra rota responde 403 antes de chegar ao código dela — nenhuma permissão depende de esconder botão.
+router.use((req, res, next) => {
+  if (!req.user || req.user.role !== 'avaliador') return next();
+  if (req.path.startsWith('/auth/') || policy.avaliadorPodeRota(req.method, req.path)) return next();
+  return fail(res, 403, 'forbidden', 'O perfil de avaliador só acessa a avaliação de candidatos.');
+});
 
 // Rotas administrativas: esconder a tela no navegador não é controle de segurança.
 // A autorização é validada novamente no servidor em toda requisição.
@@ -605,6 +670,16 @@ router.delete('/auth/sessions/:id', (req, res) => {
 
 /* ---------------------------------- meta ---------------------------------- */
 router.get('/meta', (req, res) => {
+  // Avaliador: só o necessário para a tela de candidatos (sem contagens nem definições de outros módulos).
+  if (req.user.role === 'avaliador') {
+    const pick = ['motoristas', 'entregadores'].filter((k) => hasOwn(ENTITIES, k));
+    return res.json({
+      user: req.user, org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') }, settings: { org_nome: getSetting('org_nome') },
+      entities: Object.fromEntries(pick.map((k) => [k, { key: k, label: ENTITIES[k].label, singular: ENTITIES[k].singular, icon: ENTITIES[k].icon, fields: ENTITIES[k].fields.filter((f) => ['nome', 'cidade', 'veiculo', 'placa', 'cnh_categoria', 'modalidade', 'origem', 'data_primeiro_contato', 'situacao', 'documentos'].includes(f.key)) }])),
+      pendentes: { candidaturas: candidaturas.ativo() ? db.prepare(`SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado') AND funcao IN (${candidaturas.escopoAvaliador().map(() => '?').join(',') || "''"})`).get(...candidaturas.escopoAvaliador()).c : 0 },
+      can: policy.permissionsFor('avaliador', []), etapa2: null, documentos: docs.ativo(), candidaturas: candidaturas.ativo(), hoje: todayISO()
+    });
+  }
   const defs = {};
   for (const [key, def] of Object.entries(ENTITIES)) {
     defs[key] = {
@@ -634,6 +709,10 @@ router.get('/meta', (req, res) => {
     parceiros: db.prepare("SELECT COUNT(*) c FROM parceiros WHERE situacao NOT IN ('Parceria confirmada','Não concretizada')").get().c,
     wa: wa.store.contarNaoLidas()
   };
+  if (hasOwn(ENTITIES, 'comercios')) pendentes.comercios = db.prepare("SELECT COUNT(*) c FROM comercios WHERE situacao NOT IN ('Ativo na plataforma','Não concretizado')").get().c;
+  if (candidaturas.ativo()) pendentes.candidaturas = db.prepare("SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado')").get().c;
+  if (hasOwn(ENTITIES, 'entregadores')) pendentes.entregadores = db.prepare("SELECT COUNT(*) c FROM entregadores WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c;
+  if (recebidos && docs.ativo() && policy.docsAnexar(req.user.role, docs.politica())) pendentes.anexos_wa = recebidos.contarPendentes();
 
   res.json({
     user: req.user,
@@ -646,7 +725,14 @@ router.get('/meta', (req, res) => {
     },
     entities: defs,
     pendentes,
-    can: policy.permissionsFor(req.user.role, Object.keys(ENTITIES)),
+    can: (() => {
+      const c = policy.permissionsFor(req.user.role, Object.keys(ENTITIES));
+      if (docs.ativo() && req.user.role === 'admin') c.exportar_pdf.push('documentos');
+      return c;
+    })(),
+    etapa2: pessoas.ativa() ? { funcoes: pessoas.catalogo() } : null,
+    documentos: docs.ativo(),
+    candidaturas: candidaturas.ativo(),
     hoje: todayISO()
   });
 });
@@ -655,7 +741,7 @@ router.get('/relations', (req, res) => {
   const type = String(req.query.type || '');
   const def = Object.prototype.hasOwnProperty.call(ENTITIES, type) ? ENTITIES[type] : null;
   if (!def) return res.json({ items: [] });
-  const labelField = { motoristas: 'nome', passageiros: 'nome', parceiros: 'nome_estabelecimento', campanhas: 'titulo', atendimentos: 'assunto' }[type] || 'nome';
+  const labelField = { motoristas: 'nome', passageiros: 'nome', parceiros: 'nome_estabelecimento', comercios: 'nome_estabelecimento', campanhas: 'titulo', atendimentos: 'assunto' }[type] || 'nome';
   const q = String(req.query.q || '').trim();
   const rows = q
     ? db.prepare(`SELECT id, ${labelField} AS label FROM ${def.table} WHERE ${labelField} LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT 50`).all(`%${entities.likeEscape(q)}%`)
@@ -699,6 +785,30 @@ router.get('/dashboard', (req, res) => {
     ),
     tarefas_atrasadas: n("SELECT COUNT(*) c FROM tarefas WHERE situacao IN ('Pendente','Em andamento') AND data_vencimento < ?", hoje)
   };
+  // Etapa 2 (M2): entregadores e motociclistas, no mesmo critério do motorista (cada um conta em UMA etapa).
+  if (hasOwn(ENTITIES, 'entregadores')) {
+    kpis.entregadores_total = n('SELECT COUNT(*) c FROM entregadores');
+    kpis.entregadores_interessados = n("SELECT COUNT(*) c FROM entregadores WHERE situacao = 'Novo interessado'");
+    kpis.entregadores_em_processo = n("SELECT COUNT(*) c FROM entregadores WHERE situacao IN ('Primeiro contato realizado','Aguardando retorno','Cadastro em andamento','Cadastro em análise')");
+    kpis.entregadores_aprovados = n("SELECT COUNT(*) c FROM entregadores WHERE situacao = 'Aprovado'");
+    kpis.entregadores_contratados = n("SELECT COUNT(*) c FROM entregadores WHERE situacao = 'Contratado'");
+    kpis.entregadores_docs_a_conferir = n("SELECT COUNT(*) c FROM entregadores WHERE situacao IN ('Aprovado','Contratado') AND COALESCE(documentos,'') <> 'Conferidos'");
+  }
+
+  // Etapa 2 (M3): comércios parceiros (entregas). A empresa que também é Parceiro do Clube conta em cada função, separadamente.
+  if (hasOwn(ENTITIES, 'comercios')) {
+    kpis.comercios_total = n('SELECT COUNT(*) c FROM comercios');
+    kpis.comercios_novos = n("SELECT COUNT(*) c FROM comercios WHERE situacao IN ('Identificado','Primeiro contato','Aguardando resposta')");
+    kpis.comercios_negociacao = n("SELECT COUNT(*) c FROM comercios WHERE situacao IN ('Em negociação','Proposta apresentada','Cadastro em andamento')");
+    kpis.comercios_ativos = n("SELECT COUNT(*) c FROM comercios WHERE situacao = 'Ativo na plataforma'");
+  }
+
+  // Etapa 2 (M4): documentos aguardando conferência e documentos com pendência (rejeitado / necessita atualização).
+  if (docs.ativo()) {
+    const c = docs.contagens();
+    kpis.documentos_pendentes = c.pendentes;
+    kpis.documentos_atencao = c.atencao;
+  }
 
   const months = [];
   const base = new Date(`${hoje}T12:00:00Z`);
@@ -739,7 +849,9 @@ router.get('/dashboard', (req, res) => {
 
   const proximas = [
     ...db.prepare("SELECT id, nome AS titulo, 'Motorista' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM motoristas WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite),
+    ...(hasOwn(ENTITIES, 'entregadores') ? db.prepare("SELECT id, nome AS titulo, 'Entregador' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM entregadores WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").all(limite) : []),
     ...db.prepare("SELECT id, nome AS titulo, 'Passageiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM passageiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Usuário cadastrado','Não prosseguiu')").all(limite),
+    ...(hasOwn(ENTITIES, 'comercios') ? db.prepare("SELECT id, nome_estabelecimento AS titulo, 'Comércio' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM comercios WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Ativo na plataforma','Não concretizado')").all(limite) : []),
     ...db.prepare("SELECT id, nome_estabelecimento AS titulo, 'Parceiro' AS modulo, data_acompanhamento AS data, situacao, proxima_acao AS acao FROM parceiros WHERE data_acompanhamento IS NOT NULL AND data_acompanhamento <= ? AND situacao NOT IN ('Parceria confirmada','Não concretizada')").all(limite),
     ...db.prepare("SELECT id, titulo, 'Tarefa' AS modulo, data_vencimento AS data, situacao, descricao AS acao FROM tarefas WHERE data_vencimento <= ? AND situacao NOT IN ('Concluída','Cancelada')").all(limite)
   ]
@@ -797,6 +909,25 @@ function reportSummary(de, ate) {
       por_situacao: porSituacao('motoristas', 'situacao'),
       por_origem: porCampo('motoristas', 'origem')
     },
+    ...(hasOwn(defs, 'entregadores') ? {
+      entregadores: {
+        total: db.prepare(`SELECT COUNT(*) c FROM entregadores WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
+        contratados: db.prepare(`SELECT COUNT(*) c FROM entregadores WHERE data_primeiro_contato BETWEEN ? AND ? AND situacao = 'Contratado'`).get(de, ate).c,
+        por_situacao: porSituacao('entregadores', 'situacao'),
+        por_modalidade: porCampo('entregadores', 'modalidade'),
+        por_origem: porCampo('entregadores', 'origem')
+      }
+    } : {}),
+    ...(hasOwn(defs, 'comercios') ? {
+      comercios: {
+        total: db.prepare(`SELECT COUNT(*) c FROM comercios WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
+        ativos: db.prepare(`SELECT COUNT(*) c FROM comercios WHERE data_primeiro_contato BETWEEN ? AND ? AND situacao = 'Ativo na plataforma'`).get(de, ate).c,
+        por_situacao: porSituacao('comercios', 'situacao'),
+        por_categoria: porCampo('comercios', 'categoria'),
+        por_origem: porCampo('comercios', 'origem')
+      }
+    } : {}),
+    ...(docs.ativo() ? { documentos: docs.resumoPeriodo(de, ate) } : {}),
     passageiros: {
       total: db.prepare(`SELECT COUNT(*) c FROM passageiros WHERE data_primeiro_contato BETWEEN ? AND ?`).get(de, ate).c,
       por_situacao: porSituacao('passageiros', 'situacao'),
@@ -842,6 +973,31 @@ router.get('/reports/summary', (req, res) => {
   res.json(reportSummary(de, ate));
 });
 
+/* ------------------------- relatórios em PDF (todos os setores) ------------------------- */
+// PDF é o formato principal de exportação; o CSV abaixo continua como opção complementar.
+const { criarRelatoriosPdf, ErroRelatorio } = require('./relatorios-pdf');
+const relatoriosPdf = criarRelatoriosPdf({ db, ENTITIES, entities, getSetting, todayISO, localDate, reportSummary, cenarioCompleto, computeCenario,
+  // `docs` é criado mais abaixo (depois de pessoas): o relatório acessa por função, só quando é chamado.
+  docs: { ativo: () => docs.ativo(), consultar: (...a) => docs.consultar(...a), get SITUACOES() { return docs.SITUACOES; } } });
+
+router.get('/reports/pdf', (req, res) => {
+  const tipo = String(req.query.type || '');
+  // Quem decide é o servidor: gestor só exporta setores sem lista de pessoas (policy.canExportPdf). Tudo é auditado.
+  if (!relatoriosPdf.tiposValidos().includes(tipo)) return fail(res, 400, 'invalid_type', 'Tipo de relatório inválido.');
+  if (!policy.canExportPdf(req.user.role, tipo)) return fail(res, 403, 'forbidden', 'Somente administradores exportam listas com dados pessoais.');
+  try {
+    const r = relatoriosPdf.gerar(tipo, req.query, req.user);
+    audit(req, 'exportar', tipo, null, `Exportação PDF: ${r.resumo}`);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${r.arquivo}"`);
+    if (r.linhas !== null && r.linhas !== undefined) res.setHeader('X-Linhas', String(r.linhas));
+    res.send(r.buffer);
+  } catch (err) {
+    if (err instanceof ErroRelatorio) return fail(res, err.status, 'report', err.message);
+    throw err;
+  }
+});
+
 router.get('/reports/export', requireAdmin, (req, res) => {
   const type = String(req.query.type || 'motoristas');
   const { de, ate } = period(req.query);
@@ -850,7 +1006,8 @@ router.get('/reports/export', requireAdmin, (req, res) => {
 
   if (type === 'simulacoes') {
     const rows = db.prepare("SELECT * FROM simulacoes WHERE date(created_at, '-3 hours') BETWEEN ? AND ? ORDER BY id").all(de, ate);
-    const header = ['ID', 'Data', 'Cenário', 'Corridas/mês', 'Faturamento bruto', 'Receita plataforma', 'Repasse motoristas', 'Custos', 'Resultado', 'Observação', 'Responsável'];
+    // Cabeçalhos dizem "estimado": são simulações, não receita realizada.
+    const header = ['ID', 'Data', 'Cenário', 'Corridas/mês', 'Faturamento bruto estimado', 'Receita estimada (plataforma)', 'Repasse estimado aos motoristas', 'Custos mensais', 'Resultado estimado', 'Observação', 'Responsável'];
     // Valores numéricos seguem como número (inclusive negativos): sendCsv cuida do formato com vírgula.
     const body = rows.map((s) => {
       const r = safeJson(s.resultados);
@@ -860,12 +1017,27 @@ router.get('/reports/export', requireAdmin, (req, res) => {
     return sendCsv(res, `financeiro_${stamp}.csv`, header, body);
   }
 
+  if (type === 'documentos' && docs.ativo()) {
+    // Só metadados e situação da conferência (nada de CPF/CNPJ nem arquivo). Administrador (a rota já exige).
+    // Mesmo critério do PDF e do cartão da tela: período pela data de inclusão (só quando de/ate vêm na consulta).
+    const lista = docs.consultar(req, { situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, de: req.query.de, ate: req.query.ate, tudo: true }).items;
+    const header = ['ID', 'Função', 'Cadastro', 'Documento', 'Situação', 'Versões', 'Enviado em', 'Conferido por', 'Conferido em'];
+    const body = lista.map((i) => [i.id, i.funcao_rotulo, i.registro_titulo || '', i.titulo || i.categoria_rotulo, i.situacao_rotulo, i.total_versoes, i.versao_atual ? localDate(i.versao_atual.data_envio) || i.versao_atual.data_envio : '', i.conferido_por_nome || '', i.conferido_em ? localDate(i.conferido_em) : '']);
+    audit(req, 'exportar', 'documentos', null, `Exportação CSV de documentos (${lista.length} linhas)`);
+    return sendCsv(res, req.query.de || req.query.ate ? `documentos_${stamp}.csv` : 'documentos.csv', header, body);
+  }
+
   const def = Object.prototype.hasOwnProperty.call(ENTITIES, type) ? ENTITIES[type] : null;
   if (!def) return fail(res, 400, 'invalid_type', 'Tipo de relatório inválido.');
 
   // Mesmo critério de data do resumo: campanhas sem data planejada usam a data de publicação.
   const dateExpr = def.table === 'campanhas' ? 'COALESCE(data_publicacao, data_planejada)' : def.dateField;
-  const rows = db.prepare(`SELECT * FROM ${def.table} WHERE ${dateExpr} BETWEEN ? AND ? ORDER BY ${dateExpr} DESC, id DESC`).all(de, ate);
+  // modo=lista (botão CSV das telas de lista): os MESMOS filtros da lista (busca, situação, etapa…) e, sem período, todo o histórico.
+  const lista = req.query.modo === 'lista';
+  const filtro = lista ? entities.montarFiltro(def, req.query) : null;
+  const rows = lista
+    ? db.prepare(`SELECT * FROM ${def.table} WHERE ${filtro.where.join(' AND ')} ORDER BY ${dateExpr} DESC, id DESC`).all(...filtro.params)
+    : db.prepare(`SELECT * FROM ${def.table} WHERE ${dateExpr} BETWEEN ? AND ? ORDER BY ${dateExpr} DESC, id DESC`).all(de, ate);
   const header = ['ID', ...def.fields.map((f) => f.label), 'Criado em'];
   const body = rows.map((r) => [
     r.id,
@@ -875,8 +1047,8 @@ router.get('/reports/export', requireAdmin, (req, res) => {
     }),
     r.created_at ? localDate(r.created_at) : ''
   ]);
-  audit(req, 'exportar', def.table, null, `Exportação CSV de ${def.label} (${de} a ${ate}, ${rows.length} linhas)`);
-  sendCsv(res, `${type}_${stamp}.csv`, header, body);
+  audit(req, 'exportar', def.table, null, `Exportação CSV de ${def.label} (${lista ? 'lista com filtros' : `${de} a ${ate}`}, ${rows.length} linhas)`);
+  sendCsv(res, lista ? `${type}_lista.csv` : `${type}_${stamp}.csv`, header, body);
 });
 
 /* -------------------------------- financeiro ------------------------------- */
@@ -1174,6 +1346,171 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ------------------------ Etapa 2: ficha central de pessoas ------------------------ */
+// Só existe com FM_ETAPA2=1 e as migrações aplicadas (pessoas.ativa()). Gestor consulta, cria e adiciona função;
+// juntar duplicados é só do administrador (confirmação explícita + auditoria).
+const { createPessoas, ErroPessoa } = require('./pessoas');
+const pessoas = createPessoas({ db, entities, ENTITIES, audit });
+
+// Documentos (M4): arquivo digital por função, cifrado, em armazenamento privado (src/documentos/). Só com FM_ETAPA2=1 e a migração 005.
+const { createDocumentos, ErroDoc } = require('./documentos/service');
+const { criarDoAmbiente } = require('./documentos/armazenamento');
+const docs = createDocumentos({
+  db, armazenamento: criarDoAmbiente({ dataDir: DATA_DIR }), ENTITIES, entities, audit, getSetting, setSetting, todayISO, isDateISO, localDate
+});
+function docsAtivo(req, res, next) {
+  if (!docs.ativo()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
+  next();
+}
+const { createCandidaturas, ErroCand } = require('./candidaturas');
+const candidaturas = createCandidaturas({ db, audit, docs, getSetting });
+recebidos = createRecebidos({ db, docs, candidaturas, audit });
+ia.definirRecebidos(recebidos);
+// Ficha ligada à conversa depois (pela equipe ou pela IA): os arquivos que esperavam vão para ela.
+wa.store.ouvir((evt) => {
+  if (evt && evt.tipo === 'vinculo' && evt.vinculoTipo === 'motoristas') recebidos.processar(evt.conversaId).catch((err) => console.error(`[documentos] conversa ${evt.conversaId}: ${err.message}`));
+});
+docs.definirEscopoAvaliador((funcao, registroId) => candidaturas.noEscopoAvaliador(funcao, registroId));
+// Erro de regra de documentos vira resposta com o código e a mensagem certos; o resto cai no tratador geral.
+const comDoc = (fn) => seguro(async (req, res) => {
+  try { await fn(req, res); } catch (err) {
+    if (err instanceof ErroDoc) return res.status(err.status).json({ error: { code: err.code, message: err.message } });
+    throw err;
+  }
+});
+function etapa2(req, res, next) {
+  if (!pessoas.ativa()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
+  next();
+}
+function respostaPessoa(res, fn) {
+  try { return fn(); } catch (err) {
+    if (err instanceof ErroPessoa) {
+      if (err.message === 'validacao' && err.resultado) {
+        const r = err.resultado;
+        if (r.errors) return res.status(r.status).json({ error: { code: 'validation', message: 'Verifique os campos destacados.', fields: r.errors } });
+        return fail(res, r.status, 'error', r.error);
+      }
+      return res.status(err.status).json({ error: { code: 'pessoa', message: err.message, ...(err.conflitos ? { conflitos: err.conflitos, opcoes: err.opcoes } : {}), ...(err.registro_id ? { registro_id: err.registro_id } : {}) } });
+    }
+    throw err;
+  }
+}
+router.get('/pessoas', etapa2, (req, res) => res.json(pessoas.listar({ q: req.query.q, page: req.query.page })));
+router.get('/pessoas/duplicados', etapa2, requireAdmin, (req, res) => {
+  const r = pessoas.duplicados();
+  audit(req, 'consultar', 'duplicados', null, `Possíveis duplicados de pessoas (${r.total_grupos} grupo(s))`);
+  res.json(r);
+});
+router.post('/pessoas/verificar-telefone', etapa2, (req, res) => {
+  const exceto = Number.isInteger(req.body.exceto) ? req.body.exceto : null;
+  res.json({ possiveis: pessoas.verificarTelefone(String(req.body.telefone || '').slice(0, 30), { exceto }) });
+});
+router.post('/pessoas/juntar', etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+  const b = req.body || {};
+  const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
+  res.json(pessoas.juntar({ manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
+}));
+// Ficha central + resumo dos documentos de cada função (só situação) + CPF/CNPJ mascarado (só administrador).
+function fichaCentral(req, tipo) {
+  const admin = req.user.role === 'admin';
+  const f = pessoas.fichaTitular(tipo, Number(req.params.id), { admin });
+  if (f.mesclada) return f;
+  if (docs.ativo()) f.documentos = docs.resumoDasFuncoes([...f.funcoes, ...f.funcoes_encerradas]);
+  if (admin) f.protegido = { ...pessoas.infoProtegido(tipo, Number(req.params.id)), coleta: docs.ativo() ? docs.politica().cpf_cnpj[tipo === 'pessoa' ? 'cpf' : 'cnpj'] : 'desligado' };
+  return f;
+}
+router.get('/pessoas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(fichaCentral(req, 'pessoa'))));
+router.post('/pessoas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
+  const r = pessoas.adicionarFuncao(Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
+  res.status(201).json({ item: r.item, titular: r.titular });
+}));
+
+// Ficha central da EMPRESA (parceiro do Clube de Vantagens e comércio): mesma lógica e mesmas permissões das pessoas.
+router.get('/empresas', etapa2, (req, res) => res.json(pessoas.listarTitulares('empresa', { q: req.query.q, page: req.query.page })));
+router.get('/empresas/duplicados', etapa2, requireAdmin, (req, res) => {
+  const r = pessoas.duplicadosTitulares('empresa');
+  audit(req, 'consultar', 'duplicados', null, `Possíveis duplicados de empresas (${r.total_grupos} grupo(s))`);
+  res.json(r);
+});
+router.post('/empresas/verificar-telefone', etapa2, (req, res) => {
+  const exceto = Number.isInteger(req.body.exceto) ? req.body.exceto : null;
+  res.json({ possiveis: pessoas.verificarTelefoneTitular('empresa', String(req.body.telefone || '').slice(0, 30), { exceto }) });
+});
+router.post('/empresas/juntar', etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+  const b = req.body || {};
+  const principais = b.principais && typeof b.principais === 'object' ? b.principais : {};
+  res.json(pessoas.juntarTitulares('empresa', { manterId: Number(b.manter_id), juntarId: Number(b.juntar_id), principais, confirmo: b.confirmo }, req));
+}));
+router.get('/empresas/:id', etapa2, (req, res) => respostaPessoa(res, () => res.json(fichaCentral(req, 'empresa'))));
+router.post('/empresas/:id/funcoes', etapa2, (req, res) => respostaPessoa(res, () => {
+  const r = pessoas.adicionarFuncaoTitular('empresa', Number(req.params.id), String(req.body.funcao || ''), req.body.dados, req);
+  res.status(201).json({ item: r.item, titular: r.titular });
+}));
+
+
+// CPF (pessoa) e CNPJ (empresa): só administrador; só cifrados; coleta só se a política estiver "opcional" (decisão pendente do dono).
+for (const [tipo, caminho, campo] of [['pessoa', 'pessoas', 'cpf'], ['empresa', 'empresas', 'cnpj']]) {
+  router.put(`/${caminho}/:id/${campo}`, etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+    if (!docs.ativo() || docs.politica().cpf_cnpj[campo] !== 'opcional') {
+      return fail(res, 409, 'coleta_desligada', `A coleta de ${campo.toUpperCase()} está desligada: a política de dados ainda não foi definida pelo dono.`);
+    }
+    res.json({ protegido: pessoas.definirProtegido(tipo, Number(req.params.id), req.body && req.body[campo], req.body && req.body.finalidade, req) });
+  }));
+  router.post(`/${caminho}/:id/${campo}/remover`, etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => {
+    if (!req.body || req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+    res.json({ protegido: pessoas.removerProtegido(tipo, Number(req.params.id), req) });
+  }));
+  router.post(`/${caminho}/:id/${campo}/revelar`, etapa2, requireAdmin, (req, res) => respostaPessoa(res, () => res.json(pessoas.revelarProtegido(tipo, Number(req.params.id), req))));
+}
+
+/* ----------------------- Etapa 2: consultas só de leitura ----------------------- */
+// Relatório de possíveis duplicados (mostra só nome, módulo, situação e 4 últimos dígitos do telefone) e estado das
+// migrações. Nenhuma das duas altera dados.
+router.get('/admin/duplicados', requireAdmin, (req, res) => {
+  const r = require('./duplicados').relatorioDuplicados(db);
+  audit(req, 'consultar', 'duplicados', null, `Relatório de possíveis duplicados (${r.total_grupos} grupo(s))`);
+  res.json(r);
+});
+router.get('/admin/migracoes', requireAdmin, (req, res) => {
+  const m = require('./migracoes');
+  res.json({ etapa2_ligada: process.env.FM_ETAPA2 === '1', ...m.estado(db), integridade: m.verificarIntegridade(db) });
+});
+
+// Verificação de saúde depois de publicar (só administrador): versão no ar, banco, migrações, documentos (gravação e
+// leitura reais de um arquivo de prova, cifrado e apagado em seguida), WhatsApp, IA e cópia de segurança. Nenhum segredo sai.
+router.get('/admin/saude', requireAdmin, seguro(async (req, res) => {
+  const m = require('./migracoes');
+  const pkg = require('../package.json');
+  let cache = null;
+  try { cache = (/const CACHE = '([^']+)'/.exec(fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8')) || [])[1] || null; } catch (_) { /* sem sw */ }
+  let commit = process.env.RENDER_GIT_COMMIT || null;
+  try { if (!commit) commit = fs.readFileSync(path.join(__dirname, '..', 'VERSAO'), 'utf8').trim().slice(0, 40) || null; } catch (_) { /* sem arquivo */ }
+  const banco = db.prepare('PRAGMA quick_check').get();
+  const documentos = { ativo: docs.ativo(), ...docs.estadoArmazenamento(), prova: null };
+  if (docs.ativo() && documentos.pronto) {
+    const prova = Buffer.from(`prova-${crypto.randomUUID()}`);
+    try {
+      const g = await docs.guardarRecebido(prova);
+      const lido = await docs.lerRecebido(g);
+      await docs.descartarGuardado(g.chave);
+      documentos.prova = lido.equals(prova) ? 'ok' : 'conteúdo diferente';
+    } catch (err) { documentos.prova = `falhou: ${String(err.message).slice(0, 120)}`; }
+  }
+  const est = wa.estado();
+  const cfgIa = ia.config();
+  audit(req, 'saude_ver', 'sistema', null, 'verificação de saúde');
+  res.json({
+    versao: pkg.version, commit, cache, node: process.version, etapa2: process.env.FM_ETAPA2 === '1',
+    banco: { quick_check: banco ? Object.values(banco)[0] : null },
+    migracoes: { ...m.estado(db) },
+    documentos,
+    anexos_whatsapp: recebidos && recebidos.ativo() ? { ativo: true, pendentes: recebidos.contarPendentes() } : { ativo: false },
+    whatsapp: { ativo: est.ativo, estado: est.canal.state, fila: est.fila },
+    ia: { ativa: cfgIa.ativo, modo: cfgIa.modo, responde_sozinha: cfgIa.responder, provedor: cfgIa.provedor, chave_configurada: cfgIa.chaveConfigurada },
+    cofre: { configurado: !!process.env.SNAPSHOT_URL, modo: process.env.SNAPSHOT_MODO || 'render' }
+  });
+}));
+
 router.get('/audit', requireAdmin, (req, res) => {
   const limit = Math.min(300, Math.max(1, parseInt(req.query.limit, 10) || 100));
   res.json({ items: db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(limit) });
@@ -1197,18 +1534,157 @@ router.post('/parceiros/:id/confirmar', (req, res) => {
 });
 
 // Motorista contratado (já trabalhando): marcação manual e datada, como a confirmação de parceria. Fica verde na lista.
-router.post('/motoristas/:id/contratar', (req, res) => {
-  const id = Number(req.params.id);
-  const row = db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id);
-  if (!row) return fail(res, 404, 'not_found', 'Motorista não encontrado.');
-  if (row.situacao === 'Contratado') return fail(res, 409, 'already', 'Este motorista já está como contratado.');
-  if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
-  const now = nowISO();
-  db.prepare('UPDATE motoristas SET situacao = ?, contratado_em = ?, updated_at = ? WHERE id = ?').run('Contratado', todayISO(), now, id);
-  entities.logInteraction('motoristas', id, req, `Motorista contratado (marcado por ${req.user.nome})`, row.situacao, 'Contratado', 'Confirmação');
-  audit(req, 'contratar', 'motoristas', id, 'Motorista marcado como contratado');
-  res.json({ item: db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id) });
+// Entregador (Etapa 2, M2) segue a mesma regra: marcação manual, datada, com confirmação explícita.
+function contratar(tabela, rotulo) {
+  return (req, res) => {
+    const id = Number(req.params.id);
+    const row = db.prepare(`SELECT * FROM ${tabela} WHERE id = ?`).get(id);
+    if (!row) return fail(res, 404, 'not_found', `${rotulo} não encontrado.`);
+    if (row.situacao === 'Contratado') return fail(res, 409, 'already', `Este ${rotulo.toLowerCase()} já está como contratado.`);
+    if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+    const now = nowISO();
+    db.prepare(`UPDATE ${tabela} SET situacao = ?, contratado_em = ?, updated_at = ? WHERE id = ?`).run('Contratado', todayISO(), now, id);
+    entities.logInteraction(tabela, id, req, `${rotulo} contratado (marcado por ${req.user.nome})`, row.situacao, 'Contratado', 'Confirmação');
+    audit(req, 'contratar', tabela, id, `${rotulo} marcado como contratado`);
+    res.json({ item: db.prepare(`SELECT * FROM ${tabela} WHERE id = ?`).get(id) });
+  };
+}
+router.post('/motoristas/:id/contratar', contratar('motoristas', 'Motorista'));
+if (hasOwn(ENTITIES, 'entregadores')) router.post('/entregadores/:id/contratar', contratar('entregadores', 'Entregador'));
+
+// Comércio parceiro (Etapa 2, M3): marcar como "Ativo na plataforma" (já pedindo entregas) é manual, datado e com confirmação.
+// Não mexe em NENHUM outro cadastro da mesma empresa (o Parceiro do Clube, por exemplo, tem situação própria).
+if (hasOwn(ENTITIES, 'comercios')) {
+  router.post('/comercios/:id/ativar', (req, res) => {
+    const id = Number(req.params.id);
+    const row = db.prepare('SELECT * FROM comercios WHERE id = ?').get(id);
+    if (!row) return fail(res, 404, 'not_found', 'Comércio não encontrado.');
+    if (row.situacao === 'Ativo na plataforma') return fail(res, 409, 'already', 'Este comércio já está ativo na plataforma.');
+    if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação de forma explícita.');
+    db.prepare('UPDATE comercios SET situacao = ?, ativado_em = ?, updated_at = ? WHERE id = ?').run('Ativo na plataforma', todayISO(), nowISO(), id);
+    entities.logInteraction('comercios', id, req, `Comércio ativado na plataforma (marcado por ${req.user.nome})`, row.situacao, 'Ativo na plataforma', 'Confirmação');
+    audit(req, 'ativar', 'comercios', id, 'Comércio marcado como ativo na plataforma');
+    res.json({ item: db.prepare('SELECT * FROM comercios WHERE id = ?').get(id) });
+  });
+}
+
+
+
+/* ------------------------- Avaliação de candidatos (Etapa 2) ------------------------- */
+// Equipe (admin e gestor) acompanha e muda etapas; avaliador consulta e registra pareceres; DECISÃO FINAL só o
+// administrador (o proprietário). Tudo decidido em src/candidaturas.js (servidor) e auditado.
+function comCand(fn) {
+  return async (req, res) => {
+    try { return res.json(await fn(req)); } catch (err) {
+      if (err instanceof ErroCand || err instanceof ErroDoc) return fail(res, err.status, err.code, err.message);
+      console.error(`[candidaturas] ${err.message}`);
+      return fail(res, 500, 'erro', 'Erro ao processar a avaliação.');
+    }
+  };
+}
+const candidaturasAtivas = (req, res, next) => (candidaturas.ativo() ? next() : fail(res, 404, 'not_found', 'Recurso não encontrado.'));
+router.get('/candidaturas', candidaturasAtivas, comCand((req) => candidaturas.listar(req, {
+  etapa: req.query.etapa ? String(req.query.etapa) : '', funcao: req.query.funcao ? String(req.query.funcao) : '', q: req.query.q, pendentes: req.query.pendentes, page: req.query.page
+})));
+router.post('/candidaturas', candidaturasAtivas, comCand((req) => {
+  const r = candidaturas.abrir(req, String(req.body.funcao || ''), req.body.registro_id);
+  return { criada: r.criada, ...candidaturas.detalhe(req, r.candidatura.id) };
+}));
+router.get('/candidaturas/:id', candidaturasAtivas, comCand((req) => candidaturas.detalhe(req, req.params.id)));
+router.post('/candidaturas/:id/etapa', candidaturasAtivas, comCand((req) => candidaturas.mudarEtapa(req, req.params.id, { etapa: String(req.body.etapa || ''), observacao: req.body.observacao })));
+router.post('/candidaturas/:id/decisao', candidaturasAtivas, requireAdmin, comCand((req) => candidaturas.decidir(req, req.params.id, { decisao: req.body.decisao, motivo: req.body.motivo, confirmo: req.body.confirmo })));
+router.post('/candidaturas/:id/reabrir', candidaturasAtivas, requireAdmin, comCand((req) => candidaturas.reabrir(req, req.params.id, { motivo: req.body.motivo, confirmo: req.body.confirmo, etapa: req.body.etapa || undefined })));
+router.post('/candidaturas/:id/pareceres', candidaturasAtivas, comCand((req) => candidaturas.registrarParecer(req, req.params.id, req.body || {})));
+
+/* ------------------------------- Documentos (M4) ------------------------------- */
+// Todas as rotas exigem login e FM_ETAPA2=1. A permissão (admin/gestor, categoria liberada) é decidida no servidor em service.js.
+// Nenhum arquivo tem URL pública: o conteúdo só sai por GET /documentos/:id/arquivo, que confere permissão e registra o acesso.
+const { maxBytes } = require('./documentos/validacao');
+const lerArquivo = (req, res, next) => express.raw({ type: () => true, limit: maxBytes() + 1048576 })(req, res, (err) => {
+  if (err) return fail(res, err.status === 413 ? 413 : 400, 'arquivo_invalido', err.status === 413 ? 'Arquivo maior que o limite permitido.' : 'Não foi possível ler o arquivo enviado.');
+  next();
 });
+// Metadados do envio vão em cabeçalhos (não na URL): X-Documento = JSON codificado; X-Nome-Arquivo = nome codificado.
+function metaDoEnvio(req) {
+  const dec = (v) => { try { return decodeURIComponent(String(v || '')); } catch (e) { return ''; } };
+  let meta = {};
+  const bruto = dec(req.get('x-documento'));
+  if (bruto.length > 3000) throw new ErroDoc(422, 'invalido', 'Dados do envio grandes demais.');
+  try { meta = bruto ? JSON.parse(bruto) : {}; } catch (e) { throw new ErroDoc(422, 'invalido', 'Dados do envio inválidos.'); }
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) meta = {};
+  return { ...meta, nome: dec(req.get('x-nome-arquivo')).slice(0, 200), conteudo: Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0) };
+}
+
+router.get('/documentos/meta', docsAtivo, (req, res) => res.json({
+  funcoes: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, { rotulo: require('./titulares').FUNCOES[f].rotulo, categorias: docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo })) }])),
+  situacoes: docs.SITUACOES, geral: docs.GERAL, armazenamento: docs.estadoArmazenamento(),
+  pode: { politica: req.user.role === 'admin', anexar: policy.docsAnexar(req.user.role, docs.politica()) }
+}));
+/* ------------------ arquivos recebidos pelo WhatsApp (fotos/PDFs → arquivo digital da ficha) ------------------ */
+// Lista e ações: quem pode anexar documentos (admin; gestor se a política deixar). Ver o arquivo da área de espera (ainda
+// sem classificação): só o administrador, auditado. Nada é apagado: "não é documento" e "ciente" só registram a decisão.
+function podeAnexarDocs(req, res, next) {
+  if (!policy.docsAnexar(req.user.role, docs.politica())) return fail(res, 403, 'forbidden', 'Seu perfil não pode cuidar de documentos.');
+  next();
+}
+const comAnexo = (fn) => comDoc(async (req, res) => {
+  try { await fn(req, res); } catch (err) {
+    if (err && err.status && err.codigo) return res.status(err.status).json({ error: { code: err.codigo, message: err.message } });
+    throw err;
+  }
+});
+router.get('/wa/anexos', docsAtivo, podeAnexarDocs, (req, res) => {
+  res.json({ itens: recebidos.listar({ pendentes: req.query.todos !== '1' }), pendentes: recebidos.contarPendentes() });
+});
+router.get('/wa/anexos/:id/arquivo', docsAtivo, requireAdmin, comAnexo(async (req, res) => {
+  const a = await recebidos.arquivoDaEspera(req, req.params.id);
+  res.set('Content-Type', a.mime || 'application/octet-stream');
+  res.set('Content-Disposition', `inline; filename="arquivo-whatsapp.${String(a.nome || '').split('.').pop().replace(/[^a-z0-9]/gi, '') || 'bin'}"`);
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; sandbox");
+  res.send(a.conteudo);
+}));
+router.post('/wa/anexos/:id/classificar', docsAtivo, podeAnexarDocs, comAnexo(async (req, res) => {
+  const b = req.body || {};
+  const r = await recebidos.classificar(req, req.params.id, { categoria: String(b.categoria || ''), registro_id: b.registro_id, titulo: b.titulo });
+  res.json({ anexo: recebidos.publico(r) });
+}));
+router.post('/wa/anexos/:id/resolver', docsAtivo, podeAnexarDocs, comAnexo(async (req, res) => {
+  res.json({ anexo: recebidos.publico(recebidos.resolver(req, req.params.id, { acao: String((req.body || {}).acao || '') })) });
+}));
+
+router.get('/documentos/politica', docsAtivo, requireAdmin, (req, res) => {
+  const pol = docs.politica();
+  res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol), armazenamento: docs.estadoArmazenamento(), categorias: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo }))])), fixos: docs.OBRIGATORIOS_FIXOS });
+});
+router.put('/documentos/politica', docsAtivo, requireAdmin, comDoc((req, res) => {
+  const pol = docs.salvarPolitica(req, req.body);
+  res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol) });
+}));
+router.get('/documentos/lista', docsAtivo, comDoc((req, res) => res.json(docs.consultar(req, {
+  situacao: String(req.query.situacao || ''), funcao: String(req.query.funcao || ''), categoria: String(req.query.categoria || ''), q: req.query.q, page: req.query.page
+}))));
+router.get('/documentos', docsAtivo, comDoc((req, res) => res.json(docs.listar(req, String(req.query.funcao || ''), req.query.registro_id))));
+// Documento novo ou versão nova: a avaliação do candidato (se houver) só se move entre as etapas iniciais — nunca decide.
+const avisarAvaliacao = (r) => { try { if (r && r.documento) candidaturas.atualizarPelosDocumentos(r.documento.funcao, r.documento.registro_id, null); } catch (e) { console.error(`[candidaturas] ${e.message}`); } return r; };
+router.post('/documentos', docsAtivo, lerArquivo, comDoc(async (req, res) => {
+  res.status(201).json(avisarAvaliacao(await docs.anexar(req, metaDoEnvio(req))));
+}));
+router.get('/documentos/:id', docsAtivo, comDoc((req, res) => res.json(docs.historico(req, req.params.id))));
+router.post('/documentos/:id/versoes', docsAtivo, lerArquivo, comDoc(async (req, res) => {
+  res.status(201).json(avisarAvaliacao(await docs.anexar(req, { ...metaDoEnvio(req), documento_id: req.params.id })));
+}));
+router.get('/documentos/:id/arquivo', docsAtivo, comDoc(async (req, res) => {
+  const r = await docs.obterArquivo(req, req.params.id, { versao: req.query.versao, acao: req.query.modo === 'ver' ? 'ver' : 'baixar' });
+  res.setHeader('Content-Type', r.mime);
+  res.setHeader('Content-Disposition', `${req.query.modo === 'ver' ? 'inline' : 'attachment'}; filename="${r.nomeDownload}"`);
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+  res.setHeader('Content-Length', String(r.conteudo.length));
+  res.end(r.conteudo);
+}));
+router.post('/documentos/:id/conferir', docsAtivo, comDoc((req, res) => res.json({ documento: docs.conferir(req, req.params.id, req.body || {}) })));
+router.patch('/documentos/:id', docsAtivo, comDoc((req, res) => res.json({ documento: docs.observar(req, req.params.id, req.body || {}) })));
+router.post('/documentos/:id/excluir-definitivo', docsAtivo, comDoc(async (req, res) => res.json(await docs.excluirDefinitivo(req, req.params.id, req.body || {}))));
 
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".
@@ -1228,9 +1704,28 @@ router.get('/:entity', (req, res) => {
   res.json(entities.listEntity(def, req.query));
 });
 
+// 13/11 (pedido do dono): com o arquivo digital ligado, a situação de cada documento do motorista/entregador vem SÓ do
+// arquivo guardado (anexar, conferir e rejeitar no painel de documentos). Ninguém marca "recebido" ou "conferido" à mão.
+const CAMPOS_DOC_FICHA = new Set(['doc_cnh', 'doc_crlv', 'doc_endereco', 'doc_antecedentes', 'doc_foto_frente', 'doc_foto_lado', 'doc_foto_traseira', 'documentos']);
+function docsDaFichaBloqueados(def, body, atual) {
+  if (!docs.ativo() || !['motoristas', 'entregadores'].includes(def.table) || !body || typeof body !== 'object') return false;
+  return Object.keys(body).some((k) => CAMPOS_DOC_FICHA.has(k) && String(body[k] == null ? '' : body[k]) !== String((atual && atual[k]) == null ? '' : atual[k]));
+}
+const MSG_DOCS_FICHA = 'A situação dos documentos é atualizada pelo arquivo digital: anexe, confira ou rejeite o arquivo no painel "Documentos" da ficha.';
+
 router.post('/:entity', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
+  if (docsDaFichaBloqueados(def, req.body, {})) return fail(res, 422, 'documentos_pelo_arquivo', MSG_DOCS_FICHA);
+  if (pessoas.ativa() && Object.prototype.hasOwnProperty.call(pessoas.FUNCAO_DA_TABELA, def.table)) {
+    // O usuário pode escolher o titular já existente (pessoa_id para pessoa, empresa_id para empresa); sem escolha = novo.
+    const ehEmpresa = pessoas.FUNCAO_DA_TABELA[def.table] === 'parceiro_clube' || pessoas.FUNCAO_DA_TABELA[def.table] === 'comercio';
+    const pid = Number(ehEmpresa ? req.body.empresa_id : req.body.pessoa_id);
+    return respostaPessoa(res, () => {
+      const r = pessoas.criarRegistro(def.table, req.body, req, { titularId: Number.isInteger(pid) && pid > 0 ? pid : null });
+      res.status(201).json({ item: r.item, titular: r.titular });
+    });
+  }
   const result = entities.createEntity(def, req.body, req);
   if (result.errors) return res.status(result.status).json({ error: { code: 'validation', message: 'Verifique os campos destacados.', fields: result.errors } });
   if (result.error) return fail(res, result.status, 'error', result.error);
@@ -1239,16 +1734,17 @@ router.post('/:entity', (req, res) => {
 
 // Ficha: conversa do WhatsApp vinculada, documentos recebidos (motorista) e o último resumo da IA.
 function fichaDoCadastro(tipo, id) {
-  if (!['motoristas', 'passageiros', 'parceiros'].includes(tipo)) return null;
+  if (!['motoristas', 'passageiros', 'parceiros', 'entregadores', 'comercios'].includes(tipo)) return null;
   const conv = db.prepare(`SELECT c.id, c.atendimento, c.atend_motivo, c.ultima_em FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id
     WHERE k.vinculo_tipo = ? AND k.vinculo_id = ? ORDER BY c.ultima_em DESC LIMIT 1`).get(tipo, id);
-  const ficha = { conversa: conv || null, documentos: null, resumo_ia: null };
+  const ficha = { conversa: conv || null, documentos: null, resumo_ia: null,
+    avaliacao: tipo === 'motoristas' ? candidaturas.daFicha('motorista', id) : (tipo === 'entregadores' ? candidaturas.daFicha('entregador', id) : null) };
   if (conv) {
     const a = db.prepare('SELECT resultado, criado_em FROM ia_analises WHERE conversa_id = ? ORDER BY id DESC LIMIT 1').get(conv.id);
     if (a) { try { ficha.resumo_ia = { texto: JSON.parse(a.resultado).resumo || '', em: a.criado_em }; } catch (err) { /* análise antiga */ } }
   }
-  if (tipo === 'motoristas') {
-    const rec = conv ? documentosRecebidos(wa.store.listarMensagens(conv.id, { limite: 500 })) : { cnh: null, crlv: null, endereco: null };
+  if (tipo === 'motoristas' || tipo === 'entregadores') {
+    const rec = conv ? documentosRecebidos(wa.store.listarMensagens(conv.id, { limite: 500 })) : documentosRecebidos([]);
     ficha.documentos = rec;
   }
   return ficha;
@@ -1264,12 +1760,18 @@ router.get('/:entity/:id', (req, res) => {
   if (def.interactions) {
     interacoes = db.prepare('SELECT * FROM interacoes WHERE entity = ? AND entity_id = ? ORDER BY id DESC').all(def.table, id);
   }
-  res.json({ item, interacoes, ficha: fichaDoCadastro(req.params.entity, id) });
+  let titular = null;
+  if (pessoas.ativa()) {
+    const v = db.prepare('SELECT titular_tipo AS tipo, titular_id AS id FROM vinculos WHERE registro_tabela = ? AND registro_id = ? AND ativo = 1').get(def.table, id);
+    titular = v || null;
+  }
+  res.json({ item, interacoes, ficha: fichaDoCadastro(req.params.entity, id), titular });
 });
 
 router.patch('/:entity/:id', (req, res) => {
   const def = entityDef(req, res);
   if (!def) return;
+  if (docsDaFichaBloqueados(def, req.body, db.prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(Number(req.params.id)))) return fail(res, 422, 'documentos_pelo_arquivo', MSG_DOCS_FICHA);
   const result = entities.updateEntity(def, Number(req.params.id), req.body, req);
   if (result.errors) return res.status(result.status).json({ error: { code: 'validation', message: 'Verifique os campos destacados.', fields: result.errors } });
   if (result.error) return fail(res, result.status, 'error', result.error);
@@ -1284,6 +1786,7 @@ router.delete('/:entity/:id', (req, res) => {
   }
   const result = entities.deleteEntity(def, Number(req.params.id), req);
   if (result.error) return fail(res, result.status, 'error', result.error);
+  if (pessoas.ativa()) pessoas.aoExcluirRegistro(def.table, Number(req.params.id), req);
   res.json({ ok: true });
 });
 
@@ -1328,4 +1831,4 @@ router.post('/:entity/:id/interacoes', (req, res) => {
   res.status(201).json({ item: db.prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(id) });
 });
 
-module.exports = { buildRouter: () => router, computeCenario, wa, ia };
+module.exports = { buildRouter: () => router, computeCenario, wa, ia, docs, recebidos: () => recebidos };

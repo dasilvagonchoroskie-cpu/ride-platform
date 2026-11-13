@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { recebidosFalso, tipoDoTexto } = require('./apoio/recebidos-falso');
 
 function montar() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-auto-'));
@@ -22,8 +23,9 @@ function montar() {
   const provider = { completar: async () => ({ texto: JSON.stringify(resposta), modelo: 'falso', tokensEntrada: 1, tokensSaida: 1 }) };
   const cofre = { ler: () => 'chave-falsa-0000000000000', final4: () => '0000', origem: () => 'arquivo', salvar() {}, apagar() {} };
   const ia = createIaService({ db, waStore, entities, ENTITIES, audit: () => {}, getSetting, setSetting, cofre, provider, todayISO, nowISO, log: { log() {}, error() {} } });
+  ia.definirRecebidos(recebidosFalso(db)); // SIMULAÇÃO do armazenamento (o real: test/wa-anexos.test.js)
   setSetting('ia_ativo', '1'); setSetting('ia_modo', 'automatico'); setSetting('ia_criar_cadastro', '1'); setSetting('ia_responder', '1');
-  const receber = (texto, id, extra = {}) => waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Evandro', externoId: id, texto, tipo: 'text', quando: new Date().toISOString(), deMim: false, ...extra });
+  const receber = (texto, id, extra = {}) => waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Evandro', externoId: id, texto, tipo: tipoDoTexto(texto), quando: new Date().toISOString(), deMim: false, ...extra });
   return { db, ia, waStore, receber, setResposta: (r) => { resposta = r; } };
 }
 
@@ -46,10 +48,10 @@ test('sem cadastro: IA recebe os campos do motorista e o cadastro nasce com veí
   assert.ok(enviada, 'a IA respondeu sozinha');
   assert.equal(enviada.status, 'pendente');
   assert.match(enviada.texto, /Recebemos o seu documento/, 'confirmação padrão (modelo), não texto livre da IA');
-  assert.match(enviada.texto, /comprovante de endereço/, 'pede o que falta');
+  assert.match(enviada.texto, /comprovante de residência/, 'pede o que falta (dos 7 itens obrigatórios)');
 });
 
-test('motorista: CNH, CRLV e comprovante de endereço → ficha completa, "Cadastro em análise" e passa para a equipe', async () => {
+test('motorista: os 7 itens (CNH, CRLV, comprovante, antecedentes e 3 fotos do veículo) → ficha completa, "Cadastro em análise" e passa para a equipe', async () => {
   const { db, ia, receber, setResposta } = montar();
   setResposta({ resumo: 'motorista', assunto: 'cadastro_motorista', urgencia: 'media', sentimento: 'positivo', perfil: 'motorista',
     campos: { nome: 'Evandro da Silva', cidade: 'Goiatuba' }, resposta_sugerida: '', proxima_acao: '', tarefa: null, atendimento: { opcao: 'cadastro', transferir: false } });
@@ -59,13 +61,20 @@ test('motorista: CNH, CRLV e comprovante de endereço → ficha completa, "Cadas
   await ia.executarAutomatico(r.conversaId);
   let m = db.prepare('SELECT * FROM motoristas').get();
   assert.equal(m.documentos, 'Incompletos');
-  assert.match(db.prepare("SELECT texto FROM wa_mensagens WHERE origem = 'ia' ORDER BY id DESC").get().texto, /envie também um comprovante de endereço/);
+  assert.match(db.prepare("SELECT texto FROM wa_mensagens WHERE origem = 'ia' ORDER BY id DESC").get().texto, /envie também um comprovante de residência/);
   r = receber('[imagem] 📎 Tipo: Comprovante de endereço\nNome do titular: Evandro\nEndereço: Rua das Flores, 120, Centro\nCidade/UF: Goiatuba - GO', 'D3');
   await ia.executarAutomatico(r.conversaId);
+  m = db.prepare('SELECT * FROM motoristas').get();
+  assert.equal(m.documentos, 'Incompletos', '3 de 7 ainda não é completo (12/11 noite)');
+  assert.notEqual(m.situacao, 'Cadastro em análise');
+  assert.equal(db.prepare('SELECT atendimento FROM wa_conversas').get().atendimento, 'ia');
+  const resto = ['Tipo: Certidão de antecedentes criminais\nNome: Evandro', 'Tipo: Foto do veículo (frente)\nCor: Prata', 'Tipo: Foto do veículo (lado)', 'Tipo: Foto do veículo (traseira)\nPlaca visível: ABC1D23'];
+  for (const [i, t] of resto.entries()) { r = receber(`[imagem] 📎 ${t}`, `D${4 + i}`); await ia.executarAutomatico(r.conversaId); }
   m = db.prepare('SELECT * FROM motoristas').get();
   assert.equal(m.doc_cnh, 'Recebido — conferir');
   assert.equal(m.doc_crlv, 'Recebido — conferir');
   assert.equal(m.doc_endereco, 'Recebido — conferir');
+  for (const c of ['doc_antecedentes', 'doc_foto_frente', 'doc_foto_lado', 'doc_foto_traseira']) assert.equal(m[c], 'Recebido — conferir', c);
   assert.equal(m.documentos, 'Recebidos — conferir');
   assert.equal(m.endereco, 'Rua das Flores, 120, Centro', 'endereço tirado do comprovante');
   assert.equal(m.situacao, 'Cadastro em análise');
@@ -148,13 +157,21 @@ test('A1: resposta com anotação interna não é enviada (motivo no painel)', a
   receber('o que anotaram sobre mim?', 'F2');
   setResposta({ resumo: 'y', perfil: 'motorista', campos: {}, resposta_sugerida: 'Anotamos: suspeita de fraude não aprovar ainda.' });
   await ia.executarAutomatico(r1.conversaId, { forcar: true });
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia'").get().n, 1, 'só a primeira resposta saiu');
+  const saidas = db.prepare("SELECT texto FROM wa_mensagens WHERE origem = 'ia' ORDER BY id").all().map((m) => m.texto);
+  assert.ok(!saidas.some((t) => /fraude/.test(t)), 'a anotação interna nunca sai');
   assert.match(ia.ultimaAnalise(r1.conversaId).aplicado_resumo, /repetia anotação interna/);
+  // Desde 12/11: a IA não fica parada — a conversa vai para a equipe com o modelo fixo de transferência.
+  const c = db.prepare('SELECT atendimento, atend_motivo, ia_estado, ia_erro FROM wa_conversas WHERE id = ?').get(r1.conversaId);
+  assert.equal(c.atendimento, 'aguardando');
+  assert.match(c.atend_motivo, /A IA não conseguiu responder/);
+  assert.equal(c.ia_estado, 'transferida_falha');
+  assert.equal(c.ia_erro, 'filtro_dado_interno');
+  assert.equal(saidas.length, 2, 'primeira resposta + aviso fixo de transferência');
 });
 
 test('motorista já contratado que manda documento: o documento é marcado, mas a contratação não muda', async () => {
   const { db, ia, receber, setResposta } = montar();
-  const r1 = receber('oi', 'K1');
+  const r1 = receber('quero ser motorista', 'K1'); // "oi" sozinho não identifica perfil (origem/saudação ≠ intenção)
   setResposta({ resumo: 'x', perfil: 'motorista', campos: { nome: 'Evandro', cidade: 'Goiatuba' }, resposta_sugerida: 'Olá!' });
   await ia.executarAutomatico(r1.conversaId);
   const id = db.prepare('SELECT id FROM motoristas').get().id;

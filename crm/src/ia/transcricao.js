@@ -22,8 +22,12 @@ const INSTRUCAO_DOCUMENTO = 'Você extrai dados de arquivos enviados por WhatsAp
   + 'Se for CRLV / documento do veículo: Placa, Marca/Modelo, Ano fabricação, Ano modelo, Cor, Renavam, Proprietário, Cidade/UF.\n'
   + 'Se for comprovante de endereço (conta de luz, água, telefone, internet ou gás, fatura, declaração de residência): '
   + '"Tipo: Comprovante de endereço", Nome do titular, Endereço (rua, número e bairro, numa linha só), Cidade/UF, CEP, Data de emissão ou vencimento.\n'
+  + 'Se for certidão de antecedentes criminais: "Tipo: Certidão de antecedentes criminais", Nome, Órgão emissor, Data de emissão. '
+  + 'NÃO transcreva o conteúdo nem o resultado da certidão.\n'
+  + 'Se for FOTO DE UM VEÍCULO (carro ou moto, não um documento): "Tipo: Foto do veículo (frente)", "Tipo: Foto do veículo (lado)" ou '
+  + '"Tipo: Foto do veículo (traseira)" conforme o ângulo, depois Cor e Placa visível (só se der para ler).\n'
   + 'Se for RG, CPF, boleto, nota, contrato ou outro: os campos principais (nome, números, valores, datas, endereço).\n'
-  + 'Se não for documento: "Descrição: <uma frase>" e o texto visível, se houver.\n'
+  + 'Se não for documento nem foto de veículo: "Descrição: <uma frase>" e o texto visível, se houver.\n'
   + 'Copie os valores exatamente como estão. Se não der para ler um campo, não escreva esse campo. Não invente.';
 
 function limparTranscricao(t) {
@@ -148,4 +152,17 @@ function criarTranscritor({ cofre, obterModeloGemini, fetchImpl = globalThis.fet
   return { transcrever, lerMidia, disponiveis };
 }
 
-module.exports = { criarTranscritor, transcreverGemini, transcreverGroq, limparTranscricao, MAX_BYTES, MAX_SEGUNDOS };
+// Lê com novas tentativas curtas quando a falha é passageira (Gemini fora do ar, tempo esgotado, rede, cota, resposta vazia).
+// Falha definitiva (formato, tamanho, sem chave) não repete. Esperas em ms, ex.: [3000, 8000] = até 3 tentativas.
+const PASSAGEIROS_LEITURA = new Set(['indisponivel', 'timeout', 'rede', 'limite_provedor', 'resposta_vazia', 'resposta_invalida']);
+async function lerComTentativas(ler, esperas = [], aoRepetir = () => {}, dormir = (ms) => new Promise((ok) => setTimeout(ok, ms))) {
+  for (let i = 0; ; i += 1) {
+    try { return await ler(); } catch (err) {
+      if (!PASSAGEIROS_LEITURA.has(err && err.codigo) || i >= esperas.length) throw err;
+      aoRepetir(err, esperas[i], i + 1);
+      await dormir(esperas[i]);
+    }
+  }
+}
+
+module.exports = { lerComTentativas, PASSAGEIROS_LEITURA, criarTranscritor, transcreverGemini, transcreverGroq, limparTranscricao, MAX_BYTES, MAX_SEGUNDOS };

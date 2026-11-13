@@ -80,6 +80,7 @@ test('especificarCampos lista só campos permitidos e as opções dos selects', 
   const cat = esp.find((e) => e.chave === 'categoria');
   assert.ok(Array.isArray(cat.opcoes) && cat.opcoes.length > 0);
   for (const tipo of Object.keys(P.CAMPOS_IA)) {
+    if (!ENTITIES[tipo]) continue; // entregadores e comércios só existem com a Etapa 2 ligada
     for (const k of P.CAMPOS_IA[tipo]) assert.ok(ENTITIES[tipo].fields.some((f) => f.key === k), `${tipo}.${k} existe em defs`);
   }
 });

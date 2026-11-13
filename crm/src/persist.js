@@ -19,8 +19,9 @@ const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 const INTERVALO_MS = Number(process.env.SNAPSHOT_INTERVALO_MS) || 30000;
-// Nunca vão para o retrato: biblioteca do WhatsApp (instalada no build), backups locais e o banco em si (vai serializado).
-const IGNORAR = /^(wa-lib|backups)(\/|$)|^crm\.db(-wal|-shm|-journal)?$|\.tmp$/;
+// Nunca vão para o retrato: biblioteca do WhatsApp (instalada no build), backups locais, os arquivos dos documentos (M4: têm
+// armazenamento próprio, cifrado) e o banco em si (vai serializado).
+const IGNORAR = /^(wa-lib|backups|documentos)(\/|$)|^crm\.db(-wal|-shm|-journal)?$|\.tmp$/;
 
 function dirs() {
   const dataDir = process.env.FM_DATA_DIR ? path.resolve(process.env.FM_DATA_DIR) : path.join(ROOT, 'data');
@@ -103,6 +104,7 @@ function criarCliente({ fetchImpl = globalThis.fetch } = {}) {
 }
 
 const DONO = `${process.env.RENDER_INSTANCE_ID || 'local'}-${crypto.randomBytes(6).toString('hex')}`;
+const modoCopia = () => String(process.env.SNAPSHOT_MODO || '').trim().toLowerCase() === 'copia';
 let cliente = null;
 let ativo = false;
 let perdeuDono = false;
@@ -120,6 +122,13 @@ async function restaurar({ log = console, fetchImpl } = {}) {
     throw new Error(`Não consegui falar com o cofre de dados (${err.message}). O CRM não vai subir vazio para não apagar os dados.`);
   }
   ativo = true;
+  // Modo cópia (servidor com disco PERSISTENTE, ex.: VPS da Hostinger): se já existe banco local, ele é a fonte da verdade e o
+  // cofre só recebe cópias cifradas (fora do servidor). Sem banco local (dia da migração), restaura do cofre uma vez.
+  // Assumir o cofre faz o processo antigo (Render) parar de gravar; religar o Render traz de volta a última cópia (rollback).
+  if (modoCopia() && fs.existsSync(dbPath)) {
+    log.log('[cofre] modo cópia: usando os dados do disco local; o cofre recebe cópias cifradas.');
+    return { usado: true, novo: false, local: true };
+  }
   if (!r || !r.dados) { log.log('[cofre] nenhum retrato salvo ainda: instalação nova.'); return { usado: true, novo: true }; }
   // Troca de chave: se o retrato ainda estiver cifrado com a chave antiga (SNAPSHOT_KEY_ANTERIOR), abre com ela;
   // o próximo retrato já sai com a chave nova. Depois da troca, a variável antiga deve ser apagada.

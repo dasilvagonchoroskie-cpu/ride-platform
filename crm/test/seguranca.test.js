@@ -182,7 +182,7 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
 
   const lidos = await g('GET', '/ia/modelos');
   assert.equal(lidos.s, 200);
-  assert.equal(lidos.j.modelos.length, 8);
+  assert.equal(lidos.j.modelos.length, 11, '8 modelos + confirmação rápida + áudio não ouvido (12/11) + arquivo não aceito (13/11)');
   assert.equal((await g('PUT', '/ia/modelos', { modelos: [{ id: 'saudacao', texto: 'oi', ativo: true }] })).s, 403, 'gestor não edita');
   const salvo = await adm('PUT', '/ia/modelos', { modelos: [{ id: 'saudacao', texto: 'Olá, Fortaleza Move!', ativo: true }], site_url: 'https://fortalezamove.com.br', informacoes: { clube: 'Desconto em lavagem.' } });
   assert.equal(salvo.s, 200);
@@ -204,7 +204,7 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
   const id1 = m1.j.item.id;
   const ficha = await g('GET', `/motoristas/${id1}`);
   assert.equal(ficha.s, 200);
-  assert.deepEqual(Object.keys(ficha.j.ficha.documentos).sort(), ['cnh', 'crlv', 'endereco']);
+  assert.deepEqual(Object.keys(ficha.j.ficha.documentos).sort(), ['antecedentes', 'cnh', 'crlv', 'endereco', 'foto_frente', 'foto_lado', 'foto_traseira'], 'os 7 itens do candidato');
   assert.equal(ficha.j.ficha.conversa, null);
   assert.equal((await g('POST', '/motoristas/99999/contratar', { confirmo: true })).s, 404);
   assert.equal((await g('POST', `/motoristas/${id1}/contratar`, {})).s, 422, 'exige confirmação explícita');

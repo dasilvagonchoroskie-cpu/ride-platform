@@ -41,21 +41,31 @@ function extrairDadosDocumentos(mensagens) {
   return r;
 }
 
-// Que documento é este texto lido (📎)? CNH, CRLV (documento do veículo) ou comprovante de endereço.
+// Que documento é este texto lido (📎)? Os 7 itens do candidato a motorista: CNH, CRLV, comprovante de residência,
+// certidão de antecedentes criminais e as três fotos do veículo (frente, lado, traseira — cada uma é um item).
+const TIPOS_DOCUMENTO = ['cnh', 'crlv', 'endereco', 'antecedentes', 'foto_frente', 'foto_lado', 'foto_traseira'];
 function tipoDocumento(texto) {
   const t = String(texto || '');
   if (!/📎/u.test(t) && !/^\s*tipo\s*:/im.test(t)) return null;
   const tipo = (t.match(/(?:^|\n|📎)\s*tipo\s*:\s*([^\n]+)/i) || [])[1] || '';
   const alvo = `${tipo}\n${t}`;
-  if (/comprovante de (endere[çc]o|resid[êe]ncia)|conta de (luz|energia|[áa]gua|telefone|internet|g[áa]s)|fatura de (energia|[áa]gua|internet|telefone)/i.test(tipo || alvo)) return 'endereco';
-  if (/\bcrlv\b|certificado de registro|licenciamento|documento do ve[ií]culo|\brenavam\b/i.test(tipo || alvo)) return 'crlv';
-  if (/\bcnh\b|carteira (nacional )?de habilita[çc][ãa]o|habilita[çc][ãa]o/i.test(tipo || alvo)) return 'cnh';
+  const base = tipo || alvo;
+  if (/antecedentes? criminais|certid[ãa]o (judicial |de distribui[çc][ãa]o )?criminal|certid[ãa]o negativa criminal/i.test(base)) return 'antecedentes';
+  if (/\bfoto\b[^\n]{0,30}\bve[ií]culo|\bve[ií]culo\b[^\n]{0,20}\b(foto|imagem)\b|imagem do ve[ií]culo/i.test(tipo)) {
+    if (/frente|frontal|dianteir/i.test(tipo)) return 'foto_frente';
+    if (/lado|lateral|perfil/i.test(tipo)) return 'foto_lado';
+    if (/traseir|\btr[aá]s\b|fundo/i.test(tipo)) return 'foto_traseira';
+    return null; // foto do veículo sem lado claro: a equipe confere (não conta como nenhum dos três)
+  }
+  if (/comprovante de (endere[çc]o|resid[êe]ncia)|conta de (luz|energia|[áa]gua|telefone|internet|g[áa]s)|fatura de (energia|[áa]gua|internet|telefone)/i.test(base)) return 'endereco';
+  if (/\bcrlv\b|certificado de registro|licenciamento|documento do ve[ií]culo|\brenavam\b/i.test(base)) return 'crlv';
+  if (/\bcnh\b|carteira (nacional )?de habilita[çc][ãa]o|habilita[çc][ãa]o/i.test(base)) return 'cnh';
   return null;
 }
 
 // Documentos do motorista que já chegaram pela conversa (mensagens do contato com 📎).
 function documentosRecebidos(mensagens) {
-  const r = { cnh: null, crlv: null, endereco: null };
+  const r = Object.fromEntries(TIPOS_DOCUMENTO.map((k) => [k, null]));
   for (const m of mensagens || []) {
     if (m.direcao !== 'in') continue;
     const tipo = tipoDocumento(m.texto);
@@ -76,4 +86,4 @@ function mascararNumeros(texto) {
     });
 }
 
-module.exports = { mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };
+module.exports = { TIPOS_DOCUMENTO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };

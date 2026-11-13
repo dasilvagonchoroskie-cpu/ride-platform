@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { recebidosFalso, tipoDoTexto } = require('./apoio/recebidos-falso');
 
 function montar() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-central-'));
@@ -29,11 +30,12 @@ function montar() {
   const cofre = { ler: () => 'chave-falsa-0000000000000', final4: () => '0000', origem: () => 'arquivo', salvar() {}, apagar() {} };
   const auditados = [];
   const ia = createIaService({ db, waStore, entities, ENTITIES, audit: (req, acao, t, id, det) => auditados.push({ acao, det }), getSetting, setSetting, cofre, provider, todayISO, nowISO, log: { log() {}, error() {} } });
+  ia.definirRecebidos(recebidosFalso(db)); // SIMULAÇÃO do armazenamento (o real: test/wa-anexos.test.js)
   setSetting('ia_ativo', '1'); setSetting('ia_modo', 'automatico'); setSetting('ia_responder', '1');
   let n = 0;
   const receber = async (texto, extra = {}) => {
     n += 1;
-    const r = waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Cliente', externoId: `E${n}`, texto, tipo: 'text', quando: new Date(Date.now() + n).toISOString(), deMim: false, ...extra });
+    const r = waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', nome: 'Cliente', externoId: `E${n}`, texto, tipo: tipoDoTexto(texto), quando: new Date(Date.now() + n).toISOString(), deMim: false, ...extra });
     if (!extra.deMim) await ia.executarAutomatico(r.conversaId);
     return r;
   };
@@ -160,7 +162,8 @@ test('documento: confirma o recebimento uma vez e pede o que falta (sem dizer qu
   estado.analise = { resumo: 'cnh', perfil: 'motorista', campos: { cnh_categoria: 'B' }, atendimento: { opcao: 'cadastro', transferir: false } };
   await receber('[documento] 📎 Documento: CNH\nCategoria: B');
   const m = daIA().pop();
-  assert.match(m, /^Recebemos o seu documento\. Obrigado! Agora, envie também a foto do documento do veículo \(CRLV\) e um comprovante de endereço \(conta de luz, água ou internet\)\.$/);
+  // 12/11 noite: são 7 itens; pede 2 por vez e avisa quantos ainda faltam (nunca considera completo com menos de 7).
+  assert.match(m, /^Recebemos o seu documento\. Obrigado! Agora, envie também o documento do veículo \(CRLV\) e um comprovante de residência \(conta de luz, água ou internet\)\. Depois disso, ainda faltarão 4 item\(ns\) da lista\.$/);
   assert.doesNotMatch(m, /aprovad|analisad/i);
   assert.equal(conv().atendimento, 'ia');
 });

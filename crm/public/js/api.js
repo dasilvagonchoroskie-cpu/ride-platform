@@ -38,6 +38,21 @@ export const api = {
   patch: (path, body) => request(path, { method: 'PATCH', body: body || {} }),
   del: (path) => request(path, { method: 'DELETE' }),
 
+  // Busca um arquivo (PDF/CSV) e devolve { blob, nome, linhas } sem baixar: quem chama decide (baixar, abrir, compartilhar).
+  async blob(path, nomePadrao = 'arquivo.pdf') {
+    let res;
+    try { res = await fetch(`/api${path}`, { credentials: 'same-origin' }); } catch (err) { throw new ApiError('Falha de conexão com o servidor.', 0, 'network'); }
+    if (!res.ok) {
+      let message = 'Não foi possível gerar o arquivo.';
+      try { const data = await res.json(); if (data && data.error) message = data.error.message; } catch (err) { /* sem corpo json */ }
+      throw new ApiError(message, res.status, 'export');
+    }
+    const blob = await res.blob();
+    const m = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') || '');
+    const linhas = res.headers.get('x-linhas');
+    return { blob, nome: m ? m[1] : nomePadrao, linhas: linhas === null ? null : Number(linhas) };
+  },
+
   async download(path, fallbackName = 'exportacao.csv') {
     const res = await fetch(`/api${path}`, { credentials: 'same-origin' });
     if (!res.ok) {

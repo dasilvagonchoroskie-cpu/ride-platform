@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 11/11/2026 (19h30, horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 12/11/2026 (horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -18,7 +18,8 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] Trocar a senha inicial do administrador e gerar os códigos de recuperação.
 - [ ] Conferir em Configurações se a chave do Gemini está salva e o "Testar conexão" passa.
 - [ ] Verificação em duas etapas no Render, Supabase e GitHub (quando tiver o próprio celular).
-- [ ] Decidir a hospedagem definitiva: KVM2 da Hostinger (decidido como destino; falta contratar e migrar).
+- [x] 12/11 Hospedagem definitiva decidida: VPS da Hostinger, antes do lançamento. Preparação pronta em `deploy/hostinger/`.
+- [ ] **Contratar a VPS e o domínio** e marcar o dia da migração (guia `deploy/hostinger/README.md`). Nada foi contratado nem migrado.
 - [ ] Gestão de frota: auditoria no chat próprio (inclui apagar o projeto Supabase vazio myfktvjbdczfxgppnbua).
 
 ## 2. Ordem de desenvolvimento de 11/11 (executar uma etapa por vez, com relatório)
@@ -35,17 +36,95 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       - [x] M1 (parte do banco) pessoas, empresas, vínculos e CPF/CNPJ protegidos (11/11, testado com dados fictícios).
       - [x] M1 (telas) ficha central da pessoa, "adicionar função", aviso de telefone repetido e junção de duplicados
             (só admin) — 11/11, no ambiente de desenvolvimento com dados fictícios (testes automáticos + navegador).
-      - [ ] Próximos (aguardando conferência do dono): M2 entregadores/motociclistas · M3 comércios · M4 documentos e
-            armazenamento seguro (sem documentos reais). Depois: IA/WhatsApp ligados à pessoa (hoje o cadastro criado
-            pela IA ainda não ganha pessoa).
+      - [x] M2 entregadores e motociclistas (12/11, ramo etapa2, dados fictícios): módulo próprio com a mesma pessoa podendo ser
+            motorista e entregador, situação independente, "Contratado" em verde, documentos, modalidade, dashboard, relatórios,
+            WhatsApp. Limitação: a IA ainda não marca os documentos do entregador (só do motorista); marcar manualmente na ficha.
+      - [x] Relatórios em PDF em todos os setores, com CSV complementar (12/11, ramo etapa2): ver README "Relatórios em PDF".
+            Ainda sem PDF: Conversas, Pessoas, Empresas e ficha individual (Etapa 3); Dashboard (o "Relatório geral" cobre o período).
+      - [x] M3 comércios parceiros que pedem entregas (12/11, ramo etapa2, dados fictícios): função independente do Parceiro do
+            Clube, empresa central reaproveitada (sem duplicar), situações, histórico, "Ativo na plataforma" em verde, dashboard,
+            relatórios (PDF só admin + CSV), WhatsApp, tarefas. Limitações: sem CNPJ/documentos (M4); telefone e WhatsApp são um
+            campo só; a IA não cria comércio nem marca documentos; gestor não exporta PDF/CSV de comércios (confirmar com o dono).
+      - [x] M4 documentos e armazenamento seguro (12/11, ramo etapa2, dados fictícios): arquivo digital por função, cifrado, versões,
+            situações independentes, permissões admin/gestor, CPF/CNPJ cifrados, backup/restauração/verificação, relatório PDF/CSV.
+            Limitações: adaptador Supabase só testado com servidor falso; sem antivírus; sem rotação da `FM_DOCS_KEY`; CPF/CNPJ
+            "obrigatório" não existe (só desligado/opcional).
+      - [ ] DECISÕES DO DONO (M4): (1) manter originais em todas as substituições; (2) armazenamento definitivo (pasta persistente
+            da Hostinger ou Supabase Storage privado) e configuração; (3) quais documentos o gestor pode ver/baixar/conferir;
+            (4) quais dados de CPF/CNPJ exigir e guardar em cada cadastro; (5) prazo de retenção de documentos e cadastros encerrados.
+            Antes de qualquer uso real: gerar `FM_DOCS_KEY` e `FM_DADOS_KEY` (64 hex) e guardá-las fora do servidor e do repositório.
+      - [ ] Próximo (aguardando avaliação do M4 e autorização do dono): etapa seguinte. Depois: IA/WhatsApp ligados à pessoa (hoje o
+            cadastro criado pela IA ainda não ganha pessoa).
       - [x] Ficha central da EMPRESA (parceiro do Clube; comércio entra no M3) e preservação dos históricos antigos
             (ficha central mostra os históricos originais de cada ficha; testado que migração e junção não alteram
             nenhum) — 11/11, desenvolvimento, dados fictícios.
       - [ ] Política de retenção e descarte por tipo de dado (decisão da empresa; não usar prazo fixo sem avaliar).
       - [ ] **Migração dos dados reais e deploy da Etapa 2: só depois do teste das notificações + autorização.**
-- [ ] Etapa 3 — PDF de cada fichário concluído (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
+- [ ] Etapa 3 — PDF de cada fichário concluído (o gerador central de PDF já existe desde 12/11) (baixar, imprimir, WhatsApp, e-mail, compartilhar), só por decisão de
       usuário autorizado, com nova versão sem apagar o histórico.
 - [ ] Etapa 4 — status reais e independentes para entregadores, parceiros e comércios (verde só para concluído).
+
+### Revisão da exportação PDF/CSV nos Relatórios (12/11/2026, ramo `etapa2`)
+- [x] 12/11 PDF + CSV em todos os blocos de Relatórios, Financeiro, listas e Documentos; datas em UTC-3; período em Documentos; resumo com
+      Comércios/Documentos; "estimado" nos financeiros; nomes de arquivo com período; botões maiores no celular. 159/159 testes.
+- [ ] **Dono:** testar no celular real (APK) baixar, abrir e compartilhar o PDF (a verificação feita foi em Chrome emulando celular).
+- [ ] **Dono (decisão):** atendimentos continuam só para o administrador (têm nome e assunto de pessoas); liberar ao gestor só se ele decidir.
+- Fora do escopo, só anotado: o filtro de período do cartão "Documentos" da tela de Relatórios considera TODOS os documentos no total e só
+  os enviados no período no subtítulo (comportamento do M4, mantido); sem antivírus nos arquivos (M4); app 1.0.x sem Web Share.
+
+### Auditoria geral (12/11/2026, ramo `etapa2`)
+- [x] 12/11 IA do WhatsApp: causa encontrada no log de produção (provedor fora do ar, sem nova tentativa); novas tentativas, transferência
+      para a equipe quando não dá, recuperação após reinício, estado real na tela e botão "Tentar de novo". Testes com provedor falso.
+- [x] 12/11 Ícone antigo no carregamento (quadrado "FM") trocado pelo logotipo oficial; favicon.ico, selo de notificação, cache v25.
+- [x] 12/11 Busca com a lupa sobre o texto; botões pequenos no celular; faixa da conversa cortada no celular.
+- [x] 12/11 Proteção contra troca acidental da FM_DOCS_KEY; auditoria automática de todas as rotas (401/403/CSRF).
+- [ ] **Dono:** cadastrar as informações oficiais da Central (Configurações > Modelos de Comunicação da IA: geral, cadastro, encomendas,
+      clube). Sem elas a IA só apresenta os serviços do menu e passa para a equipe — não inventa.
+- [x] 12/11 Decisão do dono: a IA continua só no Gemini, **sem segundo provedor** (sem Groq). Quando o Gemini falha, a conversa passa
+      para a equipe (comportamento da auditoria). Futuro: contratar a API paga do Gemini e só trocar a chave em Configurações.
+- [ ] **Dono:** testar no celular real: falha da IA vira "IA tentando de novo"/transferência; compartilhar e imprimir um PDF pelo Android;
+      conferir o logotipo na abertura do app e do navegador depois da publicação.
+- [ ] Gerar um APK novo a partir do etapa2 quando for publicar (o app-twa do etapa2 foi igualado ao main; nenhuma mudança de app nesta auditoria).
+- Observação (fora do escopo, sem mudança): o WhatsApp de produção reconecta a cada ~50 min (log "Reconectando…"); funciona, mas vale
+  acompanhar. `/auth/status` e `/api/health` continuam públicos (backlog).
+
+### Requisição final de 12/11/2026 (ramo `etapa2`, NÃO está em produção)
+- [x] 12/11 Fluxo de candidatos a motorista (9 etapas, decisão só do administrador com confirmação, nada automático).
+- [x] 12/11 Perfil "Avaliador de cadastros" (lista fechada de rotas, sem acesso administrativo), parecer com histórico imutável.
+- [x] 12/11 ~~Integração assinada app do motorista → CRM~~ RETIRADA no mesmo dia (decisão do dono: os dois cadastros são independentes).
+      Documentos: todas as versões guardadas (decisão do dono).
+- [x] 12/11 Informações oficiais da IA organizadas em 8 assuntos com situação "preenchido/falta" (nada inventado).
+- [x] 12/11 Preparação da migração para a Hostinger (scripts + guia + `SNAPSHOT_MODO=copia`), sem executar nada. 175/175 testes.
+- [ ] **Dono:** criar o usuário do avaliador (Configurações → Usuários → perfil "Avaliador de cadastros") quando for usar.
+- [ ] **Dono:** escrever as informações oficiais dos 8 assuntos da IA (hoje vazias: a IA não inventa).
+- [ ] **Configuração futura (na migração):** `FM_DOCS_KEY`, `FM_DADOS_KEY` geradas na VPS e guardadas no cofre
+      de senhas; armazenamento dos documentos no disco da VPS; desligar o cron `crm-manter-acordado`; APK com o domínio novo.
+- [ ] **Validação física:** testar o fluxo do avaliador e dos candidatos no celular real (verificado só em Chrome emulando celular).
+
+### Correções do atendimento por IA e 7 documentos (12/11/2026 noite, ramo `etapa2`, NÃO está em produção)
+- [x] 12/11 Confirmação rápida de recebimento enquanto a IA processa (uma por fala; não conta como resposta); espera de 15 s → 7 s.
+- [x] 12/11 Áudio: novas tentativas na leitura, a IA espera a leitura, aviso honesto quando não dá para ouvir (2 seguidos → equipe).
+- [x] 12/11 Conversa concluída + mensagem nova = novo atendimento (limites e "repetida" por atendimento; histórico mantido).
+- [x] 12/11 IA ⇄ equipe repetível: assumir para a IA na hora (até no meio da redação); devolver responde a pendente; trocas auditadas.
+- [x] 12/11 Origem "site" (e outras) registrada e separada da intenção: menu geral, sem documentos de motorista sem pedido.
+- [x] 12/11 Candidato a motorista: 7 documentos obrigatórios independentes (com antecedentes e 3 fotos do veículo); completo só com os 7.
+- [x] 12/11 Sem integração com o aplicativo do motorista (retirada); avaliação no CRM não aprova, não cria nem ativa nada na Central.
+- [x] 12/11 192/192 testes (17 novos em `test/ia-atendimento.test.js`; provedor e canal FALSOS).
+- [ ] **Validação real (dono, depois da publicação autorizada):** áudio de verdade no WhatsApp; tempo até a confirmação e até a resposta;
+      concluir e escrever de novo 1 min depois; assumir pelo celular, devolver pelo botão e repetir; clicar no botão do site; mandar os 7
+      itens pela conversa. Nada disso foi testado com WhatsApp e Gemini reais.
+- [ ] **Dono (opcional):** revisar os textos dos 2 modelos novos (confirmação rápida e áudio não ouvido) em Modelos de Comunicação da IA.
+- Observação: a cota grátis do Gemini continua sendo o maior risco de demora/falha (log de 12/11: vários "IA indisponível").
+
+### Etapa final: arquivos do WhatsApp e versão candidata (13/11/2026, ramo `etapa2`, NÃO está em produção)
+- [x] 13/11 Fotos/PDFs do WhatsApp guardados cifrados na ficha (ou na espera / pendentes de classificação); texto não conta mais.
+- [x] 13/11 Botões do site: os 4 textos reconhecidos como origem "Site"; "Vim pelo site" → menu geral (testado com o texto real do site).
+- [x] 13/11 Versão candidata 2.1.0-rc.1, `/api/admin/saude`, procedimento de publicação/rollback e roteiro de testes reais. 199/199 testes.
+- [ ] **Dono — decidir o destino:** Render agora (precisa de bucket PRIVADO no Supabase Storage + chave de serviço) ou VPS Hostinger.
+- [ ] **Dono — gerar e guardar** `FM_DOCS_KEY` e `FM_DADOS_KEY` (cofre de senhas) e autorizar a publicação (`docs/PUBLICACAO-ETAPA2.md`).
+- [ ] **Dono — testes reais** (`docs/ROTEIRO-TESTES-REAIS.md`): WhatsApp, Gemini, áudio, troca IA/equipe, site, 7 documentos, PWA,
+      PDF e notificação no celular. Nada disso foi testado com WhatsApp/Gemini reais nem em aparelho físico.
+- [ ] Decisão pendente (LGPD): prazo de guarda dos arquivos do WhatsApp que nunca viraram documento (hoje: nada é apagado sozinho).
 
 ## 3. Riscos e avisos em aberto
 

@@ -1,0 +1,6 @@
+[Unit]
+Description=CRM Fortaleza Move — verificação de saúde
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/fortaleza-crm/verificar-saude.sh

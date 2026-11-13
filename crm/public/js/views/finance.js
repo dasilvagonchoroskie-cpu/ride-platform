@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import * as ui from '../ui.js';
+import { abrirExportacao, podeExportar, podePdf } from '../exportar.js';
 
 function compute(p, custos) {
   const motoristas = Number(p.motoristas_ativos) || 0;
@@ -55,6 +56,7 @@ export async function renderFinance(view, state) {
           <p class="sub">Comissão padrão da plataforma: ${data.comissao_padrao}% por corrida concluída · premissas editáveis</p>
         </div>
         <div class="page-actions">
+          ${podePdf(state, 'financeiro') ? `<button class="btn btn-ghost" id="fin-exportar">${ui.icon('download', 16)} Exportar</button>` : ''}
           <button class="btn btn-ghost" id="fin-new-scenario">${ui.icon('plus', 16)} Novo cenário</button>
           <button class="btn btn-gold" id="fin-save-sim">${ui.icon('save', 16)} Salvar simulação</button>
         </div>
@@ -336,6 +338,26 @@ export async function renderFinance(view, state) {
           loadHistory();
         } catch (err) { ui.toast(err.message, 'error'); }
       });
+    });
+
+    const btnExp = view.querySelector('#fin-exportar');
+    if (btnExp) btnExp.addEventListener('click', () => {
+      // Dois relatórios: o geral (todos os cenários + simulações) ou só o cenário aberto na tela, com as premissas SALVAS.
+      const m = ui.modal({
+        title: 'Exportar planejamento financeiro', size: 'small',
+        body: `<p class="small muted" style="margin-top:0">O PDF usa as premissas salvas. Salve as alterações antes de exportar.</p>
+          <div style="display:grid;gap:8px">
+            <button class="btn btn-primary" data-exp="financeiro" type="button">Todos os cenários e simulações</button>
+            <button class="btn btn-soft" data-exp="cenario" type="button">Só o cenário “${ui.esc(ativo.nome)}”</button>
+          </div>`
+      });
+      m.dialog.querySelectorAll('[data-exp]').forEach((b) => b.addEventListener('click', () => {
+        const tipo = b.dataset.exp;
+        m.close();
+        abrirExportacao(state, tipo === 'cenario'
+          ? { titulo: `Cenário — ${ativo.nome}`, tipo: 'cenario', pdf: `type=cenario&id=${ativo.id}` }
+          : { titulo: 'Planejamento financeiro', tipo: 'financeiro', pdf: 'type=financeiro', csv: podeExportar(state, 'financeiro') ? 'type=simulacoes' : null, csvNome: 'simulacoes.csv' });
+      }));
     });
 
     view.querySelector('#fin-new-scenario').addEventListener('click', () => {

@@ -47,6 +47,103 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- `src/documentos/recebidos.js` + migração 007 `wa_anexos` (uma linha por mensagem, sem DELETE por gatilho). Situações: aguardando_ficha |
+  pendente_classificacao | anexado | duplicado | recusado | falhou | nao_documento. Área de espera CIFRADA (`docs.guardarRecebido/lerRecebido`,
+  numero 0); cópia descartada só depois de `docs.anexarRecebido` (usuário de sistema `REQ_WHATSAPP`, só código chama) com SHA-256 conferido.
+- Transcritor (routes.js) guarda foto/documento do CLIENTE (nunca `deMim`) mesmo sem leitura; `pareceDocumento` evita guardar foto comum.
+  Categoria só por `tipoDocumento` (frente/lado/traseira separados); dúvida = pendente. Evento `vinculo` do store → `recebidos.processar`.
+- REGRA: texto NUNCA é comprovante. `marcarDocumentos` só resume/avança etapa a partir dos `doc_*` (que só o arquivo digital muda);
+  Central conta `recebidos.categoriasGuardadas` + `doc_*`; sem `recebidos` ativo → transfere `documento_sem_arquivo`. PATCH de `doc_*` = 422.
+- Testes da IA usam `test/apoio/recebidos-falso.js` (SIMULAÇÃO); o fluxo real está em `test/wa-anexos.test.js`. `GET /admin/saude`.
+
+## Correções do atendimento por IA e 7 documentos (12/11/2026 noite, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- Diagnóstico pelo log de produção (só leitura): áudios caíam com "IA indisponível" na LEITURA (sem nova tentativa) e a conversa ficava
+  sem resposta; cada fala levava 2 chamadas ao Gemini + espera de 15 s; `inicioDe(conv)` dependia de colunas que `SELECT_CONVERSA` não trazia.
+- Mensagem `tipo='aviso'` (confirmação rápida, `registrarChegada` → `enviarConfirmacao`) NUNCA conta como resposta: `ultimaDoCliente`,
+  `mensagensReais`, varredura e limites ignoram; eco do aviso pelo celular vira aviso (store.ingerir/concluirEnvio). NÃO quebrar.
+- Áudio: `midiasEmLeitura` (routes marca início/fim), `lerComTentativas` (transcricao.js), `audioIlegivel` → modelo `audio_nao_compreendido`.
+- Atendimento: `atend_inicio` (reabertura = mensagem que reabriu), limites por atendimento, `enviar()` reconfere estado/mensagem nova,
+  ouvinte `waStore.ouvir` (cancela timers ao assumir/concluir; devolver → `agendarAutomatico`; audita trocas do sistema).
+- Origem: `C.origemDoContato` / `C.semIntencao`; `origem_contato`; sem intenção → perfil/assunto indefinidos (analisar e responderCentral).
+- Motorista: `DOCUMENTOS_MOTORISTA` em defs.js (7 itens: tipo/categoria/campo/rótulo/pedido) usado por M4, ficha, IA e Central;
+  `OBRIGATORIOS_FIXOS` em documentos/service.js (política não retira). Cache `fm-crm-v27`. Testes: `test/ia-atendimento.test.js`.
+
+## Candidatos, avaliador e Hostinger (12/11/2026, ramo `etapa2`, "requisição final"; NÃO está em produção)
+- Migração 006 (congelada): `candidaturas` (etapas em `src/candidaturas.js`, CHECK decisao↔etapa, sem DELETE), `candidatura_pareceres`
+  e `candidatura_eventos` (append-only por gatilho), `integracao_vinculos|documentos|nonces`. Docs só movem entre cadastro_recebido /
+  documentacao_pendente / documentacao_recebida. Decisão: só admin, `confirmo:true`, recusa com motivo; aprovar NÃO contrata a ficha
+  nem libera no app (a Central do backend continua liberando). NUNCA aprovação automática.
+- Perfil `avaliador` (`policy.ROTAS_AVALIADOR`, guarda logo após `requireAuth`): só candidatos, parecer e documentos no escopo
+  (`docs_politica.avaliador` + candidatura existente). Nunca admin. Rota nova para ele = entrar na lista + teste. `rotas-permissoes.test.js`
+  falha se alguma rota escapar da lista.
+- SEM integração com o aplicativo do motorista (decisão do dono, 12/11 noite): a entrada assinada foi RETIRADA (rotas, `src/integracao.js`,
+  exceção em `docs.anexar`). Os dois caminhos são independentes: app → Central (aprovação lá); CRM → ficha/documentos/avaliação, e o dono
+  usa a ficha para preencher o cadastro na Central. Tabelas `integracao_*` da 006 ficam vazias (migração congelada). NÃO recriar.
+- IA: só Gemini, sem reserva (decisão do dono); `INFO_EXTRAS` (entregadores, comerciantes) + `situacaoInformacoes()`; nada inventado.
+- Hostinger: `deploy/hostinger/` (guia + scripts, nada executado); `SNAPSHOT_MODO=copia` em `persist.js`. Cache `fm-crm-v26`.
+
+## M2 entregadores e relatórios em PDF (12/11/2026, ramo `etapa2`, pedido do dono)
+- `entregadores`: módulo funcional como o motorista (mesmas situações, `Contratado` verde, documentos, `modalidade`), só existe em
+  `ENTITIES` com `FM_ETAPA2=1` (migração 003). Mesma pessoa pode ser motorista e entregador. `POST /entregadores/:id/contratar`.
+  A IA não cria entregadores e não marca os documentos deles (só motorista).
+- PDF: `src/pdf/documento.js` (escritor de PDF sem dependência, Helvetica/AFM, PNG com transparência), `src/pdf/relatorio.js`
+  (layout padrão: identidade, filtros, indicadores, tabelas com totais, aviso de lista vazia, rodapé LGPD) e `src/relatorios-pdf.js`
+  (modelos por setor). Rota `GET /reports/pdf` (antes de `/:entity`); filtros iguais aos da lista via `entities.montarFiltro`.
+- Permissão: `policy.canExportPdf` (admin tudo; gestor só tarefas/campanhas/resumo/financeiro/cenario). CSV segue só admin. Toda
+  exportação é auditada. Novo relatório = novo modelo em `relatorios-pdf.js` + permissão em `policy.js` + teste em `test/m2-pdf.test.js`.
+- Front: `public/js/exportar.js` (`abrirExportacao`: baixar, abrir/imprimir em nova aba, compartilhar, CSV). Sem iframe (CSP).
+  Cache do app `fm-crm-v21` (etapa2; v22 no M3).
+- "Simulação incompleta" = `custos_total` não maior que zero (mesma regra da tela do financeiro).
+
+## Auditoria geral de 12/11/2026 (ramo `etapa2`, pedido do dono; NÃO está em produção)
+- IA: causa da falha real de 12/11 12:27 = provedor 5xx sem nova tentativa (log de produção: "análise automática da conversa 1: O serviço de
+  IA está indisponível agora"). `executarAutomatico` agora marca `wa_conversas.ia_estado` (processando|tentando|respondida|transferida|
+  transferida_falha|sem_acao|analisada|falhou|sem_chave|limite), `ia_erro` (só código), `ia_msg_id`, `ia_tentativas`, `ia_proxima`.
+  Erros passageiros (`PASSAGEIROS`) repetem por `IA_REPETIR_MS`; no fim, ou com motivo que não é silêncio intencional (`QUIETOS`), chama
+  `transferirPorFalha` (só se a conversa está com a IA e a última mensagem é do cliente). `recuperarPendentes` (varredura) é idempotente:
+  pega só conversa 'ia' cuja última mensagem é do cliente e ainda não tratada / tentativa vencida / processamento preso > 5 min.
+  NÃO quebrar: humano assumiu → IA quieta; eco não conta; resposta da IA ainda passa por `respostaSegura`. Testes: `test/ia-recuperacao.test.js`.
+- Ícones: nada de "FM" em texto como marca; usar `/icons/logo.png`. Selo do push: `/icons/badge-96.png`. Cache `fm-crm-v25` (etapa2).
+- Documentos: `cifra.impressao()` + setting `docs_chave_impressao`; chave diferente → 503 `armazenamento_indisponivel` (não "integridade").
+- Toda rota nova entra sozinha em `test/rotas-permissoes.test.js` (lê o código): protegida por login e, se `requireAdmin`, 403 para gestor.
+- No backup (`CRM-Fortaleza-move-`), o `app-twa` do etapa2 estava com os ícones ANTIGOS (o commit e635709 do ícone novo só estava no main):
+  igualado ao main em 12/11.
+
+## Revisão da exportação nos Relatórios (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- Um só caminho de exportação: `abrirExportacao` (front) → `GET /reports/pdf` (`relatorios-pdf.js`) e `GET /reports/export` (CSV, só admin).
+  Nenhum relatório novo cria PDF por fora: novo bloco = modelo em `relatorios-pdf.js` + `policy.canExportPdf` + teste em
+  `test/relatorios-exportacao.test.js`. Tela (`reportSummary`), PDF e CSV precisam do mesmo critério de data e dos mesmos totais.
+- Datas de timestamp em PDF/CSV: `localDate` (UTC-3), nunca `slice(0, 10)`. Documentos: período pela data de inclusão local.
+- PDF de período leva o período no nome do arquivo; simulações e cenários sempre como "estimado/estimada"; aviso de que não é receita realizada.
+- Gestor: PDF só de tarefas, campanhas, resumo, financeiro e cenário; atendimentos e listas de pessoas/documentos ficam só com o admin; CSV só admin.
+  Cache do app `fm-crm-v24` (etapa2).
+
+## M3 comércios (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- `comercios`: módulo funcional como entregadores, só em `ENTITIES` com `FM_ETAPA2=1` (migração 004, congelada). Titular = EMPRESA central
+  (`FUNCOES.comercio` em `src/titulares.js`, nome do titular vem de `nome_estabelecimento`). Independente de `parceiros` (Clube): decisão
+  do dono em 12/11 ("dois cadastros diferentes"); mesma empresa pode ter as duas funções, 409 se repetir a mesma.
+- `pessoas.criarRegistro` copia `razao_social` e `endereco` do registro para a empresa quando vazios. Sem campo de CNPJ (M4).
+- Situações em `STATUS_COMERCIO`; fechado = 'Ativo na plataforma' (verde), perdido = 'Não concretizado'. `POST /comercios/:id/ativar`
+  (admin e gestor, `confirmo:true`). `fichaDoCadastro` e `/relations` conhecem 'comercios'; dashboard `comercios_*`; `reportSummary.comercios`.
+- PDF `type=comercios` em `relatorios-pdf.js`; `policy.canExportPdf`: só admin (gestor não exporta lista com dados pessoais); CSV só admin.
+- IA: `CAMPOS_IA.comercios` (pode preencher campos vazios de comércio vinculado), nunca cria comércio. WhatsApp: `VINCULOS.comercios`.
+- Front: menu Comércios, banner "comércio pedindo entregas", botão "Marcar como ativo na plataforma", cartões no dashboard e em Relatórios.
+  Cache do app `fm-crm-v22` (etapa2). Testes: `test/m3-comercios.test.js`.
+
+## M4 documentos e armazenamento (12/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+- `documentos` / `documento_versoes` / `documento_eventos` (migração 005, congelada; eventos append-only e versões imutáveis por gatilho; sem DELETE).
+  Documento = `funcao` (motorista|entregador|parceiro_clube|comercio) + `registro_id`; um por categoria (índice parcial), "outros" ilimitado.
+  `src/documentos/`: `service.js` (regras, permissão, eventos, auditoria), `cifra.js` (AES-256-GCM por arquivo, `FM_DOCS_KEY`),
+  `armazenamento.js` (local/supabase; nunca sobrescreve; recusa disco efêmero), `validacao.js` (assinatura, extensão, tamanho, PDF ativo),
+  `manutencao.js` (verificar/backup/restaurar). Arquivos NUNCA entram no retrato do cofre (`persist.js` IGNORAR `documentos`).
+- Regras: conferir NUNCA muda a situação da função (`sincronizarLegado` só mexe em `doc_*`/`documentos`); permissão no servidor
+  (`policy.docs*`, política em setting `docs_politica`: gestor só anexa por padrão; ver/conferir por categoria liberada; exclusão definitiva
+  desligada); todo acesso/negação/integridade vira evento + auditoria; CPF/CNPJ só cifrado, só admin, coleta desligada por padrão.
+- Decididos em 12/11: 7 documentos obrigatórios do motorista (ver acima); manter TODAS as versões; armazenamento definitivo no disco da VPS Hostinger (na migração). Pendentes: o que o gestor vê;
+  quais CPF/CNPJ exigir; prazo de retenção. Sem exclusão automática. `FM_DOCS_KEY` precisa existir antes de qualquer uso real.
+- Front: `public/js/documentos.js` (painel por ficha, tela Documentos, política, bloco CPF/CNPJ); cache `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
+
 ## Ficha do motorista e "fechados" em verde (10/11/2026, pedido do dono)
 - Motorista: situação nova `Contratado` (fechado), documentos por item `doc_cnh`/`doc_crlv`/`doc_endereco` (Não enviado /
   Recebido — conferir / Conferido) + resumo `documentos` (Não enviados / Incompletos / Recebidos — conferir / Conferidos),
@@ -65,6 +162,40 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   lateral e o login em `.brand-mark` com fundo branco) e, no app Android (repo de backup, `app-twa`): ícone adaptável
   (`mipmap-anydpi-v26`, fundo branco + logo na zona segura), `splash_logo` com abertura em fundo branco e `ic_notificacao`
   (silhueta branca, PNG por densidade). APK 2.0.107. Cache do app v19 (main) / v20 (etapa2).
+## Etapa 2 — preparação (ramo `etapa2`, 11/11/2026; NÃO está em produção)
+- Trabalho no ramo git `etapa2` (ride-platform e backup). `main` é o que vai para o Render: nada da Etapa 2 entra em
+  `main` nem em deploy antes da autorização do dono (depois do teste das notificações no celular).
+- Migrações versionadas: `src/migracoes/index.js` (tabela `schema_migracoes` com checksum; cada migração numa transação
+  com `verificar()` + foreign_key_check; integrity_check antes/depois; recusa código alterado ou banco mais novo).
+  Só rodam com `FM_ETAPA2=1` (db.js), com cópia em `data/backups/pre-migracao-*` antes de cada uma. Migrações são
+  CONGELADAS: nunca editar uma já aplicada; mudança = migração nova.
+- 001: `pessoas`/`empresas` (uid permanente, `telefone_chave` só para achar duplicado, CPF/CNPJ só cifrados com
+  finalidade), `vinculos` (titular pessoa|empresa × função motorista|entregador|passageiro|parceiro_clube|comercio ×
+  registro funcional; 1 ativo por função; 1 titular por registro; CHECK de compatibilidade), `titulares_eventos`.
+- 002: liga os cadastros atuais sem alterá-los (une só mesmo telefone + mesmo nome em funções diferentes; o resto fica
+  separado e aparece no relatório).
+- Só leitura: `src/duplicados.js` (`GET /api/admin/duplicados`, admin, auditado, telefone só com 4 dígitos),
+  `GET /api/admin/migracoes`; `scripts/simular-migracao.js <crm.db>` (cópia em memória; o original não muda).
+- `src/protegidos.js`: CPF/CNPJ com AES-256-GCM + índice HMAC (`FM_DADOS_KEY`, 64 hex, fora do repositório); sem
+  chave não grava. Nenhuma tela coleta ainda. Testes: `test/migracoes.test.js`.
+- M1 telas (11/11): `src/pessoas.js` (serviço) + rotas em routes.js, todas atrás de `pessoas.ativa()` (FM_ETAPA2=1 e
+  tabelas existentes; senão 404): `GET /pessoas` (busca), `GET /pessoas/:id` (ficha central: funções ativas e encerradas,
+  eventos, possíveis duplicados), `POST /pessoas/verificar-telefone` (só aviso), `POST /pessoas/:id/funcoes` (adicionar
+  função compatível; 409 se já tem), `GET /pessoas/duplicados` e `POST /pessoas/juntar` (só admin, `confirmo:true`,
+  `principais` para função repetida; nada apagado: a juntada vira `mesclada`, vínculos passam, ficha repetida é
+  ENCERRADA). Com a Etapa 2 ligada, `POST /:entity` de motoristas/passageiros/parceiros cria o registro + pessoa/empresa
+  na mesma transação (`pessoa_id` opcional = o usuário escolheu); `DELETE` encerra o vínculo. `GET /:entity/:id` traz
+  `titular`. `/meta` traz `etapa2` (catálogo de funções). Front: `public/js/views/pessoas.js` (#/pessoas, ?id=, ?duplicados=1),
+  aviso de telefone no formulário de motorista/passageiro (`escolherPessoa` em entity.js), `?abrir=ID` abre uma ficha,
+  `ui.modal({ onClose })`. Testes: `test/pessoas.test.js`.
+- Complemento do M1 (11/11 noite): `pessoas.js` é genérico por titular (`TIPOS.pessoa|empresa`; funções `*Titular`); as
+  funções antigas (`listar`, `ficha`… de pessoa) continuam. Rotas `/empresas*` iguais às de pessoas (gestor consulta,
+  cria e adiciona função; duplicados/juntar só admin, auditado com entity `empresas`); `POST /parceiros` aceita
+  `empresa_id`. Ficha central (pessoa e empresa) traz `historico_funcoes`: lê os históricos ORIGINAIS de cada ficha
+  (interacoes, tarefas, conversas do WhatsApp do contato ligado, auditoria só para admin) direto das tabelas de sempre,
+  inclusive de fichas encerradas; o histórico central (`titulares_eventos`) só registra o que acontece a partir da
+  Etapa 2. Busca de pessoas/empresas ignora acento e maiúscula. Menu "Empresas". Teste de preservação em
+  `test/migracoes.test.js` (impressão digital das tabelas de histórico igual antes/depois da migração e da junção).
 
 ## Ordem de serviço de 11/11 tarde (dashboard, push, financeiro, APK)
 - Dashboard: `motoristas_interessados` agora é só 'Novo interessado' (antes era o TOTAL e incluía contratados);

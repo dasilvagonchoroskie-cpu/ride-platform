@@ -1,0 +1,47 @@
+# CRM Fortaleza Move — serviço do systemd (VPS Hostinger). Instalado como /etc/systemd/system/fortaleza-crm.service.
+[Unit]
+Description=CRM Fortaleza Move
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fortaleza-crm
+Group=fortaleza-crm
+WorkingDirectory=/opt/fortaleza-crm/app
+EnvironmentFile=/etc/fortaleza-crm/crm.env
+# start.js: no dia da migração traz os dados do cofre (SNAPSHOT_*); depois, em SNAPSHOT_MODO=copia, usa o disco local e
+# manda cópias cifradas para o cofre. Fail-closed: se o cofre configurado não responder, não sobe vazio.
+ExecStart=/usr/bin/node start.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Endurecimento (o processo só escreve na pasta de dados; nada de privilégios, nada de /home, /tmp próprio).
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/fortaleza-crm
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+RemoveIPC=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+LimitNOFILE=65536
+MemoryMax=1500M
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=CRM Fortaleza Move — cópia de segurança cifrada
+After=fortaleza-crm.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/fortaleza-crm/backup-crm.sh
+Nice=10
+IOSchedulingClass=idle

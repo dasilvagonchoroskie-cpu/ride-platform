@@ -1,5 +1,5 @@
 // Mude o número da versão sempre que alterar a lista de arquivos; ativação limpa os caches antigos.
-const CACHE = 'fm-crm-v19';
+const CACHE = 'fm-crm-v28';
 const ASSETS = [
   '/',
   '/index.html',
@@ -8,17 +8,25 @@ const ASSETS = [
   '/js/api.js',
   '/js/ui.js',
   '/js/notificacoes.js',
+  '/js/exportar.js',
+  '/js/documentos.js',
+  '/js/views/candidatos.js',
   '/js/views/whatsapp.js',
   '/js/views/dashboard.js',
   '/js/views/entity.js',
   '/js/views/finance.js',
+  '/js/views/pessoas.js',
   '/js/views/reports.js',
   '/js/views/settings.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/favicon-32.png',
-  '/icons/logo.png'
+  '/icons/logo.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/badge-96.png',
+  '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
@@ -68,7 +76,7 @@ self.addEventListener('push', (event) => {
     await self.registration.showNotification(d.titulo || 'CRM Fortaleza Move', {
     body: d.corpo || '',
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png', // silhueta do logotipo oficial (o Android usa só a transparência)
     tag: d.tag || undefined,
     renotify: !discreto,
     silent: discreto,

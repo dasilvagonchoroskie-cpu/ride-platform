@@ -15,6 +15,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 app.locals.db = db;
 
+// Corpo bruto guardado SÓ para a integração assinada (a assinatura HMAC é conferida sobre os bytes exatos recebidos).
 app.use(express.json({ limit: '1mb' }));
 // Bloqueia chamadas de escrita originadas em outros sites (proteção CSRF adicional).
 app.use('/api', (req, res, next) => {
@@ -74,7 +75,8 @@ app.use(express.static(PUBLIC_DIR, {
   setHeaders(res, filePath) {
     if (/sw\.js$|index\.html$|manifest\.webmanifest$/.test(filePath)) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    } else if (/\.(js|css|html)$/.test(filePath)) {
+    } else if (/\.(js|css|html)$/.test(filePath) || /[\\/]icons[\\/]|favicon\.ico$/.test(filePath)) {
+      // Ícones também revalidam (ETag): quando a identidade visual muda, o ícone antigo não fica um dia inteiro no cache.
       // Revalida a cada uso (ETag): uma nova versão chega aos usuários sem esperar o cache expirar.
       res.setHeader('Cache-Control', 'no-cache');
     } else {
