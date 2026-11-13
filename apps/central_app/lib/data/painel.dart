@@ -1612,6 +1612,19 @@ class PainelApi {
     return _txt(r['rideId']);
   }
 
+  // Entrega manual lancada pela Central (13/11/2026): o servidor confere tudo e calcula o preco.
+  Future<Map<String, dynamic>> buscarLojaParaEntrega(String busca) async =>
+      await _c.request('POST', '/admin/manual-deliveries/buscar', body: {'busca': busca.trim()}) as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> perfilDaLojaParaEntrega(String id) async =>
+      await _c.request('GET', '/admin/manual-deliveries/estabelecimentos/$id') as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> cotarEntregaDaCentral(Map<String, dynamic> corpo) async =>
+      await _c.request('POST', '/admin/manual-deliveries/cotar', body: corpo) as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> lancarEntregaDaCentral(Map<String, dynamic> corpo) async =>
+      await _c.request('POST', '/admin/manual-deliveries', body: corpo) as Map<String, dynamic>;
+
   Future<void> enviarParaMotorista(String rideId, String driverId) =>
       _c.request('POST', '/admin/rides/$rideId/assign', body: {'driverId': driverId});
 

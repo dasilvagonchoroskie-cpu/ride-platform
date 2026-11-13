@@ -232,6 +232,19 @@ export type EntregaManualInput = z.infer<typeof entregaManualSchema>;
 export const cotarManualSchema = cotarSchema.omit({ veiculo: true, paradas: true }).extend({ comercioId: z.string().uuid() });
 export type CotarManualInput = z.infer<typeof cotarManualSchema>;
 
+/**
+ * Entrega lancada pela Central (13/11/2026): igual ao pedido da loja, mas a
+ * Central escolhe a loja, o veiculo (Moto ou Carro) e, se quiser, o motorista
+ * (sem motorista, o despacho automatico de sempre).
+ */
+export const entregaCentralSchema = entregaSchema
+  .omit({ paradas: true })
+  .extend({ comercioId: z.string().uuid(), motoristaId: z.string().uuid().optional() });
+export type EntregaCentralInput = z.infer<typeof entregaCentralSchema>;
+
+export const cotarCentralSchema = cotarSchema.omit({ paradas: true }).extend({ comercioId: z.string().uuid() });
+export type CotarCentralInput = z.infer<typeof cotarCentralSchema>;
+
 export type TipoDeBusca = { tipo: 'EMAIL' | 'TELEFONE' | 'NOME'; valor: string };
 
 /** E-mail se tem "@"; telefone se so tem numeros e simbolos de telefone (8+ numeros); senao, nome. */

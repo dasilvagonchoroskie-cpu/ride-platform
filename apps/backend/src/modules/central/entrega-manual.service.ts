@@ -3,7 +3,9 @@ import { RideStatus } from '@prisma/client';
 import { UserRole } from '@ride/shared';
 import { BusinessException } from '../../common/errors/business.exception';
 import { PrismaService } from '../../database/prisma.service';
-import type { EntregaManualInput } from '../comercio/comercio.regras';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import type { EntregaCentralInput, EntregaManualInput } from '../comercio/comercio.regras';
+import { PracasService } from '../pracas/pracas.service';
 import { ComercioService } from '../comercio/comercio.service';
 import { RidesService } from '../rides/rides.service';
 import { CentralService } from './central.service';
@@ -26,6 +28,7 @@ export class EntregaManualService {
     private readonly comercio: ComercioService,
     private readonly central: CentralService,
     private readonly rides: RidesService,
+    private readonly pracas: PracasService,
   ) {}
 
   async lancar(userId: string, input: EntregaManualInput) {
@@ -85,5 +88,56 @@ export class EntregaManualService {
       throw erro;
     }
     return { rideId: r.rideId, codigo: registro.ride.code, repetido: r.repetido };
+  }
+
+  /**
+   * Entrega lancada pela Central (13/11/2026): o comerciante ligou ou chegou na
+   * Central. E o MESMO pedido da loja (`criarEntrega`): mesmas portas, preco
+   * oficial, chave anti-duplicidade e acompanhamento; muda so a origem (CENTRAL).
+   * Sem motorista escolhido, o despacho automatico procura (como no pedido da
+   * loja); com motorista, a entrega e enviada a ele, que aceita no aplicativo
+   * (como na corrida manual da Central). Nada aqui liga o Comercio nem muda
+   * permissao, tarifa ou comissao: se alguma porta estiver fechada, o servidor recusa.
+   */
+  async lancarPelaCentral(user: AuthenticatedUser, input: EntregaCentralInput) {
+    const c = await this.comercio.lojaParaCentral(input.comercioId);
+    await this.pracas.exigirAcesso(user, await this.comercio.pracaDaLoja(c));
+    if (input.motoristaId) await this.pracas.exigirAcesso(user, await this.pracas.pracaDoMotorista(input.motoristaId));
+    await this.comercio.portasDe(c);
+
+    const { comercioId: _comercioId, motoristaId, ...pedido } = input;
+    const r = await this.comercio.criarEntrega(c, pedido, { atorId: user.id, atorRole: UserRole.ADMIN, origem: 'CENTRAL' });
+
+    const registro = await this.prisma.comercioPedido.findUnique({
+      where: { rideId: r.rideId },
+      select: { origem: true, ride: { select: { code: true, status: true } } },
+    });
+    if (!registro) throw BusinessException.conflict('Não foi possível confirmar o registro da entrega. Confira o histórico.');
+    if (r.repetido) {
+      if (registro.origem !== 'CENTRAL') throw BusinessException.conflict('Esta chave de pedido já foi usada em outra entrega.');
+      return { rideId: r.rideId, codigo: registro.ride.code, repetido: true };
+    }
+    await this.prisma.rideStatusHistory.create({
+      data: {
+        rideId: r.rideId,
+        status: RideStatus.REQUESTED,
+        actorId: user.id,
+        actorRole: UserRole.ADMIN,
+        note: `Entrega lançada pela Central para ${c.nomeFantasia}.`,
+      },
+    });
+    if (motoristaId) {
+      try {
+        await this.central.atribuir(user.id, r.rideId, motoristaId);
+      } catch (erro) {
+        // Nao deixa a entrega solta procurando outro motorista quando a Central escolheu um.
+        await this.prisma.ride.update({
+          where: { id: r.rideId },
+          data: { status: RideStatus.CANCELLED_BY_SYSTEM, cancelledAt: new Date(), driverId: null, vehicleId: null },
+        });
+        throw erro;
+      }
+    }
+    return { rideId: r.rideId, codigo: registro.ride.code, repetido: false };
   }
 }

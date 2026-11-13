@@ -506,6 +506,15 @@ export class ComercioService implements OnModuleInit {
 
   async buscarParaMotorista(userId: string, busca: string) {
     const m = await this.motoristaAprovado(userId);
+    return this.buscarLojas(busca, async (praca) => praca === m.praca);
+  }
+
+  /** A mesma busca para a Central: so as lojas das cidades que o operador pode ver. */
+  async buscarParaCentral(busca: string, vePraca: (praca: string | null) => Promise<boolean>) {
+    return this.buscarLojas(busca, vePraca);
+  }
+
+  private async buscarLojas(busca: string, aceitaPraca: (praca: string | null) => Promise<boolean>) {
     const q = tipoDeBusca(busca);
     const onde: Prisma.ComercioWhereInput =
       q.tipo === 'EMAIL'
@@ -516,7 +525,7 @@ export class ComercioService implements OnModuleInit {
     const achados = await this.prisma.comercio.findMany({ where: onde, orderBy: { nomeFantasia: 'asc' }, take: 25 });
     const itens = [];
     for (const c of achados) {
-      if ((await this.pracaDe(c)) !== m.praca) continue;
+      if (!(await aceitaPraca(await this.pracaDe(c)))) continue;
       const motivo = motivoParaMotorista(c.status);
       itens.push({
         id: c.id,
@@ -537,6 +546,17 @@ export class ComercioService implements OnModuleInit {
   async perfilParaMotorista(userId: string, comercioId: string) {
     const m = await this.motoristaAprovado(userId);
     const c = await this.comercioParaMotorista(m.praca, comercioId);
+    return this.perfilDe(c);
+  }
+
+  /** O perfil da loja para a Central (o controlador ja conferiu a cidade). */
+  async perfilParaCentral(comercioId: string) {
+    const c = await this.prisma.comercio.findUnique({ where: { id: comercioId } });
+    if (!c) throw BusinessException.notFound('Estabelecimento não encontrado.');
+    return { ...(await this.perfilDe(c)), praca: await this.pracaDe(c) };
+  }
+
+  private async perfilDe(c: Linha) {
     const [concluidas, recentes] = await Promise.all([
       // Concluida = a corrida terminou como COMPLETED (nunca pedido iniciado ou cancelado).
       this.prisma.comercioPedido.count({ where: { comercioId: c.id, ride: { status: 'COMPLETED' } } }),
@@ -581,6 +601,23 @@ export class ComercioService implements OnModuleInit {
     return { ...r, opcoes, veiculo };
   }
 
+  /** A loja pelo id, sem conferir cidade (quem chama confere a cidade do operador). */
+  async lojaParaCentral(comercioId: string): Promise<Linha> {
+    const c = await this.prisma.comercio.findUnique({ where: { id: comercioId } });
+    if (!c) throw BusinessException.notFound('Estabelecimento não encontrado.');
+    return c;
+  }
+
+  async pracaDaLoja(c: Linha): Promise<string | null> {
+    return this.pracaDe(c);
+  }
+
+  /** Preco oficial para a Central: a loja e o veiculo (Moto ou Carro) vem do pedido; nada e criado. */
+  async cotarParaCentral(c: Linha, input: CotarInput) {
+    await this.portasDe(c);
+    return this.cotarDe(c, input);
+  }
+
   async pedir(userId: string, input: EntregaInput) {
     const c = await this.podePedir(userId);
     const r = await this.criarEntrega(c, input, { atorId: userId, atorRole: UserRole.PASSENGER, origem: 'APP' });
@@ -597,7 +634,7 @@ export class ComercioService implements OnModuleInit {
   async criarEntrega(
     c: Linha,
     input: EntregaInput,
-    quem: { atorId: string; atorRole: UserRole; origem: 'APP' | 'MOTORISTA'; motoristaId?: string },
+    quem: { atorId: string; atorRole: UserRole; origem: 'APP' | 'MOTORISTA' | 'CENTRAL'; motoristaId?: string },
   ): Promise<{ rideId: string; repetido: boolean }> {
     const ja = await this.prisma.comercioPedido.findUnique({ where: { comercioId_chave: { comercioId: c.id, chave: input.chave } } });
     if (ja) return { rideId: ja.rideId, repetido: true };
@@ -688,7 +725,12 @@ export class ComercioService implements OnModuleInit {
         data: {
           actorId: quem.atorId,
           actorRole: quem.atorRole,
-          action: quem.origem === 'MOTORISTA' ? 'COMERCIO_ENTREGA_LANCADA_PELO_MOTORISTA' : 'COMERCIO_PEDIU_ENTREGA',
+          action:
+            quem.origem === 'MOTORISTA'
+              ? 'COMERCIO_ENTREGA_LANCADA_PELO_MOTORISTA'
+              : quem.origem === 'CENTRAL'
+                ? 'COMERCIO_ENTREGA_LANCADA_PELA_CENTRAL'
+                : 'COMERCIO_PEDIU_ENTREGA',
           entity: 'ride',
           entityId: rideId,
           after: { comercioId: c.id, origem: quem.origem, veiculo: input.veiculo, coletaAlternativa: !!input.coletaAlternativa, entregas: extras.length + 1 } as never,
@@ -729,8 +771,8 @@ export class ComercioService implements OnModuleInit {
       situacao: ROTULOS[etapa],
       final: ehFinal(etapa),
       criadaEm: r.requestedAt.toISOString(),
-      /** APP = a loja pediu pelo aplicativo; MOTORISTA = lancada manualmente pelo motorista (12/11/2026). */
-      lancamento: p.origem === 'MOTORISTA' ? ('MOTORISTA' as const) : ('APP' as const),
+      /** APP = a loja pediu pelo aplicativo; MOTORISTA = lancada manualmente pelo motorista (12/11/2026); CENTRAL = lancada pela Central (13/11/2026). */
+      lancamento: p.origem === 'MOTORISTA' ? ('MOTORISTA' as const) : p.origem === 'CENTRAL' ? ('CENTRAL' as const) : ('APP' as const),
       encomenda: p.encomenda,
       observacoes: p.observacoes,
       destinatario: { nome: e?.destinatarioNome ?? null, telefone: e?.destinatarioTelefone ?? null },

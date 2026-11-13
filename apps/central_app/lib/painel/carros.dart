@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import 'comuns.dart';
+import 'cadastrar_motorista.dart' show TipoDeVeiculo;
 import 'foto.dart';
 import 'tarifas.dart' show iconeDaCategoria;
 
@@ -73,7 +74,7 @@ class _CarrosDoMotoristaState extends State<CarrosDoMotorista> {
   }
 
   Future<void> _novo() async {
-    final dados = await formularioDoCarro(context, titulo: 'Cadastrar outro carro');
+    final dados = await formularioDoCarro(context, titulo: 'Cadastrar outro carro', tipos: TipoDeVeiculo.values);
     if (dados == null || !mounted) return;
     await _fazer(() => widget.api.cadastrarCarro(widget.driverId, dados), 'Carro cadastrado (já conferido pela Central).');
   }
@@ -380,7 +381,16 @@ class _Miniatura extends StatelessWidget {
 
 /// Formulario do carro (placa, marca, modelo, ano e cor). Devolve os dados
 /// prontos para o servidor, ou null se cancelou.
-Future<Map<String, dynamic>?> formularioDoCarro(BuildContext context, {required String titulo, CarroDoMotorista? carro}) {
+///
+/// [tipos] (so no cadastro novo): os tipos que a Central pode escolher; com
+/// mais de um aparece o seletor e o resultado leva a `categoria` do veiculo.
+Future<Map<String, dynamic>?> formularioDoCarro(
+  BuildContext context, {
+  required String titulo,
+  CarroDoMotorista? carro,
+  List<TipoDeVeiculo>? tipos,
+}) {
+  var tipo = tipos?.first;
   final placa = TextEditingController(text: carro?.placa ?? '');
   final marca = TextEditingController(text: carro?.marca ?? '');
   final modelo = TextEditingController(text: carro?.modelo ?? '');
@@ -407,6 +417,17 @@ Future<Map<String, dynamic>?> formularioDoCarro(BuildContext context, {required 
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (tipos != null && tipos.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Spacing.sm),
+                    child: SegmentedButton<TipoDeVeiculo>(
+                      key: const Key('tipo-do-veiculo'),
+                      showSelectedIcon: false,
+                      segments: [for (final t in tipos) ButtonSegment(value: t, label: Text(t.rotulo))],
+                      selected: {tipo!},
+                      onSelectionChanged: (v) => setState(() => tipo = v.first),
+                    ),
+                  ),
                 campo('Placa', placa, caps: TextCapitalization.characters, dica: 'ABC1D23'),
                 campo('Marca', marca, dica: 'Ex.: Chevrolet'),
                 campo('Modelo', modelo, dica: 'Ex.: Onix'),
@@ -440,6 +461,7 @@ Future<Map<String, dynamic>?> formularioDoCarro(BuildContext context, {required 
                   'model': modelo.text.trim(),
                   'year': a,
                   'color': cor.text.trim(),
+                  if (tipo != null) 'categoria': tipo!.categoria,
                 });
               },
               child: const Text('Salvar'),

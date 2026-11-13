@@ -7,6 +7,7 @@ import { AuthModule } from '../auth/auth.module';
 import { AdminCentralController, DriverPayoutsController, SafetyController } from './central.controller';
 import { CorridaDoMotoristaController } from './corrida-do-motorista.controller';
 import { EntregaManualController } from './entrega-manual.controller';
+import { EntregaManualCentralController } from './entrega-manual-central.controller';
 import { EntregaManualService } from './entrega-manual.service';
 import { CentralService } from './central.service';
 import { DadosPessoaisCentralController, MeusDadosMotoristaController } from './dados-pessoais.controller';
@@ -17,7 +18,7 @@ import { RecuperacaoAssistidaController } from './recuperacao-assistida.controll
 
 @Module({
   imports: [PrismaModule, RidesModule, VehiclesModule, AuthModule, ComercioModule],
-  controllers: [AdminCentralController, SafetyController, DriverPayoutsController, CorridaDoMotoristaController, EntregaManualController, MeusDadosMotoristaController, DadosPessoaisCentralController, RecuperacaoAssistidaController],
+  controllers: [AdminCentralController, SafetyController, DriverPayoutsController, CorridaDoMotoristaController, EntregaManualController, EntregaManualCentralController, MeusDadosMotoristaController, DadosPessoaisCentralController, RecuperacaoAssistidaController],
   providers: [CentralService, EntregaManualService, DadosPessoaisService, PedidosExclusaoService, RecuperacaoAssistidaService],
   exports: [CentralService, PedidosExclusaoService],
 })

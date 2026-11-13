@@ -413,7 +413,7 @@ export class EntregasService implements OnModuleInit {
         origem: r.comercioPedido ? 'COMERCIO' : 'PASSAGEIRO',
         comercio: r.comercioPedido?.comercio.nomeFantasia ?? null,
         /** Comercio: APP (a loja pediu) ou MOTORISTA (lancada manualmente); entrega comum: null. */
-        lancamento: r.comercioPedido ? (r.comercioPedido.origem === 'MOTORISTA' ? 'MOTORISTA' : 'APP') : null,
+        lancamento: r.comercioPedido ? (r.comercioPedido.origem === 'MOTORISTA' ? 'MOTORISTA' : r.comercioPedido.origem === 'CENTRAL' ? 'CENTRAL' : 'APP') : null,
         cliente: { nome: r.passenger.name, telefone: r.passenger.phone },
         motorista: r.driver ? { nome: r.driver.user.name, telefone: r.driver.user.phone } : null,
         veiculo: r.vehicle ? `${r.vehicle.model} · ${r.vehicle.plate}` : null,
