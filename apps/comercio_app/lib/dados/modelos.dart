@@ -121,19 +121,30 @@ class Estabelecimento {
 
 /// Um endereco achado na busca do mapa.
 class Lugar {
-  const Lugar({required this.endereco, required this.detalhe, required this.latitude, required this.longitude});
+  const Lugar({required this.endereco, required this.detalhe, required this.latitude, required this.longitude, this.bairro = '', this.cep = ''});
 
   final String endereco;
   final String detalhe;
   final double latitude;
   final double longitude;
 
+  /// Bairro e CEP (so numeros) quando o mapa sabe; vazio = nao veio.
+  final String bairro;
+  final String cep;
+
   static Lugar? tentar(dynamic j) {
     final m = _mapa(j);
     final lat = _dbl(m['latitude']);
     final lng = _dbl(m['longitude']);
     if (lat == null || lng == null) return null;
-    return Lugar(endereco: _txt(m['address']), detalhe: _txt(m['detail']), latitude: lat, longitude: lng);
+    return Lugar(
+      endereco: _txt(m['address']),
+      detalhe: _txt(m['detail']),
+      latitude: lat,
+      longitude: lng,
+      bairro: _txt(m['neighborhood']),
+      cep: _txt(m['postalCode']).replaceAll(RegExp(r'\D'), ''),
+    );
   }
 }
 

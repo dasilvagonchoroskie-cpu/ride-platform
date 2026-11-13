@@ -1,4 +1,5 @@
 import 'package:comercio_app/app.dart';
+import 'package:comercio_app/core/alarme.dart';
 import 'package:comercio_app/core/api.dart';
 import 'package:comercio_app/core/armazenamento.dart';
 import 'package:comercio_app/dados/modelos.dart';
@@ -161,6 +162,16 @@ void main() {
       await fechar(tester);
     });
 
+    testWidgets('motorista chegou à loja (aviso novo e não lido): alarma uma vez por entrega; aviso velho não alarma', (tester) async {
+      Alarme.tocados.clear();
+      final novo = Aviso(id: 'n', titulo: 'Motorista chegou à loja', texto: 't', tipo: 'comercio-entrega', criadoEm: DateTime.now(), lido: false, rideId: 'r-chegou');
+      final velho = Aviso(id: 'v', titulo: 'Motorista chegou à loja', texto: 't', tipo: 'comercio-entrega', criadoEm: DateTime(2026, 11, 12, 15, 30), lido: false, rideId: 'r-velho');
+      final servidor = ServidorFalso()..caixa = CaixaDeAvisos(itens: [novo, velho]);
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      expect(Alarme.tocados, ['r-chegou']);
+      await fechar(tester);
+    });
+
     testWidgets('apagar todos pede confirmação antes', (tester) async {
       final servidor = ServidorFalso()..caixa = CaixaDeAvisos(itens: [aviso('a', 'Um')]);
       await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
@@ -216,6 +227,8 @@ void main() {
       expect(find.text('Posição do motorista em tempo real.'), findsOneWidget);
       // sem imagens de rua: avisa, mas os pontos continuam
       expect(find.textContaining('As ruas do mapa não estão disponíveis'), findsOneWidget);
+      // mapa grande + botao para abrir em tela cheia
+      expect(find.byKey(const Key('ampliar-mapa')), findsOneWidget);
       await fechar(tester);
     });
 
@@ -324,10 +337,10 @@ void main() {
       await fechar(tester);
     });
 
-    testWidgets('a tela dos termos mostra o texto do servidor e avisa que é minuta sem revisão de advogado', (tester) async {
+    testWidgets('a tela dos termos mostra o texto do servidor, sem os avisos de minuta', (tester) async {
       await abrir(tester, sessaoCom(ServidorFalso()));
       await tocar(tester, 'Ler os termos de uso');
-      expect(find.textContaining('minuta técnica'), findsOneWidget);
+      expect(find.textContaining('minuta técnica'), findsNothing);
       expect(find.text('1. Quem somos'), findsOneWidget);
       expect(find.textContaining('importante'), findsOneWidget);
       await fechar(tester);

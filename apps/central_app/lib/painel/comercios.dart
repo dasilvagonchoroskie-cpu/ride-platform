@@ -192,20 +192,20 @@ class _ComerciosTelaState extends State<ComerciosTela> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        title: Text(ligar ? 'Liberar as entregas do Comércio?' : 'Bloquear as entregas do Comércio?'),
+        title: Text(ligar ? 'Ligar o aplicativo Comércio?' : 'Desligar o aplicativo Comércio?'),
         content: Text(ligar
             ? 'Lojas aprovadas poderão pedir entregas a motoristas de verdade, mas só nas cidades onde a Entrega está ligada em Entregas. Tarifas, comissões e carteiras não mudam.'
-            : 'Nenhuma loja consegue consultar preço nem pedir entrega. Entregas já pedidas continuam e podem ser canceladas.'),
+            : 'O aplicativo Comércio para de funcionar para todas as lojas, mesmo instalado: aparece "Serviço fora do ar". Nenhuma loja consulta preço nem pede entrega. Entregas já pedidas continuam e podem ser canceladas.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Voltar')),
-          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: Text(ligar ? 'Liberar' : 'Bloquear')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: Text(ligar ? 'Ligar' : 'Desligar')),
         ],
       ),
     );
     if (ok != true || !mounted) return;
     final feito = await tentar(context, () async {
       await _api.gravarConfig(ligar);
-    }, sucesso: ligar ? 'Entregas do Comércio liberadas.' : 'Entregas do Comércio bloqueadas.');
+    }, sucesso: ligar ? 'Aplicativo Comércio ligado.' : 'Aplicativo Comércio desligado.');
     if (feito && mounted) _recarregar();
   }
 
@@ -299,11 +299,11 @@ class _ChaveGeral extends StatelessWidget {
       child: SwitchListTile(
         value: liberadas,
         onChanged: dono ? (v) => aoMudar(v) : null,
-        title: Text('Entregas do Comércio liberadas', style: AppText.bodyStrong),
+        title: Text('Aplicativo Comércio ligado', style: AppText.bodyStrong),
         subtitle: Text(
           liberadas
               ? 'Lojas aprovadas podem pedir entrega nas cidades com Entrega ligada.${dono ? '' : ' Só o dono muda isto.'}'
-              : 'Bloqueado: nenhuma loja consulta preço nem pede entrega.${dono ? '' : ' Só o dono muda isto.'}',
+              : 'Desligado: o aplicativo Comércio para de funcionar para todas as lojas, mesmo instalado.${dono ? '' : ' Só o dono muda isto.'}',
           style: AppText.caption,
         ),
       ),

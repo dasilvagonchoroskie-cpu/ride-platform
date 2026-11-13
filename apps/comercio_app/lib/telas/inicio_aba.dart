@@ -71,7 +71,7 @@ class _InicioAbaState extends State<InicioAba> {
     final lista = _abertas;
     return RefreshIndicator(
       onRefresh: _carregar,
-      child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 100), children: [
+      child: ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 100 + MediaQuery.viewPaddingOf(context).bottom), children: [
         Text(nome, style: const TextStyle(fontSize: 13, color: Cores.textoSuave, fontWeight: FontWeight.w600)),
         const Text('Entregas em andamento', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
         const SizedBox(height: 16),

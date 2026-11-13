@@ -64,7 +64,7 @@ class _StatusTelaState extends State<StatusTela> {
       ),
       body: RefreshIndicator(
         onRefresh: _atualizar,
-        child: ListView(padding: const EdgeInsets.all(20), children: [
+        child: ListView(padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + MediaQuery.viewPaddingOf(context).bottom), children: [
           const SizedBox(height: 16),
           Icon(icone, size: 64, color: cor),
           const SizedBox(height: 14),

@@ -6,7 +6,9 @@ import 'estado/escopo.dart';
 import 'estado/sessao.dart';
 import 'telas/cadastro_tela.dart';
 import 'telas/entrada_tela.dart';
+import 'telas/fora_do_ar_tela.dart';
 import 'telas/inicio_shell.dart';
+import 'telas/permissoes_tela.dart';
 import 'telas/status_tela.dart';
 import 'telas/termos_inicio_tela.dart';
 import 'widgets/comuns.dart';
@@ -80,6 +82,18 @@ class Porteiro extends StatelessWidget {
     if (s.iniciando) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     // Primeira abertura: termos e privacidade antes de qualquer tela de entrar ou criar conta.
     if (!s.aceitouTermos) return const TermosInicioTela();
+    // Autorizacoes do Android (so no celular, uma vez, nenhuma trava o app).
+    return PortaoPermissoes(child: _DepoisDasAutorizacoes(s));
+  }
+}
+
+class _DepoisDasAutorizacoes extends StatelessWidget {
+  const _DepoisDasAutorizacoes(this.s);
+
+  final Sessao s;
+
+  @override
+  Widget build(BuildContext context) {
     if (!s.logado) return const EntradaTela();
     if (!s.cadastrado) {
       if (s.falha != null) {
@@ -90,6 +104,8 @@ class Porteiro extends StatelessWidget {
       }
       return const CadastroTela();
     }
+    // Chave geral da Central desligada: nada funciona, mesmo com o aplicativo instalado.
+    if (!s.estabelecimento!.entregasLiberadas) return const ForaDoArTela();
     if (s.estabelecimento!.situacao != Situacao.aprovado) return const StatusTela();
     return const InicioShell();
   }

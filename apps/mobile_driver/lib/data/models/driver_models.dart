@@ -249,6 +249,11 @@ class RideOffer {
   final String paymentMethod;
   final int expiresInSeconds;
 
+  /// Quem pediu, como o motorista ve: entrega do aplicativo Comercio aparece como
+  /// "Comercio" (nao "Passageiro"), para ele saber que e entrega.
+  String get solicitanteNome => entrega != null ? 'Comércio' : passengerName;
+  String get solicitanteIniciais => entrega != null ? 'CO' : passengerInitials;
+
   String get passengerInitials {
     final parts = passengerName.split(' ').where((p) => p.isNotEmpty).take(2);
     return parts.map((p) => p[0].toUpperCase()).join();

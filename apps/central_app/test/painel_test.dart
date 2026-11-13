@@ -1722,11 +1722,11 @@ void main() {
     expect(find.text('Aguardando aprovação'), findsOneWidget);
 
     // Chave geral: nasce bloqueada; so liga depois de confirmar, e grava.
-    expect(find.textContaining('Bloqueado: nenhuma loja consulta preço'), findsOneWidget);
+    expect(find.textContaining('Desligado: o aplicativo Comércio para de funcionar'), findsOneWidget);
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(find.textContaining('Tarifas, comissões e carteiras não mudam'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Liberar'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Ligar'));
     await _carregar(tester);
     expect(_pedidosDeComercio.single, 'PUT /api/admin/comercios/config {"ativo":true}');
     expect(find.textContaining('Lojas aprovadas podem pedir entrega'), findsOneWidget);

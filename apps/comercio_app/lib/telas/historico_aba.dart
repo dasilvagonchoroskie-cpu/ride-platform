@@ -62,7 +62,7 @@ class _HistoricoAbaState extends State<HistoricoAba> {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: _reiniciar,
-      child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 100), children: [
+      child: ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 100 + MediaQuery.viewPaddingOf(context).bottom), children: [
         const Text('Histórico de entregas', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
         const SizedBox(height: 16),
         if (_itens.isEmpty && _carregando)

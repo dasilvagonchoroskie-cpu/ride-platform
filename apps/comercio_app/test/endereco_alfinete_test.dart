@@ -67,6 +67,21 @@ void main() {
       c.dispose();
     });
 
+    test('alfinete preenche bairro e CEP que vieram do mapa, e troca os do ponto anterior', () {
+      final c = EnderecoControle();
+      c.escolher(const Lugar(endereco: 'Rua C', detalhe: 'Goiatuba - GO', latitude: -18.01, longitude: -49.35, bairro: 'Setor Sul', cep: '75600000'), doAlfinete: true);
+      expect(c.bairro.text, 'Setor Sul');
+      expect(c.cep.text, '75600-000');
+      c.escolher(const Lugar(endereco: 'Rua D', detalhe: 'Goiatuba - GO', latitude: -18.02, longitude: -49.36, bairro: 'Centro', cep: '75600001'), doAlfinete: true);
+      expect(c.bairro.text, 'Centro');
+      expect(c.cep.text, '75600-001');
+      // ponto que o mapa nao sabe o bairro/CEP: nao deixa o valor do ponto velho
+      c.escolher(const Lugar(endereco: 'Rua E', detalhe: 'Goiatuba - GO', latitude: -18.03, longitude: -49.37), doAlfinete: true);
+      expect(c.bairro.text, '');
+      expect(c.cep.text, '');
+      c.dispose();
+    });
+
     test('endereço achado por busca: mexer na rua apaga a localização (precisa confirmar de novo)', () {
       final c = EnderecoControle();
       c.escolher(const Lugar(endereco: 'Rua C, 5', detalhe: 'Centro, Goiatuba - GO', latitude: -18.01, longitude: -49.35));

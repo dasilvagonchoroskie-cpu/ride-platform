@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/config.dart';
+import '../core/permissoes_nativas.dart';
 import '../core/tema.dart';
 import '../dados/comercio_api.dart';
 import '../dados/modelos.dart';
@@ -38,6 +39,20 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
   bool _movendo = false;
   bool _falhou = false;
   Timer? _espera;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sem ponto de partida (loja sem localizacao): usa a ultima posicao do celular, se a loja liberou a localizacao.
+    if (widget.inicioLat == null || widget.inicioLng == null) {
+      PermissoesNativas.posicao().then((p) {
+        if (p == null || !mounted) return;
+        final ponto = LatLng(p['latitude']!, p['longitude']!);
+        setState(() => _centro = ponto);
+        _mapa.move(ponto, 16.5);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -84,6 +99,8 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
       detalhe: l?.detalhe ?? '',
       latitude: _centro.latitude,
       longitude: _centro.longitude,
+      bairro: l?.bairro ?? '',
+      cep: l?.cep ?? '',
     ));
   }
 

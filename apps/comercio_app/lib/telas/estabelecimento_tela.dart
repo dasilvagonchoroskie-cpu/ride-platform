@@ -80,7 +80,7 @@ class _EstabelecimentoTelaState extends State<EstabelecimentoTela> {
       appBar: AppBar(title: const Text('Editar estabelecimento')),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          padding: EdgeInsets.fromLTRB(20, 4, 20, 28 + MediaQuery.viewPaddingOf(context).bottom),
           child: Form(
             key: _form,
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

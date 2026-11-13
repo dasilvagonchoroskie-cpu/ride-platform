@@ -21,7 +21,19 @@ describe('TomTom: formato das respostas', () => {
         },
         position: { lat: -18.01, lon: -49.35 },
       }),
-    ).toEqual({ address: 'Avenida Brasília, 120', detail: 'Centro, Goiatuba - GO', latitude: -18.01, longitude: -49.35 });
+    ).toEqual({ address: 'Avenida Brasília, 120', detail: 'Centro, Goiatuba - GO', latitude: -18.01, longitude: -49.35, neighborhood: 'Centro' });
+  });
+
+  it('devolve bairro e CEP (so numeros) quando o mapa sabe, e nada quando nao sabe', () => {
+    const com = paraLugar({
+      address: { streetName: 'Rua Goiás', municipalitySubdivision: 'Setor Sul', municipality: 'Goiatuba', countrySubdivisionCode: 'GO', postalCode: '75600-000', countryCode: 'BR' },
+      position: { lat: -18.0, lon: -49.3 },
+    });
+    expect(com?.neighborhood).toBe('Setor Sul');
+    expect(com?.postalCode).toBe('75600000');
+    const sem = paraLugar({ address: { streetName: 'Rua Goiás', municipality: 'Goiatuba', countryCode: 'BR' }, position: { lat: -18.0, lon: -49.3 } });
+    expect(sem).not.toHaveProperty('neighborhood');
+    expect(sem).not.toHaveProperty('postalCode');
   });
 
   it('lugar com nome (POI) e cidade inteira', () => {

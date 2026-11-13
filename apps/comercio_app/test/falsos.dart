@@ -29,7 +29,7 @@ class ServidorFalso extends ComercioApi {
   ConfigDoMapa? mapaConfig;
   int consultasDeMapa = 0;
   Object? erroNosTermos;
-  TermosDeUso termosDeTeste = const TermosDeUso(versao: '0.1.0-minuta', conteudo: '# Termos\n\n## 1. Quem somos\n\nTexto **importante**.\n\n- item um', revisadoPorAdvogado: false);
+  TermosDeUso termosDeTeste = const TermosDeUso(versao: '0.1.0-minuta', conteudo: '# Termos\n\n> **Minuta técnica em revisão.** Texto de teste.\n\n## 1. Quem somos\n\nTexto **importante**.\n\n- item um', revisadoPorAdvogado: false);
 
   @override
   Future<CaixaDeAvisos> avisos() async {

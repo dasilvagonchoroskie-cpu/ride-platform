@@ -1,11 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../core/config.dart';
 import '../core/formato.dart';
+import '../core/instalar_stub.dart' if (dart.library.js_interop) '../core/instalar_web.dart' as navegador;
 import '../core/tema.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
 import 'estabelecimento_tela.dart';
+import 'permissoes_tela.dart';
 import 'termos_tela.dart';
 
 /// Dados do estabelecimento, edicao e saida.
@@ -17,7 +20,7 @@ class ContaAba extends StatelessWidget {
     final s = EscopoSessao.de(context);
     final e = s.estabelecimento;
     if (e == null) return const SizedBox.shrink();
-    return ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 40), children: [
+    return ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.viewPaddingOf(context).bottom), children: [
       const Text('Meu estabelecimento', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
       const SizedBox(height: 16),
       Card(
@@ -56,6 +59,22 @@ class ContaAba extends StatelessWidget {
         label: const Text('Termos de uso'),
       ),
       const SizedBox(height: 10),
+      OutlinedButton.icon(
+        key: const Key('autorizacoes-celular'),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AutorizacoesTela())),
+        icon: const Icon(Icons.verified_user_outlined),
+        label: const Text('Autorizações do celular'),
+      ),
+      const SizedBox(height: 10),
+      if (kIsWeb && navegador.navegadorPodeInstalar()) ...[
+        OutlinedButton.icon(
+          key: const Key('instalar-no-aparelho'),
+          onPressed: navegador.instalarNoNavegador,
+          icon: const Icon(Icons.install_mobile),
+          label: const Text('Instalar o Comércio neste aparelho'),
+        ),
+        const SizedBox(height: 10),
+      ],
       OutlinedButton.icon(onPressed: s.sair, icon: const Icon(Icons.logout), label: const Text('Sair da conta')),
       const SizedBox(height: 20),
       Center(child: Text('Fortaleza Move Comércio · versão ${AppConfig.appVersion}', style: const TextStyle(color: Cores.textoFraco, fontSize: 12))),

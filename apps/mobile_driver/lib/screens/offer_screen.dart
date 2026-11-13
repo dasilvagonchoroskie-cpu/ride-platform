@@ -94,7 +94,7 @@ class OfferScreen extends StatelessWidget {
           Expanded(
             flex: 6,
             child: SheetSurface(
-              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg),
+              padding: EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg + MediaQuery.viewPaddingOf(context).bottom),
               // Deslizar e Recusar ficam SEMPRE na tela, embaixo; so os
               // detalhes rolam. Antes, em celular de 780 de altura, o
               // "Deslize para aceitar" ficava 162 pontos abaixo da tela
@@ -329,25 +329,28 @@ class OfferScreen extends StatelessWidget {
                           // Passageiro
                           Row(
                             children: [
-                              AppAvatar(initials: offer.passengerInitials, size: 40),
+                              AppAvatar(initials: offer.solicitanteIniciais, size: 40),
                               const SizedBox(width: Spacing.md),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      offer.passengerName,
+                                      offer.solicitanteNome,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: SheetText.heading,
                                     ),
-                                    Row(
-                                      children: [
-                                        AppStars(value: offer.passengerRating, size: 12),
-                                        const SizedBox(width: Spacing.xs),
-                                        Text(offer.passengerRating.toStringAsFixed(1), style: SheetText.muted),
-                                      ],
-                                    ),
+                                    if (offer.entrega != null)
+                                      Text('Entrega de comércio', style: SheetText.muted)
+                                    else
+                                      Row(
+                                        children: [
+                                          AppStars(value: offer.passengerRating, size: 12),
+                                          const SizedBox(width: Spacing.xs),
+                                          Text(offer.passengerRating.toStringAsFixed(1), style: SheetText.muted),
+                                        ],
+                                      ),
                                   ],
                                 ),
                               ),

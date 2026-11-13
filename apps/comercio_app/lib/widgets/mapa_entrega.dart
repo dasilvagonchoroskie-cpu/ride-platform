@@ -16,7 +16,10 @@ import 'comuns.dart';
 /// velho e avisado; sem imagens do mapa os pontos continuam certos, mas a
 /// tela diz que as ruas nao estao disponiveis.
 class MapaEntrega extends StatefulWidget {
-  const MapaEntrega({super.key, required this.mapa, required this.ruas, required this.veiculo, required this.comMotorista});
+  const MapaEntrega({super.key, required this.mapa, required this.ruas, required this.veiculo, required this.comMotorista, this.telaCheia = false});
+
+  /// true = mapa ocupando a tela toda (aberto pelo botao "Ampliar").
+  final bool telaCheia;
 
   final MapaDaEntrega mapa;
 
@@ -133,11 +136,12 @@ class _MapaEntregaState extends State<MapaEntrega> {
     final ruas = widget.ruas;
     final nitido = ruas != null && ruas.tamanho >= 512 && MediaQuery.devicePixelRatioOf(context) >= 1.5;
     final ajuste = _ajuste(pontos);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+    // Mapa grande: metade da altura da tela (entre 340 e 620); na tela cheia, o que sobrar.
+    final altura = (MediaQuery.sizeOf(context).height * 0.5).clamp(340.0, 620.0);
+    final mapa = ClipRRect(
+        borderRadius: BorderRadius.circular(widget.telaCheia ? 0 : 14),
         child: SizedBox(
-          height: 260,
+          height: widget.telaCheia ? null : altura,
           child: Stack(children: [
             FlutterMap(
               mapController: _controle,
@@ -205,11 +209,35 @@ class _MapaEntregaState extends State<MapaEntrega> {
                   child: Text(ruas.atribuicao, style: const TextStyle(fontSize: 10, color: Colors.black87)),
                 ),
               ),
+            if (!widget.telaCheia)
+              Positioned(
+                left: 8,
+                top: 8,
+                child: FilledButton.tonalIcon(
+                  key: const Key('ampliar-mapa'),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(title: const Text('Mapa da entrega')),
+                      body: SafeArea(
+                        child: Column(children: [
+                          Expanded(
+                            child: MapaEntrega(mapa: widget.mapa, ruas: widget.ruas, veiculo: widget.veiculo, comMotorista: widget.comMotorista, telaCheia: true),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  )),
+                  icon: const Icon(Icons.fullscreen, size: 18),
+                  label: const Text('Ampliar'),
+                ),
+              ),
             if (_mexeu)
               Positioned(
                 right: 8,
                 top: 8,
                 child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                   onPressed: () {
                     setState(() => _mexeu = false);
                     _enquadrar();
@@ -220,7 +248,9 @@ class _MapaEntregaState extends State<MapaEntrega> {
               ),
           ]),
         ),
-      ),
+      );
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (widget.telaCheia) Expanded(child: mapa) else mapa,
       const SizedBox(height: 8),
       Wrap(spacing: 14, runSpacing: 4, children: [
         if (m.coleta != null) _legenda(Cores.loja, 'Loja'),

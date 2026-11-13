@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/tema.dart';
@@ -17,8 +19,34 @@ class InicioShell extends StatefulWidget {
   State<InicioShell> createState() => _InicioShellState();
 }
 
-class _InicioShellState extends State<InicioShell> {
+class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   int _aba = 0;
+  Timer? _vigia;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Se a Central desligar o Comercio com o app aberto, a tela de "fora do ar" aparece sozinha.
+    _vigia = Timer.periodic(const Duration(seconds: 60), (_) => _conferirChave());
+  }
+
+  @override
+  void dispose() {
+    _vigia?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _conferirChave();
+  }
+
+  Future<void> _conferirChave() async {
+    if (!mounted) return;
+    await EscopoSessao.ler(context).atualizar();
+  }
 
   /// Muda a cada volta de uma tela; as abas recarregam quando a chave muda.
   int _versao = 0;

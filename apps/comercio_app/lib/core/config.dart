@@ -14,7 +14,7 @@ class AppConfig {
   static const Duration atualizacao = Duration(seconds: 8);
 
   /// Sino de avisos: de quantos em quantos segundos o app confere se ha aviso novo.
-  static const Duration atualizacaoDosAvisos = Duration(seconds: 30);
+  static const Duration atualizacaoDosAvisos = Duration(seconds: 15);
 
   /// Centro usado so para orientar a busca de enderecos quando o
   /// estabelecimento ainda nao tem localizacao (Goiatuba, GO).
