@@ -1331,8 +1331,10 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
         if (mudou || girou) notifyListeners();
         _talvezMandarPosicao(p);
       }, onError: (_) {
-        // Um erro isolado do stream nao para o motorista: o heartbeat
-        // continua tentando enviar a ultima posicao boa conhecida.
+        // Um erro isolado do stream nao para o motorista: o servico nativo
+        // (CorridasService) segue mandando a posicao, inclusive a cada 45 s
+        // com o motorista parado, e o app volta a escutar na proxima
+        // abertura da tela online.
       });
     } catch (_) {
       locationDenied = true;
