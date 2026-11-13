@@ -215,6 +215,7 @@ class _MapaEntregaState extends State<MapaEntrega> {
                 top: 8,
                 child: FilledButton.tonalIcon(
                   key: const Key('ampliar-mapa'),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
                     builder: (_) => Scaffold(
                       appBar: AppBar(title: const Text('Mapa da entrega')),
@@ -236,6 +237,7 @@ class _MapaEntregaState extends State<MapaEntrega> {
                 right: 8,
                 top: 8,
                 child: FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                   onPressed: () {
                     setState(() => _mexeu = false);
                     _enquadrar();
