@@ -5,6 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 Widget _app(Widget filho) => MaterialApp(home: filho);
 
+/// Tela alta: a lista de autorizacoes rola e o que fica fora da tela nem e montado.
+void _telaAlta(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 3200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
   setUp(() => Armazenamento.atual = ArmazenamentoEmMemoria());
 
@@ -15,6 +22,7 @@ void main() {
   });
 
   testWidgets('no celular, na primeira abertura mostra as autorizações e continua sem travar', (tester) async {
+    _telaAlta(tester);
     await tester.pumpWidget(_app(const PortaoPermissoes(forcarAndroid: true, child: Text('app'))));
     await tester.pumpAndSettle();
     expect(find.text('Autorizações do celular'), findsOneWidget);
@@ -32,6 +40,7 @@ void main() {
   });
 
   testWidgets('lista: notificações, localização, GPS e bateria; ajuste do fabricante com "Já fiz"', (tester) async {
+    _telaAlta(tester);
     await tester.pumpWidget(_app(const Scaffold(
       body: ConteudoAutorizacoes(
         estadoDeTeste: {'notificacao': true, 'localizacao': false, 'gps': true, 'bateria': false, 'x_inicioAutomatico': false},
@@ -45,7 +54,6 @@ void main() {
     expect(find.byKey(const ValueKey('liberar-notificacao')), findsNothing);
     expect(find.byKey(const ValueKey('nome-aparelho')), findsOneWidget);
     expect(find.byKey(const ValueKey('ajuste-inicioAutomatico')), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const ValueKey('feito-inicioAutomatico')));
     await tester.tap(find.byKey(const ValueKey('feito-inicioAutomatico')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('refazer-inicioAutomatico')), findsOneWidget);
