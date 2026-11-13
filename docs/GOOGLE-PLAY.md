@@ -93,7 +93,7 @@ conta ou de servidor **sem atualizar o app na loja**.
 | 5.2 | **Classificação indicativa** (questionário IARC): sem violência, sem jogos; marca que usuários se comunicam e que o app **compartilha a localização** | E responde (eu digo o que marcar) | ⏳ |
 | 5.3 | **Público-alvo**: 18 anos ou mais (a conta já exige 18 anos) | E | ⏳ |
 | 5.4 | **Anúncios**: "não tem anúncios" | E | ⏳ |
-| 5.5 | **Acesso ao app** (App access): o Google precisa entrar no app. Eu preparo **uma conta de revisão** do passageiro e uma do motorista (aprovado, com carro e saldo) que mostram o código na tela; você só copia os dados para o formulário | C | ⏳ |
+| 5.5 | **Acesso ao app** (App access): o Google precisa entrar no app. **Código pronto (13/11/2026), desligado por padrão:** variável `OTP_CONTAS_REVISAO` no Render (formato `e-mail=código,e-mail=código`; código só de dígitos, do tamanho do código normal). Vale só para e-mail da lista, só entrada por e-mail, só passageiro/motorista (nunca a Central), mantém o limite de 6 pedidos por hora e não envia e-mail. Falta: **você autorizar** criar as duas contas de revisão (passageiro e motorista aprovado, com carro) e gravar a variável no Render (o valor fica só lá; nunca no repositório nem no chat) e copiar e-mail/código para o formulário | C | 🟡 código pronto, falta autorização e variável |
 | 5.6 | **Serviço em primeiro plano** (Foreground service): o motorista usa *localização* (receber chamados e seguir a corrida com a tela apagada); o passageiro usa *sincronização de dados*. A loja pede descrição e um **vídeo curto** mostrando o uso | C escreve e grava no Android de teste; E envia | ⏳ |
 | 5.7 | Localização em segundo plano | — | ✅ não pedimos `ACCESS_BACKGROUND_LOCATION` (só o serviço em primeiro plano, com aviso fixo na tela) |
 | 5.8 | Outras declarações que aparecerem (ex.: recursos financeiros, saúde, governo): todas "não" | E | ⏳ |
@@ -106,7 +106,7 @@ conta ou de servidor **sem atualizar o app na loja**.
 | 6.2 | Alvo **Android 16 (API 36)** — obrigatório para app novo e atualização desde 31/08/2026 | C | ✅ a esteira confere no APK pronto |
 | 6.3 | Bibliotecas nativas alinhadas em **16 KB** | C | ✅ a esteira confere no APK pronto |
 | 6.4 | Assinatura: a mesma chave dos APKs vira a **chave de envio** (upload key); o Google guarda a chave do app (Play App Signing). Segredos `ANDROID_*` do GitHub + cópia do .jks fora do GitHub | C | ✅ (perder a chave = não atualiza mais) |
-| 6.5 | **Desligar o modo teste do código de entrada** (`OTP_DEBUG_RETURN` no Render; estava ligado desde o começo, sem SMS). Ligado, conta só com telefone (sem e-mail) recebe o código **na tela**: na loja, qualquer pessoa entraria nessas contas. Antes de desligar: e-mail funcionando e as contas de revisão do item 5.5 | C | ⏳ **obrigatório antes de publicar** |
+| 6.5 | **Desligar o modo teste do código de entrada** (`OTP_DEBUG_RETURN` no Render; estava ligado desde o começo, sem SMS). Ligado, conta só com telefone (sem e-mail) recebe o código **na tela**: na loja, qualquer pessoa entraria nessas contas. Antes de desligar: e-mail funcionando e as contas de revisão do item 5.5 (variável `OTP_CONTAS_REVISAO`) testadas em celular | C | ⏳ **obrigatório antes de publicar** |
 | 6.6 | Primeira versão pelo **teste interno** (Internal testing — "Teste interno", até 100 pessoas), depois produção | E + C | ⏳ |
 
 ## 7. Verificação de desenvolvedor do Android (regra nova de 2026)

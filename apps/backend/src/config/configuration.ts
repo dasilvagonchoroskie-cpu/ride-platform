@@ -17,7 +17,7 @@ export interface AppConfiguration {
     refreshSecret: string;
     refreshTtl: number;
   };
-  otp: { length: number; ttlSeconds: number; maxAttempts: number; debugReturn: boolean; chaveTeste?: string };
+  otp: { length: number; ttlSeconds: number; maxAttempts: number; debugReturn: boolean; chaveTeste?: string; contasRevisao: Record<string, string> };
   s3: {
     endpoint?: string;
     region: string;
@@ -89,6 +89,7 @@ export function configuration(): AppConfiguration {
       maxAttempts: env.OTP_MAX_ATTEMPTS,
       debugReturn: env.OTP_DEBUG_RETURN,
       chaveTeste: env.OTP_CHAVE_TESTE && env.OTP_CHAVE_TESTE.length >= 24 ? env.OTP_CHAVE_TESTE : undefined,
+      contasRevisao: lerContasDeRevisao(env.OTP_CONTAS_REVISAO, env.OTP_LENGTH),
     },
     s3: {
       endpoint: env.S3_ENDPOINT || undefined,
@@ -132,4 +133,24 @@ export function configuration(): AppConfiguration {
       minPayoutCents: env.MIN_PAYOUT_CENTS,
     },
   };
+}
+
+
+/**
+ * `email=codigo,email=codigo` -> { email(minusculo): codigo }. Ignora entrada mal formada
+ * (e-mail sem @, codigo que nao seja so digitos com o tamanho do OTP): errar aqui so
+ * deixa a conta de revisao DESLIGADA, nunca mais permissiva.
+ */
+export function lerContasDeRevisao(texto: string | undefined, tamanho: number): Record<string, string> {
+  const saida: Record<string, string> = {};
+  for (const par of (texto ?? '').split(',')) {
+    const i = par.indexOf('=');
+    if (i < 0) continue;
+    const email = par.slice(0, i).trim().toLowerCase();
+    const codigo = par.slice(i + 1).trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) continue;
+    if (!new RegExp(`^\\d{${tamanho}}$`).test(codigo)) continue;
+    saida[email] = codigo;
+  }
+  return saida;
 }

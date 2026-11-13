@@ -32,6 +32,10 @@ chat (regra de 30/10/2026).
   - `OTP_CHAVE_TESTE`: só a esteira de testes usa (mesmo valor do segredo do GitHub).
   - `OTP_DEBUG_RETURN`: modo teste (código na tela para conta sem e-mail; ligado
     desde o começo, sem SMS). **Desligar antes da loja** (`docs/GOOGLE-PLAY.md`, item 6.5).
+  - `OTP_CONTAS_REVISAO`: contas de revisão da loja (Google Play), `e-mail=código` separados por
+    vírgula. **Desligada por padrão (vazia).** Só e-mail da lista, só entrada por e-mail, só
+    passageiro/motorista (nunca ADMIN), sem envio de e-mail, com o limite de 6 pedidos/hora e as
+    5 tentativas do código normal. Valor só no Render, nunca no repositório (`docs/GOOGLE-PLAY.md`, 5.5).
 - Mapa: `TOMTOM_API_KEY` (busca, endereço e rota; nunca sai do servidor),
   `TOMTOM_API_KEY_MAPA` (opcional: chave só das imagens do mapa, a única que
   chega aos celulares; sem ela, vale a `TOMTOM_API_KEY`), `TOMTOM_COTA_MES`,
