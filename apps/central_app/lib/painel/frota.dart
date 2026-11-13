@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/central_theme.dart';
 import '../data/painel.dart';
 import '../widgets/ui.dart';
+import 'cadastrar_motorista.dart' show TipoDeVeiculo;
 import 'carros.dart';
 import 'comuns.dart';
 import 'painel_state.dart';
@@ -63,6 +64,38 @@ class _FrotaTelaState extends State<FrotaTela> {
         _lista = _api.frota(tipo: _tipo, busca: _busca.text, situacao: _situacao);
       });
 
+  /// Cadastra um veiculo novo para um motorista que ja existe (pedido do
+  /// Evandro, 13/11/2026): escolhe o motorista e preenche o veiculo; ja entra
+  /// conferido pela Central, na categoria desta tela (Moto, ou Carro/Utilitario).
+  Future<void> _cadastrar() async {
+    final api = _api;
+    final motorista = await escolherMotoristaDoVeiculo(context, api);
+    if (motorista == null || !mounted) return;
+    final tipos = widget.moto ? const [TipoDeVeiculo.moto] : const [TipoDeVeiculo.carro, TipoDeVeiculo.utilitario];
+    final dados = await formularioDoCarro(
+      context,
+      titulo: widget.moto ? 'Cadastrar moto de ${motorista.nome}' : 'Cadastrar veículo de ${motorista.nome}',
+      tipos: tipos,
+    );
+    if (dados == null || !mounted) return;
+    try {
+      await api.cadastrarCarro(motorista.id, dados);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${widget.moto ? 'Moto cadastrada' : 'Veículo cadastrado'} para ${motorista.nome}.')));
+      _recarregar();
+    } catch (e) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Não foi possível cadastrar'),
+          content: Text(mensagemDe(e)),
+          actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK'))],
+        ),
+      );
+    }
+  }
+
   Future<void> _abrir(VeiculoDaFrota v) async {
     await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => DetalheDoVeiculo(veiculo: v, api: _api)));
     if (mounted) _recarregar();
@@ -72,6 +105,18 @@ class _FrotaTelaState extends State<FrotaTela> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.md, Spacing.md, 0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.icon(
+              key: const Key('cadastrar-veiculo'),
+              onPressed: _cadastrar,
+              icon: Icon(widget.moto ? Icons.two_wheeler : Icons.directions_car_outlined),
+              label: Text(widget.moto ? 'Cadastrar moto' : 'Cadastrar carro'),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(Spacing.md, Spacing.md, Spacing.md, 0),
           child: TextField(
@@ -352,6 +397,94 @@ class _DetalheDoVeiculoState extends State<DetalheDoVeiculo> {
           CarrosDoMotorista(driverId: v.motoristaId, api: api),
         ],
       ),
+    );
+  }
+}
+
+/// Escolhe um motorista ja cadastrado (ativos e pendentes), com busca por
+/// nome, telefone ou placa. null = cancelou.
+Future<MotoristaCadastro?> escolherMotoristaDoVeiculo(BuildContext context, PainelApi api) {
+  return showDialog<MotoristaCadastro>(
+    context: context,
+    builder: (ctx) => _EscolherMotorista(api: api),
+  );
+}
+
+class _EscolherMotorista extends StatefulWidget {
+  const _EscolherMotorista({required this.api});
+
+  final PainelApi api;
+
+  @override
+  State<_EscolherMotorista> createState() => _EscolherMotoristaState();
+}
+
+class _EscolherMotoristaState extends State<_EscolherMotorista> {
+  final _busca = TextEditingController();
+  late final Future<List<MotoristaCadastro>> _todos = _carregar();
+
+  Future<List<MotoristaCadastro>> _carregar() async {
+    final ativos = await widget.api.motoristas('APPROVED');
+    final pendentes = await widget.api.motoristas('PENDING');
+    return [...ativos, ...pendentes];
+  }
+
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('De qual motorista é o veículo?'),
+      content: SizedBox(
+        width: 420,
+        height: 420,
+        child: FutureBuilder<List<MotoristaCadastro>>(
+          future: _todos,
+          builder: (context, s) {
+            if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+            if (s.hasError) return Text('Não foi possível carregar os motoristas: ${mensagemDe(s.error!)}');
+            final q = _busca.text.trim().toLowerCase();
+            final qd = q.replaceAll(RegExp(r'\D'), '');
+            final lista = [
+              for (final m in s.data!)
+                if (q.isEmpty ||
+                    m.nome.toLowerCase().contains(q) ||
+                    m.placa.toLowerCase().contains(q) ||
+                    (qd.isNotEmpty && m.telefone.replaceAll(RegExp(r'\D'), '').contains(qd)))
+                  m,
+            ];
+            return Column(
+              children: [
+                TextField(
+                  controller: _busca,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(hintText: 'Buscar por nome, telefone ou placa', prefixIcon: Icon(Icons.search)),
+                ),
+                const SizedBox(height: Spacing.sm),
+                Expanded(
+                  child: lista.isEmpty
+                      ? const Center(child: Text('Nenhum motorista encontrado.'))
+                      : ListView(
+                          children: [
+                            for (final m in lista)
+                              ListTile(
+                                title: Text(m.nome),
+                                subtitle: Text('${m.telefone} · ${nomeDoStatusMotorista(m.status)}'),
+                                onTap: () => Navigator.of(context).pop(m),
+                              ),
+                          ],
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar'))],
     );
   }
 }

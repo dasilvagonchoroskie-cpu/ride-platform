@@ -12,6 +12,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { ComercioAvisosService } from '../comercio/comercio.avisos';
 import { ComercioService } from '../comercio/comercio.service';
 import { EntregaManualController } from './entrega-manual.controller';
+import { EntregaManualCentralController } from './entrega-manual-central.controller';
 import { EntregaManualService } from './entrega-manual.service';
 
 /**
@@ -72,7 +73,7 @@ function combina(c: any, where: any, users: Record<string, any>): boolean {
 
 const entregasFalsas = { criarParadas: jest.fn(async () => undefined), paradasDaCorrida: jest.fn(async () => [] as unknown[]) };
 
-function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: string; semVeiculo?: boolean; pracaDoMotorista?: string | null } = {}) {
+function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: string; semVeiculo?: boolean; pracaDoMotorista?: string | null; operadorDaCidade?: string | null } = {}) {
   const users: Record<string, any> = {
     uLoja1: { id: 'uLoja1', role: 'PASSENGER', email: 'padaria@loja.com', phone: '+5564999991234', emailVerifiedAt: new Date() },
     uLoja2: { id: 'uLoja2', role: 'PASSENGER', email: 'mercado@loja.com', phone: '+5564988887777', emailVerifiedAt: new Date() },
@@ -191,10 +192,15 @@ function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: strin
   const pracas: any = {
     listar: jest.fn(async () => PRACAS),
     pracaDoMotorista: jest.fn(async () => (op.pracaDoMotorista === undefined ? 'goiatuba' : op.pracaDoMotorista)),
+    // Operador da Central: sem cidade = dono (ve tudo); com cidade so mexe nela.
+    escopoDe: jest.fn(async () => (op.operadorDaCidade ?? null)),
+    exigirAcesso: jest.fn(async (_u: unknown, praca: string | null) => {
+      if (op.operadorDaCidade && op.operadorDaCidade !== praca) throw new Error('Isto e de outra cidade.');
+    }),
   };
   const avisos = new ComercioAvisosService(prisma, { avisar: jest.fn() } as never);
   const comercio = new ComercioService(prisma, rides as never, pracas as never, avisos, entregasFalsas as never);
-  const manual = new EntregaManualService(prisma, comercio, central as never, rides as never);
+  const manual = new EntregaManualService(prisma, comercio, central as never, rides as never, pracas as never);
   return { prisma, rides, central, comercio, manual, comercios, pedidos, corridas, historico, auditoria, motorista, config };
 }
 
@@ -480,5 +486,95 @@ describe('Lancamento manual: rotas e papeis', () => {
     expect(() => guard.canActivate(ctx(UserRole.ADMIN))).toThrow();
     expect(Reflect.getMetadata('path', EntregaManualController)).toBe('driver/manual-deliveries');
     expect(Reflect.getMetadata('method', EntregaManualController.prototype.lancar)).toBe(RequestMethod.POST);
+  });
+});
+
+describe('Lancamento manual pela Central', () => {
+  const admin = { id: 'uAdmin', role: UserRole.ADMIN } as never;
+  const pedidoCentral = (comercioId: string, extra: Record<string, unknown> = {}) => ({
+    ...pedidoManual(comercioId, 'chave-central-0000001'),
+    veiculo: 'MOTO',
+    ...extra,
+  });
+
+  it('lanca: pedido do Comercio com origem CENTRAL, veiculo escolhido e despacho automatico (ninguem atribuido)', async () => {
+    const ctx = montar();
+    const r = await ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1') as never);
+    expect(r).toMatchObject({ repetido: false, codigo: expect.stringMatching(/^FM/) });
+    const [passageiro, entrada] = ctx.rides.pedir.mock.calls[0] as unknown as [string, any];
+    expect(passageiro).toBe('uLoja1');
+    expect(entrada.paymentMethodType).toBe('CASH');
+    expect(entrada.entrega.veiculo).toBe('MOTO');
+    expect(ctx.pedidos[0]).toMatchObject({ comercioId: 'c1', origem: 'CENTRAL' });
+    expect(ctx.pedidos[0].lancadoPor ?? null).toBeNull();
+    expect(ctx.central.atribuir).not.toHaveBeenCalled();
+    expect(ctx.rides.aceitar).not.toHaveBeenCalled();
+    expect(ctx.auditoria[0]).toMatchObject({ actorId: 'uAdmin', actorRole: UserRole.ADMIN, action: 'COMERCIO_ENTREGA_LANCADA_PELA_CENTRAL' });
+  });
+
+  it('o veiculo e o que a Central escolheu (carro)', async () => {
+    const ctx = montar();
+    await ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1', { veiculo: 'CARRO' }) as never);
+    expect((ctx.rides.pedir.mock.calls[0] as unknown as [string, any])[1].entrega.veiculo).toBe('CARRO');
+  });
+
+  it('com motorista escolhido: so envia a ele (ele aceita no aplicativo)', async () => {
+    const ctx = montar();
+    const r = await ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1', { motoristaId: '11111111-1111-4111-8111-111111111111' }) as never);
+    expect(ctx.central.atribuir).toHaveBeenCalledWith('uAdmin', r.rideId, '11111111-1111-4111-8111-111111111111');
+    expect(ctx.rides.aceitar).not.toHaveBeenCalled();
+  });
+
+  it('falha ao enviar ao motorista escolhido: a entrega e cancelada e nao fica solta', async () => {
+    const ctx = montar();
+    ctx.central.atribuir.mockRejectedValueOnce(new Error('Motorista desconectado'));
+    await expect(
+      ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1', { motoristaId: '11111111-1111-4111-8111-111111111111' }) as never),
+    ).rejects.toThrow('Motorista desconectado');
+    const ids = Object.keys(ctx.corridas);
+    expect(ctx.corridas[ids[0]].status).toBe('CANCELLED_BY_SYSTEM');
+  });
+
+  it.each([
+    ['loja aguardando', 'cAguardando', {}, /aguardando/i],
+    ['loja suspensa', 'cSuspensa', {}, /suspens/i],
+    ['e-mail nao confirmado', 'c3', {}, /e-mail/i],
+    ['chave geral desligada', 'c1', { chaveLigada: false }, /./],
+  ])('porta fechada (%s): nada e criado', async (_n, id, opcoes, erro) => {
+    const ctx = montar(opcoes);
+    await expect(ctx.manual.lancarPelaCentral(admin, pedidoCentral(id) as never)).rejects.toThrow(erro);
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    expect(ctx.pedidos).toHaveLength(0);
+  });
+
+  it('operador de OUTRA cidade nao lanca nem enxerga a loja', async () => {
+    const ctx = montar({ operadorDaCidade: 'itumbiara' });
+    await expect(ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1') as never)).rejects.toThrow('outra cidade');
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    const achadas = await ctx.comercio.buscarParaCentral('itumbiara', async (praca) => praca === 'goiatuba');
+    expect(achadas.itens).toHaveLength(0);
+  });
+
+  it('repetir a mesma chave nao duplica; chave de entrega do app nao e reaproveitada', async () => {
+    const ctx = montar();
+    const a = await ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1') as never);
+    const b = await ctx.manual.lancarPelaCentral(admin, pedidoCentral('c1') as never);
+    expect(b).toMatchObject({ repetido: true, rideId: a.rideId });
+    expect(ctx.pedidos).toHaveLength(1);
+  });
+
+  it('a Central cota o preco oficial dos dois veiculos, sem criar nada', async () => {
+    const ctx = montar();
+    const c = await ctx.comercio.lojaParaCentral('c1');
+    const { comercioId: _x, chave: _y, ...cotar } = pedidoCentral('c1') as any;
+    const r = await ctx.comercio.cotarParaCentral(c, cotar);
+    expect(r.opcoes.length).toBeGreaterThan(0);
+    expect(ctx.pedidos).toHaveLength(0);
+  });
+
+  it('rotas: so ADMIN, em admin/manual-deliveries (a rota do motorista continua so do motorista)', () => {
+    expect(Reflect.getMetadata(ROLES_KEY, EntregaManualCentralController)).toEqual([UserRole.ADMIN]);
+    expect(Reflect.getMetadata('path', EntregaManualCentralController)).toBe('admin/manual-deliveries');
+    expect(Reflect.getMetadata(ROLES_KEY, EntregaManualController)).toEqual([UserRole.DRIVER]);
   });
 });

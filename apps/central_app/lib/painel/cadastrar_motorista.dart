@@ -67,6 +67,19 @@ String? dataParaServidor(String texto) {
   return '${d.substring(4)}-${d.substring(2, 4)}-${d.substring(0, 2)}';
 }
 
+/// Tipo do veiculo no cadastro: Carro (Popular), Moto ou Utilitario (Fiorino, furgao).
+/// [categoria] e o codigo que o servidor guarda no veiculo.
+enum TipoDeVeiculo {
+  carro('Carro', 'carro', 'CARRO'),
+  moto('Moto', 'moto', 'MOTO'),
+  utilitario('Utilitário', 'utilitário', 'UTILITARIO');
+
+  const TipoDeVeiculo(this.rotulo, this.nome, this.categoria);
+  final String rotulo;
+  final String nome;
+  final String categoria;
+}
+
 class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
   final _nome = TextEditingController();
   final _telefone = TextEditingController();
@@ -82,6 +95,7 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
   final _placa = TextEditingController();
   final _saldo = TextEditingController();
   String _categoria = 'B';
+  TipoDeVeiculo _tipo = TipoDeVeiculo.carro;
   bool _aprovar = true;
   bool _enviando = false;
   String? _erro;
@@ -116,10 +130,10 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
     if (validade == null) return 'Validade da CNH: DD/MM/AAAA.';
     if (!DateTime.parse(validade).isAfter(DateTime.now())) return 'A CNH está vencida.';
     if (_marca.text.trim().isEmpty || _modelo.text.trim().isEmpty || _cor.text.trim().isEmpty) {
-      return 'Preencha marca, modelo e cor do carro.';
+      return 'Preencha marca, modelo e cor do ${_tipo.nome}.';
     }
     final ano = int.tryParse(_ano.text.trim());
-    if (ano == null || ano < 1990 || ano > DateTime.now().year + 1) return 'Ano do carro inválido.';
+    if (ano == null || ano < 1990 || ano > DateTime.now().year + 1) return 'Ano do ${_tipo.nome} inválido.';
     final placa = _placa.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (!RegExp(r'^[A-Z]{3}\d[A-Z0-9]\d{2}$').hasMatch(placa)) return 'Placa inválida (ABC1234 ou ABC1D23).';
     return null;
@@ -154,6 +168,7 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
           'model': _modelo.text.trim(),
           'year': int.parse(_ano.text.trim()),
           'color': _cor.text.trim(),
+          'categoria': _tipo.categoria,
         },
         'aprovar': _aprovar,
       });
@@ -277,9 +292,27 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
               ),
             ),
             _campo('Validade da CNH', _validade, dica: 'DD/MM/AAAA', teclado: TextInputType.number, mascara: _mascaraData),
-            _titulo('Carro'),
+            _titulo('Veículo'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: Spacing.md),
+              child: SegmentedButton<TipoDeVeiculo>(
+                key: const Key('tipo-do-veiculo'),
+                showSelectedIcon: false,
+                segments: [for (final t in TipoDeVeiculo.values) ButtonSegment(value: t, label: Text(t.rotulo))],
+                selected: {_tipo},
+                onSelectionChanged: (v) => setState(() => _tipo = v.first),
+              ),
+            ),
+            if (_tipo == TipoDeVeiculo.utilitario)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.md),
+                child: Text(
+                  'Utilitário (Fiorino, furgão): fica só no cadastro por enquanto, sem corrida de passageiro.',
+                  style: AppText.caption.copyWith(color: AppColors.textMuted),
+                ),
+              ),
             _campo('Marca', _marca, dica: 'Ex.: Chevrolet', maiusculas: TextCapitalization.words),
-            _campo('Modelo', _modelo, dica: 'Ex.: Spin', maiusculas: TextCapitalization.words),
+            _campo('Modelo', _modelo, dica: _tipo == TipoDeVeiculo.moto ? 'Ex.: CG 160' : _tipo == TipoDeVeiculo.utilitario ? 'Ex.: Fiorino' : 'Ex.: Spin', maiusculas: TextCapitalization.words),
             _campo('Ano', _ano, teclado: TextInputType.number),
             _campo('Cor', _cor, maiusculas: TextCapitalization.words),
             _campo('Placa', _placa, dica: 'ABC1D23', maiusculas: TextCapitalization.characters),
@@ -291,7 +324,7 @@ class _CadastrarMotoristaTelaState extends State<CadastrarMotoristaTela> {
               onChanged: (v) => setState(() => _aprovar = v),
               title: const Text('Já aprovar', style: AppText.body),
               subtitle: Text(
-                'Conferi a CNH, o documento do carro e o motorista pessoalmente.',
+                'Conferi a CNH, o documento do veículo e o motorista pessoalmente.',
                 style: AppText.caption.copyWith(color: AppColors.textMuted),
               ),
             ),

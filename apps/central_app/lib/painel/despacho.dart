@@ -10,6 +10,7 @@ import '../core/utils/geo.dart';
 import '../data/painel.dart';
 import '../widgets/contingencia_mapa.dart';
 import 'comuns.dart';
+import 'entrega_manual_central.dart';
 import 'painel_state.dart';
 
 /// Despacho: fila de corridas esperando motorista e corridas em andamento,
@@ -46,11 +47,24 @@ class Despacho extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'nova-corrida',
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NovaCorrida())),
-          icon: const Icon(Icons.add_call),
-          label: const Text('Criar corrida manual'),
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            FloatingActionButton.extended(
+              heroTag: 'nova-entrega',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const EntregaManualCentralTela())),
+              icon: const Icon(Icons.local_shipping_outlined),
+              label: const Text('Lançar entrega manual'),
+            ),
+            const SizedBox(height: Spacing.sm),
+            FloatingActionButton.extended(
+              heroTag: 'nova-corrida',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NovaCorrida())),
+              icon: const Icon(Icons.add_call),
+              label: const Text('Criar corrida manual'),
+            ),
+          ],
         ),
       ),
     );
