@@ -1,2 +1,5 @@
 Analyzing central_app...                                        
-No issues found! (ran in 8.7s)
+
+   info • Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check • lib/painel/entrega_manual_central.dart:279:38 • use_build_context_synchronously
+
+1 issue found. (ran in 8.3s)
