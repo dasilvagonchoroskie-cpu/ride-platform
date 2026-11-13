@@ -1,8 +1,18 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 12/11/2026 (horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 13/11/2026 (horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
+
+## 0. Publicação 2.1.0-rc.1 no Render (13/11/2026)
+
+- [x] 13/11 Merge `etapa2 → main` nos dois repositórios, deploy manual, 7 migrações aplicadas, bucket privado `crm-documentos`,
+      cópia do cofre antes (`cofre.copia_pre_publicacao`). Rotas sem login → 401; setup fechado. Registro: `docs/PUBLICACAO-RENDER-2026-11-13.md`.
+- [ ] **Dono: cadastrar no Render `FM_DOCS_KEY`, `FM_DADOS_KEY` e `DOCS_SUPABASE_KEY`** (passo a passo no registro acima) e
+      guardar as duas primeiras no cofre de senhas. Até lá, o arquivo digital fica desligado.
+- [ ] Depois das chaves: abrir `/api/admin/saude` logado e conferir `prova: "ok"` (Claude confere o log).
+- [ ] Dono: testes reais do `docs/ROTEIRO-TESTES-REAIS.md` (WhatsApp, áudio, documento fictício, IA, notificações). Nenhum feito ainda.
+- [ ] Opcional: "Health Check Path" `/api/health` no painel do Render (a ferramenta do Claude não altera essa opção).
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)
 

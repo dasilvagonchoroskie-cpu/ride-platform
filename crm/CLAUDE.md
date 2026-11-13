@@ -47,7 +47,16 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
-## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; NÃO está em produção)
+## PUBLICADO no Render: 2.1.0-rc.1 (13/11/2026 06h40, autorização formal do dono)
+- `etapa2` mesclado no `main` (monorepo `5c2f29f` + `88dd8c2`; backup `117b9f7`); deploy manual do commit `88dd8c2`; migrações 1–7
+  aplicadas no banco real; Render com `FM_ETAPA2=1`, `DOCS_STORAGE=supabase`, `DOCS_SUPABASE_URL`, `DOCS_SUPABASE_BUCKET=crm-documentos`,
+  `COOKIE_SECURE=true`. Bucket `crm-documentos` PRIVADO (RLS sem políticas). Cópia anterior: `cofre.copia_pre_publicacao` (v3472).
+- FALTAM (só o dono): `FM_DOCS_KEY`, `FM_DADOS_KEY`, `DOCS_SUPABASE_KEY` no painel do Render. Sem elas o arquivo digital fica desligado
+  (documentos do WhatsApp → equipe). Conferir depois em `/api/admin/saude` (`prova: "ok"`). Detalhes: `docs/PUBLICACAO-RENDER-2026-11-13.md`.
+- Seções abaixo marcadas "NÃO está em produção" agora ESTÃO (desde 13/11). Mesclar `etapa2` no `main` não mexe em nada fora de `crm/`
+  (logs automáticos do monorepo são restaurados se vierem junto).
+
+## Arquivos do WhatsApp → ficha, versão 2.1.0-rc.1 (13/11/2026, ramo `etapa2`, pedido do dono; publicado em 13/11)
 - `src/documentos/recebidos.js` + migração 007 `wa_anexos` (uma linha por mensagem, sem DELETE por gatilho). Situações: aguardando_ficha |
   pendente_classificacao | anexado | duplicado | recusado | falhou | nao_documento. Área de espera CIFRADA (`docs.guardarRecebido/lerRecebido`,
   numero 0); cópia descartada só depois de `docs.anexarRecebido` (usuário de sistema `REQ_WHATSAPP`, só código chama) com SHA-256 conferido.

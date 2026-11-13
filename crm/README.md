@@ -354,7 +354,7 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Rotas: `GET /wa/anexos`, `POST /wa/anexos/:id/classificar`, `POST /wa/anexos/:id/resolver` (quem pode anexar documentos);
   `GET /wa/anexos/:id/arquivo` (só admin, auditado). `GET /admin/saude` (admin): versão, banco, migrações e prova real de gravar/ler
   um arquivo cifrado. Origem "Site" reconhece os 4 botões do site público.
-- Versão `2.1.0-rc.1`, cache `fm-crm-v28`. Publicação: `docs/PUBLICACAO-ETAPA2.md`. Testes reais: `docs/ROTEIRO-TESTES-REAIS.md`.
+- Versão `2.1.0-rc.1`, cache `fm-crm-v28`. Publicação: `docs/PUBLICACAO-ETAPA2.md`; publicada no Render em 13/11/2026 (`docs/PUBLICACAO-RENDER-2026-11-13.md`). Testes reais: `docs/ROTEIRO-TESTES-REAIS.md`.
   Testes: `test/wa-anexos.test.js` (rotas, banco, disco e cifra reais; WhatsApp e Gemini simulados).
 
 ## Hospedagem definitiva: VPS da Hostinger (preparado, NÃO executado)
