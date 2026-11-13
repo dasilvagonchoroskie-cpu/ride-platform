@@ -198,7 +198,11 @@ só passam a existir no banco quando o servidor subir depois de um merge autoriz
   (dono/motorista, marca/modelo, ano, placa, documentos, situação, histórico), aprovar/rejeitar e **suspender/reativar**
   (`PATCH /admin/vehicles/:id/suspensao`, situação `SUSPENSO`).
 - Cadastro da moto **não é** autorização de entrega; permissões municipais não foram tocadas.
-- A data de validade de documento **não existe no modelo de dados**: a tela mostra "validade não registrada pelo sistema".
+- Validades (13/11/2026): a **CNH** do motorista já tem validade no cadastro (`cnhExpiresAt`) e agora aparece na lista e no
+  detalhe de Carros e Motos, com aviso "CNH vencida". O **CRLV** do veículo não tinha data: a Central passa a anotá-la
+  (`PATCH /admin/vehicles/:id/validade-crlv`, guardada na ficha do carro em `settings.veiculos`, sem coluna nova e com
+  auditoria `VEHICLE_CRLV_VALIDITY`). É **só registro e aviso**: o sistema não bloqueia o veículo por vencimento (isso é
+  regra de negócio e fica para decisão do dono). Aprovação do cadastro do motorista continua recusando CNH vencida, como antes.
 
 ### Lançar entrega manualmente (app do motorista)
 Botão "Lançar entrega manualmente", separado de "Lançar corrida manual". Fluxo: buscar estabelecimento (telefone,

@@ -1,9 +1,31 @@
 # PENDÊNCIAS — Fortaleza Move
 
-Atualizado em 05/11/2026: Clube de Vantagens (seção 0). Antes, 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
+Atualizado em 13/11/2026: situação consolidada (seção 00000003, a primeira) — vale mais que as linhas antigas. Antes, 05/11/2026: Clube de Vantagens (seção 0). Antes, 30/10/2026 (fim da tarde): carro no sentido da rua, cor pela disponibilidade e GPS mais preciso (pedido de 30/10 15:20, montagem 285). Antes: pedido de 30/10 01:37 em 7 etapas — etapas 1 a 5 feitas, etapa 6 (ícones) esperando os 3 símbolos, etapa 7 (loja) feita.
 Este arquivo diz o que foi **verificado com teste real**, o que é **só teste automático/simulado** e o que **não existe ou não tem teste**.
 
 Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou esteira) · **[AUTO]** só teste automático, com dados de mentira · **[SEM TESTE]** existe, mas nada testou · **[NÃO EXISTE]** ainda não foi feito.
+
+---
+
+## 00000003. SITUAÇÃO CONSOLIDADA (13/11/2026) — leia esta seção primeiro
+Esta seção vale mais que qualquer linha antiga mais abaixo que a contradiga. Legenda: **Feito** · **Feito, sem prova no celular** · **Desligado** (existe, mas não ligado) · **Falta fazer** · **Depende do dono** · **Depende de terceiro**.
+
+**Trabalho atual (PR #59, em rascunho, sem merge e sem deploy):** Comércio (4º app), mapa operacional da Central, menus Carros e Motos, entrega manual do motorista, validades (CNH/CRLV) e correções de robustez do Comércio. Tudo com teste automático verde (servidor, Central e motorista); nada provado em celular real nem em produção.
+- **Feito (13/11):** trava contra duas decisões ao mesmo tempo em aprovar/rejeitar/suspender loja; listas da Central (lojas e entregas) lidas em lotes para o operador de uma cidade não perder registros por causa do corte de 300; Central mostra quem lançou cada entrega manual e quando; validade da CNH (já existia no cadastro) e do CRLV (nova, só aviso) em Carros e Motos.
+
+**Correções de contradições entre documentos (o que vale):**
+- `OTP_DEBUG_RETURN`: os documentos de 11/11 (GOOGLE-PLAY 6.5, SEGURANCA-CENTRAL A6) dizem **LIGADO** em produção; a linha "resolvido 08/10, false" do arquivo mestre (seção 9, item 2) é antiga. Tratar como ligado até alguém conferir o valor no Render. Desligar só com as contas de revisão do Google prontas e autorização do dono.
+- Push do passageiro/motorista (Firebase): **Feito, sem prova no celular** (09/10). A linha "3. Notificação push para o passageiro" da seção 9 do mestre é antiga. O app do Comércio **não tem** Firebase.
+- AAB: a esteira de lançamento dos apps passageiro/motorista gera `.aab` assinado quando disparada à mão; **nenhum AAB definitivo foi gerado nem enviado agora** (decisão: só depois da auditoria final). Comércio: `aab-comercio.yml` preparada e **não executada**.
+- Repositório: **continua PÚBLICO** (verificado em 13/11). Tornar privado é do dono; quando disser, conferir Render e esteiras.
+- Publicação do servidor: **juntar o PR #59 na `main` publica o servidor sozinho** (esteira "Publicar o servidor" roda a cada envio que mexe em `apps/backend`; a `main` não tem proteção de ramo). Avisar o dono antes de qualquer merge e escolher a janela.
+- Restauração da cópia do banco: a cópia diária roda (`copia-banco.yml`), mas a esteira de restauração **nunca foi executada** (faltam os segredos de teste, do dono).
+- Teste de ponta a ponta: última execução 12/11 02:23 (antes do PR #59), 386 OK, 3 falhas da carteira que são intencionais (o teste supõe o bloqueio por saldo desligado), 4 pulados. As rotas novas só existem em produção depois do merge e do deploy.
+
+**Falta fazer (Claude, sem depender de decisão):** conta de revisão do Google que funcione com o código na tela desligado · documentação do Firebase e manual de operação da Central · testes automáticos de módulos sem teste próprio (motoristas, praças, documentos, usuários, limpeza, relatórios) · passos do teste de ponta a ponta para as rotas novas (rodando só depois do deploy autorizado).
+**Falta provar no celular (dono + aparelhos):** roteiro A–P em `docs/TESTE-DE-RUA.md` (atualizar por cima sem deslogar, desconectar um aparelho, GPS, push, chamada com tela apagada/app fechado, taxímetro, mapa e 20 ruas de Goiatuba, outras marcas de celular, ao sol e telas pequenas) + os novos: mapa operacional, Motos, entrega manual do motorista, app do Comércio.
+**Depende do dono:** tarifas e comissões (inclusive entrega de carro/moto) · bloqueio por saldo · ligar Conforto/Premium/Moto/Entregas e a chave geral do Comércio · formas de pagamento (cartão não existe, por decisão) · parceiros do Clube · destinos recentes só no celular? · A9 (chave do teste entra como dono sem as duas etapas) · duas etapas do dono (precisa do celular próprio) · ambiente `recuperacao-excepcional` no GitHub · repositório privado · Zod 4/Nest 11 (4 avisos do auditor: 1 alto, 3 moderados) · conta Play (CNPJ/D-U-N-S ou 12 testadores por 14 dias) e domínio da API · Hostinger M1/M2 · o que fazer com os APKs de teste do Comércio na página de versões · loja aprovada poder editar nome/endereço sem nova aprovação.
+**Depende de terceiro:** revisão jurídica (termos de passageiro, motorista, Comércio, política de privacidade, texto 7-A de entregas, transferência de dados para fora do Brasil, contrato da TomTom) · Firebase do Comércio (registro do app) · Google Play (verificação, declarações) · SMS (pago) · e-mail Gmail limita ~100 códigos por dia.
 
 ---
 
@@ -14,7 +36,7 @@ Legenda: **Implementado** · **Testado automaticamente** · **Testado em ambient
 - [NÃO TESTADO EM DISPOSITIVO REAL] Tudo. Nenhum APK novo foi gerado ou enviado (por decisão: sem entrega parcial). Cores do mapa ao sol, toque nos filtros e o fluxo do motorista precisam de celular real.
 - [SIMULADO] Lançamento e despacho só com servidor falso e `pedir` simulado. Colunas `origem`, `lancado_por`, `lancado_em` só existem após o deploy; nada foi aplicado no banco de produção.
 - [PENDENTE DE AUTORIZAÇÃO] Merge do PR #59 · deploy · ligar a chave geral do Comércio · entrega real ou chamar motorista real · gerar APK/AAB.
-- Decisões a conferir: (1) não existia menu "Carros": criamos Carros e Motos; (2) validade de documento não existe no modelo; (3) `atribuir` sobrescrevia a categoria de entrega: correção mínima para preservá-la (o dono pode vetar); (4) a checagem de carteira no `atribuir` já existia e não foi alterada; (5) entrega que não é do Comércio continua laranja.
+- Decisões a conferir: (1) não existia menu "Carros": criamos Carros e Motos; (2) a CNH já tinha validade no cadastro e agora aparece na Central; o CRLV não tinha, e a Central passa a anotar a data (só aviso, não bloqueia); (3) `atribuir` sobrescrevia a categoria de entrega: correção mínima para preservá-la (o dono pode vetar); (4) a checagem de carteira no `atribuir` já existia e não foi alterada; (5) entrega que não é do Comércio continua laranja.
 - Limites respeitados: tarifas, comissões, carteiras, pagamentos, configuração municipal, Moto/Goiatuba, despacho e localização não foram alterados; `db-bootstrap.yml`, `android-apks.yml` e `auditoria.yml` não foram executados.
 
 ## 00000001. Fortaleza Move Comércio — 4º aplicativo (12/11/2026, PR #59 em rascunho)
