@@ -22,7 +22,7 @@ const ASSUNTO_IDS = Object.keys(ASSUNTOS);
 // Como a IA deve conduzir cada assunto (instrução do sistema, confiável). As informações oficiais vêm da
 // "base de conhecimento" editável; sem informação, a IA encaminha para a equipe em vez de inventar.
 const FLUXOS = {
-  cadastro: 'Oriente sobre o cadastro de motorista. Peça os documentos: foto da CNH, do documento do veículo (CRLV) e de um comprovante de endereço (conta de luz, água ou internet), um de cada vez se ainda faltarem. Quando chegarem, apenas confirme o RECEBIMENTO (nunca diga que foram analisados ou aprovados). Aprovação ou reprovação é sempre da equipe.',
+  cadastro: 'Oriente sobre o cadastro de motorista. Os 7 itens obrigatórios são: foto da CNH; documento do veículo (CRLV ou equivalente aceito); comprovante de residência; certidão de antecedentes criminais; foto do veículo de frente; foto do veículo de lado; foto do veículo de traseira (as três fotos são itens separados). Peça o que ainda faltar, um ou dois de cada vez. Quando chegarem, apenas confirme o RECEBIMENTO (nunca diga que foram analisados ou aprovados). Aprovação e cadastro oficial são sempre da equipe.',
   passageiro: 'Oriente sobre o uso do aplicativo e viagens e ajude com problemas comuns usando só as informações oficiais. Reclamações que precisem de providência vão para a equipe.',
   encomendas: 'Explique o serviço de coleta e entrega só com as informações oficiais. Entenda o que a pessoa quer enviar ou receber (o quê, de onde, para onde). Nunca informe preço, prazo, disponibilidade ou condições que não estejam nas informações oficiais: orçamento e confirmação são com a equipe.',
   clube: 'Explique os benefícios do Clube de Vantagens, a carteirinha digital e as regras de quem pode participar, só com as informações oficiais. Casos que dependem de análise individual vão para a equipe.',
@@ -47,7 +47,10 @@ const MODELOS_PADRAO = {
   transferencia: { nome: 'Aviso de transferência para atendimento humano', texto: 'Sua solicitação foi encaminhada para nossa equipe de atendimento. Em breve, você receberá um retorno. Agradecemos pelo contato!' },
   espera: { nome: 'Aviso de espera', texto: 'Sua solicitação já está com a nossa equipe. Assim que possível, um atendente vai continuar a conversa. Obrigado pela paciência!' },
   encerramento: { nome: 'Mensagem de encerramento', texto: 'A Fortaleza Move agradece pelo seu contato! Foi um prazer atendê-lo(a).\n\n{site_oficial}\n\nConte sempre com a Fortaleza Move!' },
-  site: { nome: 'Divulgação do site oficial', texto: 'Aproveite para conhecer nosso site oficial e conferir informações sobre a plataforma, nossos serviços, benefícios e canais de suporte.\n\nAcesse: {site}' }
+  site: { nome: 'Divulgação do site oficial', texto: 'Aproveite para conhecer nosso site oficial e conferir informações sobre a plataforma, nossos serviços, benefícios e canais de suporte.\n\nAcesse: {site}' },
+  // 12/11 noite (pedido do dono): retorno rápido enquanto a IA processa, e aviso honesto quando um áudio não pôde ser ouvido.
+  recebimento: { nome: 'Confirmação rápida de recebimento (enquanto a IA processa)', texto: 'Recebemos a sua mensagem! Estamos verificando e já respondemos.' },
+  audio_nao_compreendido: { nome: 'Áudio que não pôde ser ouvido', texto: 'Desculpe, não consegui ouvir o seu áudio. Pode escrever a sua mensagem, por favor?' }
 };
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
 const MAX_MODELO = 1500;
@@ -153,7 +156,37 @@ function opcaoDoMenu(texto) {
 
 const pediuMenu = (texto) => /^(menu|opcoes|ver (o )?menu|mostrar (o )?menu|voltar( ao menu)?|inicio)$/.test(semAcento(texto).replace(/[^\w\s]/g, '').trim());
 
+// ORIGEM do contato ≠ INTENÇÃO (12/11 noite). "Olá! Vim pelo site da Fortaleza Move." diz de onde a pessoa veio, não o que
+// ela quer: não pode virar cadastro de motorista. A origem fica registrada (relatórios) e a conversa recebe o menu geral.
+const ORIGENS_CONTATO = [
+  ['Site', /\b(vim|cheguei|venho|vindo|achei|encontrei|vi)\b[^.!?\n]{0,25}\b(pelo|do|no|atraves do|via)\s+(seu |o |nosso )?site\b|\bpelo site\b/],
+  ['Instagram', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+(insta|instagram)\b/],
+  ['Facebook', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+(face|facebook)\b/],
+  ['TikTok', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+tik ?tok\b/],
+  ['Indicação', /\b(fui indicad[oa]|me indicaram|indicacao de)\b/]
+];
+function origemDoContato(texto) {
+  const t = semAcento(texto);
+  const achada = ORIGENS_CONTATO.find(([, re]) => re.test(t));
+  return achada ? achada[0] : null;
+}
+// Mensagem sem intenção clara: só saudação, origem do contato ou "quero saber mais" genérico (sem citar um serviço).
+const SERVICO_CITADO = /\b(motorista|dirigir|cadastr|cnh|crlv|carro|veiculo|moto(boy|queiro)?|entreg|encomend|pacote|coleta|passageir|corrida|viagem|clube|vantage|carteirinha|comerci|loja|parceri|reclama|problema|ajuda com|pagamento|valor|preco)/;
+function semIntencao(texto) {
+  const t = semAcento(texto).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return true;
+  if (SERVICO_CITADO.test(t)) return false;
+  const resto = t
+    .replace(/\b(ola|oi|oie|opa|bom dia|boa tarde|boa noite|tudo bem|tudo bom|e ai|eai|hello|ei|salve|blz|beleza|td bem)\b/g, ' ')
+    .replace(/\b(vim|cheguei|venho|vindo|achei|encontrei|vi)\b( (pelo|do|no|atraves do|via))? (seu |o |nosso )?(site|insta|instagram|face|facebook|tik ?tok|anuncio|propaganda)\b/g, ' ')
+    .replace(/\bpelo site\b/g, ' ')
+    .replace(/\b(quero|queria|gostaria de|gostaria|preciso)( de)? (saber|conhecer|entender|informac(ao|oes)|mais informac(ao|oes))( mais)?( sobre)?( a| o| os| as)?( fortaleza ?move| plataforma| empresa| voces| servicos| aplicativo| app)?\b/g, ' ')
+    .replace(/\b(da|de|a|o|fortaleza ?move|move|fortaleza|plataforma|por favor|pf|pfv|obrigad[oa]|aqui|ai)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  return resto.length === 0;
+}
+
 // Pedido explícito de falar com uma pessoa (reforço sem IA).
 const pediuHumano = (texto) => /\b(atendente|atendimento humano|falar com (um|uma|alguem|algu[eé]m|uma pessoa|pessoa|humano|gente)|pessoa de verdade|ser humano|humano por favor)\b/.test(semAcento(texto));
 
-module.exports = { INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
+module.exports = { origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };

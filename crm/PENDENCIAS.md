@@ -91,16 +91,30 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 ### Requisição final de 12/11/2026 (ramo `etapa2`, NÃO está em produção)
 - [x] 12/11 Fluxo de candidatos a motorista (9 etapas, decisão só do administrador com confirmação, nada automático).
 - [x] 12/11 Perfil "Avaliador de cadastros" (lista fechada de rotas, sem acesso administrativo), parecer com histórico imutável.
-- [x] 12/11 Integração assinada app do motorista → CRM (lado do CRM). Documentos: todas as versões guardadas (decisão do dono).
+- [x] 12/11 ~~Integração assinada app do motorista → CRM~~ RETIRADA no mesmo dia (decisão do dono: os dois cadastros são independentes).
+      Documentos: todas as versões guardadas (decisão do dono).
 - [x] 12/11 Informações oficiais da IA organizadas em 8 assuntos com situação "preenchido/falta" (nada inventado).
 - [x] 12/11 Preparação da migração para a Hostinger (scripts + guia + `SNAPSHOT_MODO=copia`), sem executar nada. 175/175 testes.
-- [ ] **Desenvolvimento:** envio do backend da plataforma para o CRM (candidato + documentos) — protocolo em
-      `docs/integracao-app-motorista.md`; precisa de autorização (mexe no sistema no ar) e de ambiente que monte o backend.
 - [ ] **Dono:** criar o usuário do avaliador (Configurações → Usuários → perfil "Avaliador de cadastros") quando for usar.
 - [ ] **Dono:** escrever as informações oficiais dos 8 assuntos da IA (hoje vazias: a IA não inventa).
-- [ ] **Configuração futura (na migração):** `FM_DOCS_KEY`, `FM_DADOS_KEY`, `FM_INTEGRACAO_SEGREDO` geradas na VPS e guardadas no cofre
+- [ ] **Configuração futura (na migração):** `FM_DOCS_KEY`, `FM_DADOS_KEY` geradas na VPS e guardadas no cofre
       de senhas; armazenamento dos documentos no disco da VPS; desligar o cron `crm-manter-acordado`; APK com o domínio novo.
 - [ ] **Validação física:** testar o fluxo do avaliador e dos candidatos no celular real (verificado só em Chrome emulando celular).
+
+### Correções do atendimento por IA e 7 documentos (12/11/2026 noite, ramo `etapa2`, NÃO está em produção)
+- [x] 12/11 Confirmação rápida de recebimento enquanto a IA processa (uma por fala; não conta como resposta); espera de 15 s → 7 s.
+- [x] 12/11 Áudio: novas tentativas na leitura, a IA espera a leitura, aviso honesto quando não dá para ouvir (2 seguidos → equipe).
+- [x] 12/11 Conversa concluída + mensagem nova = novo atendimento (limites e "repetida" por atendimento; histórico mantido).
+- [x] 12/11 IA ⇄ equipe repetível: assumir para a IA na hora (até no meio da redação); devolver responde a pendente; trocas auditadas.
+- [x] 12/11 Origem "site" (e outras) registrada e separada da intenção: menu geral, sem documentos de motorista sem pedido.
+- [x] 12/11 Candidato a motorista: 7 documentos obrigatórios independentes (com antecedentes e 3 fotos do veículo); completo só com os 7.
+- [x] 12/11 Sem integração com o aplicativo do motorista (retirada); avaliação no CRM não aprova, não cria nem ativa nada na Central.
+- [x] 12/11 192/192 testes (17 novos em `test/ia-atendimento.test.js`; provedor e canal FALSOS).
+- [ ] **Validação real (dono, depois da publicação autorizada):** áudio de verdade no WhatsApp; tempo até a confirmação e até a resposta;
+      concluir e escrever de novo 1 min depois; assumir pelo celular, devolver pelo botão e repetir; clicar no botão do site; mandar os 7
+      itens pela conversa. Nada disso foi testado com WhatsApp e Gemini reais.
+- [ ] **Dono (opcional):** revisar os textos dos 2 modelos novos (confirmação rápida e áudio não ouvido) em Modelos de Comunicação da IA.
+- Observação: a cota grátis do Gemini continua sendo o maior risco de demora/falha (log de 12/11: vários "IA indisponível").
 
 ## 3. Riscos e avisos em aberto
 

@@ -16,7 +16,7 @@ app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 app.locals.db = db;
 
 // Corpo bruto guardado SÓ para a integração assinada (a assinatura HMAC é conferida sobre os bytes exatos recebidos).
-app.use(express.json({ limit: '1mb', verify: (req, res, buf) => { if (req.originalUrl.startsWith('/api/integracoes/')) req.rawBody = Buffer.from(buf); } }));
+app.use(express.json({ limit: '1mb' }));
 // Bloqueia chamadas de escrita originadas em outros sites (proteção CSRF adicional).
 app.use('/api', (req, res, next) => {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();

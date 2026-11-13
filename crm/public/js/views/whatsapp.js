@@ -152,7 +152,7 @@ export async function renderConversas(view, state) {
   function bolha(m) {
     const st = STATUS_MSG[m.status] || ['', ''];
     const saida = m.direcao === 'out';
-    const quem = saida ? (m.origem === 'celular' ? 'pelo celular' : (m.origem === 'ia' ? 'resposta da IA' : '')) : '';
+    const quem = saida ? (m.origem === 'celular' ? 'pelo celular' : (m.tipo === 'aviso' ? 'confirmação automática (não é a resposta)' : (m.origem === 'ia' ? 'resposta da IA' : ''))) : '';
     return `<div class="wa-msg ${saida ? 'out' : 'in'}${m.origem === 'ia' ? ' ia' : ''}" data-mid="${m.id}">
       <div class="wa-bubble">
         <div class="wa-text">${ui.esc(m.texto)}</div>
@@ -212,6 +212,7 @@ export async function renderConversas(view, state) {
     ui.modal({
       title: 'Histórico do atendimento', subtitle: nomeDe(atual), size: 'small',
       body: `<p style="margin:0 0 8px">${ui.badge(est[0], est[1])}${atual.atend_motivo && atual.atendimento === 'aguardando' ? ` <span class="wa-motivo">Motivo: ${ui.esc(atual.atend_motivo)}</span>` : ''}</p>
+        ${atual.origem_contato ? `<p class="small muted" style="margin:0 0 8px">Origem do contato: ${ui.esc(atual.origem_contato)} (não indica o assunto)</p>` : ''}
         ${hist ? `<ul class="wa-hist-lista">${hist}</ul>` : '<p class="muted">Nenhuma mudança registrada ainda.</p>'}`
     });
   }

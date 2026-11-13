@@ -31,7 +31,10 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
       ['atend_por', 'INTEGER'], ['saudado_em', 'TEXT'], ['espera_em', 'TEXT'],
       // Processamento da IA por conversa (12/11): estado real (processando, tentando, respondida, falhou...), última mensagem
       // tratada, próxima tentativa e o código do erro (nunca texto do cliente). Permite recuperar mensagens pendentes.
-      ['ia_estado', 'TEXT'], ['ia_estado_em', 'TEXT'], ['ia_erro', 'TEXT'], ['ia_tentativas', 'INTEGER NOT NULL DEFAULT 0'], ['ia_msg_id', 'INTEGER'], ['ia_proxima', 'TEXT']]) {
+      ['ia_estado', 'TEXT'], ['ia_estado_em', 'TEXT'], ['ia_erro', 'TEXT'], ['ia_tentativas', 'INTEGER NOT NULL DEFAULT 0'], ['ia_msg_id', 'INTEGER'], ['ia_proxima', 'TEXT'],
+      // 12/11 noite: início do atendimento ATUAL (um concluído não bloqueia o seguinte: limites, "repetida" e menu contam a
+      // partir daqui) e a ORIGEM do contato (site, Instagram...), que é diferente da intenção e serve só para relatórios.
+      ['atend_inicio', 'TEXT'], ['origem_contato', 'TEXT']]) {
       if (!conversas.has(col)) db.exec(`ALTER TABLE wa_conversas ADD COLUMN ${col} ${tipo}`);
     }
     if (novaCentral) {

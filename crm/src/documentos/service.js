@@ -15,6 +15,7 @@ const { validarArquivo, nomeSeguro, maxBytes, TIPOS } = require('./validacao');
 const { novaChave } = require('./armazenamento');
 const policy = require('../policy');
 const { FUNCOES } = require('../titulares');
+const { DOCUMENTOS_MOTORISTA } = require('../defs');
 
 class ErroDoc extends Error {
   constructor(status, code, mensagem, extra = {}) { super(mensagem); this.status = status; this.code = code; Object.assign(this, extra); }
@@ -24,7 +25,11 @@ const DOC_FUNCOES = ['motorista', 'entregador', 'parceiro_clube', 'comercio'];
 const COMUNS_PESSOA = [['cnh', 'CNH'], ['crlv', 'CRLV'], ['comprovante_endereco', 'Comprovante de endereço'], ['outros', 'Outro documento']];
 const COMUNS_EMPRESA = [['cartao_cnpj', 'Cartão CNPJ'], ['contrato_social', 'Contrato social / documento da empresa'], ['comprovante_endereco', 'Comprovante de endereço da empresa'],
   ['alvara', 'Alvará de funcionamento'], ['documento_responsavel', 'Documento do responsável'], ['outros', 'Outro documento']];
-const CATEGORIAS = { motorista: COMUNS_PESSOA, entregador: COMUNS_PESSOA, parceiro_clube: COMUNS_EMPRESA, comercio: COMUNS_EMPRESA };
+// Motorista (12/11 noite): os 7 itens obrigatórios do candidato, cada um com o seu espaço de envio, + "outros".
+const MOTORISTA = [...DOCUMENTOS_MOTORISTA.map((d) => [d.categoria, d.rotulo]), ['outros', 'Outro documento']];
+const CATEGORIAS = { motorista: MOTORISTA, entregador: COMUNS_PESSOA, parceiro_clube: COMUNS_EMPRESA, comercio: COMUNS_EMPRESA };
+// Exigência mínima que a política salva NÃO pode tirar (decisão do dono): documentação incompleta nunca conta como completa.
+const OBRIGATORIOS_FIXOS = { motorista: DOCUMENTOS_MOTORISTA.map((d) => d.categoria), entregador: [], parceiro_clube: [], comercio: [] };
 
 const SITUACOES = {
   nao_enviado: 'Não enviado', pendente: 'Pendente de conferência', conferido: 'Conferido', rejeitado: 'Rejeitado', necessita_atualizacao: 'Necessita atualização'
@@ -34,7 +39,7 @@ const GERAL = {
   pendentes_conferencia: 'Pendentes de conferência', com_pendencias: 'Com pendências (rejeitado / atualizar)', conferidos: 'Conferidos'
 };
 // Campos antigos da ficha do motorista/entregador (preenchidos também pela IA a partir do WhatsApp).
-const LEGADO = { cnh: 'doc_cnh', crlv: 'doc_crlv', comprovante_endereco: 'doc_endereco' };
+const LEGADO = Object.fromEntries(DOCUMENTOS_MOTORISTA.map((d) => [d.categoria, d.campo]));
 
 const DECISOES_PENDENTES = [
   // 12/11/2026: o dono decidiu PRESERVAR TODAS AS VERSÕES (nenhuma é apagada automaticamente) — não é mais pendência.
@@ -78,7 +83,11 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     try { salva = JSON.parse(getSetting('docs_politica', '') || '{}'); } catch (e) { salva = {}; }
     const P = policy.DOCS_POLITICA_PADRAO;
     return {
-      obrigatorios: Object.fromEntries(DOC_FUNCOES.map((f) => [f, Array.isArray(salva.obrigatorios && salva.obrigatorios[f]) ? salva.obrigatorios[f].filter((c) => CATEGORIAS[f].some(([x]) => x === c && c !== 'outros')) : P.obrigatorios[f]])),
+      obrigatorios: Object.fromEntries(DOC_FUNCOES.map((f) => {
+        const escolhidos = Array.isArray(salva.obrigatorios && salva.obrigatorios[f]) ? salva.obrigatorios[f].filter((c) => CATEGORIAS[f].some(([x]) => x === c && c !== 'outros')) : P.obrigatorios[f];
+        // Os fixos primeiro, na ordem oficial; depois os extras que o administrador escolheu.
+        return [f, [...new Set([...OBRIGATORIOS_FIXOS[f], ...escolhidos])]];
+      })),
       gestor: {
         anexar: salva.gestor && typeof salva.gestor.anexar === 'boolean' ? salva.gestor.anexar : P.gestor.anexar,
         conferir: salva.gestor && typeof salva.gestor.conferir === 'boolean' ? salva.gestor.conferir : P.gestor.conferir,
@@ -105,6 +114,8 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
       for (const [f, lista] of Object.entries(c.obrigatorios)) {
         if (!DOC_FUNCOES.includes(f)) throw new ErroDoc(422, 'invalido', `Função desconhecida: ${f}.`);
         if (!Array.isArray(lista) || lista.some((x) => !CATEGORIAS[f].some(([k]) => k === x && k !== 'outros'))) throw new ErroDoc(422, 'invalido', `Categoria inválida para ${FUNCOES[f].rotulo}.`);
+        const faltam = OBRIGATORIOS_FIXOS[f].filter((x) => !lista.includes(x));
+        if (faltam.length) throw new ErroDoc(422, 'invalido', `Os ${OBRIGATORIOS_FIXOS[f].length} documentos do candidato a ${FUNCOES[f].rotulo.toLowerCase()} são obrigatórios e não podem ser retirados.`);
         novo.obrigatorios[f] = [...new Set(lista)];
       }
     }
@@ -334,15 +345,18 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
     const def = defDe(funcao);
     const row = registro(funcao, registroId);
     if (!row || !def) return;
+    const temCampo = (c) => def.fields.some((f) => f.key === c);
+    if (!temCampo(LEGADO[categoria])) return;
     const d = db.prepare('SELECT situacao FROM documentos WHERE funcao = ? AND registro_id = ? AND categoria = ? AND excluido_em IS NULL').get(funcao, registroId, categoria);
     const sit = d ? d.situacao : 'nao_enviado';
     const valor = sit === 'conferido' ? 'Conferido' : sit === 'pendente' ? 'Recebido — conferir' : 'Não enviado';
     const estado = { ...row, [LEGADO[categoria]]: valor };
-    const campos = Object.values(LEGADO);
+    const campos = Object.values(LEGADO).filter(temCampo);
     const ok = (v) => v === 'Recebido — conferir' || v === 'Conferido';
     const recebidos = campos.filter((c) => ok(estado[c])).length;
     const conferidos = campos.filter((c) => estado[c] === 'Conferido').length;
-    const resumo = conferidos === 3 ? 'Conferidos' : recebidos === 3 ? 'Recebidos — conferir' : recebidos > 0 ? 'Incompletos' : 'Não enviados';
+    const total = campos.length;
+    const resumo = conferidos === total ? 'Conferidos' : recebidos === total ? 'Recebidos — conferir' : recebidos > 0 ? 'Incompletos' : 'Não enviados';
     db.prepare(`UPDATE ${def.table} SET ${LEGADO[categoria]} = ?, documentos = ?, updated_at = ? WHERE id = ?`).run(valor, resumo, agora(), registroId);
   }
 
@@ -366,10 +380,9 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
    * Anexa um arquivo: primeira versão de um documento da ficha ou nova versão de um documento existente (documento_id).
    * Não faz nada pela metade: se o banco falhar depois de gravar o arquivo, o arquivo é removido.
    */
-  async function anexar(req, { funcao, registro_id: registroId, categoria, titulo, data_envio: dataEnvio, observacoes, nome, conteudo, documento_id: documentoId }, { integracao = false } = {}) {
+  async function anexar(req, { funcao, registro_id: registroId, categoria, titulo, data_envio: dataEnvio, observacoes, nome, conteudo, documento_id: documentoId }) {
     const pol = politica();
-    // `integracao` só vem do código da rota assinada do aplicativo (3º argumento; nunca do corpo da requisição).
-    if (!(integracao === true && role(req) === 'integracao') && !policy.docsAnexar(role(req), pol)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode anexar documentos.');
+    if (!policy.docsAnexar(role(req), pol)) throw new ErroDoc(403, 'forbidden', 'Seu perfil não pode anexar documentos.');
     exigirPronto();
     let doc = null;
     if (documentoId) {
@@ -563,10 +576,10 @@ function createDocumentos({ db, armazenamento, ENTITIES, entities, audit, getSet
   }
 
   return {
-    ativo, ErroDoc, CATEGORIAS, SITUACOES, GERAL, DOC_FUNCOES, funcoesDisponiveis, politica, salvarPolitica, decisoesPendentes, estadoArmazenamento, definirEscopoAvaliador,
+    ativo, ErroDoc, CATEGORIAS, OBRIGATORIOS_FIXOS, SITUACOES, GERAL, DOC_FUNCOES, funcoesDisponiveis, politica, salvarPolitica, decisoesPendentes, estadoArmazenamento, definirEscopoAvaliador,
     listar, consultar, contagens, resumoPeriodo, resumoDasFuncoes, anexar, obterArquivo, conferir, observar, historico, excluirDefinitivo,
     geralDe, tituloRegistro, rotuloCategoria
   };
 }
 
-module.exports = { createDocumentos, ErroDoc, CATEGORIAS, SITUACOES, GERAL, DOC_FUNCOES, DECISOES_PENDENTES };
+module.exports = { createDocumentos, ErroDoc, OBRIGATORIOS_FIXOS, CATEGORIAS, SITUACOES, GERAL, DOC_FUNCOES, DECISOES_PENDENTES };

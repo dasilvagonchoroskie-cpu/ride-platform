@@ -338,12 +338,13 @@ async function politicaAdmin(host, hostPend) {
       <label class="check"><input type="checkbox" id="pl-cnpj" ${pol.cpf_cnpj.cnpj === 'opcional' ? 'checked' : ''}> Permitir informar CNPJ (empresas) — opcional</label>
       <label class="check"><input type="checkbox" id="pl-exc" ${pol.exclusao_definitiva ? 'checked' : ''}> Permitir exclusão definitiva de arquivos (só administrador, com motivo)</label>
       <div><b>Documentos exigidos por função</b>${Object.entries(p.categorias).map(([fn, lista]) => `<div style="margin-top:6px"><span class="small muted">${ui.esc(ROTULO_FUNCAO[fn] || fn)}</span>
-        <div class="pol-checks">${lista.filter((c) => c.chave !== 'outros').map((c) => `<label class="check"><input type="checkbox" data-obr="${fn}:${c.chave}" ${(pol.obrigatorios[fn] || []).includes(c.chave) ? 'checked' : ''}> ${ui.esc(c.rotulo)}</label>`).join('')}</div></div>`).join('')}</div>
+        <div class="pol-checks">${lista.filter((c) => c.chave !== 'outros').map((c) => { const fixo = ((p.fixos || {})[fn] || []).includes(c.chave); return `<label class="check"${fixo ? ' title="Obrigatório para todo candidato (não pode ser retirado)"' : ''}><input type="checkbox" data-obr="${fn}:${c.chave}" ${(pol.obrigatorios[fn] || []).includes(c.chave) || fixo ? 'checked' : ''} ${fixo ? 'disabled' : ''}> ${ui.esc(c.rotulo)}${fixo ? ' 🔒' : ''}</label>`; }).join('')}</div></div>`).join('')}</div>
       <p class="small muted" style="margin:0">Armazenamento: ${ui.esc(p.armazenamento.tipo)}${p.armazenamento.pronto ? ' (pronto)' : ` — não pronto: ${ui.esc(p.armazenamento.motivo || '')}`}. Formatos: ${ui.esc(p.armazenamento.formatos.join(', '))}, até ${p.armazenamento.max_mb} MB.</p>
       <div><button class="btn btn-primary" id="pl-salvar" type="button">Salvar política</button></div></div></div>`;
   host.querySelector('#pl-salvar').addEventListener('click', async () => {
     const obrigatorios = {};
-    for (const fn of Object.keys(p.categorias)) obrigatorios[fn] = [...host.querySelectorAll(`[data-obr^="${fn}:"]:checked`)].map((c) => c.dataset.obr.split(':')[1]);
+    // Os fixos (desabilitados) também vão: checkbox desabilitado conta como marcado aqui.
+    for (const fn of Object.keys(p.categorias)) obrigatorios[fn] = [...host.querySelectorAll(`[data-obr^="${fn}:"]`)].filter((c) => c.checked).map((c) => c.dataset.obr.split(':')[1]);
     try {
       await api.put('/documentos/politica', {
         obrigatorios,

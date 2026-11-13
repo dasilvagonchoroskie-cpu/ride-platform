@@ -46,12 +46,13 @@ function canExportPdf(role, tipo) {
 // (metadados). Ver/baixar o ARQUIVO e conferir dependem de a categoria ter sido liberada ao gestor pelo administrador
 // (política `docs_politica`, decisão pendente do dono). Exclusão definitiva é só do administrador.
 const DOCS_POLITICA_PADRAO = {
-  obrigatorios: { motorista: ['cnh', 'crlv', 'comprovante_endereco'], entregador: ['cnh', 'crlv', 'comprovante_endereco'], parceiro_clube: [], comercio: [] },
+  // Motorista: os 7 itens do candidato (CNH, CRLV, comprovante de residência, antecedentes e 3 fotos do veículo).
+  obrigatorios: { motorista: ['cnh', 'crlv', 'comprovante_endereco', 'antecedentes_criminais', 'foto_veiculo_frente', 'foto_veiculo_lado', 'foto_veiculo_traseira'], entregador: ['cnh', 'crlv', 'comprovante_endereco'], parceiro_clube: [], comercio: [] },
   gestor: { anexar: true, conferir: false, categorias_visiveis: [] },
   exclusao_definitiva: false,
   cpf_cnpj: { cpf: 'desligado', cnpj: 'desligado' },
   // Avaliador de cadastros: só candidatos (com avaliação aberta) destas funções e só estas categorias de arquivo.
-  avaliador: { funcoes: ['motorista'], categorias_visiveis: ['cnh', 'crlv', 'comprovante_endereco', 'outros'] },
+  avaliador: { funcoes: ['motorista'], categorias_visiveis: ['cnh', 'crlv', 'comprovante_endereco', 'antecedentes_criminais', 'foto_veiculo_frente', 'foto_veiculo_lado', 'foto_veiculo_traseira', 'outros'] },
   confirmada_em: null
 };
 const docsVerArquivo = (role, categoria, pol) => role === 'admin' || (role === 'gestor' && !!pol && !!pol.gestor && (pol.gestor.categorias_visiveis || []).includes(categoria));

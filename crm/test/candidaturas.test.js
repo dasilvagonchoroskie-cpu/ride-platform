@@ -1,5 +1,6 @@
 'use strict';
-// Avaliação de candidatos, perfil avaliador e entrada assinada do aplicativo (12/11/2026). Servidor REAL, dados fictícios.
+// Avaliação de candidatos, perfil avaliador e os 7 documentos obrigatórios (12/11/2026). Servidor REAL, dados fictícios.
+// Sem integração com o aplicativo do motorista (decisão do dono, 12/11 noite): os dois caminhos de cadastro são independentes.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -9,17 +10,20 @@ const net = require('net');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const Database = require('better-sqlite3');
-const { assinar } = require('../src/integracao');
 
 const SEGREDO = crypto.randomBytes(32).toString('hex');
 const portaLivre = () => new Promise((ok) => { const s = net.createServer().listen(0, () => { const p = s.address().port; s.close(() => ok(p)); }); });
 const pdf = (marca) => Buffer.from(`%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n% ${marca} ${crypto.randomBytes(4).toString('hex')}\ntrailer<</Root 1 0 R>>\n%%EOF\n`);
 
-async function subir({ integracao = true } = {}) {
+const SETE = ['cnh', 'crlv', 'comprovante_endereco', 'antecedentes_criminais', 'foto_veiculo_frente', 'foto_veiculo_lado', 'foto_veiculo_traseira'];
+
+async function subir() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'crm-cand-'));
   const porta = await portaLivre();
   const env = { ...process.env, FM_DATA_DIR: dir, PORT: String(porta), HOST: '127.0.0.1', FM_INSTALL_KEY: 'FM-TEST-CHAV-E123', TRUST_PROXY: 'false', FM_ETAPA2: '1', IA_VARREDURA: '0',
-    FM_DOCS_KEY: crypto.randomBytes(32).toString('hex'), FM_DADOS_KEY: crypto.randomBytes(32).toString('hex'), FM_INTEGRACAO_SEGREDO: integracao ? SEGREDO : '' };
+    FM_DOCS_KEY: crypto.randomBytes(32).toString('hex'), FM_DADOS_KEY: crypto.randomBytes(32).toString('hex'),
+    // Mesmo com um segredo de integração no ambiente, NÃO existe rota de integração (decisão do dono).
+    FM_INTEGRACAO_SEGREDO: SEGREDO };
   const proc = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env, stdio: 'ignore' });
   const B = `http://127.0.0.1:${porta}/api`;
   for (let i = 0; i < 80; i++) { try { await fetch(`${B}/health`); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
@@ -44,17 +48,8 @@ async function subir({ integracao = true } = {}) {
   assert.equal((await adm('POST', '/users', { nome: 'Dr. Avaliador Fictício', email: 'av@x.com', senha: 'senhaforte123', role: 'avaliador' })).s, 201);
   assert.equal((await ges('POST', '/auth/login', { email: 'g@x.com', senha: 'senhaforte123' })).s, 200);
   assert.equal((await ava('POST', '/auth/login', { email: 'av@x.com', senha: 'senhaforte123' })).s, 200);
-  // Chamada assinada como o backend do aplicativo faria.
-  const app = async (caminho, { corpo, meta = '', segredo = SEGREDO, ts = Math.floor(Date.now() / 1000), nonce = crypto.randomBytes(12).toString('hex'), json = true, mexer } = {}) => {
-    const bruto = json ? Buffer.from(JSON.stringify(corpo)) : corpo;
-    const headers = { 'content-type': json ? 'application/json' : 'application/octet-stream', 'x-fm-timestamp': String(ts), 'x-fm-nonce': nonce,
-      'x-fm-assinatura': assinar(segredo, { timestamp: String(ts), nonce, metodo: 'POST', caminho: `/api${caminho}`, meta, corpo: bruto }) };
-    if (meta) headers['x-fm-meta'] = meta;
-    if (mexer) mexer(headers);
-    const r = await fetch(B + caminho, { method: 'POST', headers, body: bruto });
-    return { s: r.status, j: await r.json(), nonce, ts };
-  };
-  return { proc, dir, anon, adm, ges, ava, app };
+  const B2 = B;
+  return { proc, dir, anon, adm, ges, ava, B: B2 };
 }
 const M = { cidade: 'Fortaleza', origem: 'WhatsApp', situacao: 'Novo interessado', data_primeiro_contato: '2026-11-10' };
 
@@ -70,10 +65,12 @@ test('fluxo completo: avaliação aberta, documentos movem só as etapas iniciai
   assert.equal((await ges('POST', '/candidaturas', { funcao: 'motorista', registro_id: mot.id })).j.criada, false);
   assert.equal((await ava('POST', '/candidaturas', { funcao: 'motorista', registro_id: mot.id })).s, 403, 'avaliador não abre avaliação');
 
-  // Documentos: 1 de 3 → pendente; os 3 → recebida (nunca aprova).
+  // Documentos: 1 de 7 → pendente; 6 de 7 continua pendente; os 7 → recebida (nunca aprova).
   assert.equal((await adm.up('/documentos', pdf('cnh'), { funcao: 'motorista', registro_id: mot.id, categoria: 'cnh' }, 'cnh.pdf')).s, 201);
   assert.equal((await adm('GET', `/candidaturas/${cid}`)).j.candidatura.etapa, 'documentacao_pendente');
-  for (const cat of ['crlv', 'comprovante_endereco']) assert.equal((await adm.up('/documentos', pdf(cat), { funcao: 'motorista', registro_id: mot.id, categoria: cat }, `${cat}.pdf`)).s, 201);
+  for (const cat of SETE.slice(1, 6)) assert.equal((await adm.up('/documentos', pdf(cat), { funcao: 'motorista', registro_id: mot.id, categoria: cat }, `${cat}.pdf`)).s, 201);
+  assert.equal((await adm('GET', `/candidaturas/${cid}`)).j.candidatura.etapa, 'documentacao_pendente', 'faltando a foto traseira não está completa');
+  assert.equal((await adm.up('/documentos', pdf('tras'), { funcao: 'motorista', registro_id: mot.id, categoria: 'foto_veiculo_traseira' }, 'traseira.pdf')).s, 201);
   let d = (await adm('GET', `/candidaturas/${cid}`)).j;
   assert.equal(d.candidatura.etapa, 'documentacao_recebida');
   assert.equal(d.candidatura.decisao, null);
@@ -199,84 +196,65 @@ test('avaliador: lista fechada de rotas, escopo dos documentos e nada de outros 
   assert.equal((await ava('PATCH', '/users/3', { role: 'admin' })).s, 403);
 });
 
-test('integração do aplicativo: assinatura, horário, repetição, candidato sem duplicar, documentos cifrados e idempotentes', async (t) => {
-  const { proc, dir, adm, ges, app } = await subir();
+test('sete documentos obrigatórios do candidato: itens separados, completude, política travada e permissões', async (t) => {
+  const { proc, adm, ges, ava } = await subir();
   t.after(() => proc.kill());
-  const cand = { externo_id: 'a1b2c3d4-0000-4000-8000-000000000001', nome: 'Candidato do App Fictício', telefone: '+5585988887777', cidade: 'Fortaleza', veiculo: 'Onix 2020 prata', placa: 'abc-1d23', cnh_categoria: 'b', data_cadastro: '2026-11-12T01:30:00.000Z', cpf: '12345678909' };
-  const C = '/integracoes/app-motorista/candidato';
-  // Sem assinatura / assinatura errada / segredo errado / horário velho → 401; nada é criado.
-  assert.equal((await app(C, { corpo: cand, segredo: crypto.randomBytes(32).toString('hex') })).s, 401);
-  assert.equal((await app(C, { corpo: cand, ts: Math.floor(Date.now() / 1000) - 900 })).s, 401);
-  assert.equal((await app(C, { corpo: cand, mexer: (h) => { h['x-fm-assinatura'] = 'v1=' + '0'.repeat(64); } })).s, 401);
-  assert.equal((await app(C, { corpo: cand, mexer: (h) => { delete h['x-fm-assinatura']; } })).s, 401);
-  // Corpo alterado depois de assinar (assinatura feita sobre outro nome) → 401.
-  assert.equal((await app(C, { corpo: cand, mexer: (h) => {
-    h['x-fm-assinatura'] = assinar(SEGREDO, { timestamp: h['x-fm-timestamp'], nonce: h['x-fm-nonce'], metodo: 'POST', caminho: `/api${C}`, meta: '', corpo: Buffer.from(JSON.stringify({ ...cand, nome: 'Outro Nome' })) });
-  } })).s, 401);
-  // Assinatura de outra rota não vale nesta.
-  assert.equal((await app(C, { corpo: cand, mexer: (h) => {
-    h['x-fm-assinatura'] = assinar(SEGREDO, { timestamp: h['x-fm-timestamp'], nonce: h['x-fm-nonce'], metodo: 'POST', caminho: '/api/integracoes/app-motorista/documento', meta: '', corpo: Buffer.from(JSON.stringify(cand)) });
-  } })).s, 401);
-  assert.equal((await adm('GET', '/motoristas')).j.items.length, 0, 'nada criado');
-
-  // Válido: cria ficha (origem Aplicativo, data local de Fortaleza, placa/categoria normalizadas, sem CPF) + avaliação.
-  const r1 = await app(C, { corpo: cand });
-  assert.equal(r1.s, 201, JSON.stringify(r1.j));
-  const ficha = (await adm('GET', `/motoristas/${r1.j.registro_id}`)).j.item;
-  assert.equal(ficha.origem, 'Aplicativo do motorista');
-  assert.equal(ficha.data_primeiro_contato, '2026-11-11', '01h30 UTC = 22h30 do dia anterior em Fortaleza');
-  assert.equal(ficha.placa, 'ABC1D23');
-  assert.equal(ficha.cnh_categoria, 'B');
-  assert.equal(ficha.situacao, 'Novo interessado', 'o app nunca aprova');
-  assert.ok(!JSON.stringify(ficha).includes('12345678909'), 'CPF não entra');
-  const cid = r1.j.candidatura_id;
-  assert.equal((await adm('GET', `/candidaturas/${cid}`)).j.candidatura.origem, 'aplicativo');
-  // Repetição do MESMO envio (mesmo nonce) → 409; reenvio novo do mesmo candidato → 200 sem duplicar.
-  assert.equal((await app(C, { corpo: cand, nonce: r1.nonce, ts: r1.ts })).s, 409);
-  const r2 = await app(C, { corpo: { ...cand, cidade: 'Caucaia' } });
-  assert.equal(r2.s, 200); assert.equal(r2.j.registro_id, r1.j.registro_id); assert.equal(r2.j.criado, false);
-  assert.equal((await adm('GET', `/motoristas/${r1.j.registro_id}`)).j.item.cidade, 'Fortaleza', 'não sobrescreve');
-  // Candidato que já falou pelo WhatsApp (mesmo telefone) é ligado à ficha existente.
-  const zap = (await ges('POST', '/motoristas', { ...M, nome: 'Já Conhecido Fictício', telefone: '(85) 97777-6666' })).j.item;
-  const r3 = await app(C, { corpo: { ...cand, externo_id: 'a1b2c3d4-0000-4000-8000-000000000002', nome: 'Já Conhecido', telefone: '+5585977776666', placa: '' } });
-  assert.equal(r3.j.registro_id, zap.id);
-  assert.equal((await adm('GET', '/motoristas')).j.items.length, 2);
-  // Campos inválidos → 422.
-  assert.equal((await app(C, { corpo: { ...cand, externo_id: '../../etc' } })).s, 422);
-  assert.equal((await app(C, { corpo: { ...cand, telefone: 'abc' } })).s, 422);
-
-  // Documentos: precisam do candidato; tipo mapeado; cifrado; idempotente; mesma foto nova = nova versão; arquivo inválido recusado.
-  const D = '/integracoes/app-motorista/documento';
-  const doc = (tipo, id, corpo = pdf(tipo), externo = cand.externo_id) => app(D, { json: false, corpo, meta: JSON.stringify({ externo_id: externo, documento_externo_id: id, tipo, nome_arquivo: `${tipo}.pdf`, enviado_em: '2026-11-12T12:00:00.000Z' }) });
-  assert.equal((await doc('CNH_FRONT', 'd0000001-aaaa', pdf('x'), 'ffffffff-desconhecido')).s, 409);
-  assert.equal((await doc('CNH_FRONT', 'd0000001-aaaa')).s, 201);
-  assert.equal((await doc('CNH_FRONT', 'd0000001-aaaa')).j.repetido, true, 'mesmo documento não entra duas vezes');
-  assert.equal((await doc('CRIMINAL_RECORD', 'd0000002-aaaa')).s, 201);
-  assert.equal((await doc('CRIMINAL_RECORD', 'd0000003-aaaa')).j.versao, 2, 'nova certidão = nova versão (a anterior fica no histórico)');
-  assert.equal((await doc('NAO_EXISTE', 'd0000004-aaaa')).s, 422);
-  assert.equal((await doc('CRLV', 'd0000005-aaaa', Buffer.from('MZ executável fictício'))).s, 422, 'arquivo que não é PDF/imagem');
-  let d = (await adm('GET', `/candidaturas/${cid}`)).j;
-  assert.equal(d.candidatura.etapa, 'documentacao_pendente');
-  const ant = d.documentos.itens.find((x) => x.titulo === 'Certidão de antecedentes criminais');
-  assert.equal(ant.total_versoes, 2);
-  await doc('CRLV', 'd0000006-aaaa'); await doc('RESIDENCE_PROOF', 'd0000007-aaaa');
-  d = (await adm('GET', `/candidaturas/${cid}`)).j;
-  assert.equal(d.candidatura.etapa, 'documentacao_recebida');
-  assert.equal(d.candidatura.decisao, null, 'documentos completos não aprovam');
-  // Arquivo guardado cifrado (o conteúdo não aparece em disco).
-  const raiz = path.join(dir, 'documentos');
-  const blobs = [];
-  const andar = (p) => { for (const n of fs.readdirSync(p)) { const f = path.join(p, n); if (fs.statSync(f).isDirectory()) andar(f); else blobs.push(fs.readFileSync(f)); } };
-  andar(raiz);
-  assert.ok(blobs.length >= 5 && blobs.every((b) => !b.toString('latin1').includes('%PDF')));
-  // O gestor não abre a certidão (categoria não liberada a ele).
+  const mot = (await ges('POST', '/motoristas', { ...M, nome: 'Candidato Sete', telefone: '85999990301' })).j.item;
+  // A ficha (arquivo digital) mostra os 7 itens, cada um com o seu espaço, todos "Não enviado" e obrigatórios.
+  let lista = (await adm('GET', `/documentos?funcao=motorista&registro_id=${mot.id}`)).j;
+  assert.deepEqual(lista.itens.map((i) => i.categoria), SETE);
+  assert.ok(lista.itens.every((i) => i.obrigatorio && i.situacao === 'nao_enviado'));
+  assert.deepEqual(lista.itens.slice(4).map((i) => i.categoria_rotulo), ['Foto do veículo — frente', 'Foto do veículo — lado', 'Foto do veículo — traseira']);
+  assert.equal(lista.geral.exigidos, 7);
+  // A certidão de antecedentes está na lista e tem categoria própria.
+  assert.ok(lista.categorias.some((c) => c.chave === 'antecedentes_criminais' && c.rotulo === 'Certidão de antecedentes criminais'));
+  // Envia 6: continua "Incompletos" (na ficha e no resumo legado).
+  for (const cat of SETE.slice(0, 6)) assert.equal((await adm.up('/documentos', pdf(cat), { funcao: 'motorista', registro_id: mot.id, categoria: cat }, `${cat}.pdf`)).s, 201);
+  lista = (await adm('GET', `/documentos?funcao=motorista&registro_id=${mot.id}`)).j;
+  assert.equal(lista.geral.codigo, 'incompletos');
+  assert.equal(lista.geral.enviados, 6);
+  let ficha = (await adm('GET', `/motoristas/${mot.id}`)).j.item;
+  assert.equal(ficha.documentos, 'Incompletos');
+  assert.equal(ficha.doc_antecedentes, 'Recebido — conferir');
+  assert.ok(!ficha.doc_foto_traseira, 'traseira ainda não enviada');
+  // Complementa a pendência: com o 7º, passa a "Recebidos — conferir" (nada é aprovado).
+  assert.equal((await adm.up('/documentos', pdf('t'), { funcao: 'motorista', registro_id: mot.id, categoria: 'foto_veiculo_traseira' }, 't.pdf')).s, 201);
+  ficha = (await adm('GET', `/motoristas/${mot.id}`)).j.item;
+  assert.equal(ficha.documentos, 'Recebidos — conferir');
+  assert.equal(ficha.situacao, 'Novo interessado', 'documentação completa não muda a situação nem ativa');
+  // Política: os 7 não podem ser retirados; extras podem ser acrescentados.
+  assert.equal((await adm('PUT', '/documentos/politica', { obrigatorios: { motorista: ['cnh', 'crlv', 'comprovante_endereco'] } })).s, 422);
+  const pol = (await adm('GET', '/documentos/politica')).j;
+  assert.deepEqual(pol.fixos.motorista, SETE);
+  assert.deepEqual(pol.politica.obrigatorios.motorista, SETE);
+  // Permissões: gestor não abre arquivo (nem a certidão); avaliador só com avaliação aberta; exportação de lista com dados pessoais só admin.
+  const ant = lista.itens.find((i) => i.categoria === 'antecedentes_criminais');
   assert.equal((await ges('GET', `/documentos/${ant.id}/arquivo`)).s, 403);
+  assert.equal((await ava('GET', `/documentos/${ant.id}/arquivo`)).s, 403, 'sem avaliação aberta');
+  await ges('POST', '/candidaturas', { funcao: 'motorista', registro_id: mot.id });
+  assert.equal((await ava('GET', `/documentos/${ant.id}/arquivo`)).s, 200, 'avaliador do candidato vê a certidão');
+  assert.equal((await ges('GET', '/reports/pdf?type=documentos')).s, 403);
+  assert.equal((await ges('GET', '/reports/export?type=documentos')).s, 403);
+  // Gestor não exclui documento e ninguém exclui sem a opção ligada.
+  assert.equal((await ges('POST', `/documentos/${ant.id}/excluir-definitivo`, { motivo: 'teste', confirmo: true })).s, 403);
 });
 
-test('integração desligada sem segredo (fail-closed) e rota pública não aceita sessão no lugar da assinatura', async (t) => {
-  const { proc, adm, app } = await subir({ integracao: false });
+test('cadastro pelo aplicativo continua independente: sem rota de integração e sem aprovação/ativação pela avaliação', async (t) => {
+  const { proc, adm, ges, B } = await subir();
   t.after(() => proc.kill());
-  const r = await app('/integracoes/app-motorista/candidato', { corpo: { externo_id: 'a1b2c3d4-0000-4000-8000-000000000009', nome: 'Fulano Fictício', telefone: '85999990000' } });
-  assert.equal(r.s, 404);
-  assert.equal((await adm('POST', '/integracoes/app-motorista/candidato', { externo_id: 'a1b2c3d4-0000-4000-8000-000000000009', nome: 'Fulano', telefone: '85999990000' })).s, 404);
+  // Rotas da antiga integração não existem, mesmo com segredo no ambiente: sem sessão não há rota pública (401) e com
+  // sessão de administrador a resposta é 404.
+  for (const u of ['/integracoes/app-motorista/candidato', '/integracoes/app-motorista/documento']) {
+    const r = await fetch(B + u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    assert.equal(r.status, 401, u);
+    assert.equal((await adm('POST', u, { externo_id: 'a1b2c3d4-0000-4000-8000-000000000009', nome: 'Fulano', telefone: '85999990000' })).s, 404, u);
+  }
+  // Avaliação favorável e aprovação no CRM não ativam nem contratam a ficha (a criação oficial é na Central).
+  const mot = (await ges('POST', '/motoristas', { ...M, nome: 'Independente Fictício', telefone: '85999990401' })).j.item;
+  const cid = (await ges('POST', '/candidaturas', { funcao: 'motorista', registro_id: mot.id })).j.candidatura.id;
+  assert.equal((await adm('POST', `/candidaturas/${cid}/decisao`, { decisao: 'aprovado', confirmo: true, motivo: 'Avaliação favorável (fictícia).' })).s, 200);
+  const ficha = (await adm('GET', `/motoristas/${mot.id}`)).j.item;
+  assert.equal(ficha.situacao, 'Novo interessado');
+  assert.equal(ficha.contratado_em, null);
+  assert.equal((await adm('GET', '/motoristas')).j.items.length, 1, 'nenhum cadastro criado automaticamente');
 });

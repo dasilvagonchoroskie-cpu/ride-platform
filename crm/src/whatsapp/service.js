@@ -12,6 +12,7 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
   let rodando = false;
   let cutucando = false;
   let gancho = null; // chamado quando chega uma mensagem de cliente (ex.: análise automática da IA)
+  let aoChegar = null; // chamado NA HORA em que a mensagem do cliente chega (antes de qualquer leitura de áudio)
 
   // Pausa "humana" entre envios seguidos (1,2 a 3,5 s). Nos testes, injete () => 0.
   // WA_PAUSA_MS força um valor fixo (0 desliga a pausa; usado nos testes).
@@ -34,6 +35,7 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
         const r = store.ingerir(evt);
         if (!r || !r.inserido) return;
         const avisarIA = (opcoes) => { if (!evt.deMim && gancho) gancho(r.conversaId, opcoes); };
+        if (!evt.deMim && aoChegar) { try { aoChegar(r.conversaId, r.mensagemId); } catch (err) { log.error('[whatsapp] aviso de chegada:', err.message); } }
         // Áudio: primeiro transcreve (segundo plano); só depois avisa a IA, para ela ler o texto e não o "[mensagem de voz]".
         if (r.mensagemId && evt.midia && transcritor) {
           Promise.resolve()
@@ -139,10 +141,11 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
   // Para testes: troca o canal por um falso.
   function usarCanal(novo) { canal = novo; }
   function definirGancho(fn) { gancho = fn; }
+  function definirChegada(fn) { aoChegar = fn; }
   let transcritor = null;
   function definirTranscritor(fn) { transcritor = fn; }
 
-  return { store, iniciar, definirAtivo, estado, parear, desconectar, conectado, processarFila, cutucar, usarCanal, definirGancho, definirTranscritor, desligar };
+  return { store, iniciar, definirAtivo, estado, parear, desconectar, conectado, processarFila, cutucar, usarCanal, definirGancho, definirChegada, definirTranscritor, desligar };
 }
 
 module.exports = { createService };

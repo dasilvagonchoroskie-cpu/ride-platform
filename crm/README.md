@@ -303,7 +303,7 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Front: painel "Documentos (arquivo digital)" em cada ficha, menu **Documentos** (lista, filtros, política e decisões pendentes do dono).
   Cache do app `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
 
-## Candidatos a motorista, avaliador e integração com o app (12/11/2026, ramo `etapa2`, só desenvolvimento)
+## Candidatos a motorista e avaliador (12/11/2026, ramo `etapa2`, só desenvolvimento)
 - **Fluxo de candidatura** (migração 006, congelada): `candidaturas` com etapas Cadastro recebido → Documentação pendente/recebida
   (sozinha, pelos documentos) → Documentação em análise → Necessidade de complementação → Avaliação presencial pendente/realizada →
   Aprovado / Recusado. Independente da situação da ficha do motorista (aprovar **não** contrata nem libera no aplicativo).
@@ -312,19 +312,36 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - **Perfil `avaliador`** (ex.: o profissional que faz a avaliação presencial): lista FECHADA de rotas (`policy.ROTAS_AVALIADOR`):
   `GET /meta`, `GET /candidaturas`, `GET /candidaturas/:id`, `POST /candidaturas/:id/pareceres`, `GET /documentos/:id[/arquivo]`
   e a própria conta (`/auth/*`). Todo o resto: 403 no servidor. Vê nome, cidade, veículo, placa, categoria da CNH e documentos
-  liberados na política (`docs_politica.avaliador`, padrão CNH, CRLV, comprovante e outros), sem telefone nem anotações internas.
+  liberados na política (`docs_politica.avaliador`, padrão os 7 itens do candidato e outros), sem telefone nem anotações internas.
   Não aprova, não recusa, não exclui, não altera documento, não exporta. Toda consulta e parecer são auditados (sem conteúdo pessoal).
   Parecer: conclusão, texto, pendências, verificação de antecedentes **feita por profissional autorizado fora do CRM** (só registra
   o resultado e a fonte; o CRM não faz consulta externa automática), observações.
 - **Rotas:** `GET|POST /candidaturas`, `GET /candidaturas/:id`, `POST /candidaturas/:id/etapa` (admin/gestor),
   `POST /candidaturas/:id/decisao` e `/reabrir` (admin), `POST /candidaturas/:id/pareceres` (admin/avaliador).
-- **Integração assinada com o aplicativo do motorista:** `POST /api/integracoes/app-motorista/candidato|documento` — HMAC-SHA256,
-  janela de 5 min, nonce de uso único, limite por IP; sem `FM_INTEGRACAO_SEGREDO` respondem 404. Protocolo em
-  `docs/integracao-app-motorista.md` (o envio pelo backend ainda não existe).
-- Front: menu **Candidatos** (`public/js/views/candidatos.js`), botão "Avaliação do candidato" na ficha. Cache `fm-crm-v26`.
+- **Sem integração com o aplicativo do motorista** (decisão do dono, 12/11 noite): o cadastro pelo app continua indo para a Central
+  (aprovação lá); o CRM é um caminho independente (ficha + documentos + avaliação) que o dono usa para preencher o cadastro na Central.
+- **Documentação obrigatória do candidato a motorista (7 itens independentes):** CNH; documento do veículo (CRLV ou equivalente);
+  comprovante de residência; certidão de antecedentes criminais; foto do veículo de frente; de lado; de traseira. Cada um tem o seu
+  espaço de envio no arquivo digital e o seu campo na ficha (`doc_*`); "completo" só com os 7 (a política não deixa retirar nenhum).
+- Front: menu **Candidatos** (`public/js/views/candidatos.js`), botão "Avaliação do candidato" na ficha. Cache `fm-crm-v27`.
   Testes: `test/candidaturas.test.js` + avaliador em `test/rotas-permissoes.test.js`.
 - **Informações oficiais da IA**: 8 assuntos (gerais, cadastro de motoristas, entregadores, encomendas, Clube, comerciantes,
   passageiros, outros) com "preenchido / falta preencher" na tela. Nada é preenchido sozinho.
+
+## Atendimento por IA no WhatsApp: correções de 12/11/2026 noite (ramo `etapa2`, só desenvolvimento)
+- **Confirmação rápida:** se a resposta não sair em `IA_CONFIRMACAO_MS` (padrão 6 s), vai UMA confirmação por fala do cliente (modelo
+  "Confirmação rápida de recebimento", editável/desligável). É `tipo='aviso'`: não conta como resposta, não notifica, não muda a lista.
+  Espera para juntar mensagens seguidas (`IA_ATRASO_MS`) caiu de 15 s para 7 s. O registro do servidor mostra o tempo de cada resposta.
+- **Áudio:** leitura com novas tentativas curtas (`IA_MIDIA_REPETIR_MS`, padrão 3 s e 8 s); a IA espera a leitura terminar; áudio que
+  não pôde ser ouvido recebe o modelo "Áudio que não pôde ser ouvido" (pede para escrever) sem chamar a IA; dois seguidos → equipe.
+- **Novo atendimento depois do encerramento:** mensagem nova numa conversa concluída abre NOVO atendimento (`atend_inicio`): assunto,
+  estado da IA, limites e "repetida" contam só a partir daí; o histórico continua. Limites: 40 respostas/60 análises por atendimento,
+  80/120 por conversa em 24 h (`IA_RESPOSTAS_ATENDIMENTO`, `IA_ANALISES_ATENDIMENTO`, `IA_RESPOSTAS_CONVERSA_DIA`, `IA_ANALISES_CONVERSA_DIA`).
+- **IA ⇄ equipe:** assumir/concluir cancela tentativas e confirmações pendentes; a IA confere o estado de novo antes de enviar (não fala
+  se a equipe assumiu durante a redação); devolver faz a IA responder a mensagem pendente; trocas feitas pelo sistema são auditadas.
+- **Origem ≠ intenção:** "Vim pelo site" (e Instagram, Facebook, TikTok, indicação) é guardado em `wa_conversas.origem_contato` e NÃO
+  vira assunto nem perfil: a pessoa recebe o menu geral. O fluxo de cadastro só começa quando ela escolhe ou diz o que quer.
+- Testes: `test/ia-atendimento.test.js` (provedor e canal FALSOS: não comprovam WhatsApp/Gemini reais).
 
 ## Hospedagem definitiva: VPS da Hostinger (preparado, NÃO executado)
 Guia simples e scripts em `deploy/hostinger/` (provisionamento, systemd endurecido, Nginx + HTTPS, firewall, cópia diária cifrada,

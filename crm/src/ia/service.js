@@ -14,6 +14,7 @@ const preenchido = (v) => v !== null && v !== undefined && String(v).trim() !== 
 
 const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos } = require('./documentos');
 const C = require('./central');
+const { DOCUMENTOS_MOTORISTA } = require('../defs');
 
 // Motivos de a IA não responder, em português (aparecem no painel da conversa e no registro do servidor).
 const MOTIVOS = {
@@ -23,7 +24,9 @@ const MOTIVOS = {
   falha_redacao: 'a IA não conseguiu redigir', filtro_numero: 'bloqueada: continha número de documento', filtro_link_ou_email: 'bloqueada: continha link ou e-mail',
   filtro_dado_interno: 'bloqueada: repetia anotação interna', filtro_longa: 'bloqueada: longa demais', filtro_vazia: 'a IA não sugeriu resposta',
   atendimento_humano: 'conversa em atendimento humano', aguardando_humano: 'aguardando atendimento humano (aviso de espera já enviado)',
-  em_andamento: 'outra resposta em andamento', concluida: 'atendimento concluído'
+  em_andamento: 'outra resposta em andamento', concluida: 'atendimento concluído',
+  limite_atendimento: 'limite de respostas da IA neste atendimento', mudou_estado: 'a equipe assumiu durante o processamento',
+  audio_pendente: 'áudio ainda sendo ouvido'
 };
 
 function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, setSetting, cofre, provider, todayISO, nowISO, log = console }) {
@@ -32,6 +35,22 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   const respondendo = new Set();
   const central = C.criarCentral({ getSetting, setSetting });
   const timers = new Map();
+  const ackTimers = new Map();
+  // Áudios/mídias que ainda estão sendo lidos (a IA espera a leitura antes de decidir; a varredura não atropela).
+  const midiasEmLeitura = new Set();
+
+  // Mensagens "de verdade" da conversa: sem as confirmações rápidas de recebimento (tipo 'aviso'), que não são resposta.
+  const mensagensReais = (conversaId, limite) => waStore.listarMensagens(conversaId, { limite: Math.min(300, limite + 20) }).filter((m) => m.tipo !== 'aviso').slice(-limite);
+  // Início do atendimento ATUAL: um atendimento concluído não pesa sobre o próximo (limites, "repetida", menu).
+  const inicioDe = (conv) => (conv && (conv.atend_inicio || conv.created_at)) || '';
+  // Texto do cliente sem o rótulo de mídia ("[mensagem de voz] 🎤 ...").
+  const textoPuro = (t) => String(t || '').replace(/^\[[^\]]{1,40}\]\s*/, '').replace(/^[🎤📎]\s*/u, '');
+  function semIntencaoNoAtendimento(conv, mensagens) {
+    const inicio = inicioDe(conv);
+    const doCliente = mensagens.filter((m) => m.direcao === 'in' && String(m.created_at || '') >= inicio);
+    if (!doCliente.length) return false;
+    return doCliente.every((m) => m.tipo === 'text' || !m.tipo ? C.semIntencao(textoPuro(m.texto)) : false);
+  }
 
   // Provedor ativo (Anthropic, DeepSeek, OpenAI...). Cada provedor guarda o próprio modelo e a própria chave.
   const provedorAtual = () => {
@@ -167,7 +186,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (cfg.provedor === 'personalizado' && !cfg.urlBase) throw new ErroIA('url_invalida', 'Informe o endereço da IA em Configurações.');
     const conv = waStore.obterConversa(conversaId);
     if (!conv) throw new ErroIA('nao_encontrada', 'Conversa não encontrada.', 404);
-    const mensagens = waStore.listarMensagens(conversaId, { limite: 60 });
+    const mensagens = mensagensReais(conversaId, 60);
     if (!mensagens.length) throw new ErroIA('sem_mensagens', 'A conversa ainda não tem mensagens.');
     const ultimoId = mensagens[mensagens.length - 1].id;
 
@@ -208,6 +227,13 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       }
       if (resultado.campos.placa) resultado.campos.placa = normalizarPlaca(resultado.campos.placa) || resultado.campos.placa;
       if (tipoAlvo) resultado.perfil = tipoParaPerfil[tipoAlvo]; // com cadastro vinculado, o perfil é o do cadastro
+      // Origem do contato NÃO é intenção (12/11 noite): "Vim pelo site" não faz de ninguém candidato a motorista. Enquanto o
+      // cliente (neste atendimento) só cumprimentou ou disse de onde veio, perfil e assunto ficam indefinidos.
+      if (!tipoAlvo && semIntencaoNoAtendimento(conv, mensagens)) {
+        resultado.perfil = 'desconhecido';
+        resultado.campos = {};
+        if (resultado.atendimento) resultado.atendimento.opcao = 'indefinido';
+      }
 
       const info = db.prepare(
         `INSERT INTO ia_analises (conversa_id, mensagem_ate_id, origem, resultado, modelo, tokens_entrada, tokens_saida, criado_por, criado_em)
@@ -283,10 +309,11 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     return saida;
   }
 
-  // Ficha do motorista: marca cada documento que chegou pela conversa (CNH, CRLV, comprovante de endereço) como
-  // "Recebido — conferir" (nunca desfaz "Conferido"), resume a situação dos documentos e avança a etapa do cadastro:
-  // algum documento → "Cadastro em andamento"; os três → "Cadastro em análise". Aprovar e contratar é sempre da equipe.
-  const CAMPO_DOC = { cnh: 'doc_cnh', crlv: 'doc_crlv', endereco: 'doc_endereco' };
+  // Ficha do motorista: marca cada um dos 7 itens que chegou pela conversa (CNH, CRLV, comprovante de residência,
+  // antecedentes e as 3 fotos do veículo) como "Recebido — conferir" (nunca desfaz "Conferido"), resume a situação e avança a
+  // etapa: algum item → "Cadastro em andamento"; os 7 → "Cadastro em análise". Aprovar e contratar é sempre da equipe.
+  const CAMPO_DOC = Object.fromEntries(DOCUMENTOS_MOTORISTA.map((d) => [d.tipo, d.campo]));
+  const TOTAL_DOCS = DOCUMENTOS_MOTORISTA.length;
   const ETAPAS_INICIAIS = ['Novo interessado', 'Primeiro contato realizado', 'Aguardando retorno'];
   function marcarDocumentos(conversaId, motoristaId, req) {
     const def = ENTITIES.motoristas;
@@ -301,17 +328,17 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const ok = (v) => v === 'Recebido — conferir' || v === 'Conferido';
     const recebidos = Object.values(CAMPO_DOC).filter((c) => ok(estado[c])).length;
     const conferidos = Object.values(CAMPO_DOC).filter((c) => estado[c] === 'Conferido').length;
-    const geral = conferidos === 3 ? 'Conferidos' : recebidos === 3 ? 'Recebidos — conferir' : recebidos > 0 ? 'Incompletos' : 'Não enviados';
+    const geral = conferidos === TOTAL_DOCS ? 'Conferidos' : recebidos === TOTAL_DOCS ? 'Recebidos — conferir' : recebidos > 0 ? 'Incompletos' : 'Não enviados';
     if (linha.documentos !== 'Conferidos' && linha.documentos !== geral) corpo.documentos = geral;
     let novaEtapa = null;
-    if (recebidos === 3 && [...ETAPAS_INICIAIS, 'Cadastro em andamento'].includes(linha.situacao)) novaEtapa = 'Cadastro em análise';
+    if (recebidos === TOTAL_DOCS && [...ETAPAS_INICIAIS, 'Cadastro em andamento'].includes(linha.situacao)) novaEtapa = 'Cadastro em análise';
     else if (recebidos > 0 && ETAPAS_INICIAIS.includes(linha.situacao)) novaEtapa = 'Cadastro em andamento';
     if (novaEtapa) corpo.situacao = novaEtapa;
     if (!Object.keys(corpo).length) return { recebidos, situacao: linha.situacao };
     const r = entities.updateEntity(def, motoristaId, corpo, req);
     if (r.errors || r.error) return null;
     if (novaEtapa) {
-      entities.logInteraction('motoristas', motoristaId, req, `Etapa atualizada automaticamente: ${recebidos} de 3 documentos recebidos pelo WhatsApp (conferir na ficha).`, linha.situacao, novaEtapa, 'WhatsApp');
+      entities.logInteraction('motoristas', motoristaId, req, `Etapa atualizada automaticamente: ${recebidos} de ${TOTAL_DOCS} documentos recebidos pelo WhatsApp (conferir na ficha).`, linha.situacao, novaEtapa, 'WhatsApp');
     }
     audit(req, 'ia_documentos', 'motoristas', motoristaId, `Documentos marcados pelo servidor: ${Object.keys(corpo).join(', ')}`);
     return { recebidos, situacao: novaEtapa || linha.situacao };
@@ -342,7 +369,27 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (tentativas !== undefined) { sets.push('ia_tentativas = ?'); params.push(tentativas); }
     try { db.prepare(`UPDATE wa_conversas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conversaId); } catch (err) { log.error(`[ia] estado da conversa ${conversaId}: ${err.message}`); }
   }
-  const ultimaDoCliente = (conversaId) => db.prepare("SELECT id, direcao FROM wa_mensagens WHERE conversa_id = ? ORDER BY id DESC LIMIT 1").get(conversaId);
+  // Última mensagem REAL da conversa (a confirmação rápida não conta como resposta).
+  const ultimaDoCliente = (conversaId) => db.prepare("SELECT id, direcao, tipo, texto, created_at FROM wa_mensagens WHERE conversa_id = ? AND tipo <> 'aviso' ORDER BY id DESC LIMIT 1").get(conversaId);
+  // Áudio que não pôde ser ouvido (leitura falhou, desligada, sem fala ou acima do limite): sem transcrição 🎤 e fora de leitura.
+  const audioIlegivel = (m) => !!m && m.direcao === 'in' && m.tipo === 'audio' && !/🎤/u.test(String(m.texto || '')) && !midiasEmLeitura.has(m.id);
+
+  // Áudio que a IA não conseguiu ouvir: diz isso com franqueza e pede o texto (nunca finge que entendeu). Se o último aviso
+  // da IA já foi esse, passa para a equipe (alguém ouve o áudio no celular).
+  function responderAudioIlegivel(conversaId, cfg) {
+    const conv = waStore.obterConversa(conversaId);
+    if (!conv || conv.atendimento !== 'ia') return null; // humano/concluído/aguardando: segue o fluxo normal
+    if (!cfg.responder) { marcarEstado(conversaId, 'sem_acao', { erro: 'audio_ilegivel' }); return { tratada: true }; }
+    const texto = central.texto('audio_nao_compreendido');
+    const inicio = inicioDe(conv);
+    const ultimaIA = db.prepare("SELECT texto FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND tipo <> 'aviso' AND created_at >= ? ORDER BY id DESC LIMIT 1").get(conversaId, inicio);
+    if (!texto || (ultimaIA && ultimaIA.texto === texto)) { transferirPorFalha(conversaId, 'audio_ilegivel'); return { tratada: true }; }
+    const r = waStore.enfileirar({ conversaId, texto, usuarioId: null, origem: 'ia' });
+    if (r.erro) { log.error(`[ia] conversa ${conversaId}: aviso de áudio não enfileirado (${r.erro})`); return null; }
+    marcarEstado(conversaId, 'respondida', { erro: 'audio_ilegivel' });
+    log.log(`[ia] conversa ${conversaId}: áudio não pôde ser ouvido; cliente avisado e convidado a escrever`);
+    return { tratada: true };
+  }
 
   // A IA não vai responder esta mensagem: passa para a equipe (só se ninguém respondeu e a conversa ainda está com a IA).
   function transferirPorFalha(conversaId, codigo) {
@@ -383,14 +430,22 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (ult && ult.direcao === 'in' && !(cfg.responder && transferirPorFalha(conversaId, 'sem_chave'))) marcarEstado(conversaId, 'sem_chave', { erro: 'sem_chave', msgId: ult.id });
       return;
     }
+    // Áudio ainda sendo ouvido: quem termina a leitura chama a IA de novo.
+    if (ult && ult.direcao === 'in' && midiasEmLeitura.has(ult.id)) return;
     processando.add(conversaId);
     const msgId = ult ? ult.id : null;
+    const comecou = Date.now();
+    const desdeMsg = () => (ult && ult.created_at ? Math.round((Date.now() - Date.parse(ult.created_at)) / 1000) : null);
     marcarEstado(conversaId, 'processando', { msgId, ...(tentativa === 0 ? { tentativas: 0 } : {}) });
     try {
+      if (audioIlegivel(ult) && responderAudioIlegivel(conversaId, cfg)) return;
       // Um contato sozinho não esgota a cota de todos: no máximo ANALISES_CONVERSA_DIA análises automáticas por conversa/dia.
+      // Conta só o atendimento atual (um atendimento anterior não bloqueia o novo) + um teto de 24 h contra laço.
       const desde = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const inicioAt = inicioDe(waStore.obterConversa(conversaId));
       const feitas = db.prepare("SELECT COUNT(*) n FROM ia_analises WHERE conversa_id = ? AND origem = 'automatica' AND criado_em >= ?").get(conversaId, desde).n;
-      if (feitas >= ANALISES_CONVERSA_DIA) {
+      const noAtendimento = db.prepare("SELECT COUNT(*) n FROM ia_analises WHERE conversa_id = ? AND origem = 'automatica' AND criado_em >= ?").get(conversaId, inicioAt).n;
+      if (feitas >= ANALISES_CONVERSA_DIA || noAtendimento >= ANALISES_ATENDIMENTO) {
         log.log(`[ia] conversa ${conversaId}: limite de análises automáticas do dia para este contato`);
         if (!(cfg.responder && transferirPorFalha(conversaId, 'limite_analises_conversa'))) marcarEstado(conversaId, 'limite', { erro: 'limite_analises_conversa' });
         return;
@@ -419,11 +474,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (estadoFinal) marcarEstado(conversaId, estadoFinal);
       // Registro sem dados pessoais: só nomes de campos e decisões.
       log.log(`[ia] conversa ${conversaId}: perfil=${a.resultado.perfil} campos=[${Object.keys(a.resultado.campos || {}).join(',')}] `
-        + `${ap.erro ? `cadastro: ${ap.erro}` : (ap.criado ? `criou ${ap.criado.tipo}` : `preencheu=[${(ap.preenchidos || []).join(',')}]`)}; ${resp}`);
+        + `${ap.erro ? `cadastro: ${ap.erro}` : (ap.criado ? `criou ${ap.criado.tipo}` : `preencheu=[${(ap.preenchidos || []).join(',')}]`)}; ${resp}`
+        + `; processamento ${((Date.now() - comecou) / 1000).toFixed(1)} s${desdeMsg() !== null ? `, ${desdeMsg()} s desde a mensagem` : ''}`);
     } catch (err) {
       const codigo = (err && err.codigo) || 'erro';
       // Falha da IA nunca atrapalha o recebimento: registra, tenta de novo quando é passageira e, no fim, passa para a equipe.
-      log.error(`[ia] análise automática da conversa ${conversaId}: ${err.message}${tentativa ? ` (tentativa ${tentativa})` : ''}`);
+      log.error(`[ia] análise automática da conversa ${conversaId}: ${err.message}${tentativa ? ` (tentativa ${tentativa})` : ''} — ${((Date.now() - comecou) / 1000).toFixed(1)} s`);
       if (PASSAGEIROS.has(codigo) && agendarTentativa(conversaId, tentativa, codigo, { forcar })) return;
       if (cfg.responder && transferirPorFalha(conversaId, codigo)) return;
       marcarEstado(conversaId, 'falhou', { erro: codigo });
@@ -441,18 +497,18 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   function recuperarPendentes() {
     const cfg = config();
     if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.chaveConfigurada) return [];
-    const atraso = process.env.IA_ATRASO_MS !== undefined ? Number(process.env.IA_ATRASO_MS) : 15000;
+    const atraso = atrasoMs();
     const agora = Date.now();
     const limiteAntigo = new Date(agora - RECUPERAR_HORAS * 3600 * 1000).toISOString();
     const maduro = new Date(agora - atraso - 5000).toISOString();
     const travado = new Date(agora - 5 * 60 * 1000).toISOString();
     const linhas = db.prepare(`
       SELECT c.id, c.ia_estado, c.ia_msg_id, c.ia_proxima, c.ia_estado_em, c.ia_tentativas, m.id AS ult_id, m.direcao, m.created_at
-        FROM wa_conversas c JOIN wa_mensagens m ON m.id = (SELECT MAX(id) FROM wa_mensagens WHERE conversa_id = c.id)
+        FROM wa_conversas c JOIN wa_mensagens m ON m.id = (SELECT MAX(id) FROM wa_mensagens WHERE conversa_id = c.id AND tipo <> 'aviso')
        WHERE c.atendimento = 'ia' AND m.direcao = 'in' AND m.created_at >= ? AND m.created_at <= ?`).all(limiteAntigo, maduro);
     const feitas = [];
     for (const l of linhas) {
-      if (processando.has(l.id) || timers.has(l.id)) continue;
+      if (processando.has(l.id) || timers.has(l.id) || midiasEmLeitura.has(l.ult_id)) continue;
       const nova = !l.ia_msg_id || l.ia_msg_id < l.ult_id;
       const tentativaVencida = l.ia_estado === 'tentando' && l.ia_proxima && l.ia_proxima <= new Date(agora).toISOString();
       const presa = l.ia_estado === 'processando' && l.ia_estado_em && l.ia_estado_em <= travado;
@@ -493,9 +549,13 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   //  - se uma pessoa da equipe respondeu nos últimos 15 min (CRM ou celular), a IA fica quieta (humano assumiu);
   //  - no máximo RESPOSTAS_CONVERSA_DIA respostas da IA por conversa em 24 h e RESPOSTAS_DIA no total por dia;
   //  - não repete a mesma frase que acabou de mandar.
-  const RESPOSTAS_CONVERSA_DIA = Number(process.env.IA_RESPOSTAS_CONVERSA_DIA) || 15;
+  // Limites (12/11 noite): por ATENDIMENTO (um concluído não bloqueia o seguinte) + teto de 24 h por conversa contra laço.
+  const RESPOSTAS_ATENDIMENTO = Number(process.env.IA_RESPOSTAS_ATENDIMENTO) || 40;
+  const RESPOSTAS_CONVERSA_DIA = Number(process.env.IA_RESPOSTAS_CONVERSA_DIA) || 80;
   const RESPOSTAS_DIA = Number(process.env.IA_RESPOSTAS_DIA) || 300;
-  const ANALISES_CONVERSA_DIA = Number(process.env.IA_ANALISES_CONVERSA_DIA) || 25;
+  const ANALISES_ATENDIMENTO = Number(process.env.IA_ANALISES_ATENDIMENTO) || 60;
+  const ANALISES_CONVERSA_DIA = Number(process.env.IA_ANALISES_CONVERSA_DIA) || 120;
+  const atrasoMs = () => (process.env.IA_ATRASO_MS !== undefined ? Number(process.env.IA_ATRASO_MS) : 7000);
   async function responderAutomatico(conversaId, opcoes = {}) {
     if (respondendo.has(conversaId)) return { motivo: 'em_andamento' };
     respondendo.add(conversaId);
@@ -519,8 +579,9 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (conv.atendimento === 'concluido') return { motivo: 'concluida' };
     const a = ultimaAnalise(conversaId);
     if (!a) return { motivo: 'sem_resposta' };
-    const msgs = waStore.listarMensagens(conversaId, { limite: 30 });
+    const msgs = mensagensReais(conversaId, 30);
     const ultima = msgs[msgs.length - 1];
+    const inicio = inicioDe(conv);
     if (!ultima || ultima.direcao !== 'in') return { motivo: 'ja_respondida' };
     if (a.mensagem_ate_id !== ultima.id) return { motivo: 'analise_desatualizada' };
     // Trava antiga de 15 min: só vale para resposta da equipe DEPOIS da última mudança de estado. Se a conversa foi
@@ -528,16 +589,29 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const limite = [new Date(Date.now() - 15 * 60 * 1000).toISOString(), conv.atendimento === 'ia' && conv.atend_em ? conv.atend_em : ''].sort().pop();
     if (msgs.some((m) => m.direcao === 'out' && m.origem !== 'ia' && m.ocorrida_em > limite)) return { motivo: 'humano_assumiu' };
     const dia = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const naConversa = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND created_at >= ?").get(conversaId, dia).n;
+    const naConversa = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND tipo <> 'aviso' AND created_at >= ?").get(conversaId, dia).n;
     if (naConversa >= RESPOSTAS_CONVERSA_DIA) return { motivo: 'limite_conversa' };
-    const total = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND created_at >= ?").get(dia).n;
+    const noAtendimento = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE conversa_id = ? AND origem = 'ia' AND tipo <> 'aviso' AND created_at >= ?").get(conversaId, inicio).n;
+    if (noAtendimento >= RESPOSTAS_ATENDIMENTO) return { motivo: 'limite_atendimento' };
+    const total = db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND tipo <> 'aviso' AND created_at >= ?").get(dia).n;
     if (total >= RESPOSTAS_DIA) return { motivo: 'limite_dia' };
 
-    const ultimaIA = [...msgs].reverse().find((m) => m.origem === 'ia');
+    // "Repetida" só dentro do atendimento atual: o menu do atendimento anterior não impede o menu do novo.
+    const ultimaIA = [...msgs].reverse().find((m) => m.origem === 'ia' && String(m.created_at || '') >= inicio);
+    const novoAtendimento = !!conv.atend_inicio && !msgs.some((m) => m.origem === 'ia' && String(m.created_at || '') >= conv.atend_inicio);
     const enviar = (partes, extra = {}) => {
       const texto = partes.filter(Boolean).join('\n\n').trim();
       if (!texto) return { motivo: 'sem_resposta' };
       if (ultimaIA && ultimaIA.texto === texto) return { motivo: 'repetida' };
+      // Confere de novo ANTES de enviar (a redação leva segundos): se a equipe assumiu ou concluiu nesse meio-tempo, a IA
+      // não fala; se chegou mensagem nova do cliente, esta resposta ficou velha (a nova será tratada em seguida).
+      const agoraConv = waStore.obterConversa(conversaId);
+      const esperado = extra.transferida || extra.tipo === 'espera' ? 'aguardando' : 'ia';
+      if (!agoraConv || agoraConv.atendimento !== esperado) return { motivo: 'mudou_estado' };
+      if (!extra.transferida && extra.tipo !== 'espera') {
+        const ult = ultimaDoCliente(conversaId);
+        if (ult && ult.id !== ultima.id) return { motivo: 'analise_desatualizada' };
+      }
       const r = waStore.enfileirar({ conversaId, texto, usuarioId: null, origem: 'ia' });
       if (r.erro) return { motivo: r.erro };
       db.prepare('UPDATE ia_analises SET aplicado_resumo = ? WHERE id = ?')
@@ -561,7 +635,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
     const textoUlt = String(ultima.texto || '');
     const at = a.resultado.atendimento || {};
-    const assunto = C.opcaoDoMenu(textoUlt) || (at.opcao && at.opcao !== 'indefinido' ? at.opcao : null) || conv.atend_assunto || null;
+    // Origem ≠ intenção: enquanto o cliente só cumprimentou ou disse de onde veio (ex.: "Vim pelo site"), o assunto não é
+    // deduzido pela IA e ele recebe o menu geral. O fluxo de cadastro só começa quando ele escolhe ou diz que quer.
+    const intencaoClara = !semIntencaoNoAtendimento(conv, msgs);
+    const assunto = C.opcaoDoMenu(textoUlt) || (intencaoClara && at.opcao && at.opcao !== 'indefinido' ? at.opcao : null) || conv.atend_assunto || null;
     if (assunto && assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, assunto);
 
     const partes = [];
@@ -579,18 +656,18 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       const rec = documentosRecebidos(waStore.listarMensagens(conversaId, { limite: 500 }));
       const linha = conv.vinculo_tipo === 'motoristas' ? valoresAtuais('motoristas', conv.vinculo_id).linha : {};
       const tem = (tipo, campo) => !!rec[tipo] || ['Recebido — conferir', 'Conferido'].includes(linha[campo]);
-      const falta = [];
-      if (!tem('cnh', 'doc_cnh')) falta.push('a foto da CNH');
-      if (!tem('crlv', 'doc_crlv')) falta.push('a foto do documento do veículo (CRLV)');
-      if (!tem('endereco', 'doc_endereco')) falta.push('um comprovante de endereço (conta de luz, água ou internet)');
+      // Os 7 itens obrigatórios; nada conta como completo enquanto faltar um. Pede até 2 por vez (mensagem curta).
+      const faltaTodos = DOCUMENTOS_MOTORISTA.filter((d) => !tem(d.tipo, d.campo)).map((d) => d.pedido);
+      const falta = faltaTodos.slice(0, 2);
       if (!falta.length) return transferir('documentos', [...partes, `${confirmaDoc} Com isso, seu cadastro está aguardando análise da nossa equipe.`]);
       const lista = falta.length > 1 ? `${falta.slice(0, -1).join(', ')} e ${falta[falta.length - 1]}` : falta[0];
-      return enviar([...partes, `${confirmaDoc} Agora, envie também ${lista}.`], { tipo: 'confirmação de documento' });
+      const resto = faltaTodos.length > falta.length ? ` Depois disso, ainda faltarão ${faltaTodos.length - falta.length} item(ns) da lista.` : '';
+      return enviar([...partes, `${confirmaDoc} Agora, envie também ${lista}.${resto}`], { tipo: 'confirmação de documento' });
     }
 
     // Menu: no primeiro contato sem assunto claro, ou quando o cliente pede.
     const menu = central.texto('menu');
-    if (menu && (C.pediuMenu(textoUlt) || (!jaSaudou && !assunto))) return enviar([...partes, menu], { tipo: 'menu' });
+    if (menu && (C.pediuMenu(textoUlt) || ((!jaSaudou || novoAtendimento) && !assunto))) return enviar([...partes, menu], { tipo: 'menu' });
 
     // Informações novas aplicadas ao cadastro: confirmação padrão (uma vez por informação nova).
     const novos = ((aplicacao && aplicacao.preenchidos) || []).filter((k) => !['observacoes', 'proxima_acao'].includes(k));
@@ -607,8 +684,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       for (const k of ['observacoes', 'proxima_acao', 'condicoes']) if (preenchido(linha[k])) internos.push(String(linha[k]));
     }
     internos.push(...[a.resultado.resumo, a.resultado.proxima_acao].filter(Boolean));
+    // Redação do atendimento ATUAL (a conversa anterior, já concluída, não volta como assunto pendente).
+    const doAtendimento = msgs.filter((m) => String(m.created_at || '') >= inicio);
     const { system, user } = P.montarPromptResposta({
-      mensagens: msgs, perfil: a.resultado.perfil, faltando, assunto,
+      mensagens: doAtendimento.length ? doAtendimento : msgs.slice(-1), perfil: a.resultado.perfil, faltando, assunto,
       informacoes: central.informacoes(), jaSaudou: jaSaudou || partes.length > 0, confirmacaoEnviada: !!confirmaInfo
     });
     let r;
@@ -633,11 +712,86 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const cfg = config();
     if (!cfg.ativo || cfg.modo !== 'automatico') return;
     clearTimeout(timers.get(conversaId));
-    const atraso = process.env.IA_ATRASO_MS !== undefined ? Number(process.env.IA_ATRASO_MS) : 15000;
+    const atraso = atrasoMs();
     const t = setTimeout(() => { timers.delete(conversaId); executarAutomatico(conversaId, opcoes); }, atraso);
     if (t.unref) t.unref();
     timers.set(conversaId, t);
   }
+
+  /* ------------------- chegada da mensagem: origem + confirmação rápida (12/11 noite) ------------------- */
+  // O cliente não fica sem retorno: se a resposta de verdade não sair em IA_CONFIRMACAO_MS (padrão 6 s), vai UMA confirmação
+  // de recebimento por vez de fala do cliente (modelo "recebimento"). Ela é tipo 'aviso': não conta como resposta, não
+  // notifica, não muda a lista; a resposta definitiva vem depois. Com a IA desligada, sem chave ou fora do atendimento
+  // da IA, nada é enviado.
+  const confirmacaoMs = () => (process.env.IA_CONFIRMACAO_MS !== undefined ? Number(process.env.IA_CONFIRMACAO_MS) : 6000);
+  function registrarChegada(conversaId, mensagemId) {
+    try {
+      const conv = waStore.obterConversa(conversaId);
+      if (conv && !conv.origem_contato && mensagemId) {
+        const m = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
+        const origem = C.origemDoContato(m && m.texto);
+        if (origem) db.prepare('UPDATE wa_conversas SET origem_contato = ? WHERE id = ? AND origem_contato IS NULL').run(origem, conversaId);
+      }
+    } catch (err) { log.error(`[ia] origem da conversa ${conversaId}: ${err.message}`); }
+    const ms = confirmacaoMs();
+    if (!(ms > 0) || ackTimers.has(conversaId)) return;
+    const t = setTimeout(() => {
+      ackTimers.delete(conversaId);
+      try { enviarConfirmacao(conversaId); } catch (err) { log.error(`[ia] confirmação da conversa ${conversaId}: ${err.message}`); }
+    }, ms);
+    if (t.unref) t.unref();
+    ackTimers.set(conversaId, t);
+  }
+  function enviarConfirmacao(conversaId) {
+    const cfg = config();
+    if (!cfg.ativo || cfg.modo !== 'automatico' || !cfg.responder || !cfg.chaveConfigurada) return { motivo: 'desligada' };
+    const conv = waStore.obterConversa(conversaId);
+    if (!conv || conv.atendimento !== 'ia') return { motivo: 'fora_da_ia' };
+    const ult = ultimaDoCliente(conversaId);
+    if (!ult || ult.direcao !== 'in') return { motivo: 'ja_respondida' };
+    const ultSaida = db.prepare("SELECT MAX(id) id FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND tipo <> 'aviso'").get(conversaId).id || 0;
+    if (db.prepare("SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND tipo = 'aviso' AND id > ? LIMIT 1").get(conversaId, ultSaida)) return { motivo: 'ja_confirmada' };
+    const texto = central.texto('recebimento');
+    if (!texto) return { motivo: 'modelo_desligado' };
+    const dia = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    if (db.prepare("SELECT COUNT(*) n FROM wa_mensagens WHERE origem = 'ia' AND created_at >= ?").get(dia).n >= RESPOSTAS_DIA * 2) return { motivo: 'limite_dia' };
+    const r = waStore.enfileirar({ conversaId, texto, usuarioId: null, origem: 'ia', tipo: 'aviso' });
+    if (r.erro) return { motivo: r.erro };
+    log.log(`[ia] conversa ${conversaId}: confirmação de recebimento enviada (resposta ainda em processamento)`);
+    return { enviada: true };
+  }
+  /** Leitura de mídia em andamento (o transcritor avisa o começo e o fim). */
+  function marcarLeitura(mensagemId, emAndamento) {
+    if (emAndamento) midiasEmLeitura.add(Number(mensagemId)); else midiasEmLeitura.delete(Number(mensagemId));
+  }
+
+  /* --------------------- troca de atendimento (IA ⇄ equipe), repetível sem reiniciar --------------------- */
+  // Equipe assumiu ou concluiu → a IA para NA HORA (tentativas e confirmações pendentes canceladas; o envio confere o estado
+  // de novo). Devolvida à IA → volta a responder; se a última mensagem é do cliente e ninguém respondeu, ela responde.
+  // Mudanças feitas pelo sistema (celular, volta automática, novo atendimento) ficam na auditoria.
+  if (typeof waStore.ouvir === 'function') waStore.ouvir((evt) => {
+    if (!evt || evt.tipo !== 'atendimento') return;
+    const id = evt.conversaId;
+    try {
+      if (evt.para === 'humano' || evt.para === 'concluido') {
+        clearTimeout(timers.get(id)); timers.delete(id);
+        clearTimeout(ackTimers.get(id)); ackTimers.delete(id);
+        deNovoDepois.delete(id);
+        const c = waStore.obterConversa(id);
+        if (c && ['tentando', 'processando'].includes(c.ia_estado) && !processando.has(id)) marcarEstado(id, 'sem_acao', { erro: evt.para === 'humano' ? 'humano_assumiu' : 'concluida' });
+      }
+      if (evt.para === 'ia' && (evt.de === 'humano' || evt.de === 'aguardando') && !processando.has(id)) {
+        const u = ultimaDoCliente(id);
+        if (u && u.direcao === 'in' && String(u.created_at || '') >= new Date(Date.now() - RECUPERAR_HORAS * 3600000).toISOString()) agendarAutomatico(id);
+      }
+      if (!evt.usuarioId) {
+        const r = reqIA();
+        if (evt.para === 'humano') audit(r, 'wa_assumir', 'wa_conversas', id, 'Atendimento humano: a equipe respondeu pelo celular (IA parou)');
+        else if (evt.para === 'ia' && evt.de === 'humano') audit(r, 'wa_devolver_ia', 'wa_conversas', id, 'Conversa voltou para a IA automaticamente (equipe sem responder)');
+        else if (evt.para === 'ia' && evt.de === 'concluido') audit(r, 'wa_reabrir', 'wa_conversas', id, 'Novo atendimento: o cliente voltou a escrever depois do encerramento');
+      }
+    } catch (err) { log.error(`[ia] troca de atendimento da conversa ${id}: ${err.message}`); }
+  });
 
   async function testar() {
     const r = await provedor.completar({ system: 'Responda apenas com a palavra OK.', user: 'Teste de conexão.', maxTokens: 20 });
@@ -647,7 +801,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   const usarProvedor = (novo) => { provedor = novo; };
 
   return { central, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
-    recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar };
+    recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar, registrarChegada, enviarConfirmacao, marcarLeitura };
 }
 
 module.exports = { createIaService, MODELO_PADRAO, PROVEDOR_PADRAO };

@@ -53,8 +53,7 @@
 ## Depois da migração
 - **Aplicativo Android**: gerar um APK novo apontando para o domínio novo e preencher `TWA_PACOTE`/`TWA_SHA256` (o
   servidor publica `/.well-known/assetlinks.json`). Sem isso o app abre com a barra do navegador.
-- **Integração com o aplicativo do motorista**: o mesmo valor de `FM_INTEGRACAO_SEGREDO` vai para o backend da plataforma
-  (ver `docs/integracao-app-motorista.md`). O envio pelo backend ainda precisa ser feito (pendência de desenvolvimento).
+- **Aplicativo do motorista**: sem integração com o CRM (decisão do dono, 12/11). Nada a configurar entre os dois.
 - **IA paga (Gemini)**: quando contratar a API paga, só trocar a chave em *Configurações → Inteligência (IA)*; o código não muda.
 - **Documentos**: ficam cifrados no disco da VPS (`/var/lib/fortaleza-crm/documentos`), entram na cópia diária e
   **todas as versões são guardadas** (decisão do dono de 12/11).

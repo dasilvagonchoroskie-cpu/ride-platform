@@ -95,10 +95,10 @@ test('M4: envio, armazenamento cifrado, ver/baixar, conferência, rejeição e s
   assert.ok(meta.j.funcoes.motorista.categorias.some((c) => c.chave === 'cnh'));
   assert.equal(meta.j.armazenamento.pronto, true);
 
-  // Sem arquivo ainda: os 3 exigidos aparecem como "Não enviado" e a situação geral reflete isso.
+  // Sem arquivo ainda: os 7 exigidos do candidato a motorista (12/11 noite) aparecem como "Não enviado".
   let lista = (await adm('GET', `/documentos?funcao=motorista&registro_id=${mid}`)).j;
   assert.equal(lista.geral.codigo, 'nao_enviados');
-  assert.deepEqual(lista.itens.filter((i) => i.situacao === 'nao_enviado').map((i) => i.categoria).sort(), ['cnh', 'comprovante_endereco', 'crlv']);
+  assert.deepEqual(lista.itens.filter((i) => i.situacao === 'nao_enviado').map((i) => i.categoria).sort(), ['antecedentes_criminais', 'cnh', 'comprovante_endereco', 'crlv', 'foto_veiculo_frente', 'foto_veiculo_lado', 'foto_veiculo_traseira']);
 
   // Envio da CNH (versão 1).
   const conteudo1 = pdf('CNH-FICTICIA-V1');
@@ -602,7 +602,7 @@ test('M4: relatórios (PDF/CSV só administrador), dashboard e acompanhamento da
   // Acompanhamento da ficha do motorista registra as ações (sem o conteúdo).
   const fich = (await adm('GET', `/motoristas/${mid}`)).j;
   const hist = JSON.stringify(fich.interacoes);
-  assert.match(hist, /Documento CNH: rejeitado por Adm/);
+  assert.match(hist, /Documento CNH \(Carteira Nacional de Habilitação\): rejeitado por Adm/);
   await S.parar();
 });
 

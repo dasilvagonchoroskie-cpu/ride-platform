@@ -13,7 +13,7 @@ const whatsappRoutes = require('./whatsapp/routes');
 const { createIaService } = require('./ia/service');
 const { criarCofre } = require('./ia/secret');
 const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provider');
-const { criarTranscritor } = require('./ia/transcricao');
+const { criarTranscritor, lerComTentativas } = require('./ia/transcricao');
 const { mascararNumeros } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
@@ -38,6 +38,8 @@ const ia = createIaService({
 });
 ia.usarProvedor(criarProvedorMulti({ resolver: ia.resolverProvedor }));
 wa.definirGancho((conversaId, opcoes) => ia.agendarAutomatico(conversaId, opcoes));
+// Na chegada: registra a origem (site, Instagram...) e agenda a confirmação rápida de recebimento.
+wa.definirChegada((conversaId, mensagemId) => ia.registrarChegada(conversaId, mensagemId));
 // Recupera mensagens de cliente que ficaram sem tratamento da IA (reinício, temporizador perdido, nova tentativa vencida).
 if (process.env.IA_VARREDURA !== '0') ia.iniciarRecuperacao();
 
@@ -75,9 +77,14 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
   const registrar = (ok, provedor, erro) => db.prepare(
     'INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)'
   ).run(mensagemId, provedor ? `${provedor}:${midia.tipo}` : midia.tipo, Math.round(midia.segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
+  ia.marcarLeitura(mensagemId, true);
   try {
     const arquivo = Buffer.from(await midia.baixar(MAX_MIDIA_BYTES));
-    const r = await transcritor.lerMidia({ tipo: midia.tipo, arquivo, mime: midia.mime, nome: midia.nome, segundos: midia.segundos });
+    // Falha passageira do Gemini (fora do ar, tempo esgotado, rede, cota): tenta de novo algumas vezes, com espera curta.
+    const esperas = String(process.env.IA_MIDIA_REPETIR_MS !== undefined ? process.env.IA_MIDIA_REPETIR_MS : '3000,8000').split(',').map(Number).filter((n) => Number.isFinite(n) && n >= 0);
+    const r = await lerComTentativas(
+      () => transcritor.lerMidia({ tipo: midia.tipo, arquivo, mime: midia.mime, nome: midia.nome, segundos: midia.segundos }), esperas,
+      (err, ms, n) => console.log(`[ia] leitura de ${midia.tipo} da mensagem ${mensagemId}: ${err.message} — nova tentativa ${n} em ${Math.round(ms / 1000)} s`));
     const atual = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
     const rotulo = atual && atual.texto ? atual.texto : `[${midia.tipo}]`;
     const lido = r.simbolo === '🎤' ? r.texto : mascararNumeros(r.texto);
@@ -89,7 +96,14 @@ wa.definirTranscritor(async ({ mensagemId, midia }) => {
   } catch (err) {
     registrar(false, null, err.message);
     console.error(`[ia] leitura de ${midia.tipo} da mensagem ${mensagemId}: ${err.message}`);
+    // A equipe vê que o áudio não foi ouvido (a IA avisa o cliente com franqueza e pede o texto).
+    if (midia.tipo === 'audio') {
+      const atual = db.prepare('SELECT texto FROM wa_mensagens WHERE id = ?').get(mensagemId);
+      if (atual && !/🎤/u.test(String(atual.texto || ''))) wa.store.definirTranscricao(mensagemId, `${atual.texto || '[áudio]'} (não foi possível ouvir o áudio)`);
+    }
     return false;
+  } finally {
+    ia.marcarLeitura(mensagemId, false);
   }
 });
 
@@ -397,113 +411,10 @@ function textoCodigoEmail(codigo, req, motivo) {
   return `Seu código para ${motivo}: ${codigo}\n\nVale 10 minutos. Não passe este código para ninguém: a equipe do CRM nunca pede.\n\nPedido feito de ${auth.nomeAparelhoPublico(req)} em ${horaLocal()}.\nSe não foi você, troque sua senha do CRM.`;
 }
 
-/* --------------------- integração assinada do aplicativo do motorista --------------------- */
-// Pública por natureza (o backend da plataforma não tem sessão do CRM), mas fail-closed: sem FM_ETAPA2=1 e sem
-// FM_INTEGRACAO_SEGREDO responde 404; com eles, só executa com assinatura HMAC válida, horário dentro de ±5 min e nonce
-// inédito. Ver src/integracao.js e docs/integracao-app-motorista.md.
-const integracao = require('./integracao');
-const { toWaPhone } = require('./whatsapp/phone');
-const { createLimiter: criarLimitador } = require('./limiter');
-const limiteIntegracao = criarLimitador({ max: 240, windowMs: 60 * 1000 });
-const USUARIO_INTEGRACAO = { id: null, nome: 'Aplicativo do motorista (integração)', role: 'integracao' };
-function integracaoPronta(req, res, next) {
-  if (process.env.FM_ETAPA2 !== '1' || !integracao.configurada() || !candidaturas.ativo() || !pessoas.ativa()) return fail(res, 404, 'not_found', 'Recurso não encontrado.');
-  if (limiteIntegracao.isBlocked(req.ip)) return fail(res, 429, 'muitas_requisicoes', 'Muitas requisições. Tente de novo em instantes.');
-  limiteIntegracao.fail(req.ip);
-  next();
-}
-function autenticarIntegracao(req, res, corpo) {
-  const v = integracao.verificar({ db, cabecalhos: req.headers, metodo: req.method, caminho: `/api${req.path}`, corpo });
-  if (!v.ok) {
-    if (v.status !== 404) console.warn(`[integração] recusada (${v.codigo}) de ${req.ip}`);
-    fail(res, v.status, v.codigo, v.mensagem);
-    return null;
-  }
-  req.user = USUARIO_INTEGRACAO;
-  return v;
-}
-// Acha a ficha do candidato: pelo id do aplicativo; senão, pelo mesmo telefone (não duplica quem já falou pelo WhatsApp).
-function fichaDoCandidato(c) {
-  const v = db.prepare("SELECT registro_id FROM integracao_vinculos WHERE origem = 'app_motorista' AND externo_id = ?").get(c.externo_id);
-  if (v && db.prepare('SELECT 1 FROM motoristas WHERE id = ?').get(v.registro_id)) return { id: v.registro_id, vinculado: true };
-  const tel = toWaPhone(c.telefone);
-  if (tel) {
-    const m = db.prepare('SELECT id, telefone FROM motoristas ORDER BY id DESC LIMIT 5000').all().find((x) => toWaPhone(x.telefone) === tel);
-    if (m) return { id: m.id, vinculado: false };
-  }
-  return null;
-}
-router.post('/integracoes/app-motorista/candidato', integracaoPronta, (req, res) => {
-  const corpo = Buffer.isBuffer(req.rawBody) ? req.rawBody : Buffer.from(JSON.stringify(req.body || {}));
-  if (!autenticarIntegracao(req, res, corpo)) return;
-  const c = integracao.normalizarCandidato(req.body);
-  if (c.erro) return fail(res, 422, 'invalido', c.erro);
-  try {
-    const t = new Date().toISOString();
-    let achado = fichaDoCandidato(c);
-    let criado = false;
-    if (!achado) {
-      const r = pessoas.criarRegistro('motoristas', {
-        nome: c.nome, telefone: c.telefone, cidade: c.cidade || 'Não informada', origem: 'Aplicativo do motorista', situacao: 'Novo interessado',
-        data_primeiro_contato: c.data_cadastro ? localDate(c.data_cadastro) : todayISO(), veiculo: c.veiculo, placa: c.placa, cnh_categoria: c.cnh_categoria
-      }, req);
-      achado = { id: r.item.id, vinculado: false };
-      criado = true;
-    } else {
-      // Ficha que já existia: completa só o que está vazio (nunca sobrescreve o que a equipe preencheu).
-      for (const campo of ['cidade', 'veiculo', 'placa', 'cnh_categoria']) {
-        if (c[campo]) db.prepare(`UPDATE motoristas SET ${campo} = ? WHERE id = ? AND COALESCE(${campo}, '') = ''`).run(c[campo], achado.id);
-      }
-    }
-    db.prepare(`INSERT INTO integracao_vinculos (origem, externo_id, funcao, registro_id, criado_em, atualizado_em) VALUES ('app_motorista', ?, 'motorista', ?, ?, ?)
-      ON CONFLICT (origem, externo_id) DO UPDATE SET registro_id = excluded.registro_id, atualizado_em = excluded.atualizado_em`).run(c.externo_id, achado.id, t, t);
-    const cand = candidaturas.abrir(req, 'motorista', achado.id, { origem: 'aplicativo', sistema: true });
-    audit(req, 'integracao_candidato', 'motoristas', achado.id, criado ? 'Candidato recebido do aplicativo (ficha criada)' : 'Candidato do aplicativo ligado a ficha existente');
-    return res.status(criado ? 201 : 200).json({ ok: true, registro_id: achado.id, candidatura_id: cand.candidatura.id, criado });
-  } catch (err) {
-    if (err instanceof ErroPessoa) return fail(res, err.status || 422, 'invalido', 'Dados do candidato inválidos.');
-    console.error(`[integração] candidato: ${err.message}`);
-    return fail(res, 500, 'erro', 'Não foi possível registrar o candidato.');
-  }
-});
-const lerDocumentoIntegracao = (req, res, next) => express.raw({ type: () => true, limit: require('./documentos/validacao').maxBytes() + 1048576 })(req, res, (err) => {
-  if (err) return fail(res, err.status === 413 ? 413 : 400, 'arquivo_invalido', err.status === 413 ? 'Arquivo maior que o limite permitido.' : 'Não foi possível ler o arquivo.');
-  next();
-});
-router.post('/integracoes/app-motorista/documento', integracaoPronta, lerDocumentoIntegracao, async (req, res) => {
-  const corpo = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
-  const v = autenticarIntegracao(req, res, corpo);
-  if (!v) return;
-  const m = v.meta;
-  const tipo = String(m.tipo || '');
-  const mapa = Object.prototype.hasOwnProperty.call(integracao.TIPOS_DOC, tipo) ? integracao.TIPOS_DOC[tipo] : null;
-  if (!integracao.ID_EXTERNO.test(String(m.externo_id || '')) || !integracao.ID_EXTERNO.test(String(m.documento_externo_id || '')) || !mapa) return fail(res, 422, 'invalido', 'Metadados do documento inválidos.');
-  if (!docs.ativo()) return fail(res, 503, 'armazenamento_indisponivel', 'Armazenamento de documentos indisponível.');
-  const vinc = db.prepare("SELECT registro_id FROM integracao_vinculos WHERE origem = 'app_motorista' AND externo_id = ?").get(String(m.externo_id));
-  if (!vinc) return fail(res, 409, 'candidato_desconhecido', 'Envie o candidato antes dos documentos.');
-  const ja = db.prepare("SELECT documento_id, versao FROM integracao_documentos WHERE origem = 'app_motorista' AND externo_id = ?").get(String(m.documento_externo_id));
-  if (ja) return res.json({ ok: true, repetido: true, documento_id: ja.documento_id, versao: ja.versao });
-  try {
-    // "Outros" com nome fixo: uma nova foto do mesmo tipo vira NOVA VERSÃO do mesmo documento (histórico preservado).
-    const existente = mapa.categoria === 'outros'
-      ? db.prepare("SELECT id FROM documentos WHERE funcao = 'motorista' AND registro_id = ? AND categoria = 'outros' AND titulo = ? AND excluido_em IS NULL").get(vinc.registro_id, mapa.titulo)
-      : null;
-    const dataEnvio = /^\d{4}-\d{2}-\d{2}T/.test(String(m.enviado_em || '')) && !Number.isNaN(Date.parse(m.enviado_em)) ? localDate(m.enviado_em) : todayISO();
-    const r = await docs.anexar(req, {
-      funcao: 'motorista', registro_id: vinc.registro_id, categoria: mapa.categoria, titulo: mapa.titulo, data_envio: dataEnvio > todayISO() ? todayISO() : dataEnvio,
-      observacoes: 'Enviado pelo aplicativo do motorista', nome: String(m.nome_arquivo || `${tipo.toLowerCase()}.bin`).slice(0, 120), conteudo: corpo,
-      documento_id: existente ? existente.id : undefined
-    }, { integracao: true });
-    db.prepare("INSERT INTO integracao_documentos (origem, externo_id, documento_id, versao, recebido_em) VALUES ('app_motorista', ?, ?, ?, ?)")
-      .run(String(m.documento_externo_id), r.documento.id, r.versao, new Date().toISOString());
-    candidaturas.atualizarPelosDocumentos('motorista', vinc.registro_id, req);
-    return res.status(201).json({ ok: true, documento_id: r.documento.id, versao: r.versao });
-  } catch (err) {
-    if (err instanceof ErroDoc) return fail(res, err.status, err.code, err.message);
-    console.error(`[integração] documento: ${err.message}`);
-    return fail(res, 500, 'erro', 'Não foi possível registrar o documento.');
-  }
-});
+/* ---------------- sem integração automática com o aplicativo do motorista (12/11 noite) ---------------- */
+// Decisão do dono: o cadastro pelo APLICATIVO continua indo para a Central (aprovação lá) e o CRM é um caminho
+// INDEPENDENTE (ficha + documentos registrados pela equipe). Nenhuma rota recebe dados do aplicativo nem sincroniza nada.
+// As tabelas integracao_* da migração 006 (congelada) ficam vazias e sem uso.
 
 /* ------------------------------- autenticado ------------------------------- */
 router.use(auth.requireAuth);
@@ -1634,7 +1545,7 @@ router.get('/documentos/meta', docsAtivo, (req, res) => res.json({
 }));
 router.get('/documentos/politica', docsAtivo, requireAdmin, (req, res) => {
   const pol = docs.politica();
-  res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol), armazenamento: docs.estadoArmazenamento(), categorias: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo }))])) });
+  res.json({ politica: pol, decisoes_pendentes: docs.decisoesPendentes(pol), armazenamento: docs.estadoArmazenamento(), categorias: Object.fromEntries(docs.funcoesDisponiveis().map((f) => [f, docs.CATEGORIAS[f].map(([chave, rotulo]) => ({ chave, rotulo }))])), fixos: docs.OBRIGATORIOS_FIXOS });
 });
 router.put('/documentos/politica', docsAtivo, requireAdmin, comDoc((req, res) => {
   const pol = docs.salvarPolitica(req, req.body);
@@ -1713,7 +1624,7 @@ function fichaDoCadastro(tipo, id) {
     if (a) { try { ficha.resumo_ia = { texto: JSON.parse(a.resultado).resumo || '', em: a.criado_em }; } catch (err) { /* análise antiga */ } }
   }
   if (tipo === 'motoristas' || tipo === 'entregadores') {
-    const rec = conv ? documentosRecebidos(wa.store.listarMensagens(conv.id, { limite: 500 })) : { cnh: null, crlv: null, endereco: null };
+    const rec = conv ? documentosRecebidos(wa.store.listarMensagens(conv.id, { limite: 500 })) : documentosRecebidos([]);
     ficha.documentos = rec;
   }
   return ficha;

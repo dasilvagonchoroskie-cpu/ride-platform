@@ -114,21 +114,25 @@ function createStore(db, opts = {}) {
       const quando = evt.quando || agora();
       const deMim = !!evt.deMim;
       const texto = String(evt.texto || '').slice(0, 10000);
+      const criada = agora();
       const info = db.prepare(
         `INSERT OR IGNORE INTO wa_mensagens (conversa_id, direcao, tipo, texto, externo_id, status, origem, ocorrida_em, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(conversa.id, deMim ? 'out' : 'in', evt.tipo || 'text', texto, evt.externoId || null,
-        deMim ? 'enviada' : 'recebida', deMim ? 'celular' : 'contato', quando, agora());
+        deMim ? 'enviada' : 'recebida', deMim ? 'celular' : 'contato', quando, criada);
       if (info.changes === 0) return { inserido: false, conversaId: conversa.id, contatoId: contato.id };
 
-      atualizarResumo(conversa, { texto, quando, direcao: deMim ? 'out' : 'in' });
+      // Eco de mensagem que o próprio CRM/IA acabou de enviar (o WhatsApp devolve o que enviamos): não é a equipe respondendo.
+      const eco = deMim ? db.prepare(`SELECT id, tipo FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND origem IN ('crm', 'ia') AND id <> ? AND texto = ?
+          AND (status IN ('pendente', 'enviando') OR created_at >= ?) ORDER BY id DESC LIMIT 1`).get(conversa.id, Number(info.lastInsertRowid), texto, new Date(Date.now() - 120000).toISOString()) : null;
+      const ecoDeAviso = !!(eco && eco.tipo === 'aviso');
+      // Eco da confirmação rápida chegou antes de o envio terminar: já nasce como aviso da IA (não vira resposta nem resumo).
+      if (ecoDeAviso) db.prepare("UPDATE wa_mensagens SET tipo = 'aviso', origem = 'ia' WHERE id = ?").run(Number(info.lastInsertRowid));
+      else atualizarResumo(conversa, { texto, quando, direcao: deMim ? 'out' : 'in' });
       if (deMim) {
         // Respondeu pelo celular: considera a conversa lida.
-        db.prepare('UPDATE wa_conversas SET nao_lidas = 0 WHERE id = ?').run(conversa.id);
+        if (!ecoDeAviso) db.prepare('UPDATE wa_conversas SET nao_lidas = 0 WHERE id = ?').run(conversa.id);
         // A equipe respondeu pelo celular: a conversa passa para atendimento humano (a IA para de responder).
-        // Eco de mensagem que o próprio CRM/IA acabou de enviar não conta.
-        const eco = db.prepare(`SELECT 1 FROM wa_mensagens WHERE conversa_id = ? AND direcao = 'out' AND origem IN ('crm', 'ia') AND id <> ? AND texto = ?
-            AND (status IN ('pendente', 'enviando') OR created_at >= ?)`).get(conversa.id, Number(info.lastInsertRowid), texto, new Date(Date.now() - 120000).toISOString());
         if (!eco && (conversa.atendimento === 'ia' || conversa.atendimento === 'aguardando')) {
           mudarAtendimento(conversa.id, 'humano', { detalhe: 'Respondida pelo celular' });
         }
@@ -137,9 +141,10 @@ function createStore(db, opts = {}) {
           `UPDATE wa_conversas SET nao_lidas = nao_lidas + 1, situacao = 'Aberta', updated_at = ? WHERE id = ?`
         ).run(agora(), conversa.id);
         if (conversa.atendimento === 'concluido') {
-          // Novo contato depois de concluído: volta para a IA. Saudação de novo só se o atendimento acabou há mais de 12 h.
+          // Novo contato depois de concluído = NOVO atendimento com a IA (mesmo 1 minuto depois): o histórico fica, o assunto e
+          // o estado da IA do atendimento anterior não são reaproveitados. Saudação de novo só se acabou há mais de 12 h.
           const antigo = !conversa.atend_em || conversa.atend_em < new Date(Date.now() - 12 * 3600000).toISOString();
-          mudarAtendimento(conversa.id, 'ia', { detalhe: 'Cliente voltou a escrever', novoAtendimento: antigo });
+          mudarAtendimento(conversa.id, 'ia', { detalhe: 'Cliente voltou a escrever (novo atendimento)', novoAtendimento: antigo, reaberto: true, inicio: criada });
         }
       }
       if (!deMim) avisar({ tipo: 'mensagem', conversaId: conversa.id, mensagemId: Number(info.lastInsertRowid) });
@@ -163,7 +168,7 @@ function createStore(db, opts = {}) {
   const TIPO_EVENTO = { ia: 'devolvida', aguardando: 'transferida', humano: 'assumida', concluido: 'concluida' };
 
   // Muda o estado da conversa e registra no histórico. Retorna false se o estado já era esse (sem evento repetido).
-  function mudarAtendimento(conversaId, estado, { motivo, assunto, usuarioId, detalhe, novoAtendimento } = {}) {
+  function mudarAtendimento(conversaId, estado, { motivo, assunto, usuarioId, detalhe, novoAtendimento, reaberto, inicio } = {}) {
     if (!ESTADOS_VALIDOS.includes(estado)) return false;
     const c = db.prepare('SELECT * FROM wa_conversas WHERE id = ?').get(conversaId);
     if (!c) return false;
@@ -176,6 +181,11 @@ function createStore(db, opts = {}) {
     if (estado === 'concluido') sets.push("situacao = 'Resolvida'");
     else sets.push("situacao = 'Aberta'");
     if (novoAtendimento) sets.push('saudado_em = NULL', 'atend_assunto = NULL');
+    if (reaberto) {
+      sets.push('atend_inicio = ?', 'ia_estado = NULL', 'ia_erro = NULL', 'ia_tentativas = 0', 'ia_proxima = NULL');
+      params.push(inicio || t); // começa NA mensagem que reabriu (ela já faz parte do novo atendimento)
+      if (!novoAtendimento) sets.push('atend_assunto = NULL');
+    }
     if (assunto !== undefined) { sets.push('atend_assunto = ?'); params.push(assunto); }
     if (c.atendimento === estado && !assunto && !motivo) return false;
     db.prepare(`UPDATE wa_conversas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conversaId);
@@ -202,8 +212,11 @@ function createStore(db, opts = {}) {
   };
 
   /* --------------------------------- envio (saída) ------------------------------- */
-  function enfileirar({ conversaId, texto, usuarioId, origem = 'crm' }) {
+  // tipo 'aviso' (só da IA): confirmação rápida de recebimento. Vai para o cliente, mas NÃO é resposta: não muda a última
+  // mensagem da lista, não zera as não lidas, não gera notificação e é ignorada pela IA ao decidir se já respondeu.
+  function enfileirar({ conversaId, texto, usuarioId, origem = 'crm', tipo = 'text' }) {
     if (!['crm', 'ia'].includes(origem)) origem = 'crm';
+    const aviso = tipo === 'aviso' && origem === 'ia';
     const limpo = String(texto || '').trim();
     if (!limpo) return { erro: 'Digite a mensagem.' };
     if (limpo.length > MAX_TEXTO) return { erro: `Mensagem muito longa (máximo ${MAX_TEXTO} caracteres).` };
@@ -212,11 +225,13 @@ function createStore(db, opts = {}) {
     const t = agora();
     const info = db.prepare(
       `INSERT INTO wa_mensagens (conversa_id, direcao, tipo, texto, status, proxima_tentativa_em, enviada_por, origem, ocorrida_em, created_at)
-       VALUES (?, 'out', 'text', ?, 'pendente', ?, ?, ?, ?, ?)`
-    ).run(conversaId, limpo, t, usuarioId || null, origem, t, t);
-    atualizarResumo(conversa, { texto: limpo, quando: t, direcao: 'out' });
-    db.prepare(`UPDATE wa_conversas SET nao_lidas = 0, updated_at = ? WHERE id = ?`).run(t, conversaId);
-    if (origem === 'ia') avisar({ tipo: 'ia', conversaId, mensagemId: Number(info.lastInsertRowid) });
+       VALUES (?, 'out', ?, ?, 'pendente', ?, ?, ?, ?, ?)`
+    ).run(conversaId, aviso ? 'aviso' : 'text', limpo, t, usuarioId || null, origem, t, t);
+    if (!aviso) {
+      atualizarResumo(conversa, { texto: limpo, quando: t, direcao: 'out' });
+      db.prepare(`UPDATE wa_conversas SET nao_lidas = 0, updated_at = ? WHERE id = ?`).run(t, conversaId);
+      if (origem === 'ia') avisar({ tipo: 'ia', conversaId, mensagemId: Number(info.lastInsertRowid) });
+    }
     return { mensagem: db.prepare('SELECT * FROM wa_mensagens WHERE id = ?').get(info.lastInsertRowid) };
   }
 
@@ -252,7 +267,7 @@ function createStore(db, opts = {}) {
         ? db.prepare('SELECT id, status FROM wa_mensagens WHERE conversa_id = ? AND externo_id = ? AND id <> ?').get(msg.conversa_id, externoId, mensagemId)
         : null;
       if (eco) {
-        db.prepare('UPDATE wa_mensagens SET enviada_por = ?, origem = ? WHERE id = ?').run(msg.enviada_por, msg.origem === 'ia' ? 'ia' : 'crm', eco.id);
+        db.prepare('UPDATE wa_mensagens SET enviada_por = ?, origem = ?, tipo = ? WHERE id = ?').run(msg.enviada_por, msg.origem === 'ia' ? 'ia' : 'crm', msg.tipo === 'aviso' ? 'aviso' : (msg.tipo || 'text'), eco.id);
         db.prepare('DELETE FROM wa_mensagens WHERE id = ?').run(mensagemId);
         return;
       }
@@ -302,7 +317,7 @@ function createStore(db, opts = {}) {
   const SELECT_CONVERSA = `
     SELECT c.id, c.situacao, c.responsavel_id, c.nao_lidas, c.ultima_mensagem, c.ultima_em, c.ultima_direcao,
            c.atendimento, c.atend_assunto, c.atend_motivo, c.atend_em, c.saudado_em, c.espera_em,
-           c.ia_estado, c.ia_estado_em, c.ia_erro, c.ia_tentativas, c.ia_proxima,
+           c.ia_estado, c.ia_estado_em, c.ia_erro, c.ia_tentativas, c.ia_proxima, c.atend_inicio, c.origem_contato, c.created_at,
            k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado,
            CASE k.vinculo_tipo WHEN 'motoristas' THEN m.nome WHEN 'passageiros' THEN p.nome
                                WHEN 'parceiros' THEN r.nome_estabelecimento${temEntregadores ? ' WHEN \'entregadores\' THEN e.nome' : ''}${temComercios ? ' WHEN \'comercios\' THEN cm.nome_estabelecimento' : ''} END AS vinculo_nome,

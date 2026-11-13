@@ -168,7 +168,11 @@ export async function renderEntity(view, state, key, params) {
     return value === null || value === undefined || value === '' ? '<span class="muted">—</span>' : ui.esc(value);
   }
 
-  const DOCS = [['cnh', 'doc_cnh', 'CNH'], ['crlv', 'doc_crlv', 'Documento do veículo (CRLV)'], ['endereco', 'doc_endereco', 'Comprovante de endereço']];
+  // Motorista candidato: os 7 itens obrigatórios (decisão do dono, 12/11): cada um com a sua situação. Entregador: os 3 de sempre.
+  const DOCS_MOTORISTA = [['cnh', 'doc_cnh', 'CNH'], ['crlv', 'doc_crlv', 'Documento do veículo (CRLV)'], ['endereco', 'doc_endereco', 'Comprovante de residência'],
+    ['antecedentes', 'doc_antecedentes', 'Certidão de antecedentes criminais'], ['foto_frente', 'doc_foto_frente', 'Foto do veículo — frente'],
+    ['foto_lado', 'doc_foto_lado', 'Foto do veículo — lado'], ['foto_traseira', 'doc_foto_traseira', 'Foto do veículo — traseira']];
+  const DOCS = key === 'motoristas' ? DOCS_MOTORISTA : [['cnh', 'doc_cnh', 'CNH'], ['crlv', 'doc_crlv', 'Documento do veículo (CRLV)'], ['endereco', 'doc_endereco', 'Comprovante de endereço']];
 
   // Ficha: tudo do cadastro num lugar só. Motorista: documentos (CNH, CRLV, comprovante), etapa e contratação.
   function fichaHtml(item, ficha) {
@@ -185,7 +189,8 @@ export async function renderEntity(view, state, key, params) {
     }
     let docs = '';
     if (ehCondutor && ficha.documentos) {
-      docs = `<div class="section-title">Documentos</div><div class="ficha-docs">${DOCS.map(([tipo, campo, nome]) => {
+      const faltam = DOCS.filter(([tipo, campo]) => !['Recebido — conferir', 'Conferido'].includes(item[campo] || (ficha.documentos[tipo] ? 'Recebido — conferir' : 'Não enviado'))).length;
+      docs = `<div class="section-title">Documentos ${faltam ? `<span class="muted small">— faltam ${faltam} de ${DOCS.length} (incompleto)</span>` : `<span class="muted small">— ${DOCS.length} de ${DOCS.length} recebidos</span>`}</div><div class="ficha-docs">${DOCS.map(([tipo, campo, nome]) => {
         const rec = ficha.documentos[tipo];
         const st = item[campo] || (rec ? 'Recebido — conferir' : 'Não enviado');
         return `<div class="ficha-doc"><span class="nome">${ui.esc(nome)}</span>${ui.badge(st)}

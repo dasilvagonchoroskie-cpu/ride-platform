@@ -15,6 +15,17 @@ const STATUS_MOTORISTA = [
 
 // Situação de cada documento do motorista (o servidor marca "Recebido — conferir" quando o documento chega pelo WhatsApp).
 const STATUS_DOC = ['Não enviado', 'Recebido — conferir', 'Conferido'];
+// Documentação OBRIGATÓRIA do candidato a motorista (decisão do dono, 12/11/2026 noite): 7 itens independentes. As três fotos
+// do veículo são itens separados. `tipo` = como a leitura do WhatsApp chama; `categoria` = arquivo digital (M4); `campo` = ficha.
+const DOCUMENTOS_MOTORISTA = [
+  { tipo: 'cnh', categoria: 'cnh', campo: 'doc_cnh', rotulo: 'CNH (Carteira Nacional de Habilitação)', pedido: 'a foto da CNH' },
+  { tipo: 'crlv', categoria: 'crlv', campo: 'doc_crlv', rotulo: 'Documento do veículo (CRLV ou equivalente aceito)', pedido: 'o documento do veículo (CRLV)' },
+  { tipo: 'endereco', categoria: 'comprovante_endereco', campo: 'doc_endereco', rotulo: 'Comprovante de residência', pedido: 'um comprovante de residência (conta de luz, água ou internet)' },
+  { tipo: 'antecedentes', categoria: 'antecedentes_criminais', campo: 'doc_antecedentes', rotulo: 'Certidão de antecedentes criminais', pedido: 'a certidão de antecedentes criminais' },
+  { tipo: 'foto_frente', categoria: 'foto_veiculo_frente', campo: 'doc_foto_frente', rotulo: 'Foto do veículo — frente', pedido: 'uma foto do veículo de frente' },
+  { tipo: 'foto_lado', categoria: 'foto_veiculo_lado', campo: 'doc_foto_lado', rotulo: 'Foto do veículo — lado', pedido: 'uma foto do veículo de lado' },
+  { tipo: 'foto_traseira', categoria: 'foto_veiculo_traseira', campo: 'doc_foto_traseira', rotulo: 'Foto do veículo — traseira', pedido: 'uma foto da traseira do veículo' }
+];
 
 const STATUS_PASSAGEIRO = [
   'Novo interessado',
@@ -77,7 +88,11 @@ const ENTITIES = {
       { key: 'documentos', label: 'Documentos', type: 'select', options: ['Não enviados', 'Incompletos', 'Recebidos — conferir', 'Conferidos'] },
       { key: 'doc_cnh', label: 'CNH', type: 'select', options: STATUS_DOC },
       { key: 'doc_crlv', label: 'Documento do veículo (CRLV)', type: 'select', options: STATUS_DOC },
-      { key: 'doc_endereco', label: 'Comprovante de endereço', type: 'select', options: STATUS_DOC },
+      { key: 'doc_endereco', label: 'Comprovante de residência', type: 'select', options: STATUS_DOC },
+      { key: 'doc_antecedentes', label: 'Certidão de antecedentes criminais', type: 'select', options: STATUS_DOC },
+      { key: 'doc_foto_frente', label: 'Foto do veículo — frente', type: 'select', options: STATUS_DOC },
+      { key: 'doc_foto_lado', label: 'Foto do veículo — lado', type: 'select', options: STATUS_DOC },
+      { key: 'doc_foto_traseira', label: 'Foto do veículo — traseira', type: 'select', options: STATUS_DOC },
       { key: 'endereco', label: 'Endereço', type: 'text', max: 200, full: true },
       { key: 'contratado_em', label: 'Contratado em', type: 'date' },
       { key: 'proxima_acao', label: 'Próxima ação', type: 'text', max: 160 },
@@ -325,6 +340,7 @@ if (process.env.FM_ETAPA2 === '1') {
 
 module.exports = {
   ENTITIES,
+  DOCUMENTOS_MOTORISTA,
   CATEGORIAS_COMERCIO,
   MODALIDADES_ENTREGA,
   ORIGENS,
