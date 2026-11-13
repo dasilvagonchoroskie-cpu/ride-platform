@@ -23,6 +23,10 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
   for (const [col, tipo] of [['totp_segredo', 'TEXT'], ['totp_pendente', 'TEXT'], ['totp_ativo', 'INTEGER NOT NULL DEFAULT 0'], ['totp_ultimo_passo', 'INTEGER NOT NULL DEFAULT 0'], ['email_2fa', 'INTEGER NOT NULL DEFAULT 0']]) {
     if (!usuarios.has(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${tipo}`);
   }
+  // 13/11: contato PESSOAL (família, amigos) no número do atendimento — a IA não lê, não analisa e não responde; a conversa
+  // continua guardada e visível. Marcado pela equipe na conversa.
+  const contatos = new Set(db.prepare('PRAGMA table_info(wa_contatos)').all().map((c) => c.name));
+  if (contatos.size && !contatos.has('pessoal')) db.exec('ALTER TABLE wa_contatos ADD COLUMN pessoal INTEGER NOT NULL DEFAULT 0');
   // Central de atendimento: estado da conversa (ia | aguardando | humano | concluido), assunto do menu e motivo.
   const conversas = new Set(db.prepare('PRAGMA table_info(wa_conversas)').all().map((c) => c.name));
   if (conversas.size) {

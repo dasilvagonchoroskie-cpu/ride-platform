@@ -110,7 +110,7 @@ Execute `npm test` para rodar os testes automatizados incluídos (CSV, limitador
 | Usuários, dados da organização, trilha de auditoria e atividade recente | sim | não |
 | Alterar a própria senha e ver/encerrar as próprias sessões (tela Configurações) | sim | sim |
 | Ver e responder conversas de WhatsApp, vincular a cadastro, criar tarefa a partir da conversa | sim | sim |
-| Ativar/parear/desconectar o WhatsApp, ignorar contato e excluir conversa | sim | não |
+| Ativar/parear/desconectar o WhatsApp, contato pessoal (sem IA), ignorar contato e excluir conversa | sim | não |
 | Analisar conversa com a IA, usar a resposta sugerida, preencher/criar cadastro a partir da análise | sim | sim |
 | Configurar a IA (chave, modo, limites, modelo) | sim | não |
 
@@ -173,6 +173,11 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
   CRM não muda.
 - O CRM **não importa o histórico antigo**, ignora grupos, status e canais, e só responde ao que o atendente enviar.
   Para um contato que não deve ficar no CRM, o administrador usa **Ignorar contato** (apaga a conversa e descarta o que vier).
+  Para família e amigos que escrevem no número do atendimento, o administrador usa **Contato pessoal (sem IA)**
+  (`POST /api/wa/contatos/:id/pessoal`, `{ "pessoal": true|false }`, auditado): a IA não lê, não analisa, não confirma e não responde;
+  a conversa continua guardada. Desmarcar devolve o contato ao atendimento da IA a partir da próxima mensagem.
+  Barreira final da redação da IA (`prometeOuConfirma` em `src/ia/prompt.js`): resposta que confirma cadastro/aprovação/liberação,
+  diz que a pessoa "já pode" rodar ou garante algo não é enviada (a conversa segue para a equipe se a IA não conseguir responder).
 - A pasta `data/wa-auth` guarda a sessão pareada: **quem a tiver controla o WhatsApp**. Nunca a copie, envie ou
   coloque em Downloads. O backup do CRM (`./crm.sh backup`) não a inclui. **Desconectar** apaga a sessão.
 - Mensagens só são aceitas para envio com o WhatsApp conectado (evita uma mensagem velha sair horas depois). Falhas são

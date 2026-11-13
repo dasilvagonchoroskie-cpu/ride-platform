@@ -71,6 +71,9 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
   const cfg = ia.config();
   const pular = (motivo) => { console.log(`[ia] mídia da mensagem ${mensagemId} (${midia && midia.tipo}) não lida: ${motivo}`); return false; };
   if (!midia || typeof midia.baixar !== 'function') return pular('sem arquivo para baixar');
+  // Contato pessoal (família/amigos): nada é lido nem guardado como documento.
+  const pessoal = db.prepare('SELECT k.pessoal FROM wa_mensagens m JOIN wa_conversas c ON c.id = m.conversa_id JOIN wa_contatos k ON k.id = c.contato_id WHERE m.id = ?').get(mensagemId);
+  if (pessoal && pessoal.pessoal) return pular('contato pessoal');
   // Foto/documento é GUARDADO (cifrado) mesmo quando a IA não vai ler: o arquivo não pode se perder.
   // Só o que o CLIENTE manda (foto enviada pela equipe pelo celular não é documento do candidato).
   const guardar = !deMim && ['image', 'document'].includes(midia.tipo) && recebidos && recebidos.ativo();

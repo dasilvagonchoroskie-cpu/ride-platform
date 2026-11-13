@@ -192,6 +192,17 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
     res.json({ ok: true });
   });
 
+  // Contato pessoal (família, amigos): a IA não lê, não analisa e não responde. A conversa continua guardada. Só admin.
+  router.post('/wa/contatos/:id/pessoal', requireAdmin, (req, res) => {
+    const id = idDe(req);
+    if (!Number.isInteger(id)) return ID_INVALIDO(res);
+    if (typeof req.body.pessoal !== 'boolean') return fail(res, 422, 'invalid', 'Informe pessoal: true ou false.');
+    if (!store.definirPessoal(id, req.body.pessoal)) return fail(res, 404, 'not_found', 'Contato não encontrado.');
+    audit(req, req.body.pessoal ? 'wa_pessoal' : 'wa_pessoal_desfeito', 'wa_contatos', id,
+      req.body.pessoal ? 'Contato marcado como pessoal (a IA não atende)' : 'Contato volta ao atendimento normal');
+    res.json({ ok: true, pessoal: req.body.pessoal });
+  });
+
   router.delete('/wa/conversas/:id', requireAdmin, (req, res) => {
     const id = idDe(req);
     if (!Number.isInteger(id)) return ID_INVALIDO(res);
