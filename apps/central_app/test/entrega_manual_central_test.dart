@@ -73,6 +73,21 @@ MockClient _servidor({bool lojaAprovada = true}) => MockClient((r) async {
             ],
             'cotacao': 'medida-assinada',
           };
+        case 'POST /api/admin/manual-deliveries/avulsa/cotar':
+          dados = {
+            'coleta': {'endereco': 'Av. Brasil, 300, Centro, Goiatuba/GO', 'alternativa': false},
+            'entrega': {'endereco': 'Rua Verde, 55'},
+            'totalDeEntregas': 1,
+            'distanciaMetros': 1800,
+            'duracaoSegundos': 360,
+            'opcoes': [
+              {'veiculo': 'MOTO', 'nome': 'Moto', 'valorCents': 650},
+              {'veiculo': 'CARRO', 'nome': 'Carro', 'valorCents': 1100},
+            ],
+            'cotacao': 'medida-avulsa',
+          };
+        case 'POST /api/admin/manual-deliveries/avulsa':
+          dados = {'rideId': 'r2', 'codigo': 'FM456', 'repetido': false};
         case 'POST /api/admin/manual-deliveries':
           dados = {'rideId': 'r1', 'codigo': 'FM123', 'repetido': false};
       }
@@ -181,5 +196,65 @@ void main() {
     expect(lancar.containsKey('motoristaId'), isFalse); // automatico
     expect((lancar['destino'] as Map)['cep'], '75600111');
     expect((lancar['destinatario'] as Map)['telefone'], '64988887777');
+  });
+
+  testWidgets('estabelecimento NAO cadastrado: digita nome, telefone e coleta (no mapa) e lanca sem loja', (tester) async {
+    await _abrir(tester, _servidor());
+    await _tocar(tester, find.byKey(const Key('entrega-avulsa')));
+    expect(find.text('Estabelecimento não cadastrado'), findsWidgets);
+
+    // Sem dados ou sem confirmar a coleta no mapa nao segue.
+    await _tocar(tester, find.text('Continuar'));
+    expect(find.textContaining('nome do estabelecimento'), findsOneWidget);
+    await _escrever(tester, 'Nome do estabelecimento', 'Lanchonete do Zé');
+    await _escrever(tester, 'Telefone do estabelecimento (com DDD)', '(64) 99111-2233');
+    await _escrever(tester, 'Rua / avenida', 'Av. Brasil');
+    await _escrever(tester, 'Número', '300');
+    await _escrever(tester, 'Bairro', 'Centro');
+    await _escrever(tester, 'Cidade', 'Goiatuba');
+    await _escrever(tester, 'UF', 'go');
+    await _tocar(tester, find.text('Continuar'));
+    expect(find.textContaining('Confirmar coleta no mapa'), findsWidgets);
+    expect(find.text('O que vai levar (ex.: 2 pizzas grandes)'), findsNothing);
+
+    await _tocar(tester, find.byKey(const Key('confirmar-coleta-no-mapa')));
+    await _tocar(tester, find.text('Rua Verde, 55'));
+    expect(find.text('Coleta confirmada no mapa.'), findsOneWidget);
+    await _tocar(tester, find.text('Continuar'));
+
+    // Segue como o pedido de loja: encomenda, quem recebe, destino (cidade ja adiantada).
+    expect(find.textContaining('Retirada em: Av. Brasil, 300, Centro, Goiatuba/GO'), findsOneWidget);
+    await _escrever(tester, 'O que vai levar (ex.: 2 pizzas grandes)', '3 marmitas');
+    await _escrever(tester, 'Nome de quem recebe', 'Ana Lima');
+    await _escrever(tester, 'Telefone de quem recebe (com DDD)', '64988887777');
+    await _escrever(tester, 'Rua / avenida', 'Rua Verde');
+    await _escrever(tester, 'Número', '55');
+    await _escrever(tester, 'Bairro', 'Jardim');
+    await _escrever(tester, 'CEP', '75600111');
+    await _tocar(tester, find.byKey(const Key('confirmar-no-mapa')));
+    await _tocar(tester, find.text('Rua Verde, 55'));
+    await _tocar(tester, find.text('Ver o preço'));
+
+    final cotar = pedidos.firstWhere((p) => p.$1 == 'POST /api/admin/manual-deliveries/avulsa/cotar').$2!;
+    expect(cotar.containsKey('comercioId'), isFalse);
+    final est = cotar['estabelecimento'] as Map;
+    expect(est['nome'], 'Lanchonete do Zé');
+    expect(est['telefone'], '64991112233');
+    expect((est['coleta'] as Map)['address'], 'Av. Brasil, 300, Centro, Goiatuba/GO');
+    expect((est['coleta'] as Map)['latitude'], -18.02);
+    expect((cotar['destino'] as Map)['uf'], 'GO');
+
+    expect(find.textContaining('Lanchonete do Zé (sem cadastro)'), findsOneWidget);
+    expect(find.textContaining('Moto · R\$'), findsOneWidget);
+    await _tocar(tester, find.text('Confirmar o preço e lançar a entrega'));
+    final lancar = pedidos.lastWhere((p) => p.$1 == 'POST /api/admin/manual-deliveries/avulsa').$2!;
+    expect(lancar['veiculo'], 'MOTO');
+    expect(lancar['valorEsperadoCents'], 650);
+    expect(lancar['cotacao'], 'medida-avulsa');
+    expect(lancar['chave'], matches(RegExp(r'^[A-Za-z0-9_-]{16,64}$')));
+    expect(lancar.containsKey('comercioId'), isFalse);
+    // Nunca procurou nem leu loja cadastrada, e nao usou o caminho de loja.
+    expect(pedidos.where((p) => p.$1.endsWith('/buscar') || p.$1.contains('/estabelecimentos/')), isEmpty);
+    expect(pedidos.where((p) => p.$1 == 'POST /api/admin/manual-deliveries'), isEmpty);
   });
 }
