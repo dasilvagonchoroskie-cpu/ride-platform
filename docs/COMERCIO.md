@@ -175,6 +175,53 @@ completo, **preço confirmado = preço cobrado**, atualização só com o app ab
 nenhuma tarifa, comissão, carteira ou configuração de cidade foi tocada; chave geral continua bloqueada.
 Esteira do pacote da Play (`aab-comercio.yml`) preparada e **não executada**.
 
+## Mapa operacional, Motos e lançamento manual de entrega (12/11/2026)
+
+Tudo abaixo reaproveita o que já existia (despacho, localização, pedido do Comércio, cinco portas). Nada novo de
+despacho, localização ou financeiro. Só código e testes automáticos: **nada foi implantado**, e as colunas novas
+só passam a existir no banco quando o servidor subir depois de um merge autorizado.
+
+### Mapa único da Central (tela inicial)
+- Um só mapa com carros e motos: corrida de passageiro, entrega do Comércio, livres, offline, aguardando motorista e SOS.
+- **Ícone = tipo do veículo; cor = tipo de serviço** (nunca só cor). Passageiro mantém as cores atuais; entrega do
+  Comércio (carro ou moto) é **azul-ciano** (`AppColors.comercio`, `0xFF00B8D4`), exclusivo do Comércio, no pino, na
+  legenda e nos detalhes; **SOS é vermelho e prevalece** sobre qualquer serviço, mantendo o contexto da entrega.
+- Filtros discretos: Todos (padrão), Carros, Motocicletas, Transporte de passageiros, Entregas do Comércio, Veículos
+  livres, SOS. Só mudam o que se vê; não afetam despacho, localização nem segurança.
+- O tipo de serviço vem **estruturado do servidor** (`servico`, `origemDoServico`, `comercio`, `corrida`, `sos` em
+  `CentralService.livresPerto`), não por texto. Entrega que não é do Comércio continua laranja e só aparece em Todos/Carros/Motos.
+- Detalhes do marcador: motorista, tipo de veículo, identificação, estado, tipo de serviço, id da corrida/entrega e
+  localização; sem dados pessoais desnecessários.
+
+### Motos e Carros na Central
+- Menu **Carros** e **Motos** separados (mesmos dados, `GET /admin/frota` com filtro de praça). Lista, busca, detalhe
+  (dono/motorista, marca/modelo, ano, placa, documentos, situação, histórico), aprovar/rejeitar e **suspender/reativar**
+  (`PATCH /admin/vehicles/:id/suspensao`, situação `SUSPENSO`).
+- Cadastro da moto **não é** autorização de entrega; permissões municipais não foram tocadas.
+- A data de validade de documento **não existe no modelo de dados**: a tela mostra "validade não registrada pelo sistema".
+
+### Lançar entrega manualmente (app do motorista)
+Botão "Lançar entrega manualmente", separado de "Lançar corrida manual". Fluxo: buscar estabelecimento (telefone,
+e-mail ou nome) → perfil para confirmar (nome comercial, identificação do cadastro, endereço de retirada, situação,
+entregas **concluídas**, histórico recente com origem) → dados da encomenda, de quem recebe e destino (endereço
+completo, CEP e posição confirmada no mapa) → **preço oficial calculado pelo servidor** para o veículo do próprio
+motorista → confirmar e lançar.
+- Servidor: `driver/manual-deliveries` (`POST buscar`, `GET estabelecimentos/:id`, `POST cotar`, `POST /`), em
+  `central/entrega-manual.*`. Usa o mesmo `ComercioService.criarEntrega` do app da loja (mesmo `RidesService.pedir`).
+- Valem **as mesmas cinco portas** (e-mail confirmado, loja aprovada, chave geral, Entrega ligada na cidade, veículo
+  aceito), isolamento por cidade e teto de entregas abertas. O motorista não habilita Comércio, não aprova loja e não
+  muda permissão de cidade. Vários resultados = escolha manual; nunca cria cadastro; motivo claro se não achar/não liberada.
+- Anti-duplicidade: chave de 16 a 64 caracteres; queda de rede → "Tentar de novo" com a **mesma** chave; preço mudou
+  (409 "O preço mudou…") → mostra o valor novo e pede nova confirmação com chave nova (`valorEsperadoCents`).
+- Auditoria de origem: colunas `origem` (APP/MOTORISTA), `lancado_por`, `lancado_em` em `comercio_pedidos`
+  (`ADD COLUMN IF NOT EXISTS`, aplicadas só no deploy). Aparece em Central → Entregas, Ao Vivo, Comércios, histórico da
+  loja e relatórios. As duas origens são ciano no mapa.
+
+### Testes desta etapa (esteira, commit `6734416`)
+Servidor: 31 arquivos / **326 testes** passam, compilação limpa · Central: análise limpa, **91 testes** (+1 pulado) ·
+Motorista: análise limpa, **133 testes** (+7 pulados de antes). Todos com servidor falso/dados simulados.
+Não testado: celular real, mapa com posição real, entrega de verdade, servidor de produção, cor/legibilidade ao sol.
+
 ## Testes e esteiras
 
 | Camada | Arquivo / esteira | Resultado |

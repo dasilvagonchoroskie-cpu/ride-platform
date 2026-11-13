@@ -7,6 +7,16 @@ Legenda: **[REAL]** testado de verdade (servidor real, Android de teste ou estei
 
 ---
 
+## 00000002. Central operacional, Motos e entrega manual do motorista (12/11/2026, PR #59 em rascunho, commit `6734416`)
+Legenda: **Implementado** · **Testado automaticamente** · **Testado em ambiente controlado** (servidor falso/dados simulados) · **Não testado em dispositivo real** · **Pendente de autorização do proprietário**. Detalhes em docs/COMERCIO.md (seção "Mapa operacional, Motos e lançamento manual").
+- **Implementado + testado automaticamente:** mapa único da Central (cores por serviço, SOS prevalece, ciano só do Comércio, filtros, legenda, detalhes); menus Carros e Motos com suspender/reativar; origem APP/MOTORISTA em Entregas, Ao Vivo, Comércios e relatórios; busca de estabelecimento, perfil, preço oficial e lançamento no app do motorista, com as cinco portas no servidor.
+- **Esteira verde no commit `6734416`:** servidor 326 testes e compilação limpa · Central análise limpa + 91 testes · Motorista análise limpa + 133 testes.
+- [NÃO TESTADO EM DISPOSITIVO REAL] Tudo. Nenhum APK novo foi gerado ou enviado (por decisão: sem entrega parcial). Cores do mapa ao sol, toque nos filtros e o fluxo do motorista precisam de celular real.
+- [SIMULADO] Lançamento e despacho só com servidor falso e `pedir` simulado. Colunas `origem`, `lancado_por`, `lancado_em` só existem após o deploy; nada foi aplicado no banco de produção.
+- [PENDENTE DE AUTORIZAÇÃO] Merge do PR #59 · deploy · ligar a chave geral do Comércio · entrega real ou chamar motorista real · gerar APK/AAB.
+- Decisões a conferir: (1) não existia menu "Carros": criamos Carros e Motos; (2) validade de documento não existe no modelo; (3) `atribuir` sobrescrevia a categoria de entrega: correção mínima para preservá-la (o dono pode vetar); (4) a checagem de carteira no `atribuir` já existia e não foi alterada; (5) entrega que não é do Comércio continua laranja.
+- Limites respeitados: tarifas, comissões, carteiras, pagamentos, configuração municipal, Moto/Goiatuba, despacho e localização não foram alterados; `db-bootstrap.yml`, `android-apks.yml` e `auditoria.yml` não foram executados.
+
 ## 00000001. Fortaleza Move Comércio — 4º aplicativo (12/11/2026, PR #59 em rascunho)
 Legenda desta seção: **Implementado e testado** · **Implementado** (sem teste) · **Parcial** · **Simulado** (só com dados de mentira) · **Pendente** · **Bloqueado por autorização**. Detalhes em docs/COMERCIO.md.
 - [REAL] Teste de ponta a ponta antecipado (execução 87, a pedido do Evandro): 386 OK, 3 falhas (as 3 da carteira, intencionais), 4 pulados. Nenhuma falha causada pelo Render nessa rodada.
