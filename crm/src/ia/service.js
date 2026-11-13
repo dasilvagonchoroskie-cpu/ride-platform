@@ -681,7 +681,11 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     // Origem ≠ intenção: enquanto o cliente só cumprimentou ou disse de onde veio (ex.: "Vim pelo site"), o assunto não é
     // deduzido pela IA e ele recebe o menu geral. O fluxo de cadastro só começa quando ele escolhe ou diz que quer.
     const intencaoClara = !semIntencaoNoAtendimento(conv, msgs);
-    const assunto = C.opcaoDoMenu(textoUlt) || (intencaoClara && at.opcao && at.opcao !== 'indefinido' ? at.opcao : null) || conv.atend_assunto || null;
+    // Com o segundo menu de comércio aberto, o número digitado escolhe a opção DELE; o assunto já escolhido (comercio_*) não
+    // é trocado pelo palpite da análise quando ela só diz "comercio".
+    const doMenu = C.opcaoDoMenu(textoUlt, conv.atend_assunto);
+    const daAnalise = intencaoClara && at.opcao && at.opcao !== 'indefinido' && C.assuntoBase(conv.atend_assunto) !== 'comercio' ? at.opcao : null;
+    const assunto = doMenu || daAnalise || conv.atend_assunto || null;
     if (assunto && assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, assunto);
 
     const partes = [];
@@ -702,9 +706,10 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     }
 
     // Escolheu uma opção do menu: resposta imediata e profissional da opção (texto dos Modelos, editável), sem redação da IA.
-    const opcaoEscolhida = C.opcaoDoMenu(textoUlt);
+    const opcaoEscolhida = doMenu;
     if (opcaoEscolhida) {
-      const abertura = central.texto(`abertura_${opcaoEscolhida}`);
+      const modelo = opcaoEscolhida === 'comercio' ? 'menu_comercio' : (C.SUBASSUNTOS[opcaoEscolhida] ? C.SUBASSUNTOS[opcaoEscolhida].modelo : `abertura_${opcaoEscolhida}`);
+      const abertura = central.texto(modelo);
       if (abertura && !(ultimaIA && ultimaIA.texto.endsWith(abertura))) return enviar([...partes, abertura], { tipo: 'opção do menu' });
     }
 

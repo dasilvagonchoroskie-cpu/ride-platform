@@ -47,6 +47,14 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Menu 6 itens e segundo menu de comércio (13/11/2026 tarde, pedido do dono; 2.1.0-rc.5, cache `fm-crm-v34`)
+- Menu: 5 = "Comércio e entregas" (`ASSUNTOS.comercio`), 6 = Outros. Opção 5 envia o modelo `menu_comercio` (segundo menu): 1 já sou comerciante
+  cadastrado, 2 quero cadastrar (`abertura_comercio`, o mesmo do botão do site), 3 aguardo uma encomenda, 4 outras informações. `SUBASSUNTOS` em
+  `central.js` guarda o assunto em `atend_assunto` (`comercio_*`); `opcaoDoMenu(texto, assuntoAtual)`: 1–4 valem como sub-opção só com o assunto
+  `comercio` (menu aberto); depois os números voltam ao menu principal. A análise da IA NÃO troca o assunto enquanto for da família comercio.
+- Menu salvo igual ao padrão antigo (5 opções) migra sozinho para o novo; menu editado pelo dono não é tocado. Botão do site "Tenho um comércio"
+  → `comercio_cadastrar`. A IA não consulta pedido nem rastreia entrega (FLUXOS.comercio_aguardando só reúne dados e transfere). Testes: `test/ia-comercio-menu.test.js`.
+
 ## PUBLICADO no Render: 2.1.0-rc.1 (13/11/2026 06h40, autorização formal do dono)
 - `etapa2` mesclado no `main` (monorepo `5c2f29f` + `88dd8c2`; backup `117b9f7`); deploy manual do commit `88dd8c2`; migrações 1–7
   aplicadas no banco real; Render com `FM_ETAPA2=1`, `DOCS_STORAGE=supabase`, `DOCS_SUPABASE_URL`, `DOCS_SUPABASE_BUCKET=crm-documentos`,

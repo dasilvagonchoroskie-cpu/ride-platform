@@ -191,7 +191,7 @@ test('perguntas gerais: o contexto da redação traz os serviços do menu oficia
   for (const q of perguntas) {
     const { system, user } = P.montarPromptResposta({ mensagens: [{ direcao: 'in', texto: q }], perfil: 'desconhecido', assunto: 'cadastro', informacoes: info, jaSaudou: true });
     const ctx = JSON.parse(user.split('\n')[1]);
-    assert.deepEqual(ctx.servicos_da_plataforma, ['Cadastro de motorista e veículo', 'Atendimento ao passageiro', 'Coleta e entrega de encomendas', 'Clube de Vantagens para motoristas']);
+    assert.deepEqual(ctx.servicos_da_plataforma, ['Cadastro de motorista e veículo', 'Atendimento ao passageiro', 'Coleta e entrega de encomendas', 'Clube de Vantagens para motoristas', 'Comércio e entregas']);
     assert.match(ctx.informacoes_oficiais, /Plataforma de Fortaleza/);
     assert.match(ctx.informacoes_oficiais, /Clube de Vantagens para motoristas: Descontos/, `${q}: info do clube mesmo com assunto "cadastro"`);
     assert.match(ctx.informacoes_oficiais, /Coleta e entrega de encomendas: Coleta/);

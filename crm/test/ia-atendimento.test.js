@@ -377,7 +377,7 @@ test('os 4 botões do site: todos registram origem "Site"; só "Quero ser motori
     ['Olá! Vim pelo site da Fortaleza Move.', 'cadastro', null],
     ['Olá! Quero ser motorista da Fortaleza Move.', 'cadastro', 'cadastro'],
     ['Olá! Quero saber mais sobre corridas e encomendas da Fortaleza Move.', 'encomendas', 'encomendas'],
-    ['Olá! Tenho um comércio e quero entregas pela Fortaleza Move.', 'encomendas', 'encomendas']
+    ['Olá! Tenho um comércio e quero entregas pela Fortaleza Move.', 'encomendas', 'comercio_cadastrar']
   ];
   for (const [texto, opcaoDaIA, esperado] of casos) {
     const { receber, conv, estado, respostas } = montar();
