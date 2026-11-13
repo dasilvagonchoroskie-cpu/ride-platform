@@ -128,7 +128,7 @@ MockClient _servidor() => MockClient((http.Request r) async {
         if (_recusa != null) return _erro('FORBIDDEN', _recusa!, 403);
         if (_falhasDeRede > 0) {
           _falhasDeRede--;
-          return http.Response('fora do ar', 503);
+          throw http.ClientException('sem rede');
         }
         if (_precoMudaNoLancamento) {
           _precoMudaNoLancamento = false;
