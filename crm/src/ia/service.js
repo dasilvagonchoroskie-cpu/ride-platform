@@ -681,12 +681,15 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     // Origem ≠ intenção: enquanto o cliente só cumprimentou ou disse de onde veio (ex.: "Vim pelo site"), o assunto não é
     // deduzido pela IA e ele recebe o menu geral. O fluxo de cadastro só começa quando ele escolhe ou diz que quer.
     const intencaoClara = !semIntencaoNoAtendimento(conv, msgs);
-    // Com o segundo menu de comércio aberto, o número digitado escolhe a opção DELE; o assunto já escolhido (comercio_*) não
-    // é trocado pelo palpite da análise quando ela só diz "comercio".
+    // Com um segundo menu aberto (encomendas ou comércios), o número digitado escolhe a opção DELE; dentro de um segundo menu
+    // (aberto ou já escolhido) o assunto não é trocado pelo palpite da análise.
     const doMenu = C.opcaoDoMenu(textoUlt, conv.atend_assunto);
-    const daAnalise = intencaoClara && at.opcao && at.opcao !== 'indefinido' && C.assuntoBase(conv.atend_assunto) !== 'comercio' ? at.opcao : null;
+    const daAnalise = intencaoClara && at.opcao && at.opcao !== 'indefinido' && !C.emSubfluxo(conv.atend_assunto) ? at.opcao : null;
     const assunto = doMenu || daAnalise || conv.atend_assunto || null;
-    if (assunto && assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, assunto);
+    // Opção 2 (encomendas) ou 3 (comércios) do menu principal: abre o segundo menu e guarda "<assunto>_menu" (aí os números valem para ele).
+    const abreSegundoMenu = !!doMenu && Object.prototype.hasOwnProperty.call(C.MENUS_SUB, doMenu);
+    const assuntoGravar = abreSegundoMenu ? `${doMenu}_menu` : assunto;
+    if (assuntoGravar && assuntoGravar !== conv.atend_assunto) waStore.definirAssunto(conversaId, assuntoGravar);
 
     // Resposta de uma opção do menu termina com "Para voltar ao menu inicial, digite 0." (modelo editável; desativado = sem aviso).
     const comVoltar = (t) => { const v = central.texto('voltar_menu'); return t && v ? `${t}\n\n${v}` : t; };
@@ -710,8 +713,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     // Escolheu uma opção do menu: resposta imediata e profissional da opção (texto dos Modelos, editável), sem redação da IA.
     const opcaoEscolhida = doMenu;
     if (opcaoEscolhida) {
-      const modelo = opcaoEscolhida === 'comercio' ? 'menu_comercio' : (C.SUBASSUNTOS[opcaoEscolhida] ? C.SUBASSUNTOS[opcaoEscolhida].modelo : `abertura_${opcaoEscolhida}`);
-      const abertura = modelo === 'menu_comercio' ? central.texto(modelo) : comVoltar(central.texto(modelo));
+      const modelo = abreSegundoMenu ? C.MENUS_SUB[opcaoEscolhida] : (C.SUBASSUNTOS[opcaoEscolhida] ? C.SUBASSUNTOS[opcaoEscolhida].modelo : `abertura_${opcaoEscolhida}`);
+      const abertura = abreSegundoMenu ? central.texto(modelo) : comVoltar(central.texto(modelo));
       if (abertura && !(ultimaIA && ultimaIA.texto.endsWith(abertura))) return enviar([...partes, abertura], { tipo: 'opção do menu' });
     }
 

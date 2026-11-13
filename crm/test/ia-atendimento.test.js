@@ -311,7 +311,7 @@ test('contato pelo botão do site: origem registrada, MENU GERAL, nada de docume
   assert.equal(db.prepare('SELECT COUNT(*) n FROM motoristas').get().n, 0, 'nenhum cadastro de motorista criado');
   // Quando a pessoa escolhe a opção 1, aí sim o fluxo de cadastro começa.
   estado.redacao = { resposta: 'Ótimo! Para o cadastro, envie a foto da sua CNH.' };
-  await receber('1');
+  await receber('4');
   assert.equal(conv().atend_assunto, 'cadastro');
   assert.match(respostas().pop(), /CNH/);
 });

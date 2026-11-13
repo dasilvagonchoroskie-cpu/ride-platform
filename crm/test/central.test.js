@@ -50,11 +50,11 @@ test('primeiro contato: saudação + menu uma vez; número escolhe o assunto e a
   let enviadas = daIA();
   assert.equal(enviadas.length, 1);
   assert.match(enviadas[0], /^Olá! Seja bem-vindo\(a\) à Fortaleza Move!/);
-  assert.match(enviadas[0], /1\. Cadastro de motorista e veículo\./);
+  assert.match(enviadas[0], /4\. Cadastro de motorista e veículo\./);
   assert.match(enviadas[0], /Digite o número da opção desejada\./);
   assert.ok(conv().saudado_em);
 
-  await receber('1');
+  await receber('4');
   enviadas = daIA();
   assert.equal(enviadas.length, 2);
   // 13/11: a opção escolhida recebe a abertura fixa da opção (Modelos), sem saudação repetida e sem menu.

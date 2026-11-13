@@ -191,10 +191,10 @@ test('perguntas gerais: o contexto da redação traz os serviços do menu oficia
   for (const q of perguntas) {
     const { system, user } = P.montarPromptResposta({ mensagens: [{ direcao: 'in', texto: q }], perfil: 'desconhecido', assunto: 'cadastro', informacoes: info, jaSaudou: true });
     const ctx = JSON.parse(user.split('\n')[1]);
-    assert.deepEqual(ctx.servicos_da_plataforma, ['Cadastro de motorista e veículo', 'Atendimento ao passageiro', 'Coleta e entrega de encomendas', 'Clube de Vantagens para motoristas', 'Comércio e entregas']);
+    assert.deepEqual(ctx.servicos_da_plataforma, ['Atendimento ao passageiro', 'Encomendas (enviar ou receber)', 'Comércios', 'Cadastro de motorista e veículo', 'Clube de Vantagens para motoristas']);
     assert.match(ctx.informacoes_oficiais, /Plataforma de Fortaleza/);
     assert.match(ctx.informacoes_oficiais, /Clube de Vantagens para motoristas: Descontos/, `${q}: info do clube mesmo com assunto "cadastro"`);
-    assert.match(ctx.informacoes_oficiais, /Coleta e entrega de encomendas: Coleta/);
+    assert.match(ctx.informacoes_oficiais, /Encomendas \(enviar ou receber\): Coleta/);
     assert.match(system, /Nunca invente informação, valor, prazo/);
     assert.match(system, /NÃO tiver informação oficial suficiente/);
     assert.ok(user.includes(q.slice(0, 20)), 'pergunta do cliente vai cercada na conversa');

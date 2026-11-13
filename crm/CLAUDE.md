@@ -47,15 +47,19 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
-## Menu 6 itens e segundo menu de comércio (13/11/2026 tarde, pedido do dono; 2.1.0-rc.5, cache `fm-crm-v34`)
-- Menu: 5 = "Comércio e entregas" (`ASSUNTOS.comercio`), 6 = Outros. Opção 5 envia o modelo `menu_comercio` (segundo menu): 1 já sou comerciante
-  cadastrado, 2 quero cadastrar (`abertura_comercio`, o mesmo do botão do site), 3 aguardo uma encomenda, 4 outras informações. `SUBASSUNTOS` em
-  `central.js` guarda o assunto em `atend_assunto` (`comercio_*`); `opcaoDoMenu(texto, assuntoAtual)`: 1–4 valem como sub-opção só com o assunto
-  `comercio` (menu aberto); depois os números voltam ao menu principal. A análise da IA NÃO troca o assunto enquanto for da família comercio.
-- Menu salvo igual ao padrão antigo (5 opções) migra sozinho para o novo; menu editado pelo dono não é tocado. Botão do site "Tenho um comércio"
-  → `comercio_cadastrar`. A IA não consulta pedido nem rastreia entrega (FLUXOS.comercio_aguardando só reúne dados e transfere). Testes: `test/ia-comercio-menu.test.js`.
-
-- rc.6: "0" volta ao menu inicial (`pediuMenu`, zera `atend_assunto`); respostas das opções terminam com o modelo `voltar_menu`; o segundo menu traz "0. Voltar ao menu inicial".
+## Menu por público e painel de atendimentos (13/11/2026 tarde, pedido do dono; 2.1.0-rc.7, cache `fm-crm-v35`)
+- Menu principal por PÚBLICO: *Passageiros e clientes* 1 passageiro, 2 enviar ou receber uma encomenda; *Comércios* 3 sou comerciante/quero entregas;
+  *Motoristas* 4 cadastro, 5 Clube; *Outros* 6. `ASSUNTOS` em `central.js` (ids iguais, números novos). Opções 2 e 3 abrem SEGUNDO MENU
+  (`menu_encomendas`: 1 solicitar coleta e entrega, 2 aguardo encomenda, 3 outras; `menu_comercio`: 1 já cadastrado, 2 cadastrar = `abertura_comercio`
+  (o mesmo do botão do site), 3 outras). "0" volta ao menu inicial; respostas das opções terminam com `voltar_menu`.
+- Estado em `atend_assunto`: `encomendas_menu`/`comercio_menu` = segundo menu ABERTO (só então 1–3 valem como sub-opção; 4–6 voltam ao principal);
+  escolhida a opção vira `SUBASSUNTOS` (`encomendas_solicitar|aguardando|outros`, `comercio_cadastrado|cadastrar|outros`, com `pai`). `assuntoBase`,
+  `emSubfluxo` (a análise da IA NÃO troca o assunto dentro de subfluxo), `fluxoDe`, `MENUS_SUB`. `comercio_aguardando` (rc.5/6) é lido como `encomendas_aguardando`.
+  Cliente que só espera uma encomenda é CLIENTE (encomendas), não comerciante. Menus salvos sem alteração nas versões antigas migram sozinhos (`TEXTOS_ANTIGOS`).
+- Painel inicial: `src/atendimento-painel.js` (`resumoAtendimentos`, só leitura, sem texto de mensagem; ignora contatos pessoais/ignorados) → `/dashboard.atendimento_wa`.
+  Cada atendimento ABERTO conta em um só grupo: dependem de você (aguardando equipe + humano com o cliente falando por último) | com a IA | aguardando o cliente
+  (humano, última fala nossa); concluídos hoje (fuso Fortaleza); por assunto; por motivo de transferência; lista "esperando por você". Cartões abrem Conversas no filtro
+  certo (`fm-wa-filtro`). O cartão antigo virou "Registros de atendimento pendentes" (módulo manual). Testes: `test/dashboard-atendimento.test.js`, `test/ia-comercio-menu.test.js`.
 
 ## PUBLICADO no Render: 2.1.0-rc.1 (13/11/2026 06h40, autorização formal do dono)
 - `etapa2` mesclado no `main` (monorepo `5c2f29f` + `88dd8c2`; backup `117b9f7`); deploy manual do commit `88dd8c2`; migrações 1–7

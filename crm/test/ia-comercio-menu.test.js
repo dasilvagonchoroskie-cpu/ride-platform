@@ -1,5 +1,5 @@
 'use strict';
-// Menu 5 "Comércio e entregas" e segundo menu (13/11/2026, pedido do dono). Mesma montagem de ia-vida-real (modelo falso que erra
+// Menu por público (passageiros e clientes / comércios / motoristas / outros) e segundos menus de encomendas (2) e comércios (3) (13/11/2026, pedido do dono). Mesma montagem de ia-vida-real (modelo falso que erra
 // de propósito: sempre diz 'cadastro'). Conversa ligada a uma ficha, com histórico longo:
 // longo: pedidos de atendente, transferências, encerramentos). O modelo falso aqui se comporta como o Gemini real: se o
 // texto que ele recebe tiver um pedido de atendente, ele manda transferir. Antes da correção, o histórico antigo fazia o novo
@@ -60,79 +60,127 @@ function montar() {
 }
 
 
-const SUBMENU = /Sobre comércio e entregas, escolha uma das opções/;
+const MENU_ENC = /Sobre encomendas, escolha uma das opções/;
+const MENU_COM = /Sobre comércios, escolha uma das opções/;
 
-test('menu principal tem 6 itens e o 5 abre o segundo menu de comércio (mesmo com a análise errando para "cadastro")', async () => {
+test('menu principal separa por público; 2 abre o segundo menu de encomendas e 3 o de comércios (mesmo com a análise errando para "cadastro")', async () => {
   const { receber, daIA, conv } = montar();
   await receber('Oi');
-  assert.match(daIA()[0], /5\. Comércio e entregas\.\n6\. Outros assuntos\./);
-  await receber('5');
-  assert.match(daIA().pop(), SUBMENU);
-  assert.equal(conv().atend_assunto, 'comercio');
+  const menu = daIA()[0];
+  assert.match(menu, /\*Passageiros e clientes\*\n1\. Atendimento ao passageiro\.\n2\. Enviar ou receber uma encomenda\./);
+  assert.match(menu, /\*Comércios\*\n3\. Sou comerciante ou quero entregas para o meu comércio\./);
+  assert.match(menu, /\*Motoristas\*\n4\. Cadastro de motorista e veículo\.\n5\. Clube de Vantagens para motoristas\./);
+  assert.match(menu, /\*Outros\*\n6\. Outros assuntos\./);
+  assert.doesNotMatch(menu, /Coleta e entrega de encomendas|Comércio e entregas/, 'sem a repetição de coleta/entrega que confundia');
+  await receber('2');
+  assert.match(daIA().pop(), MENU_ENC);
+  assert.equal(conv().atend_assunto, 'encomendas_menu');
+  await receber('0');
+  await receber('3');
+  assert.match(daIA().pop(), MENU_COM);
+  assert.equal(conv().atend_assunto, 'comercio_menu');
   assert.equal(conv().atendimento, 'ia');
 });
 
-test('segundo menu: 1 cadastrado, 2 cadastrar, 3 aguardando encomenda, 4 outras informações', async () => {
+test('segundo menu de encomendas (cliente): 1 solicitar, 2 aguardando, 3 outras informações', async () => {
   const esperado = [
-    ['1', 'comercio_cadastrado', /nome do seu estabelecimento e como podemos ajudar/],
-    ['2', 'comercio_cadastrar', /nome do estabelecimento;/],
-    ['3', 'comercio_aguardando', /Para a nossa equipe verificar a sua encomenda/],
-    ['4', 'comercio_outros', /o que você gostaria de saber sobre comércio e entregas/]
+    ['1', 'encomendas_solicitar', /Para a coleta e entrega, informe/],
+    ['2', 'encomendas_aguardando', /Para a nossa equipe verificar a sua encomenda/],
+    ['3', 'encomendas_outros', /o que você gostaria de saber sobre coleta e entrega de encomendas/]
   ];
   for (const [num, assunto, re] of esperado) {
     const { receber, daIA, conv } = montar();
-    await receber('Oi');
-    await receber('5');
-    await receber(num);
+    await receber('Oi'); await receber('2'); await receber(num);
     assert.match(daIA().pop(), re, `opção ${num}`);
     assert.equal(conv().atend_assunto, assunto);
     assert.equal(conv().atendimento, 'ia', 'não vai para a equipe só por escolher a opção');
   }
 });
 
+test('segundo menu de comércios (comerciante): 1 cadastrado, 2 cadastrar, 3 outras informações', async () => {
+  const esperado = [
+    ['1', 'comercio_cadastrado', /nome do seu estabelecimento e como podemos ajudar/],
+    ['2', 'comercio_cadastrar', /nome do estabelecimento;/],
+    ['3', 'comercio_outros', /como comerciante ou sobre o cadastro do seu comércio/]
+  ];
+  for (const [num, assunto, re] of esperado) {
+    const { receber, daIA, conv } = montar();
+    await receber('Oi'); await receber('3'); await receber(num);
+    assert.match(daIA().pop(), re, `opção ${num}`);
+    assert.equal(conv().atend_assunto, assunto);
+    assert.equal(conv().atendimento, 'ia');
+  }
+});
+
 test('depois de escolher no segundo menu, os números voltam a valer para o menu principal e a análise não troca o assunto', async () => {
   const { receber, daIA, conv } = montar();
-  await receber('Oi'); await receber('5'); await receber('3');
-  assert.equal(conv().atend_assunto, 'comercio_aguardando');
+  await receber('Oi'); await receber('2'); await receber('2');
+  assert.equal(conv().atend_assunto, 'encomendas_aguardando');
   await receber('estou esperando uma pizza da Pizzaria Fictícia, rua das Flores');
-  assert.equal(conv().atend_assunto, 'comercio_aguardando', 'a análise (que diz cadastro) não muda o assunto');
-  await receber('1');
-  assert.match(daIA().pop(), /7 itens/, '1 agora é o menu principal (cadastro de motorista)');
+  assert.equal(conv().atend_assunto, 'encomendas_aguardando', 'a análise (que diz cadastro) não muda o assunto');
+  await receber('4');
+  assert.match(daIA().pop(), /7 itens/, '4 agora é o menu principal (cadastro de motorista)');
   assert.equal(conv().atend_assunto, 'cadastro');
 });
 
-test('botão do site "Tenho um comércio" vira comércio_cadastrar; novo atendimento recomeça pelo menu de 6 itens', async () => {
+test('digitar texto com o segundo menu aberto não troca o assunto; números 4 a 6 voltam ao menu principal', async () => {
+  const { receber, daIA, conv } = montar();
+  await receber('Oi'); await receber('3');
+  await receber('quero entregas para a minha loja');
+  assert.equal(conv().atend_assunto, 'comercio_menu');
+  await receber('1');
+  assert.equal(conv().atend_assunto, 'comercio_cadastrado');
+  const m = montar();
+  await m.receber('Oi'); await m.receber('2'); await m.receber('6');
+  assert.equal(m.conv().atend_assunto, 'outros', '6 dentro do menu de encomendas = menu principal (outros)');
+});
+
+test('conversa antiga com assunto "comercio_aguardando" (rc.5/rc.6) é entendida como encomendas_aguardando', () => {
+  const C = require('../src/ia/central');
+  assert.equal(C.assuntoBase('comercio_aguardando'), 'encomendas');
+  assert.equal(C.nomeDoAssunto('comercio_aguardando'), C.SUBASSUNTOS.encomendas_aguardando.nome);
+  assert.equal(C.fluxoDe('comercio_aguardando'), 'encomendas_aguardando');
+  assert.equal(C.fluxoDe('encomendas_menu'), 'encomendas');
+});
+
+test('botão do site "Tenho um comércio" vira comercio_cadastrar; novo atendimento recomeça pelo menu por público', async () => {
   const { receber, daIA, conv, concluir } = montar();
   await receber('Olá! Tenho um comércio e quero entregas pela Fortaleza Move.');
   assert.equal(conv().atend_assunto, 'comercio_cadastrar');
   concluir();
   await receber('Olá! Vim pelo site da Fortaleza Move.');
-  assert.match(daIA().pop(), /6\. Outros assuntos\./);
+  assert.match(daIA().pop(), /\*Outros\*\n6\. Outros assuntos\./);
   assert.equal(conv().atend_assunto, null);
   await receber('6');
   assert.match(daIA().pop(), /Escreva, por favor, o assunto do seu contato/);
 });
 
-test('menu salvo sem alteração (padrão antigo de 5 opções) passa a usar o novo; menu editado pelo dono não muda', () => {
+test('menus salvos SEM alteração (padrões antigos) passam a usar os novos; texto editado pelo dono não muda', () => {
   const { criarCentral, MODELOS_PADRAO } = require('../src/ia/central');
   const mem = {};
   const central = criarCentral({ getSetting: (k, d) => (k in mem ? mem[k] : d), setSetting: (k, v) => { mem[k] = v; } });
-  const antigo = 'Para direcionarmos seu atendimento, escolha uma das opções:\r\n\r\n1. Cadastro de motorista e veículo.\r\n2. Atendimento ao passageiro.\r\n3. Coleta e entrega de encomendas.\r\n4. Clube de Vantagens para motoristas.\r\n5. Outros assuntos.\r\n\r\nDigite o número da opção desejada.';
-  mem.central_modelos = JSON.stringify({ menu: { texto: antigo, ativo: true } });
-  assert.equal(central.texto('menu'), MODELOS_PADRAO.menu.texto);
+  const v1 = 'Para direcionarmos seu atendimento, escolha uma das opções:\r\n\r\n1. Cadastro de motorista e veículo.\r\n2. Atendimento ao passageiro.\r\n3. Coleta e entrega de encomendas.\r\n4. Clube de Vantagens para motoristas.\r\n5. Outros assuntos.\r\n\r\nDigite o número da opção desejada.';
+  const v2 = 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Comércio e entregas.\n6. Outros assuntos.\n\nDigite o número da opção desejada.';
+  const com2 = 'Certo! Sobre comércio e entregas, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio.\n3. Estou aguardando uma encomenda ou entrega.\n4. Outras informações.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.';
+  for (const antigo of [v1, v2]) {
+    mem.central_modelos = JSON.stringify({ menu: { texto: antigo, ativo: true } });
+    assert.equal(central.texto('menu'), MODELOS_PADRAO.menu.texto);
+  }
+  mem.central_modelos = JSON.stringify({ menu_comercio: { texto: com2, ativo: true } });
+  assert.equal(central.texto('menu_comercio'), MODELOS_PADRAO.menu_comercio.texto);
   mem.central_modelos = JSON.stringify({ menu: { texto: 'Menu do dono: 1. A 2. B', ativo: true } });
   assert.equal(central.texto('menu'), 'Menu do dono: 1. A 2. B');
 });
 
-test('opção 0 volta ao menu inicial do segundo menu e de qualquer opção; os números voltam a valer para o menu principal', async () => {
+test('opção 0 volta ao menu inicial dos segundos menus e de qualquer opção; os números voltam a valer para o menu principal', async () => {
   const { receber, daIA, conv } = montar();
-  await receber('Oi'); await receber('5');
+  await receber('Oi'); await receber('3');
   assert.match(daIA().pop(), /0\. Voltar ao menu inicial\./);
   await receber('0');
-  assert.match(daIA().pop(), /6\. Outros assuntos\./, '0 reabre o menu inicial');
+  assert.match(daIA().pop(), /\*Outros\*\n6\. Outros assuntos\./, '0 reabre o menu inicial');
   assert.equal(conv().atend_assunto, null);
-  await receber('1');
-  assert.match(daIA().pop(), /7 itens/, 'depois do 0, o 1 é cadastro de motorista (não "já sou comerciante")');
+  await receber('4');
+  assert.match(daIA().pop(), /7 itens/, 'depois do 0, o 4 é cadastro de motorista');
   assert.match(daIA().pop(), /Para voltar ao menu inicial, digite 0\./);
   await receber('0');
   assert.match(daIA().pop(), /Para direcionarmos seu atendimento/);
