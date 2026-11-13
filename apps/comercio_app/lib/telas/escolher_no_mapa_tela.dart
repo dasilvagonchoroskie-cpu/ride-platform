@@ -84,6 +84,8 @@ class _EscolherNoMapaTelaState extends State<EscolherNoMapaTela> {
       detalhe: l?.detalhe ?? '',
       latitude: _centro.latitude,
       longitude: _centro.longitude,
+      bairro: l?.bairro ?? '',
+      cep: l?.cep ?? '',
     ));
   }
 

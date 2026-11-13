@@ -13,6 +13,9 @@ export interface LugarDoProvedor {
   detail: string;
   latitude: number;
   longitude: number;
+  /** Bairro e CEP do ponto, quando o mapa sabe (o Comercio preenche os campos sozinho). */
+  neighborhood?: string;
+  postalCode?: string;
 }
 
 export interface RotaDoProvedor {
@@ -59,7 +62,11 @@ export function semChave(url: string): string {
 interface EnderecoTomTom {
   streetName?: string;
   streetNumber?: string;
+  postalCode?: string;
+  extendedPostalCode?: string;
   municipalitySubdivision?: string;
+  municipalitySecondarySubdivision?: string;
+  neighbourhood?: string;
   municipality?: string;
   countrySubdivision?: string;
   countrySubdivisionCode?: string;
@@ -102,7 +109,16 @@ export function paraLugar(r: ResultadoTomTom): LugarDoProvedor | null {
     .map((x) => x.trim())
     .filter((x) => x.length > 0 && x !== principal)
     .join(', ');
-  return { address: principal || 'Endereço sem nome', detail: apoio, latitude: lat, longitude: lon };
+  const bairro = (a.municipalitySubdivision ?? a.neighbourhood ?? a.municipalitySecondarySubdivision ?? '').trim();
+  const cep = (a.extendedPostalCode ?? a.postalCode ?? '').replace(/\D/g, '').slice(0, 8);
+  return {
+    address: principal || 'Endereço sem nome',
+    detail: apoio,
+    latitude: lat,
+    longitude: lon,
+    ...(bairro ? { neighborhood: bairro } : {}),
+    ...(cep.length === 8 ? { postalCode: cep } : {}),
+  };
 }
 
 /** Pontos da rota da TomTom ([lat, lng]), no maximo uns 500. */

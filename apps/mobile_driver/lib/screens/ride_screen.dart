@@ -284,16 +284,16 @@ class _Passageiro extends StatelessWidget {
         CircleAvatar(
           radius: 22,
           backgroundColor: AppColors.brandSoft,
-          child: Text(offer.passengerInitials, style: AppText.bodyStrong.copyWith(color: AppColors.brand)),
+          child: Text(offer.solicitanteIniciais, style: AppText.bodyStrong.copyWith(color: AppColors.brand)),
         ),
         const SizedBox(width: Spacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(offer.passengerName, style: AppText.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(offer.solicitanteNome, style: AppText.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
               Text(
-                '★ ${offer.passengerRating.toStringAsFixed(1)} · ${offer.paymentMethod}',
+                offer.entrega != null ? 'Entrega · ${offer.paymentMethod}' : '★ ${offer.passengerRating.toStringAsFixed(1)} · ${offer.paymentMethod}',
                 style: AppText.caption.copyWith(color: AppColors.textMuted),
               ),
             ],
@@ -308,7 +308,7 @@ class _Passageiro extends StatelessWidget {
                 builder: (_) => ChatScreen(
                   api: d.api,
                   caminho: '/driver/rides/${offer.id}/messages',
-                  titulo: 'Conversa com ${offer.passengerName.split(' ').first}',
+                  titulo: 'Conversa com ${offer.solicitanteNome.split(' ').first}',
                   atalhos: const [
                     'Estou a caminho',
                     'Cheguei, estou te aguardando',

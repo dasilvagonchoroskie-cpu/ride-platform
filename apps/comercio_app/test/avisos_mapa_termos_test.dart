@@ -216,6 +216,8 @@ void main() {
       expect(find.text('Posição do motorista em tempo real.'), findsOneWidget);
       // sem imagens de rua: avisa, mas os pontos continuam
       expect(find.textContaining('As ruas do mapa não estão disponíveis'), findsOneWidget);
+      // mapa grande + botao para abrir em tela cheia
+      expect(find.byKey(const Key('ampliar-mapa')), findsOneWidget);
       await fechar(tester);
     });
 

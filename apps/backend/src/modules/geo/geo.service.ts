@@ -13,6 +13,9 @@ export interface Lugar {
   latitude: number;
   longitude: number;
   distanceKm: number | null;
+  /** Bairro e CEP (8 numeros), quando o mapa sabe. */
+  neighborhood?: string;
+  postalCode?: string;
   /** true = o mapa esta no limite agora (o app mostra a contingencia). */
   limite?: boolean;
 }

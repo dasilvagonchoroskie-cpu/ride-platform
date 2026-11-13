@@ -92,7 +92,19 @@ class EnderecoControle extends ChangeNotifier {
     }
     // O bairro e o item antes da "Cidade - UF" (nunca a rua).
     final antes = cu != null ? det.sublist(0, det.length - 1) : det;
-    if (antes.isNotEmpty && livre(bairro) && antes.last != logradouro.text.trim()) bairro.text = antes.last;
+    if (l.bairro.isNotEmpty) {
+      // Veio do mapa em campo proprio: e a fonte mais certa.
+      if (livre(bairro)) bairro.text = l.bairro;
+    } else if (antes.isNotEmpty && livre(bairro) && antes.last != logradouro.text.trim()) {
+      bairro.text = antes.last;
+    } else if (doAlfinete) {
+      bairro.clear(); // o ponto anterior era de outro lugar: nao deixa o bairro velho
+    }
+    if (l.cep.length == 8 && livre(cep)) {
+      cep.text = Formato.cep(l.cep);
+    } else if (doAlfinete && l.cep.isEmpty) {
+      cep.clear();
+    }
     latitude = l.latitude;
     longitude = l.longitude;
     _porAlfinete = doAlfinete;
