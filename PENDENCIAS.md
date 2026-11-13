@@ -373,3 +373,13 @@ Limites: emulador nos EUA, não celular em Goiatuba; serve para comparar antes x
 | Documentação de contas e restauração | feita: docs/CONTAS.md (sem nenhuma senha; o repositório é público) |
 | Dependências | qs corrigido (6.16.1); sobram 4 que exigem troca grande |
 | **Etapa 8** — iPhone | **[REAL na esteira]** os 3 apps compilam (sem assinar) |
+
+## Várias entregas por pedido (Comércio) — branch `comercio-multi-entregas`
+- Modelo "um veículo, uma rota": até 5 entregas; preço = tarifa existente sobre a rota total (nenhuma tarifa/comissão alterada).
+- Nome e telefone por entrega; telefone opcional. Código de 4 dígitos por entrega; motorista confirma na ordem; finalizar exige todas.
+- Mapa do Comércio mostra ✔ verde em cada entrega concluída; Central mostra "X de N concluídas".
+- Termos + Privacidade na primeira abertura, com aceite obrigatório antes de criar conta/entrar.
+- PENDENTE (precisa do OK do dono): mesclar a branch em `main` (deploy do servidor no Render, ~1 min). Os APKs novos só funcionam por completo depois disso.
+- PENDENTE: causa do "mapa não aparece" não confirmada; o app agora mostra o motivo na tela. Testar no celular.
+- PENDENTE: aviso quando a cidade digitada difere da cidade da coleta (não feito).
+- Tabela nova `entrega_paradas` criada pelo servidor ao iniciar (RLS ligado no mesmo arquivo).
