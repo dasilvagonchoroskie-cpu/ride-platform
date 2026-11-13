@@ -69,7 +69,7 @@ class _FrotaTelaState extends State<FrotaTela> {
   /// conferido pela Central, na categoria desta tela (Moto, ou Carro/Utilitario).
   Future<void> _cadastrar() async {
     final api = _api;
-    final motorista = await escolherMotorista(context, api);
+    final motorista = await escolherMotoristaDoVeiculo(context, api);
     if (motorista == null || !mounted) return;
     final tipos = widget.moto ? const [TipoDeVeiculo.moto] : const [TipoDeVeiculo.carro, TipoDeVeiculo.utilitario];
     final dados = await formularioDoCarro(
@@ -403,7 +403,7 @@ class _DetalheDoVeiculoState extends State<DetalheDoVeiculo> {
 
 /// Escolhe um motorista ja cadastrado (ativos e pendentes), com busca por
 /// nome, telefone ou placa. null = cancelou.
-Future<MotoristaCadastro?> escolherMotorista(BuildContext context, PainelApi api) {
+Future<MotoristaCadastro?> escolherMotoristaDoVeiculo(BuildContext context, PainelApi api) {
   return showDialog<MotoristaCadastro>(
     context: context,
     builder: (ctx) => _EscolherMotorista(api: api),
