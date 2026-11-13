@@ -71,3 +71,11 @@ Nenhum desses testes foi feito ainda.
 ## F. Migração futura para a Hostinger
 Guia `deploy/hostinger/README.md`. Levar: o banco (do cofre), `wa-auth`, chaves da IA, as mesmas `FM_DOCS_KEY`/`FM_DADOS_KEY`
 (sem elas os documentos não abrem) e os arquivos do bucket `crm-documentos` (ou manter o Supabase Storage).
+
+## Atualização 2.1.0-rc.2 (13/11/2026 07h45)
+Publicada para a operação real (deploy dep-dbrek4ou01pc73b13jg0, commit e1dc4d8, cache `fm-crm-v29`; cópia do cofre v3506 antes).
+- "Contato pessoal (sem IA)" (só admin): família e amigos no número do atendimento; a IA não lê, não analisa e não responde.
+- Redação da IA: conversa informal → uma frase cordial e pergunta se precisa de algo da Fortaleza Move; insistiu ou conhece a equipe →
+  equipe; pergunta inesperada → "não tenho essa informação" e equipe; nunca confirma cadastro/aprovação nem diz "já pode"; não indica
+  link, loja ou formulário de cadastro. Barreira automática bloqueia frases assim antes do envio.
+- Conferido no ar: health 200, rotas sem login 401 (inclusive a nova), setup 403, WhatsApp conectado, cache v29.

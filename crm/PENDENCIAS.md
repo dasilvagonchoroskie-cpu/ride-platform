@@ -12,6 +12,10 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       guardar as duas primeiras no cofre de senhas. Até lá, o arquivo digital fica desligado.
 - [ ] Depois das chaves: abrir `/api/admin/saude` logado e conferir `prova: "ok"` (Claude confere o log).
 - [ ] Dono: testes reais do `docs/ROTEIRO-TESTES-REAIS.md` (WhatsApp, áudio, documento fictício, IA, notificações). Nenhum feito ainda.
+- [x] 13/11 2.1.0-rc.2 no ar (commit e1dc4d8): "Contato pessoal (sem IA)" para família/amigos; regras de conversa informal e
+      pergunta inesperada; barreira que impede a IA de confirmar cadastro/aprovação ou prometer. 202/202 testes.
+- [ ] Dono: marcar como "Contato pessoal (sem IA)" (Conversas → conversa → botão ou menu ⋯) as pessoas da família/amigos que já
+      aparecem no CRM; depois testar com um número conhecido e um desconhecido (roteiro abaixo).
 - [ ] Opcional: "Health Check Path" `/api/health` no painel do Render (a ferramenta do Claude não altera essa opção).
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)
