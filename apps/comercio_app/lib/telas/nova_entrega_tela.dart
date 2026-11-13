@@ -75,6 +75,10 @@ class _NovaEntregaTelaState extends State<NovaEntregaTela> {
       ));
       _veiculo = r.veiculo;
     }
+    // Mexeu no endereco: o aviso de erro antigo (ex.: da consulta anterior) sai da tela.
+    _destino.addListener(() {
+      if (mounted && _erro != null) setState(() => _erro = null);
+    });
   }
 
   @override

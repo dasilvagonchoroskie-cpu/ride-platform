@@ -183,8 +183,12 @@ export const entregaSchema = z.object({
 });
 export type EntregaInput = z.infer<typeof entregaSchema>;
 
-/** Para consultar o preco: igual ao pedido, sem a chave. */
-export const cotarSchema = entregaSchema.omit({ chave: true, valorEsperadoCents: true }).partial({ encomenda: true });
+/**
+ * Para consultar o preco: igual ao pedido, sem a chave. O veiculo e opcional:
+ * a consulta devolve as opcoes de todos os veiculos liberados e a loja escolhe depois
+ * (antes, o app novo recebia "Required" ao consultar, porque ainda nao ha veiculo escolhido).
+ */
+export const cotarSchema = entregaSchema.omit({ chave: true, valorEsperadoCents: true }).partial({ encomenda: true, veiculo: true });
 export type CotarInput = z.infer<typeof cotarSchema>;
 
 // ---------------------------------------------------------------------------

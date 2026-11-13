@@ -189,9 +189,23 @@ class ComercioApi {
     return lista.map(Lugar.tentar).whereType<Lugar>().toList();
   }
 
+  /// Endereco escrito de um ponto do mapa (alfinete). null = o servidor nao achou ou esta sem mapa.
+  Future<Lugar?> enderecoDoPonto(double lat, double lng) async {
+    final r = await api.get('/geo/reverse', query: {'lat': lat.toString(), 'lng': lng.toString()});
+    return Lugar.tentar(r);
+  }
+
   // ---- Entregas ----
 
-  Future<Cotacao> consultarPreco(DadosDeEntrega d) async => Cotacao.fromJson(await api.post('/comercio/entregas/preco', d.toJson()));
+  /// A consulta devolve as opcoes de TODOS os veiculos liberados na cidade; o
+  /// veiculo so e escolhido depois. O servidor atual exige o campo mesmo assim
+  /// (e ignora o valor na consulta), entao vai um valor neutro quando ainda nao
+  /// ha escolha. O pedido de verdade sempre leva o veiculo escolhido.
+  Future<Cotacao> consultarPreco(DadosDeEntrega d) async {
+    final corpo = d.toJson();
+    corpo['veiculo'] ??= 'CARRO';
+    return Cotacao.fromJson(await api.post('/comercio/entregas/preco', corpo));
+  }
 
   /// So devolve uma entrega se o SERVIDOR confirmou. Erro de rede lanca
   /// ApiException(NETWORK_ERROR): o pedido pode ou nao ter sido gravado; a

@@ -111,6 +111,14 @@ describe('Comercio: destinatario, destino e pedido (testes 6, 7 e 8)', () => {
     expect(entregaSchema.safeParse({ ...pedido, coletaAlternativa: { address: 'Av. Brasil, 10', latitude: -18, longitude: -49 } }).success).toBe(true);
   });
 
+  it('consultar o preco aceita pedido SEM veiculo (o veiculo so e escolhido depois do preco)', () => {
+    const { chave: _c, veiculo: _v, ...semChaveEVeiculo } = pedido;
+    expect(cotarSchema.safeParse(semChaveEVeiculo).success).toBe(true);
+    expect(cotarSchema.safeParse({ ...semChaveEVeiculo, veiculo: 'BICICLETA' }).success).toBe(false);
+    // o pedido de verdade continua exigindo o veiculo
+    expect(entregaSchema.safeParse({ ...pedido, veiculo: undefined }).success).toBe(false);
+  });
+
   it('endereco por extenso: rua, numero, complemento, bairro, cidade/UF e CEP com hifen', () => {
     expect(enderecoPorExtenso({ ...endereco, uf: 'GO', cep: '75600000', complemento: 'Sala 2' })).toBe(
       'Rua das Flores, 120 - Sala 2, Centro, Goiatuba/GO, CEP 75600-000',
