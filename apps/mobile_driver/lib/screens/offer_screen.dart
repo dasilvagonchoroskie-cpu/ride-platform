@@ -94,7 +94,7 @@ class OfferScreen extends StatelessWidget {
           Expanded(
             flex: 6,
             child: SheetSurface(
-              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg),
+              padding: EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg + MediaQuery.viewPaddingOf(context).bottom),
               // Deslizar e Recusar ficam SEMPRE na tela, embaixo; so os
               // detalhes rolam. Antes, em celular de 780 de altura, o
               // "Deslize para aceitar" ficava 162 pontos abaixo da tela
