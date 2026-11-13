@@ -306,6 +306,16 @@ export class ComercioService implements OnModuleInit {
     return !!v && typeof v === 'object' && !Array.isArray(v) && (v as { ativo?: unknown }).ativo === true;
   }
 
+  /** Chave geral do Comercio (a entrega avulsa da Central tambem respeita). */
+  async exigirComercioAtivo(): Promise<void> {
+    return this.exigirAtivo();
+  }
+
+  /** A cidade (praca) de um ponto do mapa, ou null se fora de todas. */
+  async pracaDoLocal(p: { latitude: number; longitude: number }): Promise<string | null> {
+    return this.pracaDe(p);
+  }
+
   private async exigirAtivo(): Promise<void> {
     if (!(await this.ativo())) throw BusinessException.forbidden(MENSAGEM_DESLIGADO);
   }

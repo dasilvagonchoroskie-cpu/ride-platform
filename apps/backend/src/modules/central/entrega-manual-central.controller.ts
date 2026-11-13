@@ -8,9 +8,13 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import {
   buscarEstabelecimentoSchema,
+  cotarAvulsaSchema,
   cotarCentralSchema,
+  entregaAvulsaSchema,
   entregaCentralSchema,
+  type CotarAvulsaInput,
   type CotarCentralInput,
+  type EntregaAvulsaInput,
   type EntregaCentralInput,
 } from '../comercio/comercio.regras';
 import { ComercioService } from '../comercio/comercio.service';
@@ -68,5 +72,20 @@ export class EntregaManualCentralController {
   @ApiOperation({ summary: 'Lanca a entrega: abre o pedido oficial (despacho automatico ou motorista escolhido)' })
   lancar(@CurrentUser() user: AuthenticatedUser, @Body(new ZodValidationPipe(entregaCentralSchema)) body: EntregaCentralInput) {
     return this.manual.lancarPelaCentral(user, body);
+  }
+
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Post('avulsa/cotar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Preco oficial da coleta para estabelecimento NAO cadastrado (nao cria nada)' })
+  cotarAvulsa(@CurrentUser() user: AuthenticatedUser, @Body(new ZodValidationPipe(cotarAvulsaSchema)) body: CotarAvulsaInput) {
+    return this.manual.cotarAvulsa(user, body);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('avulsa')
+  @ApiOperation({ summary: 'Lanca a entrega de um estabelecimento sem cadastro (despacho automatico ou motorista escolhido)' })
+  lancarAvulsa(@CurrentUser() user: AuthenticatedUser, @Body(new ZodValidationPipe(entregaAvulsaSchema)) body: EntregaAvulsaInput) {
+    return this.manual.lancarAvulsa(user, body);
   }
 }
