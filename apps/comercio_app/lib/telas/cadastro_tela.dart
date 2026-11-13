@@ -84,7 +84,7 @@ class _CadastroTelaState extends State<CadastroTela> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+          padding: EdgeInsets.fromLTRB(20, 4, 20, 28 + MediaQuery.viewPaddingOf(context).bottom),
           child: Form(
             key: _form,
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

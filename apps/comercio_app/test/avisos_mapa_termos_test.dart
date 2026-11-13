@@ -1,4 +1,5 @@
 import 'package:comercio_app/app.dart';
+import 'package:comercio_app/core/alarme.dart';
 import 'package:comercio_app/core/api.dart';
 import 'package:comercio_app/core/armazenamento.dart';
 import 'package:comercio_app/dados/modelos.dart';
@@ -158,6 +159,16 @@ void main() {
       await tester.tap(find.byIcon(Icons.done_all));
       await tester.pumpAndSettle();
       expect(servidor.avisosLidos, ['a', 'b']);
+      await fechar(tester);
+    });
+
+    testWidgets('motorista chegou à loja (aviso novo e não lido): alarma uma vez por entrega; aviso velho não alarma', (tester) async {
+      Alarme.tocados.clear();
+      final novo = Aviso(id: 'n', titulo: 'Motorista chegou à loja', texto: 't', tipo: 'comercio-entrega', criadoEm: DateTime.now(), lido: false, rideId: 'r-chegou');
+      final velho = Aviso(id: 'v', titulo: 'Motorista chegou à loja', texto: 't', tipo: 'comercio-entrega', criadoEm: DateTime(2026, 11, 12, 15, 30), lido: false, rideId: 'r-velho');
+      final servidor = ServidorFalso()..caixa = CaixaDeAvisos(itens: [novo, velho]);
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      expect(Alarme.tocados, ['r-chegou']);
       await fechar(tester);
     });
 

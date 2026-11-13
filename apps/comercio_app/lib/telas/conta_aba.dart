@@ -17,7 +17,7 @@ class ContaAba extends StatelessWidget {
     final s = EscopoSessao.de(context);
     final e = s.estabelecimento;
     if (e == null) return const SizedBox.shrink();
-    return ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 40), children: [
+    return ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 40 + MediaQuery.viewPaddingOf(context).bottom), children: [
       const Text('Meu estabelecimento', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
       const SizedBox(height: 16),
       Card(

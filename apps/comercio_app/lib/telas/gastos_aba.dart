@@ -44,7 +44,7 @@ class _GastosAbaState extends State<GastosAba> {
     final g = _g;
     return RefreshIndicator(
       onRefresh: _carregar,
-      child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 100), children: [
+      child: ListView(padding: EdgeInsets.fromLTRB(20, 16, 20, 100 + MediaQuery.viewPaddingOf(context).bottom), children: [
         const Text('Gastos com entregas', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
         if (g != null) Text('${Formato.dataHora(g.de).split(' ').first} a ${_ultimoDia(g.ate)}', style: const TextStyle(color: Cores.textoSuave)),
         const SizedBox(height: 16),

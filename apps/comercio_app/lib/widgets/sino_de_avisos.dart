@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/alarme.dart';
 import '../core/atualizacao.dart';
 import '../core/config.dart';
 import '../estado/escopo.dart';
@@ -41,6 +42,12 @@ class _SinoDeAvisosState extends State<SinoDeAvisos> {
     final servidor = EscopoSessao.ler(context).servidor;
     try {
       final caixa = await servidor.avisos();
+      // "Motorista chegou a loja" ainda nao lido e recente: alarme (uma vez por entrega).
+      final agora = DateTime.now();
+      for (final a in caixa.itens) {
+        final recente = a.criadoEm != null && agora.difference(a.criadoEm!).inMinutes < 3;
+        if (!a.lido && a.ehDeEntrega && a.titulo == 'Motorista chegou à loja' && recente && a.rideId != null) Alarme.motoristaChegou(a.rideId!);
+      }
       if (mounted) setState(() => _naoLidos = caixa.naoLidos);
     } catch (_) {
       // Sem rede ou servidor ocupado: fica o ultimo numero.

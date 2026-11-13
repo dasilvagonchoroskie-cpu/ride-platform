@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api.dart';
 import '../core/atualizacao.dart';
+import '../core/alarme.dart';
 import '../core/config.dart';
 import '../core/formato.dart';
 import '../core/tema.dart';
@@ -64,6 +65,8 @@ class _EntregaTelaState extends State<EntregaTela> {
     try {
       final e = await s.servidor.entrega(_id);
       if (!mounted) return;
+      // O motorista acabou de chegar a loja: alarme (uma vez por entrega).
+      if (_e != null && _e!.etapa != 'NO_ESTABELECIMENTO' && e.etapa == 'NO_ESTABELECIMENTO') Alarme.motoristaChegou(e.id);
       setState(() {
         _e = e;
         _falha = null;
@@ -125,7 +128,7 @@ class _EntregaTelaState extends State<EntregaTela> {
 
   Widget _corpo(Entrega e) {
     final cor = e.problema ? Cores.perigo : (e.etapa == 'ENTREGUE' ? Cores.ok : Cores.loja);
-    return ListView(padding: const EdgeInsets.all(20), children: [
+    return ListView(padding: EdgeInsets.fromLTRB(20, 20, 20, 24 + MediaQuery.viewPaddingOf(context).bottom), children: [
       if (_falha != null) ...[Faixa(_falha!, tipo: TipoFaixa.atencao, icone: Icons.cloud_off), const SizedBox(height: 14)],
       Row(children: [
         Expanded(child: Text(e.situacao, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: cor))),

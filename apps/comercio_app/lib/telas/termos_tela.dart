@@ -52,7 +52,7 @@ class _TermosTelaState extends State<TermosTela> {
           ? (_falha != null
               ? Estado(icone: Icons.cloud_off, titulo: 'Não foi possível carregar os termos', texto: _falha, botao: 'Tentar de novo', aoTocar: _carregar)
               : const Center(child: CircularProgressIndicator()))
-          : ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 32), children: [
+          : ListView(padding: EdgeInsets.fromLTRB(20, 8, 20, 32 + MediaQuery.viewPaddingOf(context).bottom), children: [
               if (!t.revisadoPorAdvogado) ...[
                 const Faixa('Este texto é uma minuta técnica e ainda não foi aprovado por advogado. Ele pode mudar depois da revisão jurídica.', tipo: TipoFaixa.atencao),
                 const SizedBox(height: 14),
