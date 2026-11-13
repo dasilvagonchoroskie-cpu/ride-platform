@@ -50,8 +50,9 @@ MockClient _servidor({bool lojaAprovada = true}) => MockClient((r) async {
             'enderecoDeRetirada': 'Rua das Flores, 120 - Centro, Goiatuba - GO',
             'cidade': 'Goiatuba',
             'uf': 'GO',
-            'situacaoRotulo': 'Aprovado',
-            'podeLancar': true,
+            'situacaoRotulo': lojaAprovada ? 'Aprovado' : 'Aguardando aprovação',
+            'podeLancar': lojaAprovada,
+            'motivo': lojaAprovada ? null : 'Este estabelecimento ainda está aguardando aprovação da Central.',
             'entregasConcluidas': 7,
             'historico': [],
           };

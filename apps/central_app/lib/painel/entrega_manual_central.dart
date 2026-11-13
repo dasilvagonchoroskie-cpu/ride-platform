@@ -575,17 +575,15 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
       else
         Text('${_motorista!.nome} (${_veiculo == 'MOTO' ? 'moto' : 'carro'}): o chamado vai só para ele.', style: AppText.body),
       const SizedBox(height: Spacing.xs),
-      Row(children: [
+      Wrap(spacing: Spacing.sm, runSpacing: Spacing.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
         OutlinedButton.icon(
           key: const Key('escolher-motorista-da-entrega'),
           onPressed: _ocupado ? null : _escolherMotorista,
           icon: const Icon(Icons.person_search),
           label: Text(_motorista == null ? 'Escolher um motorista' : 'Trocar motorista'),
         ),
-        if (_motorista != null) ...[
-          const SizedBox(width: Spacing.sm),
+        if (_motorista != null)
           TextButton(onPressed: _ocupado ? null : () => setState(() => _motorista = null), child: const Text('Automático')),
-        ],
       ]),
       const SizedBox(height: Spacing.md),
       Container(
