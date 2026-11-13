@@ -61,6 +61,8 @@ const MODELOS_PADRAO = {
   abertura_encomendas: { nome: 'Opção 3 escolhida (coleta e entrega de encomendas)', texto: 'Certo! Para a coleta e entrega, informe, por favor:\n\n• o que deseja enviar;\n• o endereço de coleta;\n• o endereço de entrega.\n\nCom essas informações, a nossa equipe dá sequência ao seu pedido.' },
   abertura_clube: { nome: 'Opção 4 escolhida (Clube de Vantagens)', texto: 'Certo! Conte, por favor, o que você gostaria de saber sobre o Clube de Vantagens para motoristas.' },
   abertura_outros: { nome: 'Opção 5 escolhida (outros assuntos)', texto: 'Certo! Escreva, por favor, o assunto do seu contato para direcionarmos o seu atendimento.' },
+  // 13/11: botão "Tenho um comércio e quero entregas" do site.
+  abertura_comercio: { nome: 'Botão do site "Tenho um comércio e quero entregas"', texto: 'Que bom ter você por aqui! A Fortaleza Move tem atendimento para comércios que precisam de coleta e entrega.\n\nPara a nossa equipe preparar o seu atendimento, informe, por favor:\n\n• o nome do estabelecimento;\n• a cidade e o endereço;\n• o que você vende ou costuma entregar;\n• quantas entregas faz, em média, por dia ou por semana.\n\nCom essas informações, a nossa equipe entra em contato para combinar os detalhes.' },
   documento_recusado: { nome: 'Arquivo de documento não aceito', texto: 'Não consegui receber esse arquivo. Pode enviar de novo como foto (JPG ou PNG) ou PDF, com até 10 MB, por favor?' }
 };
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
@@ -185,6 +187,14 @@ const ORIGENS_CONTATO = [
   ['TikTok', /\b(vim|cheguei|vi|achei)\b[^.!?\n]{0,25}\b(pelo|do|no)\s+tik ?tok\b/],
   ['Indicação', /\b(fui indicad[oa]|me indicaram|indicacao de)\b/]
 ];
+// O que responder a cada botão do site (texto pronto e fixo, sem depender da IA).
+const BOTOES_SITE = [
+  { re: /^ola!? vim pelo site da fortaleza move\.?$/, modelo: 'menu' },
+  { re: /^ola!? quero ser motorista da fortaleza move\.?$/, modelo: 'abertura_cadastro', assunto: 'cadastro' },
+  { re: /^ola!? quero saber mais sobre corridas e encomendas da fortaleza move\.?$/, modelo: 'menu' },
+  { re: /^ola!? tenho um comercio e quero entregas pela fortaleza move\.?$/, modelo: 'abertura_comercio', assunto: 'encomendas' }
+];
+const botaoDoSite = (texto) => BOTOES_SITE.find((b) => b.re.test(semAcento(texto).trim())) || null;
 /** Texto pronto de um dos botões de WhatsApp do site (a pessoa clicou no site de novo). */
 const ehBotaoDoSite = (texto) => TEXTOS_DO_SITE.some((re) => re.test(semAcento(texto).trim()));
 function origemDoContato(texto) {
@@ -211,4 +221,4 @@ function semIntencao(texto) {
 // Pedido explícito de falar com uma pessoa (reforço sem IA).
 const pediuHumano = (texto) => /\b(atendente|atendimento humano|falar com (um|uma|alguem|algu[eé]m|uma pessoa|pessoa|humano|gente)|pessoa de verdade|ser humano|humano por favor)\b/.test(semAcento(texto));
 
-module.exports = { ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
+module.exports = { botaoDoSite, ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
