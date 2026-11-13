@@ -22,7 +22,7 @@ Esta seção vale mais que qualquer linha antiga mais abaixo que a contradiga. L
 - Restauração da cópia do banco: a cópia diária roda (`copia-banco.yml`), mas a esteira de restauração **nunca foi executada** (faltam os segredos de teste, do dono).
 - Teste de ponta a ponta: última execução 12/11 02:23 (antes do PR #59), 386 OK, 3 falhas da carteira que são intencionais (o teste supõe o bloqueio por saldo desligado), 4 pulados. As rotas novas só existem em produção depois do merge e do deploy.
 
-**Feito (13/11, #106):** conta de revisão do Google no servidor (`OTP_CONTAS_REVISAO`, desligada por padrão; 9 testes locais OK, esteira pendente). **Depende do dono:** autorizar as duas contas e gravar a variável no Render; só então desligar `OTP_DEBUG_RETURN`.
+**Feito (13/11, #106):** conta de revisão do Google no servidor (`OTP_CONTAS_REVISAO`, desligada por padrão; 9 testes novos, esteira do servidor verde no `2e60e7b`). **Depende do dono:** autorizar as duas contas e gravar a variável no Render; só então desligar `OTP_DEBUG_RETURN`.
 
 **Feito (13/11, testes automáticos novos, esteira do servidor verde no `ad7959a` para os 5 primeiros):** limpeza de dados (10), cidades/praças e guardas do dono (24), documentos do motorista (15), usuários (14), painel de relatórios (10), motoristas — ficar online/aprovação/documentos (22). São testes com banco de mentira; **não** provam nada em produção. `notificacoes` já tinha teste na caixa de entrada.
 
