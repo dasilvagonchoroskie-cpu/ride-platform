@@ -95,6 +95,11 @@ const CRIAR_TABELAS = [
   `ALTER TABLE "comercio_pedidos" ADD COLUMN IF NOT EXISTS "origem" VARCHAR(10) NOT NULL DEFAULT 'APP'`,
   `ALTER TABLE "comercio_pedidos" ADD COLUMN IF NOT EXISTS "lancado_por" UUID`,
   `ALTER TABLE "comercio_pedidos" ADD COLUMN IF NOT EXISTS "lancado_em" TIMESTAMP(3)`,
+  // Seguranca por linha (RLS) ja na criacao: o ajuste do PrismaService roda ANTES destas
+  // tabelas nascerem, e sem isto elas ficariam abertas pela API publica do Supabase ate a
+  // proxima partida do servidor (auditoria de 13/11/2026). Idempotente.
+  `ALTER TABLE "comercios" ENABLE ROW LEVEL SECURITY`,
+  `ALTER TABLE "comercio_pedidos" ENABLE ROW LEVEL SECURITY`,
 ];
 
 const POR_PAGINA = 20;

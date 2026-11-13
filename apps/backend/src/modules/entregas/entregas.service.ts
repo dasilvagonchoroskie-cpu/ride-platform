@@ -56,6 +56,8 @@ export class EntregasService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     try {
       await this.prisma.$executeRawUnsafe(CRIAR_TABELA);
+      // RLS ja na criacao (ver Comercio): o ajuste do PrismaService roda antes desta tabela existir.
+      await this.prisma.$executeRawUnsafe('ALTER TABLE "entregas" ENABLE ROW LEVEL SECURITY');
       await this.sementeDaTarifa();
     } catch (e) {
       this.logger.error(`Entregas: nao preparou a tabela ou a tarifa: ${(e as Error).message}`);

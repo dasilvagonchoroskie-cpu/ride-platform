@@ -37,6 +37,15 @@ export interface DeviceContext {
   userAgent?: string;
 }
 
+/**
+ * Resposta perdida na renovacao (tunel, sinal fraco): o servidor ja trocou o
+ * refresh token, mas o app nao recebeu o par novo e tenta de novo com o antigo.
+ * Dentro desta janela o antigo ainda vale UMA renovacao extra, desde que a
+ * sessao que o substituiu continue aberta. Sair, trocar a senha ou desconectar
+ * o aparelho revoga o substituto e fecha esta porta na hora.
+ */
+export const JANELA_REPETIR_RENOVACAO_MS = 2 * 60 * 1000;
+
 @Injectable()
 export class TokenService {
   constructor(
@@ -130,8 +139,19 @@ export class TokenService {
       include: { user: { include: { driver: { select: { id: true } } } } },
     });
 
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    if (!stored || stored.expiresAt < new Date()) {
       throw BusinessException.unauthorized('Refresh token invalido ou expirado.', ERROR_CODES.TOKEN_INVALID);
+    }
+
+    if (stored.revokedAt) {
+      // So vale se foi uma TROCA recente (tem substituto) e a sessao nova segue aberta.
+      const recente = Date.now() - stored.revokedAt.getTime() <= JANELA_REPETIR_RENOVACAO_MS;
+      const substituto = recente && stored.replacedBy
+        ? await this.prisma.refreshToken.findUnique({ where: { tokenHash: stored.replacedBy }, select: { revokedAt: true } })
+        : null;
+      if (!substituto || substituto.revokedAt) {
+        throw BusinessException.unauthorized('Refresh token invalido ou expirado.', ERROR_CODES.TOKEN_INVALID);
+      }
     }
 
     if (stored.user.status === 'BLOCKED' || stored.user.status === 'DELETED') {
@@ -152,8 +172,10 @@ export class TokenService {
     );
 
     const newHash = hashToken(issued.refreshToken, this.refreshPepper);
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
+    // So fecha o token se ainda estiver aberto: duas renovacoes ao mesmo tempo (app
+    // e vigia nativo) nao sobrescrevem o substituto de quem chegou primeiro.
+    await this.prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date(), replacedBy: newHash },
     });
 
