@@ -10,6 +10,7 @@ import {
   CODIGO_ENTREGA,
   CODIGO_ENTREGA_MOTO,
   conferirCodigo,
+  MAX_TENTATIVAS_CODIGO,
   entregaNaCidade,
   gravarEntregaNaCidade,
   lerConfigDeEntregas,
@@ -35,6 +36,41 @@ CREATE TABLE IF NOT EXISTS "entregas" (
   CONSTRAINT "entregas_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "rides"("id") ON DELETE CASCADE ON UPDATE CASCADE
 )`;
 
+/**
+ * Varias entregas num pedido so (13/11/2026): a ultima entrega e a da tabela
+ * "entregas" (como sempre); as anteriores ficam aqui, na ordem da rota, cada uma
+ * com quem recebe e o proprio codigo de 4 numeros.
+ */
+const CRIAR_TABELA_PARADAS = `
+CREATE TABLE IF NOT EXISTS "entrega_paradas" (
+  "ride_id" UUID NOT NULL,
+  "sequencia" INTEGER NOT NULL,
+  "descricao" VARCHAR(200) NOT NULL,
+  "destinatario_nome" VARCHAR(120) NOT NULL,
+  "destinatario_telefone" VARCHAR(20) NOT NULL,
+  "codigo" VARCHAR(4) NOT NULL,
+  "tentativas" INTEGER NOT NULL DEFAULT 0,
+  "entregue_em" TIMESTAMP(3),
+  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "entrega_paradas_pkey" PRIMARY KEY ("ride_id", "sequencia"),
+  CONSTRAINT "entrega_paradas_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "rides"("id") ON DELETE CASCADE ON UPDATE CASCADE
+)`;
+
+/** Maximo de entregas num pedido (as paradas no caminho + a ultima). */
+export const MAX_ENTREGAS_POR_PEDIDO = 5;
+
+export interface ParadaDaEntrega {
+  sequencia: number;
+  descricao: string;
+  destinatarioNome: string;
+  destinatarioTelefone: string;
+  codigo: string;
+  tentativas: number;
+  entregueEm: Date | null;
+}
+
+type ExecutorSql = { $executeRawUnsafe: (consulta: string, ...valores: unknown[]) => Promise<number> };
+
 export interface DadosDaEntrega {
   descricao: string;
   destinatarioNome: string;
@@ -58,6 +94,8 @@ export class EntregasService implements OnModuleInit {
       await this.prisma.$executeRawUnsafe(CRIAR_TABELA);
       // RLS ja na criacao (ver Comercio): o ajuste do PrismaService roda antes desta tabela existir.
       await this.prisma.$executeRawUnsafe('ALTER TABLE "entregas" ENABLE ROW LEVEL SECURITY');
+      await this.prisma.$executeRawUnsafe(CRIAR_TABELA_PARADAS);
+      await this.prisma.$executeRawUnsafe('ALTER TABLE "entrega_paradas" ENABLE ROW LEVEL SECURITY');
       await this.sementeDaTarifa();
     } catch (e) {
       this.logger.error(`Entregas: nao preparou a tabela ou a tarifa: ${(e as Error).message}`);
@@ -184,6 +222,86 @@ export class EntregasService implements OnModuleInit {
     return this.prisma.entrega.findUnique({ where: { rideId } });
   }
 
+  // ------------------------------------------------------------------
+  // Varias entregas no mesmo pedido (paradas no caminho)
+  // ------------------------------------------------------------------
+
+  /** Grava as entregas do caminho (na mesma transacao da corrida). Cada uma ganha o seu codigo. */
+  async criarParadas(
+    tx: ExecutorSql,
+    rideId: string,
+    lista: Array<{ sequencia: number; descricao: string; destinatarioNome: string; destinatarioTelefone: string }>,
+  ): Promise<void> {
+    for (const p of lista) {
+      await tx.$executeRawUnsafe(
+        'INSERT INTO "entrega_paradas" ("ride_id","sequencia","descricao","destinatario_nome","destinatario_telefone","codigo") VALUES ($1::uuid,$2,$3,$4,$5,$6)',
+        rideId,
+        p.sequencia,
+        p.descricao.trim().slice(0, 200),
+        p.destinatarioNome.trim().slice(0, 120),
+        telefoneDeQuemRecebe(p.destinatarioTelefone).slice(0, 20),
+        generateNumericCode(4),
+      );
+    }
+  }
+
+  async paradasDaCorrida(rideId: string): Promise<ParadaDaEntrega[]> {
+    return this.prisma.$queryRawUnsafe<ParadaDaEntrega[]>(
+      `SELECT "sequencia", "descricao", "destinatario_nome" AS "destinatarioNome", "destinatario_telefone" AS "destinatarioTelefone",
+              "codigo", "tentativas", "entregue_em" AS "entregueEm"
+         FROM "entrega_paradas" WHERE "ride_id" = $1::uuid ORDER BY "sequencia"`,
+      rideId,
+    );
+  }
+
+  /**
+   * O motorista entregou a parada [sequencia]: na ORDEM da rota e com o codigo de quem
+   * recebe. Repetir a mesma parada ja entregue nao faz nada (toque duplo).
+   */
+  async entregarParada(rideId: string, sequencia: number, digitado: string | null | undefined): Promise<void> {
+    const lista = await this.paradasDaCorrida(rideId);
+    const p = lista.find((x) => x.sequencia === sequencia);
+    if (!p) throw BusinessException.notFound('Esta parada não existe nesta corrida.');
+    if (p.entregueEm) return;
+    const primeira = lista.find((x) => !x.entregueEm);
+    if (primeira && primeira.sequencia !== sequencia) {
+      throw BusinessException.validation(`Entregue primeiro a parada ${primeira.sequencia}, na ordem da rota.`);
+    }
+    const r = conferirCodigo(p, digitado);
+    if (!r.ok) {
+      if ((digitado ?? '').replace(/\D/g, '').length === 4 && p.tentativas < MAX_TENTATIVAS_CODIGO) {
+        await this.prisma.$executeRawUnsafe('UPDATE "entrega_paradas" SET "tentativas" = "tentativas" + 1 WHERE "ride_id" = $1::uuid AND "sequencia" = $2', rideId, sequencia);
+      }
+      throw BusinessException.validation(r.motivo);
+    }
+    await this.prisma.$executeRawUnsafe(
+      'UPDATE "entrega_paradas" SET "entregue_em" = now() WHERE "ride_id" = $1::uuid AND "sequencia" = $2 AND "entregue_em" IS NULL',
+      rideId,
+      sequencia,
+    );
+    // A parada da rota tambem registra a chegada (o mapa e o acompanhamento usam).
+    await this.prisma.$executeRawUnsafe('UPDATE "ride_stops" SET "arrived_at" = now() WHERE "ride_id" = $1::uuid AND "sequence" = $2 AND "arrived_at" IS NULL', rideId, sequencia);
+  }
+
+  /** A ultima entrega (e o fim da corrida) so vale depois de todas as anteriores. */
+  async exigirParadasEntregues(rideId: string): Promise<void> {
+    const pendente = (await this.paradasDaCorrida(rideId)).find((x) => !x.entregueEm);
+    if (pendente) throw BusinessException.validation(`Falta entregar a parada ${pendente.sequencia}. Peça o código a quem recebe e confirme antes de encerrar.`);
+  }
+
+  /** Para a resposta da corrida. O codigo nunca vai para o motorista; as tentativas so para a Central. */
+  publicoParadas(lista: ParadaDaEntrega[], quem: QuemVe) {
+    return lista.map((p) => ({
+      sequencia: p.sequencia,
+      descricao: p.descricao,
+      destinatarioNome: p.destinatarioNome,
+      destinatarioTelefone: p.destinatarioTelefone,
+      entregueEm: p.entregueEm ? new Date(p.entregueEm).toISOString() : null,
+      ...(quem === 'motorista' ? {} : { codigo: p.codigo }),
+      ...(quem === 'central' ? { tentativas: p.tentativas } : {}),
+    }));
+  }
+
   /** Motorista confirmou a coleta (o "iniciar" da corrida). */
   async coletou(rideId: string): Promise<void> {
     await this.prisma.entrega.updateMany({ where: { rideId, coletadaEm: null }, data: { coletadaEm: new Date() } });
@@ -219,6 +337,7 @@ export class EntregasService implements OnModuleInit {
       if (p?.id !== pracaDoOperador) throw BusinessException.forbidden('Esta entrega e de outra cidade.');
     }
     await this.prisma.entrega.update({ where: { rideId }, data: { tentativas: 0 } });
+    await this.prisma.$executeRawUnsafe('UPDATE "entrega_paradas" SET "tentativas" = 0 WHERE "ride_id" = $1::uuid', rideId);
     await this.prisma.auditLog.create({
       data: { actorId: adminId, actorRole: 'ADMIN', action: 'ENTREGA_LIBEROU_CODIGO', entity: 'ride', entityId: rideId },
     });
@@ -266,6 +385,18 @@ export class EntregasService implements OnModuleInit {
         vehicle: { select: { plate: true, model: true, category: true } },
       },
     });
+    // Varias entregas num pedido: quantas ja foram entregues (as do caminho + a ultima).
+    const progresso = new Map<string, { total: number; feitas: number }>();
+    const ids = lista.map((r) => r.id);
+    if (ids.length) {
+      const linhas = await this.prisma
+        .$queryRawUnsafe<Array<{ ride_id: string; total: number | bigint; feitas: number | bigint }>>(
+          'SELECT "ride_id", COUNT(*) AS total, COUNT("entregue_em") AS feitas FROM "entrega_paradas" WHERE "ride_id" = ANY($1::uuid[]) GROUP BY "ride_id"',
+          ids,
+        )
+        .catch(() => []);
+      for (const l of linhas) progresso.set(l.ride_id, { total: Number(l.total), feitas: Number(l.feitas) });
+    }
     const todas = await this.pracas.listar();
     const itens = lista
       .map((r) => ({ r, p: pracaDoPonto(todas, { latitude: r.pickupLat, longitude: r.pickupLng })?.id ?? null }))
@@ -288,6 +419,11 @@ export class EntregasService implements OnModuleInit {
         veiculo: r.vehicle ? `${r.vehicle.model} · ${r.vehicle.plate}` : null,
         pedidaEm: r.requestedAt.toISOString(),
         detalhe: this.publico(r.entrega, 'central'),
+        /** Varias entregas: total e quantas ja foram entregues (entrega unica: 1 de 1 ou 0 de 1). */
+        progresso: {
+          total: (progresso.get(r.id)?.total ?? 0) + 1,
+          concluidas: (progresso.get(r.id)?.feitas ?? 0) + (r.entrega?.entregueEm ? 1 : 0),
+        },
       }));
     return { itens };
   }

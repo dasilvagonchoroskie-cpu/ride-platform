@@ -12,6 +12,8 @@ abstract class Armazenamento {
   static const String renovacao = 'comercio.renovacao';
   static const String aparelho = 'comercio.aparelho';
   static const String email = 'comercio.email';
+  /// Versao dos termos e da politica de privacidade que a pessoa aceitou na abertura do app.
+  static const String termosAceitos = 'comercio.termos_aceitos';
 
   static Armazenamento atual = ArmazenamentoCofre();
 }

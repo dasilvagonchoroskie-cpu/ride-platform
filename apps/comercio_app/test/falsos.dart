@@ -66,8 +66,17 @@ class ServidorFalso extends ComercioApi {
   @override
   Future<Estabelecimento?> meu() async => loja;
 
+  /// Ultimo pedido de preco recebido (para conferir as varias entregas).
+  DadosDeEntrega? ultimosDados;
+
+  TermosDeUso privacidadeDeTeste = const TermosDeUso(versao: '1', conteudo: '# Privacidade\n\nTexto da privacidade.', revisadoPorAdvogado: false);
+
+  @override
+  Future<TermosDeUso> privacidade() async => privacidadeDeTeste;
+
   @override
   Future<Cotacao> consultarPreco(DadosDeEntrega d) async {
+    ultimosDados = d;
     consultasDePreco++;
     if (erroNoPreco != null) throw erroNoPreco!;
     return cotacao;

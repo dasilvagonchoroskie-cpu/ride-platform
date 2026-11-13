@@ -8,6 +8,7 @@ import 'telas/cadastro_tela.dart';
 import 'telas/entrada_tela.dart';
 import 'telas/inicio_shell.dart';
 import 'telas/status_tela.dart';
+import 'telas/termos_inicio_tela.dart';
 import 'widgets/comuns.dart';
 
 class ComercioApp extends StatefulWidget {
@@ -77,6 +78,8 @@ class Porteiro extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = EscopoSessao.de(context);
     if (s.iniciando) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // Primeira abertura: termos e privacidade antes de qualquer tela de entrar ou criar conta.
+    if (!s.aceitouTermos) return const TermosInicioTela();
     if (!s.logado) return const EntradaTela();
     if (!s.cadastrado) {
       if (s.falha != null) {

@@ -71,7 +71,9 @@ export const requestRideSchema = z.object({
       destinatarioTelefone: z
         .string()
         .trim()
-        .refine((t) => /^\d{10,13}$/.test(t.replace(/\D/g, '')), 'Telefone de quem recebe com DDD (só números).'),
+        // 13/11/2026: o telefone de quem recebe e opcional (vazio vale); preenchido, tem que ter DDD.
+        .refine((t) => t.replace(/\D/g, '') === '' || /^\d{10,13}$/.test(t.replace(/\D/g, '')), 'Telefone de quem recebe com DDD (só números).')
+        .default(''),
       /** 10/11/2026: o cliente escolhe moto ou carro (sem isto, vale o que a cidade aceita). */
       veiculo: z.enum(['CARRO', 'MOTO']).optional(),
     })

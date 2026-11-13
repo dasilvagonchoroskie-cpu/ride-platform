@@ -25,6 +25,18 @@ class Sessao extends ChangeNotifier {
 
   bool iniciando = true;
   bool logado = false;
+
+  /// Termos de uso e politica de privacidade: aceitos na primeira abertura, ANTES de entrar ou criar a conta.
+  /// null = ainda nao aceitou (ou os termos mudaram de versao).
+  String? termosAceitosVersao;
+  bool get aceitouTermos => termosAceitosVersao != null;
+
+  Future<void> aceitarTermos(String versao) async {
+    await Armazenamento.atual.gravar(Armazenamento.termosAceitos, versao);
+    termosAceitosVersao = versao;
+    notifyListeners();
+  }
+
   String? email;
   Estabelecimento? estabelecimento;
 
@@ -35,6 +47,9 @@ class Sessao extends ChangeNotifier {
   ConfigDoMapa? _mapa;
   DateTime? _mapaEm;
 
+  /// Por que o mapa de ruas nao esta disponivel (para a tela explicar).
+  String? erroDoMapa;
+
   /// null = sem mapa de ruas agora (sem rede ou servidor sem fornecedor): a tela avisa, nao inventa.
   Future<ConfigDoMapa?> configDoMapa() async {
     final recente = _mapaEm != null && DateTime.now().difference(_mapaEm!) < const Duration(minutes: 10);
@@ -42,17 +57,22 @@ class Sessao extends ChangeNotifier {
     try {
       _mapa = await servidor.configDoMapa();
       _mapaEm = DateTime.now();
-    } catch (_) {
-      // mantem o ultimo conhecido, se houver
+      erroDoMapa = null;
+    } catch (e) {
+      // mantem o ultimo conhecido, se houver; o motivo aparece na tela do mapa
+      erroDoMapa = e is ApiException ? e.message : 'Sem resposta do servidor.';
     }
+    if (_mapa == null && erroDoMapa == null) erroDoMapa = 'O servidor não mandou o endereço das imagens do mapa.';
     return _mapa;
   }
 
   bool get cadastrado => estabelecimento != null;
   bool get aprovado => estabelecimento?.aprovado ?? false;
 
+
   /// Abre o app: se ja ha login guardado, confere com o servidor.
   Future<void> iniciar() async {
+    termosAceitosVersao = await Armazenamento.atual.ler(Armazenamento.termosAceitos);
     final token = await Armazenamento.atual.ler(Armazenamento.acesso);
     logado = token != null && token.isNotEmpty;
     if (logado) {

@@ -8,10 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'falsos.dart';
 
-Sessao sessaoCom(ServidorFalso servidor, {bool logado = true, Estabelecimento? loja}) {
+Sessao sessaoCom(ServidorFalso servidor, {bool logado = true, Estabelecimento? loja, bool aceitouTermos = true}) {
   servidor.loja ??= loja; // o servidor falso responde com a mesma loja da sessao
   final s = Sessao(api: ApiClient(), servidor: servidor);
   s.iniciando = false;
+  s.termosAceitosVersao = aceitouTermos ? 'teste' : null;
   s.logado = logado;
   s.estabelecimento = loja;
   s.email = 'loja@exemplo.com';
@@ -38,30 +39,38 @@ Future<void> tocar(WidgetTester tester, String texto) async {
   await tester.pumpAndSettle();
 }
 
-/// Preenche os 3 primeiros passos e o endereco, ate a tela do preco.
+/// Preenche UMA entrega (o cartao [k], de 0 a 4) na tela de entregas: 11 campos por cartao.
+Future<void> preencherEntrega(WidgetTester tester, int k, {required String o, required String quem, String? fone, required String rua}) async {
+  final campos = find.byType(TextFormField);
+  final base = 11 * k;
+  await tester.enterText(campos.at(base + 0), o);
+  await tester.enterText(campos.at(base + 1), quem);
+  if (fone != null) await tester.enterText(campos.at(base + 2), fone);
+  await tester.enterText(campos.at(base + 3), rua);
+  await tester.enterText(campos.at(base + 4), '10');
+  await tester.enterText(campos.at(base + 6), 'Centro');
+  await tester.enterText(campos.at(base + 7), 'Goiatuba');
+  await tester.enterText(campos.at(base + 8), 'GO');
+  await tester.enterText(campos.at(base + 9), '75600000');
+  final buscar = find.text('Buscar no mapa').at(k);
+  await tester.ensureVisible(buscar);
+  await tester.tap(buscar);
+  await tester.pumpAndSettle();
+  final lugar = find.text('Rua A, 10').last;
+  await tester.ensureVisible(lugar);
+  await tester.tap(lugar);
+  await tester.pumpAndSettle();
+}
+
+/// Coleta (passo 1) + uma entrega (passo 2), ate a tela do preco.
 Future<void> preencherAtePreco(WidgetTester tester) async {
   await tester.tap(find.text('Nova entrega'));
   await tester.pumpAndSettle();
-  // 1. Encomenda
-  await tester.enterText(find.byType(TextFormField).at(0), '1 pizza grande');
+  // 1. Coleta (endereco do estabelecimento)
+  expect(find.text('Coletar no endereço do estabelecimento'), findsOneWidget);
   await tocar(tester, 'Continuar');
-  // 2. Coleta (endereco do estabelecimento)
-  expect(find.text('No endereço do estabelecimento'), findsOneWidget);
-  await tocar(tester, 'Continuar');
-  // 3. Quem recebe
-  await tester.enterText(find.byType(TextFormField).at(0), 'Maria Silva');
-  await tester.enterText(find.byType(TextFormField).at(1), '64999990000');
-  await tocar(tester, 'Continuar');
-  // 4. Endereco de entrega
-  final campos = find.byType(TextFormField);
-  await tester.enterText(campos.at(0), 'Rua A');
-  await tester.enterText(campos.at(1), '10');
-  await tester.enterText(campos.at(3), 'Centro');
-  await tester.enterText(campos.at(4), 'Goiatuba');
-  await tester.enterText(campos.at(5), 'GO');
-  await tester.enterText(campos.at(6), '75600000');
-  await tocar(tester, 'Buscar no mapa');
-  await tocar(tester, 'Rua A, 10');
+  // 2. Entregas
+  await preencherEntrega(tester, 0, o: '1 pizza grande', quem: 'Maria Silva', fone: '64999990000', rua: 'Rua A');
   await tocar(tester, 'Consultar preço');
 }
 
@@ -131,7 +140,7 @@ void main() {
       await abrir(tester, sessaoCom(servidor, loja: estabelecimento(liberadas: false)));
       await tocar(tester, 'Nova entrega');
       expect(find.text('Entregas ainda não liberadas'), findsNothing);
-      expect(find.textContaining('Nova entrega · 1/6'), findsOneWidget);
+      expect(find.textContaining('Nova entrega · 1/4'), findsOneWidget);
       await fechar(tester);
     });
 
@@ -140,7 +149,7 @@ void main() {
       await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
       await tocar(tester, 'Nova entrega');
       expect(find.text('Estabelecimento suspenso'), findsOneWidget);
-      expect(find.textContaining('Nova entrega · 1/6'), findsNothing);
+      expect(find.textContaining('Nova entrega · 1/4'), findsNothing);
       await fechar(tester);
     });
 
@@ -151,10 +160,10 @@ void main() {
       await abrir(tester, s);
       await tester.tap(find.text('Nova entrega'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Nova entrega · 1/6'), findsOneWidget);
+      expect(find.textContaining('Nova entrega · 1/4'), findsOneWidget);
       s.api.aoSessaoExpirar!();
       await tester.pumpAndSettle();
-      expect(find.textContaining('Nova entrega · 1/6'), findsNothing);
+      expect(find.textContaining('Nova entrega · 1/4'), findsNothing);
       expect(find.text('Ler os termos de uso'), findsOneWidget);
       expect(await Armazenamento.atual.ler(Armazenamento.acesso), isNull);
       expect(await Armazenamento.atual.ler(Armazenamento.renovacao), isNull);
@@ -298,6 +307,73 @@ void main() {
       await tocar(tester, 'Confirmar entrega');
       expect(find.text('Seu estabelecimento está suspenso. Fale com a Central.'), findsOneWidget);
       expect(find.text('Entrega FM100'), findsNothing);
+      await fechar(tester);
+    });
+
+    testWidgets('telefone de quem recebe é opcional: sem telefone o pedido segue', (tester) async {
+      final servidor = ServidorFalso();
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      await tester.tap(find.text('Nova entrega'));
+      await tester.pumpAndSettle();
+      await tocar(tester, 'Continuar');
+      await preencherEntrega(tester, 0, o: '1 pizza grande', quem: 'Maria Silva', rua: 'Rua A');
+      await tocar(tester, 'Consultar preço');
+      expect(find.text('Telefone inválido (com DDD).'), findsNothing);
+      expect(servidor.consultasDePreco, 1);
+      await fechar(tester);
+    });
+
+    testWidgets('várias entregas: cada uma com nome e telefone próprios; a última vai nos campos principais e as outras como paradas', (tester) async {
+      final servidor = ServidorFalso();
+      await abrir(tester, sessaoCom(servidor, loja: estabelecimento()));
+      await tester.tap(find.text('Nova entrega'));
+      await tester.pumpAndSettle();
+      await tocar(tester, 'Continuar');
+      await preencherEntrega(tester, 0, o: '1 pizza grande', quem: 'Maria Silva', fone: '64999990000', rua: 'Rua A');
+      await tocar(tester, 'Adicionar outra entrega (1/5)');
+      expect(find.text('Entrega 1 de 2'), findsOneWidget);
+      expect(find.text('Entrega 2 de 2'), findsOneWidget);
+      await preencherEntrega(tester, 1, o: '2 refrigerantes', quem: 'João Souza', rua: 'Rua A');
+      await tocar(tester, 'Consultar preço');
+      expect(servidor.ultimosDados, isNotNull);
+      final d = servidor.ultimosDados!;
+      expect(d.destinatarioNome, 'João Souza'); // a ultima
+      expect(d.paradas.length, 1);
+      expect(d.paradas.first.destinatarioNome, 'Maria Silva');
+      expect(d.paradas.first.destinatarioTelefone, '64999990000');
+      final json = d.toJson();
+      expect((json['paradas'] as List).length, 1);
+      await fechar(tester);
+    });
+
+    testWidgets('limite de 5 entregas por pedido', (tester) async {
+      await abrir(tester, sessaoCom(ServidorFalso(), loja: estabelecimento()));
+      await tester.tap(find.text('Nova entrega'));
+      await tester.pumpAndSettle();
+      await tocar(tester, 'Continuar');
+      for (var i = 1; i < 5; i++) {
+        await tocar(tester, 'Adicionar outra entrega ($i/5)');
+      }
+      expect(find.text('Entrega 5 de 5'), findsOneWidget);
+      expect(find.textContaining('Adicionar outra entrega'), findsNothing);
+      expect(find.text('Máximo de 5 entregas por pedido.'), findsOneWidget);
+      await fechar(tester);
+    });
+  });
+
+  group('Termos e privacidade na abertura', () {
+    testWidgets('sem aceite não chega à entrada; com o aceite segue para entrar', (tester) async {
+      final servidor = ServidorFalso();
+      final s = sessaoCom(servidor, logado: false, aceitouTermos: false);
+      await abrir(tester, s);
+      expect(find.text('Aceitar e continuar'), findsOneWidget);
+      expect(find.text('Receber código por e-mail'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('aceite-inicial')));
+      await tester.pumpAndSettle();
+      await tocar(tester, 'Aceitar e continuar');
+      expect(find.text('Receber código por e-mail'), findsOneWidget);
+      expect(s.aceitouTermos, isTrue);
+      expect(await Armazenamento.atual.ler(Armazenamento.termosAceitos), isNotNull);
       await fechar(tester);
     });
   });

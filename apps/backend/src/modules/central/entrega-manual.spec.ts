@@ -70,6 +70,8 @@ function combina(c: any, where: any, users: Record<string, any>): boolean {
   return true;
 }
 
+const entregasFalsas = { criarParadas: jest.fn(async () => undefined), paradasDaCorrida: jest.fn(async () => [] as unknown[]) };
+
 function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: string; semVeiculo?: boolean; pracaDoMotorista?: string | null } = {}) {
   const users: Record<string, any> = {
     uLoja1: { id: 'uLoja1', role: 'PASSENGER', email: 'padaria@loja.com', phone: '+5564999991234', emailVerifiedAt: new Date() },
@@ -191,7 +193,7 @@ function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: strin
     pracaDoMotorista: jest.fn(async () => (op.pracaDoMotorista === undefined ? 'goiatuba' : op.pracaDoMotorista)),
   };
   const avisos = new ComercioAvisosService(prisma, { avisar: jest.fn() } as never);
-  const comercio = new ComercioService(prisma, rides as never, pracas as never, avisos);
+  const comercio = new ComercioService(prisma, rides as never, pracas as never, avisos, entregasFalsas as never);
   const manual = new EntregaManualService(prisma, comercio, central as never, rides as never);
   return { prisma, rides, central, comercio, manual, comercios, pedidos, corridas, historico, auditoria, motorista, config };
 }

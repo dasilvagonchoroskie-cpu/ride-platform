@@ -20,6 +20,7 @@ import { AppConfigService } from '../../config/app-config.service';
 import { assinarCotacao, lerCotacao } from './cotacao';
 import { EntregasService } from '../entregas/entregas.service';
 import { CODIGO_ENTREGA, codigoDaEntrega, ehEntrega, veiculosDaCidade } from '../entregas/entregas.regras';
+import { MAX_ENTREGAS_POR_PEDIDO } from '../entregas/entregas.service';
 import { diaDeBrasilia, idAnonimo, posicaoAproximada, rumoArredondado } from './carros-perto';
 import type {
   CancelRideInput,
@@ -87,6 +88,23 @@ const ACAO_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
 /** Marca da corrida sem destino (no placeId do destino; sem mudar o banco). */
 export const SEM_DESTINO = 'SEM_DESTINO';
 export const TEXTO_SEM_DESTINO = 'Sem destino definido (pelo taxímetro)';
+
+/**
+ * Varias entregas num pedido: cada parada do caminho leva quem recebe, o que vai e se ja
+ * foi entregue (para o motorista confirmar uma a uma). Corrida comum: as paradas seguem como eram.
+ */
+export function mesclarParadas<T extends { sequence: number }>(
+  stops: T[],
+  entregas: Array<{ sequencia: number; descricao: string; destinatarioNome: string; destinatarioTelefone: string; entregueEm: string | null }>,
+) {
+  if (!entregas.length) return stops;
+  return stops.map((p) => {
+    const e = entregas.find((x) => x.sequencia === p.sequence);
+    return e
+      ? { ...p, entrega: { descricao: e.descricao, destinatarioNome: e.destinatarioNome, destinatarioTelefone: e.destinatarioTelefone, entregue: !!e.entregueEm } }
+      : p;
+  });
+}
 
 /** Minutos ate o embarque pela distancia em linha reta (x1,35 nas ruas, 25 km/h, +1 min para sair). */
 export function chegadaEmMinutos(distanciaMetros: number): number {
@@ -378,7 +396,7 @@ export class RidesService {
   async pedir(
     passengerId: string,
     input: RequestRideInput,
-    opcoes: { varias?: boolean; aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void> } = {},
+    opcoes: { varias?: boolean; paradasDeEntrega?: boolean; aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void> } = {},
   ) {
     const jaTem = opcoes.varias
       ? null
@@ -398,7 +416,9 @@ export class RidesService {
       if (!entrega) throw BusinessException.validation('Faltam os dados da entrega (o que vai e quem recebe).');
       if (!input.dropoff || input.semDestino) throw BusinessException.validation('Informe o endereço de entrega.');
       if (input.scheduledFor) throw BusinessException.validation('Entrega agendada ainda não está disponível.');
-      if ((input.paradas ?? []).length > 0) throw BusinessException.validation('Entrega com paradas ainda não está disponível.');
+      // Varias entregas num pedido so (um veiculo, uma rota): so o app Comercio, que grava cada parada com o seu codigo.
+      if ((input.paradas ?? []).length > 0 && !opcoes.paradasDeEntrega) throw BusinessException.validation('Entrega com paradas ainda não está disponível.');
+      if ((input.paradas ?? []).length > MAX_ENTREGAS_POR_PEDIDO - 1) throw BusinessException.validation(`No máximo ${MAX_ENTREGAS_POR_PEDIDO} entregas por pedido.`);
       input = { ...input, category: entrega.veiculo ? codigoDaEntrega(entrega.veiculo) : CODIGO_ENTREGA };
     }
     const naCidade = entrega ? await this.entregas.exigirLigada(input.pickup) : null;
@@ -723,6 +743,11 @@ export class RidesService {
       const n = notas.find((x) => x.targetId === id);
       return n?._avg.score ? Math.round(n._avg.score * 10) / 10 : 5;
     };
+    // Varias entregas: quem recebe em cada parada (so as ofertas que sao entrega).
+    const daEntrega = new Map<string, ReturnType<EntregasService['publicoParadas']>>();
+    for (const o of abertas) {
+      if (o.ride.entrega) daEntrega.set(o.ride.id, this.entregas.publicoParadas(await this.entregas.paradasDaCorrida(o.ride.id), 'motorista'));
+    }
     return abertas
       .map((o) => ({
         offerId: o.id,
@@ -754,7 +779,7 @@ export class RidesService {
         // O motorista precisa saber antes de aceitar como vai receber.
         paymentMethodType: o.ride.paymentMethodType,
         /** Etapa 3: paradas no caminho e corrida sem destino (taximetro). */
-        paradas: o.ride.stops,
+        paradas: mesclarParadas(o.ride.stops, daEntrega.get(o.ride.id) ?? []),
         semDestino: o.ride.dropoffPlaceId === SEM_DESTINO,
         /** Etapa 5: entrega de encomenda (o item e quem recebe; o codigo nunca). */
         entrega: this.entregas.publico(o.ride.entrega, 'motorista'),
@@ -1055,6 +1080,18 @@ export class RidesService {
   }
 
   /**
+   * Varias entregas num pedido: o motorista confirma uma parada do caminho com o
+   * codigo de quem recebeu, na ordem da rota, com a corrida em andamento.
+   */
+  async entregarParada(driverId: string, rideId: string, sequencia: number, codigo: string | null | undefined) {
+    const corrida = await this.daCorridaDoMotorista(driverId, rideId);
+    if (!ehEntrega(corrida.category)) throw BusinessException.validation('Esta corrida não é uma entrega.');
+    if (corrida.status !== RideStatus.IN_PROGRESS) throw BusinessException.validation('Inicie a viagem (coleta feita) antes de entregar.');
+    await this.entregas.entregarParada(rideId, sequencia, codigo);
+    return { ok: true, sequencia };
+  }
+
+  /**
    * Fim da corrida.
    *
    * O aplicativo manda o que mediu, e o servidor recalcula o preco pela
@@ -1065,7 +1102,11 @@ export class RidesService {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.COMPLETED);
     // Entrega: so termina com o codigo de 4 digitos de quem recebe.
-    if (ehEntrega(corrida.category)) await this.entregas.conferirAoEntregar(rideId, input.codigoEntrega);
+    if (ehEntrega(corrida.category)) {
+      // Varias entregas: as do caminho precisam estar entregues (cada uma com o seu codigo) antes da ultima.
+      await this.entregas.exigirParadasEntregues(rideId);
+      await this.entregas.conferirAoEntregar(rideId, input.codigoEntrega);
+    }
 
     const medida = await this.medicaoFinal(corrida, input);
     const distancia = medida.distanceMeters;
@@ -1711,6 +1752,7 @@ export class RidesService {
           return { ...resto, fotoCarroUrl: fotoDoCarro ?? documents[0]?.fileUrl ?? null };
         })()
       : null;
+    const paradasEntrega = daEntrega ? this.entregas.publicoParadas(await this.entregas.paradasDaCorrida(rideId), quemVe) : [];
     const mensagensNaoLidas = quem
       ? await this.prisma.rideMessage.count({ where: { rideId, authorId: { not: quem.userId }, readAt: null } })
       : 0;
@@ -1735,11 +1777,13 @@ export class RidesService {
         cobranca: aoVivo?.cobranca ?? null,
         tarifa: aoVivo?.tarifa ?? null,
         taximetro: aoVivo?.taximetro ?? null,
-        /** Etapa 3: paradas no caminho, na ordem, e "sem destino" (taximetro). */
-        paradas,
+        /** Etapa 3: paradas no caminho, na ordem, e "sem destino" (taximetro). Entrega com varias paradas: cada uma leva quem recebe e se ja foi entregue. */
+        paradas: mesclarParadas(paradas, paradasEntrega),
         semDestino: corrida.dropoffPlaceId === SEM_DESTINO,
         /** Etapa 5: entrega de encomenda (null = corrida de passageiro). */
         entrega: this.entregas.publico(daEntrega, quemVe),
+        /** Varias entregas num pedido: as do caminho, com o codigo de cada uma (vazio = entrega unica). */
+        paradasEntrega,
       },
     };
   }

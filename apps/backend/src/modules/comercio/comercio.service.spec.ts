@@ -44,6 +44,13 @@ const pedido = (chave = 'chave-numero-0000001') => ({
   veiculo: 'MOTO' as const,
 });
 
+/** As paradas das varias entregas (fica na tabela propria): aqui so se anota o que foi gravado. */
+const paradasGravadas: Array<{ rideId: string; lista: unknown[] }> = [];
+const entregasFalsas = {
+  criarParadas: jest.fn(async (_tx: unknown, rideId: string, lista: unknown[]) => void paradasGravadas.push({ rideId, lista })),
+  paradasDaCorrida: jest.fn(async () => [] as unknown[]),
+};
+
 function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: boolean } = {}) {
   const usuarios: Record<string, any> = {
     u1: { id: 'u1', role: 'PASSENGER', email: 'maria@padaria.com.br', emailVerifiedAt: new Date(), passwordHash: null },
@@ -166,7 +173,7 @@ function montar(opcoes: { pracas?: unknown[]; pedirDemora?: number; desligado?: 
   };
   const pracas = { listar: jest.fn(async () => opcoes.pracas ?? []) };
   const avisos = new ComercioAvisosService(prisma, caixa as never);
-  return { s: new ComercioService(prisma, rides as never, pracas as never, avisos), avisos, caixa, avisosGravados, prisma, rides, comercios, pedidos, corridas, auditoria, usuarios, pracas };
+  return { s: new ComercioService(prisma, rides as never, pracas as never, avisos, entregasFalsas as never), avisos, caixa, avisosGravados, prisma, rides, comercios, pedidos, corridas, auditoria, usuarios, pracas };
 }
 
 async function aprovado(ctx: ReturnType<typeof montar>, userId = 'u1', dados: Record<string, unknown> = cadastro) {
@@ -252,6 +259,37 @@ describe('Comercio: preco e pedido (testes 5, 8, 9, 10 e 11)', () => {
     // so oferece o que o servidor devolveu (o que a Central liga); nada e inventado
     expect(r.opcoes).toEqual([{ veiculo: 'MOTO', nome: 'Moto', valorCents: 700 }]);
     expect(ctx.rides.pedir).not.toHaveBeenCalled();
+  });
+
+  it('varias entregas num pedido: o preco e do percurso todo e as paradas ganham codigo proprio na mesma transacao', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    const parada = { encomenda: { descricao: '1 pizza' }, destinatario: { nome: 'Bia Lima', telefone: '' }, destino: { ...pedido().destino, numero: '70', latitude: -18.03, longitude: -49.34 } };
+    const comParadas = { ...pedido(), paradas: [parada] };
+
+    const cot = await ctx.s.cotar('u1', comParadas as never);
+    const [entradaDaCotacao] = ctx.rides.estimar.mock.calls[0] as unknown as [any];
+    expect(entradaDaCotacao.paradas).toHaveLength(1);
+    expect(entradaDaCotacao.paradas[0]).toMatchObject({ latitude: -18.03, longitude: -49.34 });
+    expect(cot.totalDeEntregas).toBe(2);
+
+    await ctx.s.pedir('u1', comParadas as never);
+    const [, entrada, opcoesDoPedido] = ctx.rides.pedir.mock.calls[0] as unknown as [string, any, any];
+    expect(entrada.paradas).toHaveLength(1);
+    expect(opcoesDoPedido.paradasDeEntrega).toBe(true);
+    expect(entrada.entrega.destinatarioNome).toBe('Ana Lima'); // a ultima entrega segue nos campos de sempre
+    const gravada = paradasGravadas.find((x) => x.rideId === 'r1' || x.rideId.startsWith('r'));
+    expect(gravada?.lista).toEqual([expect.objectContaining({ sequencia: 1, destinatarioNome: 'Bia Lima', destinatarioTelefone: '' })]);
+    expect(ctx.pedidos[0].encomenda).toMatch(/^2 entregas: 1 pizza; 2 caixas de bolo/);
+  });
+
+  it('entrega unica continua igual: sem paradas, nada de paradas no pedido', async () => {
+    const ctx = montar();
+    await aprovado(ctx);
+    await ctx.s.pedir('u1', pedido());
+    const [, entrada, opcoesDoPedido] = ctx.rides.pedir.mock.calls[0] as unknown as [string, any, any];
+    expect(entrada.paradas).toBeUndefined();
+    expect(opcoesDoPedido.paradasDeEntrega).toBeUndefined();
   });
 
   it('entrega desligada na cidade: o erro do servidor chega ao app e nada e criado', async () => {

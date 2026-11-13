@@ -14,8 +14,12 @@ class DadosDeEntrega {
     required this.destino,
     this.referencia,
     this.veiculo,
+    this.paradas = const [],
   });
 
+  /// Varias entregas num pedido: as entregas ANTES da ultima, na ordem da rota
+  /// (a ultima e a deste objeto: descricao, destinatario e destino).
+  final List<ParadaDeEntrega> paradas;
   final String descricao;
   final String? observacoes;
 
@@ -41,23 +45,43 @@ class DadosDeEntrega {
           'longitude': coletaAlternativa!.longitude,
         },
       'destinatario': {'nome': destinatarioNome.trim(), 'telefone': destinatarioTelefone.trim()},
-      'destino': {
-        'logradouro': destino.logradouro.trim(),
-        'numero': destino.numero.trim(),
-        if ((destino.complemento ?? '').trim().isNotEmpty) 'complemento': destino.complemento!.trim(),
-        'bairro': destino.bairro.trim(),
-        'cidade': destino.cidade.trim(),
-        'uf': destino.uf.trim().toUpperCase(),
-        'cep': destino.cep.replaceAll(RegExp(r'\D'), ''),
-        'latitude': destino.latitude,
-        'longitude': destino.longitude,
-        if ((referencia ?? '').trim().isNotEmpty) 'referencia': referencia!.trim(),
-      },
+      'destino': _destinoJson(destino, referencia),
+      if (paradas.isNotEmpty) 'paradas': [for (final p in paradas) p.toJson()],
       if (veiculo != null) 'veiculo': veiculo,
       if (cotacao != null && cotacao.isNotEmpty) 'cotacao': cotacao,
       if (valorEsperadoCents != null) 'valorEsperadoCents': valorEsperadoCents,
     };
   }
+}
+
+Map<String, dynamic> _destinoJson(Endereco destino, String? referencia) => {
+      'logradouro': destino.logradouro.trim(),
+      'numero': destino.numero.trim(),
+      if ((destino.complemento ?? '').trim().isNotEmpty) 'complemento': destino.complemento!.trim(),
+      'bairro': destino.bairro.trim(),
+      'cidade': destino.cidade.trim(),
+      'uf': destino.uf.trim().toUpperCase(),
+      'cep': destino.cep.replaceAll(RegExp(r'\D'), ''),
+      'latitude': destino.latitude,
+      'longitude': destino.longitude,
+      if ((referencia ?? '').trim().isNotEmpty) 'referencia': referencia!.trim(),
+    };
+
+/// Uma entrega do pedido que NAO e a ultima (varias entregas, um veiculo, uma rota).
+class ParadaDeEntrega {
+  const ParadaDeEntrega({required this.descricao, required this.destinatarioNome, this.destinatarioTelefone = '', required this.destino, this.referencia});
+
+  final String descricao;
+  final String destinatarioNome;
+  final String destinatarioTelefone;
+  final Endereco destino;
+  final String? referencia;
+
+  Map<String, dynamic> toJson() => {
+        'encomenda': {'descricao': descricao.trim()},
+        'destinatario': {'nome': destinatarioNome.trim(), 'telefone': destinatarioTelefone.trim()},
+        'destino': _destinoJson(destino, referencia),
+      };
 }
 
 /// Dados do cadastro do estabelecimento.
@@ -189,9 +213,23 @@ class ComercioApi {
     return lista.map(Lugar.tentar).whereType<Lugar>().toList();
   }
 
+  /// Endereco escrito de um ponto do mapa (alfinete). null = o servidor nao achou ou esta sem mapa.
+  Future<Lugar?> enderecoDoPonto(double lat, double lng) async {
+    final r = await api.get('/geo/reverse', query: {'lat': lat.toString(), 'lng': lng.toString()});
+    return Lugar.tentar(r);
+  }
+
   // ---- Entregas ----
 
-  Future<Cotacao> consultarPreco(DadosDeEntrega d) async => Cotacao.fromJson(await api.post('/comercio/entregas/preco', d.toJson()));
+  /// A consulta devolve as opcoes de TODOS os veiculos liberados na cidade; o
+  /// veiculo so e escolhido depois. O servidor atual exige o campo mesmo assim
+  /// (e ignora o valor na consulta), entao vai um valor neutro quando ainda nao
+  /// ha escolha. O pedido de verdade sempre leva o veiculo escolhido.
+  Future<Cotacao> consultarPreco(DadosDeEntrega d) async {
+    final corpo = d.toJson();
+    corpo['veiculo'] ??= 'CARRO';
+    return Cotacao.fromJson(await api.post('/comercio/entregas/preco', corpo));
+  }
 
   /// So devolve uma entrega se o SERVIDOR confirmou. Erro de rede lanca
   /// ApiException(NETWORK_ERROR): o pedido pode ou nao ter sido gravado; a
@@ -234,6 +272,9 @@ class ComercioApi {
 
   /// Termos de uso do Comercio (texto publico; minuta tecnica ate a revisao juridica).
   Future<TermosDeUso> termos() async => TermosDeUso.fromJson(await api.get('/legal/comercio'));
+
+  /// Politica de Privacidade da plataforma (texto publico, igual aos outros apps).
+  Future<TermosDeUso> privacidade() async => TermosDeUso.fromJson(await api.get('/legal/privacy'));
 
   /// Endereco das imagens do mapa (a mesma fonte dos outros apps: GET /geo/mapa). null = indisponivel.
   Future<ConfigDoMapa?> configDoMapa() async => ConfigDoMapa.tentar(await api.get('/geo/mapa'));

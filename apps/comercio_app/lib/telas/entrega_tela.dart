@@ -133,7 +133,11 @@ class _EntregaTelaState extends State<EntregaTela> {
       ]),
       const SizedBox(height: 16),
       _linhaDoTempo(e),
-      if (!e.final_ && (e.codigoDeEntrega ?? '').isNotEmpty) ...[
+      if (e.variasEntregas) ...[
+        const SizedBox(height: 18),
+        _listaDeEntregas(e),
+      ],
+      if (!e.variasEntregas && !e.final_ && (e.codigoDeEntrega ?? '').isNotEmpty) ...[
         const SizedBox(height: 18),
         Card(
           child: Padding(
@@ -175,8 +179,10 @@ class _EntregaTelaState extends State<EntregaTela> {
             Linha('Observações', e.observacoes ?? ''),
             const Divider(height: 22),
             Linha('Coleta', e.enderecoDeColeta),
-            Linha('Entrega', e.enderecoDeEntrega),
-            Linha('Recebe', [e.destinatarioNome ?? '', e.destinatarioTelefone == null ? '' : Formato.telefone(e.destinatarioTelefone!)].where((t) => t.isNotEmpty).join(' · ')),
+            if (!e.variasEntregas) ...[
+              Linha('Entrega', e.enderecoDeEntrega),
+              Linha('Recebe', [e.destinatarioNome ?? '', (e.destinatarioTelefone ?? '').isEmpty ? '' : Formato.telefone(e.destinatarioTelefone!)].where((t) => t.isNotEmpty).join(' · ')),
+            ],
             const Divider(height: 22),
             Linha('Pedida em', Formato.dataHora(e.criadaEm)),
             Linha('Entregue em', Formato.dataHora(e.entregueEm)),
@@ -188,6 +194,47 @@ class _EntregaTelaState extends State<EntregaTela> {
       if (!e.final_) OutlinedButton(onPressed: _cancelando ? null : _cancelar, child: Text(_cancelando ? 'Cancelando…' : 'Cancelar entrega')),
       if (e.final_) FilledButton(onPressed: _repetir, child: const Text('Repetir esta entrega')),
     ]);
+  }
+
+  /// Varias entregas: quantas ja foram concluidas e, em cada uma, o ✔ verde ou o codigo de quem recebe.
+  Widget _listaDeEntregas(Entrega e) {
+    final total = e.entregas.length;
+    final feitas = e.entregasFeitas;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Entregas: $feitas de $total concluídas', key: const ValueKey('progresso-entregas'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(value: total == 0 ? 0 : feitas / total, minHeight: 6, backgroundColor: Cores.borda, color: Cores.ok),
+          const SizedBox(height: 10),
+          for (final it in e.entregas) ...[
+            const Divider(height: 22),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              it.entregue
+                  ? Icon(Icons.check_circle, key: ValueKey('feita-${it.ordem}'), color: Cores.ok, size: 26)
+                  : CircleAvatar(radius: 13, backgroundColor: Cores.cartaoAlto, child: Text('${it.ordem}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800))),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(it.encomenda, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text([it.nome, if ((it.telefone ?? '').isNotEmpty) Formato.telefone(it.telefone!)].join(' · '), style: const TextStyle(color: Cores.textoSuave)),
+                  if ((it.endereco ?? '').isNotEmpty) Text(it.endereco!, style: const TextStyle(color: Cores.textoSuave, fontSize: 12)),
+                  if (it.entregue) Text('Entregue ${Formato.dataHora(it.entregueEm)}', style: const TextStyle(color: Cores.ok, fontSize: 12, fontWeight: FontWeight.w700)),
+                ]),
+              ),
+              if (!it.entregue && (it.codigo ?? '').isNotEmpty)
+                Column(children: [
+                  const Text('Código', style: TextStyle(fontSize: 11, color: Cores.textoSuave)),
+                  Text(it.codigo!, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 4, color: Cores.ouro)),
+                ]),
+            ]),
+          ],
+          const SizedBox(height: 8),
+          const Text('Cada pessoa diz o próprio código ao motorista na hora de receber.', style: TextStyle(color: Cores.textoSuave, fontSize: 12)),
+        ]),
+      ),
+    );
   }
 
   Widget _mapa(Entrega e) {

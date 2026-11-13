@@ -117,6 +117,8 @@ class Validar {
   static String? campoCpf(String? v) => (v == null || v.trim().isEmpty) ? null : (!cpf(v) ? 'CPF inválido.' : null);
   static String? campoEmail(String? v) => !email(v ?? '') ? 'E-mail inválido.' : null;
   static String? campoTelefone(String? v) => !telefone(v ?? '') ? 'Telefone inválido (com DDD).' : null;
+  /// Telefone de quem recebe: pode ficar vazio; preenchido, tem que ter DDD.
+  static String? campoTelefoneOpcional(String? v) => (v ?? '').trim().isEmpty ? null : campoTelefone(v);
   static String? campoCep(String? v) => !cep(v ?? '') ? 'CEP inválido (8 números).' : null;
   static String? campoUf(String? v) => !RegExp(r'^[A-Za-z]{2}$').hasMatch((v ?? '').trim()) ? 'Estado: 2 letras.' : null;
   static String? campoSenha(String? v) => !senha(v ?? '') ? 'Mínimo 8 caracteres, com letra e número.' : null;

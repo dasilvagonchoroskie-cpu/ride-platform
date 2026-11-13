@@ -4,6 +4,7 @@ import '../core/formato.dart';
 import '../core/tema.dart';
 import '../dados/comercio_api.dart';
 import '../dados/modelos.dart';
+import '../telas/escolher_no_mapa_tela.dart';
 import 'comuns.dart';
 
 /// Campos de um endereco + a posicao no mapa. A posicao vem da busca do
@@ -21,6 +22,10 @@ class EnderecoControle extends ChangeNotifier {
   double? longitude;
   bool _preenchendo = false;
 
+  /// A posicao veio do alfinete: ela manda mais que o texto (a pessoa pode
+  /// completar numero e complemento sem perder o ponto marcado).
+  bool _porAlfinete = false;
+
   EnderecoControle([Endereco? inicial]) {
     if (inicial != null) preencher(inicial);
     for (final c in [logradouro, numero, bairro, cidade, cep]) {
@@ -30,8 +35,10 @@ class EnderecoControle extends ChangeNotifier {
 
   bool get temLocalizacao => latitude != null && longitude != null;
 
+  bool get porAlfinete => _porAlfinete && temLocalizacao;
+
   void _mudouTexto() {
-    if (_preenchendo || !temLocalizacao) return;
+    if (_preenchendo || !temLocalizacao || _porAlfinete) return;
     latitude = null;
     longitude = null;
     notifyListeners();
@@ -48,21 +55,47 @@ class EnderecoControle extends ChangeNotifier {
     cep.text = e.cep.isEmpty ? '' : Formato.cep(e.cep);
     latitude = e.latitude;
     longitude = e.longitude;
+    _porAlfinete = false;
     _preenchendo = false;
     notifyListeners();
   }
 
-  /// Escolheu um resultado da busca: guarda a posicao e completa o que estiver vazio.
-  void escolher(Lugar l) {
+  /// Separa "Goiatuba - GO" em cidade e sigla do estado (null = nao veio nesse formato).
+  static ({String cidade, String uf})? cidadeEUf(String texto) {
+    final m = RegExp(r'^(.+?)\s*[-–]\s*([A-Za-z]{2})$').firstMatch(texto.trim());
+    if (m == null) return null;
+    return (cidade: m.group(1)!.trim(), uf: m.group(2)!.toUpperCase());
+  }
+
+  /// Escolheu um resultado da busca (ou um ponto do alfinete): guarda a posicao
+  /// e completa os campos. O que vem do mapa e a verdade do lugar: cidade e UF
+  /// sempre sao trocados (cidade SO com o nome, UF no campo proprio); os demais
+  /// campos so se estiverem vazios, ou sempre, quando [doAlfinete].
+  void escolher(Lugar l, {bool doAlfinete = false}) {
     _preenchendo = true;
+    bool livre(TextEditingController c) => doAlfinete || c.text.trim().isEmpty;
+    final semRua = l.endereco.startsWith('Ponto no mapa');
     final partes = l.endereco.split(',').map((s) => s.trim()).toList();
-    if (logradouro.text.trim().isEmpty && partes.isNotEmpty) logradouro.text = partes.first;
-    if (numero.text.trim().isEmpty && partes.length > 1 && RegExp(r'^\d+\w?$').hasMatch(partes[1])) numero.text = partes[1];
+    if (!semRua && partes.isNotEmpty && livre(logradouro)) logradouro.text = partes.first;
+    if (partes.length > 1 && RegExp(r'^\d+\w?$').hasMatch(partes[1])) {
+      if (livre(numero)) numero.text = partes[1];
+    } else if (doAlfinete) {
+      numero.clear(); // o alfinete nao sabe o numero: a pessoa digita
+    }
     final det = l.detalhe.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
-    if (bairro.text.trim().isEmpty && det.length > 1) bairro.text = det.first;
-    if (cidade.text.trim().isEmpty && det.isNotEmpty) cidade.text = det.length > 1 ? det[1] : det.first;
+    final cu = det.isEmpty ? null : cidadeEUf(det.last);
+    if (cu != null) {
+      cidade.text = cu.cidade;
+      uf.text = cu.uf;
+    } else if (det.isNotEmpty && cidade.text.trim().isEmpty) {
+      cidade.text = det.last;
+    }
+    // O bairro e o item antes da "Cidade - UF" (nunca a rua).
+    final antes = cu != null ? det.sublist(0, det.length - 1) : det;
+    if (antes.isNotEmpty && livre(bairro) && antes.last != logradouro.text.trim()) bairro.text = antes.last;
     latitude = l.latitude;
     longitude = l.longitude;
+    _porAlfinete = doAlfinete;
     _preenchendo = false;
     notifyListeners();
   }
@@ -151,6 +184,24 @@ class _EnderecoCamposState extends State<EnderecoCampos> {
     }
   }
 
+  /// Abre o mapa com o alfinete no meio; volta com o ponto escolhido.
+  Future<void> _marcarNoMapa() async {
+    final c = widget.controle;
+    final lugar = await Navigator.of(context).push<Lugar>(MaterialPageRoute(
+      builder: (_) => EscolherNoMapaTela(
+        servidor: widget.servidor,
+        inicioLat: c.temLocalizacao ? c.latitude : widget.centro?.latitude,
+        inicioLng: c.temLocalizacao ? c.longitude : widget.centro?.longitude,
+      ),
+    ));
+    if (lugar == null || !mounted) return;
+    setState(() {
+      _achados = null;
+      _erro = null;
+    });
+    c.escolher(lugar, doAlfinete: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = widget.controle;
@@ -209,7 +260,7 @@ class _EnderecoCamposState extends State<EnderecoCampos> {
       ),
       const SizedBox(height: 14),
       if (c.temLocalizacao)
-        const Faixa('Localização confirmada no mapa.', icone: Icons.check_circle_outline)
+        Faixa(c.porAlfinete ? 'Localização marcada no mapa com o alfinete.' : 'Localização confirmada no mapa.', icone: Icons.check_circle_outline)
       else
         const Faixa('Falta confirmar a localização no mapa. Toque em "Buscar no mapa" e escolha o endereço certo.', tipo: TipoFaixa.atencao),
       const SizedBox(height: 10),
@@ -217,6 +268,12 @@ class _EnderecoCamposState extends State<EnderecoCampos> {
         onPressed: _buscando ? null : _buscar,
         icon: _buscando ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.search),
         label: const Text('Buscar no mapa'),
+      ),
+      const SizedBox(height: 10),
+      OutlinedButton.icon(
+        onPressed: _marcarNoMapa,
+        icon: const Icon(Icons.location_pin),
+        label: const Text('Marcar no mapa (alfinete)'),
       ),
       if (_erro != null) ...[const SizedBox(height: 10), Faixa(_erro!, tipo: TipoFaixa.erro)],
       if (_achados != null && _achados!.isNotEmpty) ...[

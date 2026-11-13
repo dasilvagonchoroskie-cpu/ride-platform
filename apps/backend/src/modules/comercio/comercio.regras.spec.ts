@@ -6,6 +6,7 @@ import {
   descricaoParaMotorista,
   enderecoPorExtenso,
   entregaSchema,
+  entregaManualSchema,
   etapaDaEntrega,
   motivoDeNaoPoderPedir,
   periodoPadrao,
@@ -111,6 +112,14 @@ describe('Comercio: destinatario, destino e pedido (testes 6, 7 e 8)', () => {
     expect(entregaSchema.safeParse({ ...pedido, coletaAlternativa: { address: 'Av. Brasil, 10', latitude: -18, longitude: -49 } }).success).toBe(true);
   });
 
+  it('consultar o preco aceita pedido SEM veiculo (o veiculo so e escolhido depois do preco)', () => {
+    const { chave: _c, veiculo: _v, ...semChaveEVeiculo } = pedido;
+    expect(cotarSchema.safeParse(semChaveEVeiculo).success).toBe(true);
+    expect(cotarSchema.safeParse({ ...semChaveEVeiculo, veiculo: 'BICICLETA' }).success).toBe(false);
+    // o pedido de verdade continua exigindo o veiculo
+    expect(entregaSchema.safeParse({ ...pedido, veiculo: undefined }).success).toBe(false);
+  });
+
   it('endereco por extenso: rua, numero, complemento, bairro, cidade/UF e CEP com hifen', () => {
     expect(enderecoPorExtenso({ ...endereco, uf: 'GO', cep: '75600000', complemento: 'Sala 2' })).toBe(
       'Rua das Flores, 120 - Sala 2, Centro, Goiatuba/GO, CEP 75600-000',
@@ -202,5 +211,32 @@ describe('Comercio: gastos (teste 19)', () => {
     // 01/12 01:00 em Brasilia ainda e 30/11 22:00? Nao: 01/12 04:00Z = 01:00 BRT -> dezembro.
     expect(periodoPadrao(new Date('2026-12-01T04:00:00Z')).de.toISOString()).toBe('2026-12-01T03:00:00.000Z');
     expect(periodoPadrao(new Date('2026-12-01T02:00:00Z')).de.toISOString()).toBe('2026-11-01T03:00:00.000Z');
+  });
+});
+
+describe('varias entregas e telefone opcional (13/11/2026)', () => {
+  const base = {
+    chave: 'abcdefghijklmnop1234',
+    encomenda: { descricao: '1 pizza' },
+    destinatario: { nome: 'Ana Lima', telefone: '' },
+    destino: { logradouro: 'Rua Verde', numero: '55', bairro: 'Jardim', cidade: 'Goiatuba', uf: 'GO', cep: '75600111', latitude: -18.02, longitude: -49.35 },
+    veiculo: 'MOTO' as const,
+  };
+  const parada = { encomenda: { descricao: '2 bolos' }, destinatario: { nome: 'Bia', telefone: '' }, destino: base.destino };
+
+  it('telefone de quem recebe pode ficar vazio; preenchido sem DDD e recusado', () => {
+    expect(entregaSchema.safeParse(base).success).toBe(true);
+    expect(entregaSchema.safeParse({ ...base, destinatario: { nome: 'Ana', telefone: '12345' } }).success).toBe(false);
+    expect(entregaSchema.safeParse({ ...base, destinatario: { nome: 'Ana', telefone: '(64) 98888-7777' } }).success).toBe(true);
+  });
+
+  it('aceita ate 4 paradas antes da ultima (5 entregas) e recusa a quinta parada', () => {
+    expect(entregaSchema.safeParse({ ...base, paradas: [parada, parada, parada, parada] }).success).toBe(true);
+    expect(entregaSchema.safeParse({ ...base, paradas: [parada, parada, parada, parada, parada] }).success).toBe(false);
+  });
+
+  it('o lancamento manual do motorista nao leva paradas', () => {
+    const r = entregaManualSchema.safeParse({ ...base, veiculo: undefined, comercioId: '11111111-1111-4111-8111-111111111111', paradas: [parada] });
+    expect(r.success && 'paradas' in r.data).toBe(false);
   });
 });

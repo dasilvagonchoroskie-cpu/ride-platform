@@ -53,6 +53,9 @@ class PedidoDeEntrega {
   String get telefoneDeQuemRecebe => detalhe['destinatarioTelefone'] as String? ?? '';
   String get codigo => detalhe['codigo'] as String? ?? '';
   int get tentativas => _int(detalhe['tentativas']);
+  /// Varias entregas num pedido: total e quantas ja foram entregues (1 de 1 = entrega unica).
+  int get totalDeEntregas => (j['progresso'] as Map?)?['total'] is num ? _int((j['progresso'] as Map)['total']) : 1;
+  int get entreguesJa => (j['progresso'] as Map?)?['concluidas'] is num ? _int((j['progresso'] as Map)['concluidas']) : 0;
   String? get motorista => (j['motorista'] as Map?)?['nome'] as String?;
   String get cliente => (j['cliente'] as Map?)?['nome'] as String? ?? '';
 
@@ -332,6 +335,19 @@ class _CartaoDoPedido extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+              if (p.totalDeEntregas > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(children: [
+                    Icon(p.entreguesJa >= p.totalDeEntregas ? Icons.check_circle : Icons.local_shipping_outlined, size: 16, color: AppColors.success),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Entregas: ${p.entreguesJa} de ${p.totalDeEntregas} concluídas · faltam ${p.totalDeEntregas - p.entreguesJa}',
+                      key: ValueKey('progresso-${p.id}'),
+                      style: AppText.caption.copyWith(color: AppColors.success, fontWeight: FontWeight.w700),
+                    ),
+                  ]),
                 ),
               Text('Item: ${p.descricao}', style: AppText.body),
               Text('Coleta: ${p.coleta}', style: AppText.caption, maxLines: 2, overflow: TextOverflow.ellipsis),

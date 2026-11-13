@@ -1,108 +1,109 @@
-00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart
-00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: sessao antiga do arquivo comum vai para o cofre sem deslogar
-00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: login novo vai direto para o cofre; dado comum continua no arquivo comum
-00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: sair apaga login e dados da conta do cofre e do arquivo comum
-00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: cofre com defeito no aparelho: continua logado pelo arquivo comum
-00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: Central no navegador: o cofre do celular nao e usado
-00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: codigo do aparelho da Central: sorteado uma vez e guardado no cofre
-00:01 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
-00:01 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
-00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
-00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
-00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
-00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
-00:01 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:03 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 403: aviso de contingencia no mapa
-00:03 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
-00:04 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:04 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:04 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:00 +0: loading /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart
+00:00 +0: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Data DD/MM/AAAA vai para o servidor como AAAA-MM-DD
+00:00 +1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cofre_test.dart: sessao antiga do arquivo comum vai para o cofre sem deslogar
+00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +8: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +9: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +10: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +11: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +12: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +13: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +14: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:01 +15: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
+00:02 +16: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral mostra a frota inteira, com ciano so no Comercio e vermelho no SOS
+00:02 +17: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral legenda explica as cores e os filtros mostram as contagens
+00:03 +18: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
 00:04 +19: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
 00:04 +20: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
-00:04 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:04 +22: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-00:04 +23: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-00:04 +24: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
-00:04 +25: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: sem e-mail novo ou motivo curto: nem chama o servidor
-00:05 +26: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/renovacao_login_test.dart: 401: renova com o refresh que esta no cofre, repete o pedido e grava o par novo no cofre
-00:05 +27: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/renovacao_login_test.dart: sem refresh guardado: o login acabou e o aplicativo e avisado
-00:05 +28: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/renovacao_login_test.dart: o vigia nativo ja renovou no cofre: repete com o acesso dele, sem gastar o refresh
-00:05 +29: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/renovacao_login_test.dart: refresh recusado mas o vigia ja tinha trocado o refresh: nao desloga
-00:05 +30: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/renovacao_login_test.dart: refresh recusado de verdade: sessao expira
-00:05 +31: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/renovacao_login_test.dart: servidor fora (5xx) na renovacao: erro de conexao, o login continua guardado
-00:05 +32: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:06 +33: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
-00:06 +34: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:06 +35: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/cadastrar_motorista_test.dart: Cadastrar motorista: confere os campos, manda tudo e da o saldo inicial
-00:08 +36: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +37: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +38: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +39: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +40: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +41: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +42: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +43: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:08 +44: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
-00:09 +45: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral mostra a frota inteira, com ciano so no Comercio e vermelho no SOS
-00:09 +46: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
-00:09 +47: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral legenda explica as cores e os filtros mostram as contagens
-00:09 +48: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida
-00:10 +49: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS
-00:10 +50: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral filtros so mudam o desenho: Comercio, Motos, Livres e SOS
-00:10 +51: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
-00:10 +52: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral detalhe: entrega do Comercio pedida pelo aplicativo
-00:10 +53: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:10 +54: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:11 +55: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
-00:11 +56: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral detalhe: passageiro mantem "Transporte de passageiro" e offline mostra o visto
-00:11 +57: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:11 +58: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:11 +59: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
-00:12 +60: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
-00:12 +61: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
-00:12 +62: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
-00:12 +63: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:13 +64: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
-00:13 +65: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central anotar a validade do CRLV: data invalida nao vai; data valida grava, mostra VENCIDO e pode limpar
-00:13 +66: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
-00:13 +67: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central suspender exige motivo, avisa o servidor e permite reativar
-00:14 +68: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central suspender exige motivo, avisa o servidor e permite reativar
-00:14 +69: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
-00:14 +70: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
-00:17 +71: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
-00:18 +72: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
-00:18 +73: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
-00:18 +74: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
-00:18 +75: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
-00:18 +76: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
-00:18 +77: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
-00:18 +78: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
-00:18 +79: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
-00:18 +80: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
-00:18 +81: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
-00:18 +82: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
-00:18 +83: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: comercios sem estourar
-00:18 +84: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
-00:18 +85: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
-00:18 +86: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
-00:19 +87: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
-00:20 +88: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
-00:20 +89: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
-00:21 +90: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
-00:21 +91: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
-00:21 +92: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
-00:22 +93: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
-00:22 +94: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem
-00:23 +95: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
-00:24 +96: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
-00:24 +97: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
-00:25 +98: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
-00:25 +99: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
-00:25 +100: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
-00:25 +100 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
-00:26 +101 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
-00:26 +102 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
-00:26 +103 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
-00:26 +104 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
-00:27 +105 ~1: All tests passed!
+00:05 +21: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: motorista: tudo conferido libera e manda so as conferencias (sem documento)
+00:05 +22: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Mapa na Visao Geral detalhe: SOS aparece primeiro e a entrega continua visivel
+00:05 +23: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
+00:05 +24: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/recuperar_acesso_test.dart: faltou conferir: nao libera e mostra o que faltou
+00:05 +25: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central Motos lista so motos, com motorista, placa, situacao e documentos enviados
+00:05 +26: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central Motos lista so motos, com motorista, placa, situacao e documentos enviados
+00:05 +27: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central Carros lista so carros (a tela de Carros nao perde nada)
+00:06 +28: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
+00:06 +29: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central busca e filtro de situacao vao para o servidor
+00:06 +30: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +31: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +32: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +33: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +34: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +35: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +36: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central detalhe mostra os dados e avisa que cadastro nao e autorizacao de entrega
+00:07 +37: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central lista avisa CNH vencida; CRLV so avisa depois que a Central anota a data
+00:07 +38: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_operacional_test.dart: Motos e Carros na Central anotar a validade do CRLV: data invalida nao vai; data valida grava, mostra VENCIDO e pode limpar
+00:08 +39: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:09 +40: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Editar nome, cor e faixa; trocar e tirar o logo
+00:09 +41: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/aparencia_test.dart: Operador (nao dono): o servidor recusa e a Central mostra o motivo
+00:10 +42: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) sem login o mapa nao tem endereco de imagens; fornecedor TomTom
+00:10 +43: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) a configuracao publica nunca entrega a chave (tiles ignorado)
+00:10 +44: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) com login usa o endereco do servidor, guarda e esquece ao sair
+00:10 +45: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) pergunta ao servidor no maximo a cada 10 minutos (salvo depois de um limite)
+00:10 +46: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) endereco ruim do servidor e ignorado (o mapa nunca quebra)
+00:10 +47: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: MapaConfig (TomTom) o servidor liga o modo economia
+00:10 +48: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:12 +49: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:12 +50: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: operador de uma cidade ve so a cidade dele e sem as abas do dono
+00:12 +51: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) no maximo 6 imagens baixando ao mesmo tempo
+00:13 +52: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:13 +53: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:13 +54: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:13 +55: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:13 +56: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades e equipe: cidades, operador da cidade e nova cidade
+00:13 +57: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:14 +58: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:14 +59: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:14 +60: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:14 +61: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Limpeza de dados: resumo, apagar teste com confirmacao e contas
+00:14 +62: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Visao Geral: indicadores em cima do mapa e toque no carro
+00:14 +63: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:15 +64: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Despacho: fila, em andamento, escolher motorista e corrida manual
+00:15 +65: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: lista, detalhe com documento, financeiro e carteira
+00:16 +66: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: selecionar e excluir varios
+00:17 +67: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Motoristas: excluir pelo cadastro do motorista
+00:18 +68: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: busca, bloqueado e historico
+00:18 +69: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Passageiros: selecionar e excluir com confirmacao
+00:18 +70: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas: categorias, noturna, nova categoria e multiplicador
+00:19 +71: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: cadastra, edita, desativa e exclui parceiro
+00:22 +72: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Clube de Vantagens: sem conexao mostra o erro e tenta de novo; operador so consulta
+00:23 +73: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: despacho sem estourar
+00:23 +74: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: motoristas sem estourar
+00:23 +75: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: passageiros sem estourar
+00:23 +76: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: categorias sem estourar
+00:23 +77: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: tarifas sem estourar
+00:23 +78: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: financeiro sem estourar
+00:23 +79: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: alertas sem estourar
+00:23 +80: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cupons sem estourar
+00:23 +81: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: clube sem estourar
+00:24 +82: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: carteiras sem estourar
+00:24 +83: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: entregas sem estourar
+00:24 +84: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: comercios sem estourar
+00:24 +85: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tela pequena e letra grande: cidades e equipe sem estourar
+00:24 +86: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Categorias (05/11/2026): liga e desliga na cidade, sem abrir Tarifas
+00:24 +87: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: Conforto ligado so em Goiatuba, voltar ao padrao
+00:25 +88: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Tarifas por cidade: criar categoria nova so nesta cidade
+00:25 +89: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Pedidos de categoria: aprovar e recusar com motivo
+00:26 +90: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Financeiro: saques e receitas
+00:26 +91: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Alertas: SOS aberto, janela fixa e encerrados
+00:27 +92: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cupons: lista e novo cupom
+00:27 +93: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: SOS abre a janela sozinho, faixa vermelha e menu lateral
+00:27 +94: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras / Recargas: lista, recarga com confirmacao e extrato
+00:28 +95: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Comercios: lista, filtra, aprova e suspende com motivo; entregas do Comercio aparecem
+00:29 +96: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Entregas: liga na cidade so com moto, pedidos com status e liberar codigo
+00:30 +97: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Carteiras: limite do aviso "Saldo se esgotando" (padrao e voltar ao automatico)
+00:30 +98: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: motorista novo aguardando aprovacao abre aviso e leva ao cadastro
+00:31 +99: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: foto nova de motorista ativo abre aviso e leva ao cadastro
+00:31 +100: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Leitura dos dados no formato do servidor
+00:31 +101: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Fotos das telas da Central
+00:31 +101 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Dados pessoais: aprovar o pedido do motorista e editar os dados
+00:32 +102 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: mudanca de dados do motorista abre aviso, faixa fixa e leva aos pedidos
+00:32 +103 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Cidades: Todas mostra cada cidade no mapa e o toque abre a cidade
+00:33 +104 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Ao vivo: contadores, lista dos motoristas, filtro e corridas de hoje
+00:33 +105 ~1: /home/runner/work/ride-platform/ride-platform/apps/central_app/test/painel_test.dart: Casca: pedido de exclusao de conta pela internet avisa e a Central exclui
+00:33 +106 ~1: All tests passed!

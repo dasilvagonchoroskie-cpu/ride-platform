@@ -63,7 +63,12 @@ class _TermosTelaState extends State<TermosTela> {
   }
 
   /// Mostra o texto do servidor (Markdown simples): titulos, listas, citacao e **negrito**.
-  List<Widget> _blocos(String md) {
+  List<Widget> _blocos(String md) => blocosDeTexto(md);
+}
+
+/// Texto em Markdown simples -> widgets (usado nos termos da abertura e na tela de termos).
+List<Widget> blocosDeTexto(String md) {
+  {
     final saida = <Widget>[];
     for (final bruta in md.split('\n')) {
       final linha = bruta.trimRight();
@@ -95,14 +100,14 @@ class _TermosTelaState extends State<TermosTela> {
     }
     return saida;
   }
+}
 
-  Widget _rico(String texto) {
-    final partes = texto.split('**');
-    return Text.rich(
-      TextSpan(
-        children: [for (var i = 0; i < partes.length; i++) TextSpan(text: partes[i], style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w700) : null)],
-      ),
-      style: const TextStyle(height: 1.45),
-    );
-  }
+Widget _rico(String texto) {
+  final partes = texto.split('**');
+  return Text.rich(
+    TextSpan(
+      children: [for (var i = 0; i < partes.length; i++) TextSpan(text: partes[i], style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w700) : null)],
+    ),
+    style: const TextStyle(height: 1.45),
+  );
 }

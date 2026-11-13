@@ -152,6 +152,13 @@ const pontoSchema = z.object({
   placeId: z.string().max(200).optional(),
 });
 
+/** Telefone de quem recebe: opcional (13/11/2026); se vier, com DDD. */
+const telefoneOpcional = z
+  .string()
+  .trim()
+  .refine((t) => digitos(t) === '' || /^\d{10,13}$/.test(digitos(t)), 'Telefone de quem recebe com DDD.')
+  .default('');
+
 const destinoSchema = enderecoSchema
   .omit({ latitude: true, longitude: true })
   .extend({
@@ -172,9 +179,26 @@ export const entregaSchema = z.object({
   coletaAlternativa: pontoSchema.optional(),
   destinatario: z.object({
     nome: texto(2, 120, 'Nome de quem recebe'),
-    telefone: z.string().trim().refine((t) => /^\d{10,13}$/.test(digitos(t)), 'Telefone de quem recebe com DDD.'),
+    telefone: telefoneOpcional,
   }),
   destino: destinoSchema,
+  /**
+   * Varias entregas num pedido (um veiculo, uma rota): as entregas ANTES da ultima, na ordem
+   * em que o motorista vai passar. A ultima e sempre `destino` + `destinatario`. No maximo 4 + a ultima = 5.
+   */
+  paradas: z
+    .array(
+      z.object({
+        encomenda: z.object({ descricao: texto(3, 120, 'Descrição da encomenda') }),
+        destinatario: z.object({
+          nome: texto(2, 120, 'Nome de quem recebe'),
+          telefone: telefoneOpcional,
+        }),
+        destino: destinoSchema,
+      }),
+    )
+    .max(4, 'No máximo 5 entregas por pedido.')
+    .optional(),
   veiculo: z.enum(['MOTO', 'CARRO']),
   /** Medida assinada do preco consultado (a rota nao e medida de novo). */
   cotacao: z.string().max(2000).optional(),
@@ -183,8 +207,12 @@ export const entregaSchema = z.object({
 });
 export type EntregaInput = z.infer<typeof entregaSchema>;
 
-/** Para consultar o preco: igual ao pedido, sem a chave. */
-export const cotarSchema = entregaSchema.omit({ chave: true, valorEsperadoCents: true }).partial({ encomenda: true });
+/**
+ * Para consultar o preco: igual ao pedido, sem a chave. O veiculo e opcional:
+ * a consulta devolve as opcoes de todos os veiculos liberados e a loja escolhe depois
+ * (antes, o app novo recebia "Required" ao consultar, porque ainda nao ha veiculo escolhido).
+ */
+export const cotarSchema = entregaSchema.omit({ chave: true, valorEsperadoCents: true }).partial({ encomenda: true, veiculo: true });
 export type CotarInput = z.infer<typeof cotarSchema>;
 
 // ---------------------------------------------------------------------------
@@ -198,10 +226,10 @@ export const buscarEstabelecimentoSchema = z.object({ busca: z.string().trim().m
  * Pedido lancado pelo motorista: igual ao da loja, mas o veiculo NAO vem do
  * aplicativo (e o veiculo em uso do proprio motorista) e a loja e escolhida pelo id.
  */
-export const entregaManualSchema = entregaSchema.omit({ veiculo: true }).extend({ comercioId: z.string().uuid() });
+export const entregaManualSchema = entregaSchema.omit({ veiculo: true, paradas: true }).extend({ comercioId: z.string().uuid() });
 export type EntregaManualInput = z.infer<typeof entregaManualSchema>;
 
-export const cotarManualSchema = cotarSchema.omit({ veiculo: true }).extend({ comercioId: z.string().uuid() });
+export const cotarManualSchema = cotarSchema.omit({ veiculo: true, paradas: true }).extend({ comercioId: z.string().uuid() });
 export type CotarManualInput = z.infer<typeof cotarManualSchema>;
 
 export type TipoDeBusca = { tipo: 'EMAIL' | 'TELEFONE' | 'NOME'; valor: string };

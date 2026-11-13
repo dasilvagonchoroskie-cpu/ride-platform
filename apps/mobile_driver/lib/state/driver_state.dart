@@ -2000,6 +2000,30 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// Motivo da recusa do codigo da entrega (aparece na janela do codigo).
   String? erroDaEntrega;
 
+  /// Varias entregas: confirma a entrega da parada [sequencia] com o codigo que quem recebeu disse.
+  /// Errado: false com o motivo em [erroDaEntrega]. Certo: a parada fica marcada como entregue.
+  Future<bool> entregarParada(int sequencia, String codigo) async {
+    final ride = activeRide;
+    if (ride == null) return false;
+    erroDaEntrega = null;
+    if (AppConfig.hasApi) {
+      try {
+        await _client.request('POST', '/driver/rides/${ride.offer.id}/paradas/$sequencia/entregar', body: {'codigoEntrega': codigo});
+      } on ApiException catch (e) {
+        erroDaEntrega = e.message;
+        notifyListeners();
+        return false;
+      }
+    }
+    final atual = activeRide;
+    if (atual == null) return true;
+    final novas = [for (final p in atual.offer.paradas) p.sequencia == sequencia ? p.comoEntregue() : p];
+    activeRide = atual.copyWith(offer: atual.offer.comParadas(novas));
+    await _persistRide();
+    notifyListeners();
+    return true;
+  }
+
   /// Encerra a corrida. Entrega (Etapa 5): manda o codigo de 4 numeros que
   /// quem recebe disse; codigo errado volta false com o motivo em
   /// [erroDaEntrega]. true = encerrada.
