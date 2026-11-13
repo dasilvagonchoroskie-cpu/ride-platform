@@ -1,8 +1,2 @@
 Analyzing mobile_driver...                                      
-
-  error • The static setter 'aoSessaoExpirar' can't be accessed through an instance. Try using the class 'ApiClient' to access the setter • test/renovacao_login_test.dart:53:73 • instance_access_to_static_member
-  error • The static setter 'aoSessaoExpirar' can't be accessed through an instance. Try using the class 'ApiClient' to access the setter • test/renovacao_login_test.dart:97:8 • instance_access_to_static_member
-  error • The static setter 'aoSessaoExpirar' can't be accessed through an instance. Try using the class 'ApiClient' to access the setter • test/renovacao_login_test.dart:106:73 • instance_access_to_static_member
-  error • The static setter 'aoSessaoExpirar' can't be accessed through an instance. Try using the class 'ApiClient' to access the setter • test/renovacao_login_test.dart:117:8 • instance_access_to_static_member
-
-4 issues found. (ran in 10.1s)
+No issues found! (ran in 9.3s)
