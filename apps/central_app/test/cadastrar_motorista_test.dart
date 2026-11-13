@@ -112,9 +112,9 @@ void main() {
     expect(find.textContaining('(64) 99268-6632'), findsWidgets);
   });
 
-  testWidgets('Tipo do veiculo: Moto e Utilitario vao para o servidor e a mensagem acompanha o tipo', (tester) async {
-    await _abrir(tester);
-    for (final (tipo, categoria) in [('Moto', 'MOTO'), ('Utilitário', 'UTILITARIO')]) {
+  for (final (tipo, categoria) in [('Moto', 'MOTO'), ('Utilitário', 'UTILITARIO')]) {
+    testWidgets('Tipo do veiculo $tipo vai para o servidor como $categoria', (tester) async {
+      await _abrir(tester);
       pedidos.clear();
       await tester.ensureVisible(find.byKey(const Key('tipo-do-veiculo')));
       await tester.pumpAndSettle();
@@ -140,7 +140,6 @@ void main() {
 
       final corpo = pedidos.firstWhere((p) => p.$1 == 'POST /api/admin/drivers').$2!;
       expect((corpo['vehicle'] as Map)['categoria'], categoria);
-      await _abrir(tester); // reabre a tela limpa para o proximo tipo
-    }
-  });
+    });
+  }
 }
