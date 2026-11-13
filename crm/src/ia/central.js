@@ -15,9 +15,23 @@ const ASSUNTOS = {
   passageiro: { numero: '2', nome: 'Atendimento ao passageiro' },
   encomendas: { numero: '3', nome: 'Coleta e entrega de encomendas' },
   clube: { numero: '4', nome: 'Clube de Vantagens para motoristas' },
-  outros: { numero: '5', nome: 'Outros assuntos' }
+  comercio: { numero: '5', nome: 'Comércio e entregas' },
+  outros: { numero: '6', nome: 'Outros assuntos' }
 };
 const ASSUNTO_IDS = Object.keys(ASSUNTOS);
+
+// 13/11 (pedido do dono): "Comércio e entregas" tem um segundo menu (pós-menu) para cada tipo de público. O número digitado
+// só vale como opção do segundo menu enquanto o assunto do atendimento for "comercio" (menu aberto); depois o assunto vira
+// um destes (guardado em atend_assunto) e os números voltam a valer para o menu principal.
+const SUBASSUNTOS = {
+  comercio_cadastrado: { numero: '1', nome: 'Comércio e entregas — já sou comerciante cadastrado', modelo: 'abertura_comercio_cadastrado' },
+  comercio_cadastrar: { numero: '2', nome: 'Comércio e entregas — quero cadastrar meu comércio', modelo: 'abertura_comercio' },
+  comercio_aguardando: { numero: '3', nome: 'Comércio e entregas — aguardo uma encomenda', modelo: 'abertura_comercio_aguardando' },
+  comercio_outros: { numero: '4', nome: 'Comércio e entregas — outras informações', modelo: 'abertura_comercio_outros' }
+};
+const SUBASSUNTO_IDS = Object.keys(SUBASSUNTOS);
+const assuntoBase = (id) => (Object.prototype.hasOwnProperty.call(SUBASSUNTOS, id) ? 'comercio' : id);
+const nomeDoAssunto = (id) => (Object.prototype.hasOwnProperty.call(SUBASSUNTOS, id) ? SUBASSUNTOS[id].nome : (Object.prototype.hasOwnProperty.call(ASSUNTOS, id) ? ASSUNTOS[id].nome : ''));
 
 // Como a IA deve conduzir cada assunto (instrução do sistema, confiável). As informações oficiais vêm da
 // "base de conhecimento" editável; sem informação, a IA encaminha para a equipe em vez de inventar.
@@ -26,6 +40,11 @@ const FLUXOS = {
   passageiro: 'Oriente sobre o uso do aplicativo e viagens e ajude com problemas comuns usando só as informações oficiais. Reclamações que precisem de providência vão para a equipe.',
   encomendas: 'Explique o serviço de coleta e entrega só com as informações oficiais. Entenda o que a pessoa quer enviar ou receber (o quê, de onde, para onde). Nunca informe preço, prazo, disponibilidade ou condições que não estejam nas informações oficiais: orçamento e confirmação são com a equipe.',
   clube: 'Explique os benefícios do Clube de Vantagens, a carteirinha digital e as regras de quem pode participar, só com as informações oficiais. Casos que dependem de análise individual vão para a equipe.',
+  comercio: 'Atenda quem procura a Fortaleza Move sobre comércio e entregas. Descubra se a pessoa é comerciante já cadastrado, quer cadastrar um comércio, aguarda uma encomenda ou tem outra dúvida. Nunca informe preço, taxa, região, prazo ou condição comercial que não esteja nas informações oficiais: valores, contratos e parcerias são com a equipe.',
+  comercio_cadastrado: 'A pessoa diz ser comerciante já cadastrado. Entenda o nome do estabelecimento e o que ela precisa (pedido, dúvida, problema). Você não consegue consultar cadastro nem pedidos: não confirme dados, valores ou prazos; reúna o que ela precisa e encaminhe para a equipe.',
+  comercio_cadastrar: 'A pessoa quer cadastrar um comércio para pedir entregas. Reúna: nome do estabelecimento, cidade e endereço, o que vende ou costuma entregar e quantas entregas faz por dia ou por semana. Não prometa aprovação, preço, taxa ou prazo; depois de reunir os dados, diga que a equipe entrará em contato. Não indique link, loja de aplicativos ou formulário de cadastro.',
+  comercio_aguardando: 'A pessoa é cliente de um comércio e aguarda uma encomenda ou entrega que ainda não chegou. Você não consegue consultar pedidos nem rastrear entregas: nunca diga onde está a encomenda nem informe previsão. Reúna: nome do comércio ou de quem enviou, o que estava esperando, o endereço de entrega (rua e bairro) e quando foi feito o pedido, com cordialidade, e encaminhe para a equipe verificar. Se houver reclamação ou urgência, encaminhe.',
+  comercio_outros: 'A pessoa tem outra dúvida sobre comércio e entregas. Responda só com as informações oficiais; sem informação, encaminhe para a equipe.',
   outros: 'Entenda o motivo do contato e responda só quando houver informação oficial confiável; senão, encaminhe para a equipe.'
 };
 
@@ -44,7 +63,7 @@ const MODELOS_PADRAO = {
   saudacao: { nome: 'Saudação inicial', texto: 'Olá! Seja bem-vindo(a) à Fortaleza Move!\n\nAgradecemos pelo seu contato. Será um prazer ajudar você!' },
   // 13/11 (pedido do dono): quem já falou com a Fortaleza Move antes recebe uma saudação de retorno a cada novo atendimento.
   saudacao_retorno: { nome: 'Saudação de retorno (novo atendimento de quem já falou conosco)', texto: 'Olá! A Fortaleza Move agradece por entrar em contato conosco novamente. Em que podemos ajudar desta vez?' },
-  menu: { nome: 'Apresentação do menu', texto: 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Outros assuntos.\n\nDigite o número da opção desejada.' },
+  menu: { nome: 'Apresentação do menu', texto: 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Comércio e entregas.\n6. Outros assuntos.\n\nDigite o número da opção desejada.' },
   confirmacao_documentos: { nome: 'Confirmação de recebimento de documentos', texto: 'Recebemos o seu documento. Obrigado!' },
   confirmacao_informacoes: { nome: 'Confirmação de recebimento de informações', texto: 'Recebemos as suas informações. Obrigado!' },
   transferencia: { nome: 'Aviso de transferência para atendimento humano', texto: 'Sua solicitação foi encaminhada para nossa equipe de atendimento. Em breve, você receberá um retorno. Agradecemos pelo contato!' },
@@ -60,11 +79,17 @@ const MODELOS_PADRAO = {
   abertura_passageiro: { nome: 'Opção 2 escolhida (atendimento ao passageiro)', texto: 'Certo! Conte, por favor, como podemos ajudar com a sua viagem ou com o aplicativo.' },
   abertura_encomendas: { nome: 'Opção 3 escolhida (coleta e entrega de encomendas)', texto: 'Certo! Para a coleta e entrega, informe, por favor:\n\n• o que deseja enviar;\n• o endereço de coleta;\n• o endereço de entrega.\n\nCom essas informações, a nossa equipe dá sequência ao seu pedido.' },
   abertura_clube: { nome: 'Opção 4 escolhida (Clube de Vantagens)', texto: 'Certo! Conte, por favor, o que você gostaria de saber sobre o Clube de Vantagens para motoristas.' },
-  abertura_outros: { nome: 'Opção 5 escolhida (outros assuntos)', texto: 'Certo! Escreva, por favor, o assunto do seu contato para direcionarmos o seu atendimento.' },
+  abertura_outros: { nome: 'Opção 6 escolhida (outros assuntos)', texto: 'Certo! Escreva, por favor, o assunto do seu contato para direcionarmos o seu atendimento.' },
   // 13/11: botão "Tenho um comércio e quero entregas" do site.
   abertura_comercio: { nome: 'Botão do site "Tenho um comércio e quero entregas"', texto: 'Que bom ter você por aqui! A Fortaleza Move tem atendimento para comércios que precisam de coleta e entrega.\n\nPara a nossa equipe preparar o seu atendimento, informe, por favor:\n\n• o nome do estabelecimento;\n• a cidade e o endereço;\n• o que você vende ou costuma entregar;\n• quantas entregas faz, em média, por dia ou por semana.\n\nCom essas informações, a nossa equipe entra em contato para combinar os detalhes.' },
+  // Opção 5 do menu: segundo menu. As quatro respostas seguintes são as opções desse segundo menu (a 2 é "abertura_comercio").
+  menu_comercio: { nome: 'Opção 5 escolhida (comércio e entregas): segundo menu', texto: 'Certo! Sobre comércio e entregas, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio.\n3. Estou aguardando uma encomenda ou entrega.\n4. Outras informações.\n\nDigite o número da opção desejada.' },
+  abertura_comercio_cadastrado: { nome: 'Comércio, opção 1 (já sou comerciante cadastrado)', texto: 'Certo! Informe, por favor, o nome do seu estabelecimento e como podemos ajudar.\n\nCom essas informações, a nossa equipe dá sequência ao seu atendimento.' },
+  abertura_comercio_aguardando: { nome: 'Comércio, opção 3 (aguardando uma encomenda)', texto: 'Certo! Para a nossa equipe verificar a sua encomenda, informe, por favor:\n\n• o nome do comércio ou de quem enviou;\n• o que você está aguardando;\n• o endereço de entrega (rua e bairro);\n• quando o pedido foi feito.\n\nCom essas informações, a nossa equipe verifica e retorna para você.' },
+  abertura_comercio_outros: { nome: 'Comércio, opção 4 (outras informações)', texto: 'Certo! Escreva, por favor, o que você gostaria de saber sobre comércio e entregas.' },
   documento_recusado: { nome: 'Arquivo de documento não aceito', texto: 'Não consegui receber esse arquivo. Pode enviar de novo como foto (JPG ou PNG) ou PDF, com até 10 MB, por favor?' }
 };
+const MENU_ANTIGO = 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Outros assuntos.\n\nDigite o número da opção desejada.'.replace(/\\n/g, '\n');
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
 const MAX_MODELO = 1500;
 const MAX_INFO = 4000;
@@ -85,9 +110,13 @@ function criarCentral({ getSetting, setSetting }) {
     const salvos = lerSalvos();
     return MODELO_IDS.map((id) => {
       const s = Object.prototype.hasOwnProperty.call(salvos, id) && salvos[id] && typeof salvos[id] === 'object' ? salvos[id] : {};
+      let texto = typeof s.texto === 'string' && s.texto.trim() ? s.texto : MODELOS_PADRAO[id].texto;
+      // O menu salvo SEM alteração (igual ao padrão antigo de 5 opções) passa a usar o novo, com "Comércio e entregas" em 5:
+      // senão o número 5 digitado pelo cliente (agora comércio) não bateria com o texto que ele viu. Menu editado pelo dono não muda.
+      if (id === 'menu' && texto.replace(/\r\n/g, '\n').trim() === MENU_ANTIGO.trim()) texto = MODELOS_PADRAO.menu.texto;
       return {
         id, nome: MODELOS_PADRAO[id].nome,
-        texto: typeof s.texto === 'string' && s.texto.trim() ? s.texto : MODELOS_PADRAO[id].texto,
+        texto,
         ativo: s.ativo === undefined ? true : !!s.ativo,
         padrao: MODELOS_PADRAO[id].texto
       };
@@ -159,11 +188,16 @@ function criarCentral({ getSetting, setSetting }) {
 
 const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-// "1", "opção 2", "3." → assunto. Só quando a mensagem é basicamente o número.
-function opcaoDoMenu(texto) {
+// "1", "opção 2", "3." → assunto. Só quando a mensagem é basicamente o número. Com o segundo menu de comércio aberto
+// (assuntoAtual === 'comercio'), 1 a 4 escolhem a opção DELE; qualquer outro número volta a valer para o menu principal.
+function opcaoDoMenu(texto, assuntoAtual) {
   const t = semAcento(texto).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  const m = /^(?:opcao |numero |op )?([1-5])$/.exec(t);
+  const m = /^(?:opcao |numero |op )?([1-6])$/.exec(t);
   if (!m) return null;
+  if (assuntoAtual === 'comercio') {
+    const sub = SUBASSUNTO_IDS.find((id) => SUBASSUNTOS[id].numero === m[1]);
+    if (sub) return sub;
+  }
   return ASSUNTO_IDS.find((id) => ASSUNTOS[id].numero === m[1]) || null;
 }
 
@@ -192,7 +226,7 @@ const BOTOES_SITE = [
   { re: /^ola!? vim pelo site da fortaleza move\.?$/, modelo: 'menu' },
   { re: /^ola!? quero ser motorista da fortaleza move\.?$/, modelo: 'abertura_cadastro', assunto: 'cadastro' },
   { re: /^ola!? quero saber mais sobre corridas e encomendas da fortaleza move\.?$/, modelo: 'menu' },
-  { re: /^ola!? tenho um comercio e quero entregas pela fortaleza move\.?$/, modelo: 'abertura_comercio', assunto: 'encomendas' }
+  { re: /^ola!? tenho um comercio e quero entregas pela fortaleza move\.?$/, modelo: 'abertura_comercio', assunto: 'comercio_cadastrar' }
 ];
 const botaoDoSite = (texto) => BOTOES_SITE.find((b) => b.re.test(semAcento(texto).trim())) || null;
 /** Texto pronto de um dos botões de WhatsApp do site (a pessoa clicou no site de novo). */
@@ -221,4 +255,4 @@ function semIntencao(texto) {
 // Pedido explícito de falar com uma pessoa (reforço sem IA).
 const pediuHumano = (texto) => /\b(atendente|atendimento humano|falar com (um|uma|alguem|algu[eé]m|uma pessoa|pessoa|humano|gente)|pessoa de verdade|ser humano|humano por favor)\b/.test(semAcento(texto));
 
-module.exports = { botaoDoSite, ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
+module.exports = { botaoDoSite, ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, SUBASSUNTOS, SUBASSUNTO_IDS, assuntoBase, nomeDoAssunto, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };

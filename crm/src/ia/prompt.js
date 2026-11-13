@@ -71,7 +71,7 @@ FORMATO DA RESPOSTA (JSON):
   "proxima_acao": "até 120 caracteres, o próximo passo da equipe",
   "tarefa": { "titulo": "até 100 caracteres", "prazo_dias": 0 a 30 } ou null,
   "atendimento": {
-    "opcao": "assunto atual do atendimento, um de: ${OPCOES_ATEND.join(' | ')} (cadastro = cadastro de motorista e veículo; passageiro = atendimento ao passageiro; encomendas = coleta e entrega; clube = Clube de Vantagens para motoristas; outros = outro assunto; indefinido = ainda não dá para saber)",
+    "opcao": "assunto atual do atendimento, um de: ${OPCOES_ATEND.join(' | ')} (cadastro = cadastro de motorista e veículo; passageiro = atendimento ao passageiro; encomendas = coleta e entrega; clube = Clube de Vantagens para motoristas; comercio = comércio e entregas (comerciante, cadastro de comércio, cliente aguardando encomenda); outros = outro assunto; indefinido = ainda não dá para saber)",
     "transferir": true ou false,
     "motivo_transferencia": "se transferir, um de: ${MOTIVOS_TRANSF.join(' | ')}; senão vazio"
   }
@@ -122,17 +122,18 @@ function informacoesOficiais(informacoes, assuntoAtual) {
   const info = informacoes || {};
   const partes = [];
   if (info.geral) partes.push(`Sobre a Fortaleza Move (geral): ${info.geral}`);
-  const ordem = [assuntoAtual, ...Object.keys(C.ASSUNTOS).filter((k) => k !== assuntoAtual)].filter(Boolean);
-  for (const k of ordem) if (info[k]) partes.push(`${C.ASSUNTOS[k].nome}${k === assuntoAtual ? ' (assunto atual)' : ''}: ${info[k]}`);
+  const base = C.assuntoBase(assuntoAtual);
+  const ordem = [base, ...Object.keys(C.ASSUNTOS).filter((k) => k !== base)].filter(Boolean);
+  for (const k of ordem) if (info[k]) partes.push(`${C.ASSUNTOS[k].nome}${k === base ? ' (assunto atual)' : ''}: ${info[k]}`);
   for (const [k, nome] of Object.entries(C.INFO_EXTRAS)) if (info[k]) partes.push(`${nome}: ${info[k]}`);
   return limpar(partes.join('\n\n'), 9000) || 'nenhuma cadastrada';
 }
 
 function montarPromptResposta({ mensagens, perfil, faltando, assunto, informacoes, jaSaudou, confirmacaoEnviada }) {
-  const assuntoOk = Object.prototype.hasOwnProperty.call(C.ASSUNTOS, assunto) ? assunto : null;
+  const assuntoOk = Object.prototype.hasOwnProperty.call(C.FLUXOS, assunto) ? assunto : null;
   const contexto = {
     perfil_identificado: PERFIS.includes(perfil) ? perfil : 'desconhecido',
-    assunto_atual: assuntoOk ? C.ASSUNTOS[assuntoOk].nome : 'ainda não definido (descubra o que a pessoa precisa)',
+    assunto_atual: assuntoOk ? C.nomeDoAssunto(assuntoOk) : 'ainda não definido (descubra o que a pessoa precisa)',
     como_conduzir: assuntoOk ? C.FLUXOS[assuntoOk] : 'Descubra com cordialidade o que a pessoa precisa.',
     // Atendimentos que a Fortaleza Move oferece (são as opções do menu oficial: dado do sistema, não da IA).
     servicos_da_plataforma: Object.values(C.ASSUNTOS).filter((a) => a.nome !== 'Outros assuntos').map((a) => a.nome),

@@ -21,7 +21,7 @@ const PERFIL_TIPO = { motorista: 'motoristas', passageiro: 'passageiros', parcei
 const ESTADO = { ia: ['IA atendendo', 'info'], aguardando: ['Aguardando atendimento humano', 'danger'], humano: ['Atendimento humano', 'success'], concluido: ['Concluído', 'neutral'] };
 const IA_ERRO = { indisponivel: 'serviço de IA fora do ar', timeout: 'a IA demorou demais', limite_provedor: 'limite de uso do provedor', rede: 'sem conexão com a IA', resposta_invalida: 'resposta inesperada da IA', falha_redacao: 'a IA não conseguiu redigir', chave_invalida: 'chave da IA recusada', sem_saldo: 'conta da IA sem saldo', modelo_invalido: 'modelo de IA inválido', sem_chave: 'chave da IA não configurada', limite_diario: 'limite diário de análises', em_andamento: 'outra análise em andamento' };
 const ESTADO_CURTO = { ia: 'IA', aguardando: 'Aguardando', humano: 'Humano', concluido: 'Concluído' };
-const ASSUNTO_MENU = { cadastro: 'Cadastro de motorista', passageiro: 'Passageiro', encomendas: 'Encomendas', clube: 'Clube de Vantagens', outros: 'Outros assuntos' };
+const ASSUNTO_MENU = { cadastro: 'Cadastro de motorista', passageiro: 'Passageiro', encomendas: 'Encomendas', clube: 'Clube de Vantagens', comercio: 'Comércio e entregas', comercio_cadastrado: 'Comerciante cadastrado', comercio_cadastrar: 'Cadastro de comércio', comercio_aguardando: 'Aguardando encomenda', comercio_outros: 'Comércio: outras dúvidas', outros: 'Outros assuntos' };
 const EVENTO = { transferida: 'Transferida para a equipe', assumida: 'Assumida', devolvida: 'Devolvida para a IA', concluida: 'Concluída', reaberta: 'Novo atendimento', anexo: 'Arquivo' };
 
 const nomeDe = (c) => c.vinculo_nome || c.nome || c.telefone_exibicao || 'Contato';
