@@ -11,8 +11,8 @@ export type TipoDeServico = 'PASSAGEIRO' | 'ENTREGA' | 'COMERCIO';
 
 export interface ServicoDaCorrida {
   servico: TipoDeServico;
-  /** So no Comercio: APP (a loja pediu) ou MOTORISTA (lancamento manual). */
-  origem: 'APP' | 'MOTORISTA' | null;
+  /** So no Comercio: APP (a loja pediu), MOTORISTA ou CENTRAL (lancamento manual). */
+  origem: 'APP' | 'MOTORISTA' | 'CENTRAL' | null;
   comercioId: string | null;
   comercio: string | null;
 }
@@ -35,7 +35,7 @@ export async function servicosDasCorridas(prisma: PrismaService, rideIds: string
   for (const p of pedidos) {
     mapa.set(p.rideId, {
       servico: 'COMERCIO',
-      origem: p.origem === 'MOTORISTA' ? 'MOTORISTA' : 'APP',
+      origem: p.origem === 'MOTORISTA' ? 'MOTORISTA' : p.origem === 'CENTRAL' ? 'CENTRAL' : 'APP',
       comercioId: p.comercioId,
       comercio: p.comercio.nomeFantasia,
     });
