@@ -83,7 +83,8 @@ const MODELOS_PADRAO = {
   // 13/11: botão "Tenho um comércio e quero entregas" do site.
   abertura_comercio: { nome: 'Botão do site "Tenho um comércio e quero entregas"', texto: 'Que bom ter você por aqui! A Fortaleza Move tem atendimento para comércios que precisam de coleta e entrega.\n\nPara a nossa equipe preparar o seu atendimento, informe, por favor:\n\n• o nome do estabelecimento;\n• a cidade e o endereço;\n• o que você vende ou costuma entregar;\n• quantas entregas faz, em média, por dia ou por semana.\n\nCom essas informações, a nossa equipe entra em contato para combinar os detalhes.' },
   // Opção 5 do menu: segundo menu. As quatro respostas seguintes são as opções desse segundo menu (a 2 é "abertura_comercio").
-  menu_comercio: { nome: 'Opção 5 escolhida (comércio e entregas): segundo menu', texto: 'Certo! Sobre comércio e entregas, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio.\n3. Estou aguardando uma encomenda ou entrega.\n4. Outras informações.\n\nDigite o número da opção desejada.' },
+  voltar_menu: { nome: 'Aviso para voltar ao menu (final das respostas das opções)', texto: 'Para voltar ao menu inicial, digite 0.' },
+  menu_comercio: { nome: 'Opção 5 escolhida (comércio e entregas): segundo menu', texto: 'Certo! Sobre comércio e entregas, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio.\n3. Estou aguardando uma encomenda ou entrega.\n4. Outras informações.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.' },
   abertura_comercio_cadastrado: { nome: 'Comércio, opção 1 (já sou comerciante cadastrado)', texto: 'Certo! Informe, por favor, o nome do seu estabelecimento e como podemos ajudar.\n\nCom essas informações, a nossa equipe dá sequência ao seu atendimento.' },
   abertura_comercio_aguardando: { nome: 'Comércio, opção 3 (aguardando uma encomenda)', texto: 'Certo! Para a nossa equipe verificar a sua encomenda, informe, por favor:\n\n• o nome do comércio ou de quem enviou;\n• o que você está aguardando;\n• o endereço de entrega (rua e bairro);\n• quando o pedido foi feito.\n\nCom essas informações, a nossa equipe verifica e retorna para você.' },
   abertura_comercio_outros: { nome: 'Comércio, opção 4 (outras informações)', texto: 'Certo! Escreva, por favor, o que você gostaria de saber sobre comércio e entregas.' },
@@ -201,7 +202,8 @@ function opcaoDoMenu(texto, assuntoAtual) {
   return ASSUNTO_IDS.find((id) => ASSUNTOS[id].numero === m[1]) || null;
 }
 
-const pediuMenu = (texto) => /^(menu|opcoes|ver (o )?menu|mostrar (o )?menu|voltar( ao menu)?|inicio)$/.test(semAcento(texto).replace(/[^\w\s]/g, '').trim());
+// "0" volta ao menu inicial (de qualquer opção ou do segundo menu), como "menu".
+const pediuMenu = (texto) => /^(0|menu|opcoes|ver (o )?menu|mostrar (o )?menu|voltar( ao menu( inicial)?)?|inicio)$/.test(semAcento(texto).replace(/[^\w\s]/g, '').trim());
 
 // ORIGEM do contato ≠ INTENÇÃO (12/11 noite). "Olá! Vim pelo site da Fortaleza Move." diz de onde a pessoa veio, não o que
 // ela quer: não pode virar cadastro de motorista. A origem fica registrada (relatórios) e a conversa recebe o menu geral.

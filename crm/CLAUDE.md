@@ -55,6 +55,8 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Menu salvo igual ao padrão antigo (5 opções) migra sozinho para o novo; menu editado pelo dono não é tocado. Botão do site "Tenho um comércio"
   → `comercio_cadastrar`. A IA não consulta pedido nem rastreia entrega (FLUXOS.comercio_aguardando só reúne dados e transfere). Testes: `test/ia-comercio-menu.test.js`.
 
+- rc.6: "0" volta ao menu inicial (`pediuMenu`, zera `atend_assunto`); respostas das opções terminam com o modelo `voltar_menu`; o segundo menu traz "0. Voltar ao menu inicial".
+
 ## PUBLICADO no Render: 2.1.0-rc.1 (13/11/2026 06h40, autorização formal do dono)
 - `etapa2` mesclado no `main` (monorepo `5c2f29f` + `88dd8c2`; backup `117b9f7`); deploy manual do commit `88dd8c2`; migrações 1–7
   aplicadas no banco real; Render com `FM_ETAPA2=1`, `DOCS_STORAGE=supabase`, `DOCS_SUPABASE_URL`, `DOCS_SUPABASE_BUCKET=crm-documentos`,

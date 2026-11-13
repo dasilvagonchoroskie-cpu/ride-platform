@@ -688,6 +688,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const assunto = doMenu || daAnalise || conv.atend_assunto || null;
     if (assunto && assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, assunto);
 
+    // Resposta de uma opção do menu termina com "Para voltar ao menu inicial, digite 0." (modelo editável; desativado = sem aviso).
+    const comVoltar = (t) => { const v = central.texto('voltar_menu'); return t && v ? `${t}\n\n${v}` : t; };
     const partes = [];
     const jaSaudou = !!conv.saudado_em;
     if (!jaSaudou && waStore.marcarSaudado(conversaId)) {
@@ -701,7 +703,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const botao = C.botaoDoSite(textoUlt);
     if (botao) {
       if (botao.assunto && botao.assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, botao.assunto);
-      const fixo = botao.modelo === 'menu' ? central.texto('menu') : central.texto(botao.modelo);
+      const fixo = botao.modelo === 'menu' ? central.texto('menu') : comVoltar(central.texto(botao.modelo));
       if (fixo) return enviar([...partes, fixo], { tipo: botao.modelo === 'menu' ? 'menu' : 'botão do site' });
     }
 
@@ -709,7 +711,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const opcaoEscolhida = doMenu;
     if (opcaoEscolhida) {
       const modelo = opcaoEscolhida === 'comercio' ? 'menu_comercio' : (C.SUBASSUNTOS[opcaoEscolhida] ? C.SUBASSUNTOS[opcaoEscolhida].modelo : `abertura_${opcaoEscolhida}`);
-      const abertura = central.texto(modelo);
+      const abertura = modelo === 'menu_comercio' ? central.texto(modelo) : comVoltar(central.texto(modelo));
       if (abertura && !(ultimaIA && ultimaIA.texto.endsWith(abertura))) return enviar([...partes, abertura], { tipo: 'opção do menu' });
     }
 
@@ -749,6 +751,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
     // Menu: no primeiro contato sem assunto claro, ou quando o cliente pede.
     const menu = central.texto('menu');
+    // Voltar ao menu zera o assunto: os números 1–4 do segundo menu de comércio deixam de valer.
+    if (menu && C.pediuMenu(textoUlt) && conv.atend_assunto) waStore.definirAssunto(conversaId, null);
     if (menu && (C.pediuMenu(textoUlt) || ((!jaSaudou || novoAtendimento) && !assunto))) return enviar([...partes, menu], { tipo: 'menu' });
 
     // Informações novas aplicadas ao cadastro: confirmação padrão (uma vez por informação nova).
