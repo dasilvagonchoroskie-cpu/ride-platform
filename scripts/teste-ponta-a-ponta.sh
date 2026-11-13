@@ -861,6 +861,14 @@ U2=$(uso_total)
 E=$(post /rides/estimate "{\"pickup\":$EMB,\"dropoff\":$DES,\"category\":\"ENTREGA\"}" "$TP"); COTE2=$(echo "$E" | jq -r '.data.cotacao // empty')
 [ "$(echo "$E" | jq -r '.data.category')" = "ENTREGA" ] && [ "$(echo "$E" | jq -r '.data.estimatedFareCents')" -gt 0 ] 2>/dev/null \
   && ok "Entrega: preco pela tarifa propria da cidade ($(echo "$E" | jq -r '.data.estimatedFareCents') centavos)" || falha "Entrega: preco" "$E"
+# Escolha Moto/Carro da encomenda (Comercio e entrega manual): so veiculos que a Central liberou, cada um com preco oficial.
+if [ "$(echo "$E" | jq -r '.data | has("opcoesEntrega")')" = "true" ]; then
+  [ "$(echo "$E" | jq -r '[.data.opcoesEntrega[] | select((.veiculo=="CARRO" or .veiculo=="MOTO") and (.estimatedFareCents > 0))] | length')" = "$(echo "$E" | jq -r '.data.opcoesEntrega | length')" ] \
+    && [ "$(echo "$E" | jq -r '.data.opcoesEntrega | length')" -ge 1 ] 2>/dev/null \
+    && ok "Entrega: opcoes de veiculo ($(echo "$E" | jq -r '[.data.opcoesEntrega[] | .veiculo + " " + (.estimatedFareCents|tostring)] | join("; ")') centavos)" || falha "Entrega: opcoes de veiculo (moto/carro)" "$(echo "$E" | jq -c '.data.opcoesEntrega')"
+else
+  echo "PULADO Entrega: opcoes de veiculo (o servidor no ar ainda nao devolve opcoesEntrega)" | tee -a "$REL"
+fi
 post /drivers/me/location '{"latitude":-18.0130,"longitude":-49.3550,"accuracy":10}' "$TM" >/dev/null
 X=$(post /rides "{\"pickup\":$EMB,\"dropoff\":$DES,\"paymentMethodType\":\"CASH\",\"cotacao\":\"$COTE2\",\"entrega\":{\"descricao\":\"Envelope do teste automatico\",\"destinatarioNome\":\"Ana Teste\",\"destinatarioTelefone\":\"64999990000\"}}" "$TP")
 RENT=$(echo "$X" | jq -r '.data.ride.id // empty'); CODENT=$(echo "$X" | jq -r '.data.ride.entrega.codigo // empty')
