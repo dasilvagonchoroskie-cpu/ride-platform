@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Comercio: so pede e acompanha entregas pela internet. Sem GPS, sem
-         notificacao nativa, sem servico em segundo plano. -->
+    <!-- Comercio: pede e acompanha entregas pela internet. Sem servico em segundo plano. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Como os outros aplicativos: localizacao (so para o mapa abrir onde a loja esta), notificacoes. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Vibrar junto com o alarme de "o motorista chegou" (so com o app aberto). -->
     <uses-permission android:name="android.permission.VIBRATE" />
 

@@ -6,6 +6,7 @@ import '../core/tema.dart';
 import '../estado/escopo.dart';
 import '../widgets/comuns.dart';
 import 'estabelecimento_tela.dart';
+import 'permissoes_tela.dart';
 import 'termos_tela.dart';
 
 /// Dados do estabelecimento, edicao e saida.
@@ -54,6 +55,13 @@ class ContaAba extends StatelessWidget {
         onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const TermosTela())),
         icon: const Icon(Icons.article_outlined),
         label: const Text('Termos de uso'),
+      ),
+      const SizedBox(height: 10),
+      OutlinedButton.icon(
+        key: const Key('autorizacoes-celular'),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AutorizacoesTela())),
+        icon: const Icon(Icons.verified_user_outlined),
+        label: const Text('Autorizações do celular'),
       ),
       const SizedBox(height: 10),
       OutlinedButton.icon(onPressed: s.sair, icon: const Icon(Icons.logout), label: const Text('Sair da conta')),
