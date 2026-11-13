@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:flutter/services.dart';
 
+import 'alarme_web_stub.dart' if (dart.library.js_interop) 'alarme_web.dart' as web;
+
 /// Alarme "o motorista chegou" (mesmo assobio do aplicativo do passageiro:
 /// toca como alarme, mesmo no silencioso, e vibra). So com o aplicativo
 /// aberto: o Comercio nao tem servico em segundo plano. Toca uma vez por
@@ -22,7 +24,11 @@ class Alarme {
   static Future<void> motoristaChegou(String rideId) async {
     if (rideId.isEmpty || !_ja.add(rideId)) return;
     tocados.add(rideId);
-    if ((kIsWeb || !Platform.isAndroid)) return;
+    if (kIsWeb) {
+      web.tocarNoNavegador();
+      return;
+    }
+    if (!Platform.isAndroid) return;
     try {
       await _canal.invokeMethod<dynamic>('assobio', {'chave': '$rideId:chegou'});
     } catch (_) {
@@ -31,7 +37,7 @@ class Alarme {
   }
 
   static Future<void> parar() async {
-    if ((kIsWeb || !Platform.isAndroid)) return;
+    if (kIsWeb || !Platform.isAndroid) return;
     try {
       await _canal.invokeMethod<dynamic>('parar');
     } catch (_) {}

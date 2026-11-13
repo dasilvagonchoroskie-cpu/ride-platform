@@ -3,7 +3,7 @@ name: Comercio na web
 # Comercio pelo navegador (13/11/2026): monta a versao web do aplicativo do
 # Comercio (computador e celular) e publica no ramo "comercio-web-site", que o
 # Render (site estatico gratis) serve. Instala como aplicativo (PWA).
-# Em qualquer ramo so MONTA (para conferir que compila); publicar so no main.
+# Ramo do site: comercio-web-site (so o Render le).
 on:
   push:
     branches: [main, comercio-ajustes-alfinete-moto]
@@ -57,6 +57,7 @@ jobs:
               const p = await ctx.newPage();
               const erros = [];
               p.on('pageerror', (e) => erros.push(String(e)));
+              p.on('console', (m) => { if (m.type() === 'error') erros.push(m.text()); });
               await p.goto('http://localhost:8099/', { waitUntil: 'load', timeout: 90000 });
               await p.waitForTimeout(8000);
               await p.screenshot({ path: `comercio-web-${nome}.png` });
@@ -74,8 +75,8 @@ jobs:
           git config user.name "CI Fortaleza"; git config user.email "ci@fortalezadigitalsecurity.com.br"
           git add -A && git commit -q -m "fotos do Comercio web ${{ github.run_number }}"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" fotos-comercio-web
-      - name: Publicar no ramo do site (so no main)
-        if: github.ref == 'refs/heads/main'
+      - name: Publicar no ramo do site (main ou ramo de trabalho)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/comercio-ajustes-alfinete-moto'
         working-directory: apps/comercio_app/build/web
         run: |
           git init -q -b comercio-web-site
