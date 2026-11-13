@@ -20,6 +20,7 @@ import { AppConfigService } from '../../config/app-config.service';
 import { assinarCotacao, lerCotacao } from './cotacao';
 import { EntregasService } from '../entregas/entregas.service';
 import { CODIGO_ENTREGA, codigoDaEntrega, ehEntrega, veiculosDaCidade } from '../entregas/entregas.regras';
+import { MAX_ENTREGAS_POR_PEDIDO } from '../entregas/entregas.service';
 import { diaDeBrasilia, idAnonimo, posicaoAproximada, rumoArredondado } from './carros-perto';
 import type {
   CancelRideInput,
@@ -378,7 +379,7 @@ export class RidesService {
   async pedir(
     passengerId: string,
     input: RequestRideInput,
-    opcoes: { varias?: boolean; aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void> } = {},
+    opcoes: { varias?: boolean; paradasDeEntrega?: boolean; aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void> } = {},
   ) {
     const jaTem = opcoes.varias
       ? null
@@ -398,7 +399,9 @@ export class RidesService {
       if (!entrega) throw BusinessException.validation('Faltam os dados da entrega (o que vai e quem recebe).');
       if (!input.dropoff || input.semDestino) throw BusinessException.validation('Informe o endereço de entrega.');
       if (input.scheduledFor) throw BusinessException.validation('Entrega agendada ainda não está disponível.');
-      if ((input.paradas ?? []).length > 0) throw BusinessException.validation('Entrega com paradas ainda não está disponível.');
+      // Varias entregas num pedido so (um veiculo, uma rota): so o app Comercio, que grava cada parada com o seu codigo.
+      if ((input.paradas ?? []).length > 0 && !opcoes.paradasDeEntrega) throw BusinessException.validation('Entrega com paradas ainda não está disponível.');
+      if ((input.paradas ?? []).length > MAX_ENTREGAS_POR_PEDIDO - 1) throw BusinessException.validation(`No máximo ${MAX_ENTREGAS_POR_PEDIDO} entregas por pedido.`);
       input = { ...input, category: entrega.veiculo ? codigoDaEntrega(entrega.veiculo) : CODIGO_ENTREGA };
     }
     const naCidade = entrega ? await this.entregas.exigirLigada(input.pickup) : null;
@@ -1055,6 +1058,18 @@ export class RidesService {
   }
 
   /**
+   * Varias entregas num pedido: o motorista confirma uma parada do caminho com o
+   * codigo de quem recebeu, na ordem da rota, com a corrida em andamento.
+   */
+  async entregarParada(driverId: string, rideId: string, sequencia: number, codigo: string | null | undefined) {
+    const corrida = await this.daCorridaDoMotorista(driverId, rideId);
+    if (!ehEntrega(corrida.category)) throw BusinessException.validation('Esta corrida não é uma entrega.');
+    if (corrida.status !== RideStatus.IN_PROGRESS) throw BusinessException.validation('Inicie a viagem (coleta feita) antes de entregar.');
+    await this.entregas.entregarParada(rideId, sequencia, codigo);
+    return { ok: true, sequencia };
+  }
+
+  /**
    * Fim da corrida.
    *
    * O aplicativo manda o que mediu, e o servidor recalcula o preco pela
@@ -1065,7 +1080,11 @@ export class RidesService {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.COMPLETED);
     // Entrega: so termina com o codigo de 4 digitos de quem recebe.
-    if (ehEntrega(corrida.category)) await this.entregas.conferirAoEntregar(rideId, input.codigoEntrega);
+    if (ehEntrega(corrida.category)) {
+      // Varias entregas: as do caminho precisam estar entregues (cada uma com o seu codigo) antes da ultima.
+      await this.entregas.exigirParadasEntregues(rideId);
+      await this.entregas.conferirAoEntregar(rideId, input.codigoEntrega);
+    }
 
     const medida = await this.medicaoFinal(corrida, input);
     const distancia = medida.distanceMeters;
@@ -1740,6 +1759,8 @@ export class RidesService {
         semDestino: corrida.dropoffPlaceId === SEM_DESTINO,
         /** Etapa 5: entrega de encomenda (null = corrida de passageiro). */
         entrega: this.entregas.publico(daEntrega, quemVe),
+        /** Varias entregas num pedido: as do caminho, com o codigo de cada uma (vazio = entrega unica). */
+        paradasEntrega: daEntrega ? this.entregas.publicoParadas(await this.entregas.paradasDaCorrida(rideId), quemVe) : [],
       },
     };
   }

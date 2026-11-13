@@ -8,6 +8,7 @@ import { PracasService } from '../pracas/pracas.service';
 import { pracaDoPonto } from '../pracas/pracas.store';
 import { RidesService } from '../rides/rides.service';
 import { telefoneDeQuemRecebe } from '../entregas/entregas.regras';
+import { EntregasService } from '../entregas/entregas.service';
 import { ComercioAvisosService } from './comercio.avisos';
 import { COMERCIO_TERMS_VERSION } from './comercio.termos';
 import {
@@ -156,6 +157,11 @@ export function comercioPublico(c: Linha) {
   };
 }
 
+/** "COMÉRCIO Loja (tel): encomenda | Ref: ..." -> so a encomenda. */
+function soAEncomenda(descricao: string): string {
+  return descricao.replace(/^COMÉRCIO [^:]*: /, '').split(' | ')[0];
+}
+
 @Injectable()
 export class ComercioService implements OnModuleInit {
   private readonly logger = new Logger(ComercioService.name);
@@ -167,6 +173,7 @@ export class ComercioService implements OnModuleInit {
     private readonly rides: RidesService,
     private readonly pracas: PracasService,
     private readonly avisos: ComercioAvisosService,
+    private readonly entregas: EntregasService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -404,7 +411,7 @@ export class ComercioService implements OnModuleInit {
   private async exigirMesmoPreco(userId: string, c: Linha, input: EntregaInput): Promise<void> {
     const pickup = this.coleta(c, input.coletaAlternativa);
     const orc = await this.rides.estimar(
-      { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
+      { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(this.paradasDaRota(input).length ? { paradas: this.paradasDaRota(input) } : {}), ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
       userId,
     );
     const opcao = (orc.opcoesEntrega ?? []).find((o) => o.veiculo === input.veiculo);
@@ -423,6 +430,11 @@ export class ComercioService implements OnModuleInit {
     if (abertas >= MAX_ABERTAS_POR_LOJA) {
       throw BusinessException.conflict(`Você já tem ${MAX_ABERTAS_POR_LOJA} entregas em andamento. Aguarde alguma terminar ou cancele uma antes de pedir outra.`);
     }
+  }
+
+  /** As entregas do caminho (varias entregas num pedido) como paradas da rota. Vazio = entrega unica, como sempre. */
+  private paradasDaRota(input: { paradas?: EntregaInput['paradas'] }) {
+    return (input.paradas ?? []).map((p) => this.destino(p.destino));
   }
 
   private destino(d: EntregaInput['destino']) {
@@ -445,13 +457,15 @@ export class ComercioService implements OnModuleInit {
     await this.exigirColetaNaCidade(c, input.coletaAlternativa);
     const pickup = this.coleta(c, input.coletaAlternativa);
     const orc = await this.rides.estimar(
-      { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
+      { pickup, dropoff: this.destino(input.destino), category: 'ENTREGA', ...(this.paradasDaRota(input).length ? { paradas: this.paradasDaRota(input) } : {}), ...(input.cotacao ? { cotacao: input.cotacao } : {}) } as never,
       c.userId,
     );
     const opcoes = (orc.opcoesEntrega ?? []).map((o) => ({ veiculo: o.veiculo, nome: o.nome, valorCents: o.estimatedFareCents }));
     return {
       coleta: { endereco: pickup.address, alternativa: !!input.coletaAlternativa },
       entrega: { endereco: this.destino(input.destino).address },
+      /** Varias entregas: quantas no total (1 = entrega unica). O preco e a tarifa de sempre sobre o percurso todo. */
+      totalDeEntregas: (input.paradas ?? []).length + 1,
       distanciaMetros: orc.distanceMeters,
       duracaoSegundos: orc.durationSeconds,
       // Mostra so o que a Central liberou na cidade. Nada e ligado por aqui.
@@ -605,6 +619,17 @@ export class ComercioService implements OnModuleInit {
         observacoes: input.encomenda.observacoes,
         referencia: input.destino.referencia,
       });
+      const extras = input.paradas ?? [];
+      const paradasDoPedido = extras.map((p, i) => ({
+        sequencia: i + 1,
+        descricao: descricaoParaMotorista({ nome: c.nomeFantasia, telefone: c.telefone, encomenda: p.encomenda.descricao, referencia: p.destino.referencia }),
+        destinatarioNome: p.destinatario.nome,
+        destinatarioTelefone: p.destinatario.telefone,
+      }));
+      // O resumo do pedido (coluna de 120 letras) quando ha mais de uma entrega.
+      const resumoDaEncomenda = extras.length
+        ? `${extras.length + 1} entregas: ${[...extras.map((p) => p.encomenda.descricao), input.encomenda.descricao].join('; ')}`.slice(0, 120)
+        : input.encomenda.descricao;
       let rideId: string;
       try {
         const corrida = await this.rides.pedir(
@@ -613,6 +638,7 @@ export class ComercioService implements OnModuleInit {
             pickup,
             dropoff: this.destino(input.destino),
             paymentMethodType: 'CASH',
+            ...(paradasDoPedido.length ? { paradas: this.paradasDaRota(input) } : {}),
             ...(input.cotacao ? { cotacao: input.cotacao } : {}),
             entrega: {
               descricao,
@@ -623,13 +649,14 @@ export class ComercioService implements OnModuleInit {
           } as never,
           {
             varias: true,
+            ...(paradasDoPedido.length ? { paradasDeEntrega: true } : {}),
             aoCriar: async (tx, id) => {
               await tx.comercioPedido.create({
                 data: {
                   rideId: id,
                   comercioId: c.id,
                   chave: input.chave,
-                  encomenda: input.encomenda.descricao,
+                  encomenda: resumoDaEncomenda,
                   observacoes: input.encomenda.observacoes ?? null,
                   destNumero: input.destino.numero,
                   destComplemento: input.destino.complemento ?? null,
@@ -643,6 +670,7 @@ export class ComercioService implements OnModuleInit {
                   ...(quem.origem === 'MOTORISTA' ? { lancadoPor: quem.motoristaId ?? null, lancadoEm: new Date() } : {}),
                 },
               });
+              if (paradasDoPedido.length) await this.entregas.criarParadas(tx, id, paradasDoPedido);
             },
           },
         );
@@ -663,7 +691,7 @@ export class ComercioService implements OnModuleInit {
           action: quem.origem === 'MOTORISTA' ? 'COMERCIO_ENTREGA_LANCADA_PELO_MOTORISTA' : 'COMERCIO_PEDIU_ENTREGA',
           entity: 'ride',
           entityId: rideId,
-          after: { comercioId: c.id, origem: quem.origem, veiculo: input.veiculo, coletaAlternativa: !!input.coletaAlternativa } as never,
+          after: { comercioId: c.id, origem: quem.origem, veiculo: input.veiculo, coletaAlternativa: !!input.coletaAlternativa, entregas: extras.length + 1 } as never,
         },
       });
       return { rideId, repetido: false };
@@ -681,6 +709,7 @@ export class ComercioService implements OnModuleInit {
       ride: {
         include: {
           entrega: true,
+          stops: { orderBy: { sequence: 'asc' } },
           driver: { select: { user: { select: { name: true } } } },
           vehicle: { select: { plate: true, model: true } },
         },
@@ -731,7 +760,49 @@ export class ComercioService implements OnModuleInit {
     // So o que o mapa precisa (nunca a corrida inteira: telefone do motorista etc.).
     const mapa = base.final ? null : await this.mapaDaEntrega(p.ride);
     await this.avisos.deEntrega(c.userId, rideId, base.etapa as Etapa, p.ride.driver?.user?.name?.split(' ')[0] ?? null);
-    return { ...base, codigoDeEntrega: codigo, mapa };
+    // Varias entregas num pedido: cada uma com quem recebe e o codigo dela (so enquanto o pedido esta aberto).
+    const lista = p.ride.entrega ? await this.entregas.paradasDaCorrida(rideId) : [];
+    const enderecos = new Map<number, string>(((p.ride as { stops?: Array<{ sequence: number; address: string }> }).stops ?? []).map((x) => [x.sequence, x.address]));
+    const entregas = lista.length
+      ? [
+          ...lista.map((x) => ({
+            ordem: x.sequencia,
+            encomenda: soAEncomenda(x.descricao),
+            destinatario: { nome: x.destinatarioNome, telefone: x.destinatarioTelefone },
+            endereco: enderecos.get(x.sequencia) ?? null,
+            entregueEm: x.entregueEm ? new Date(x.entregueEm).toISOString() : null,
+            codigoDeEntrega: base.final || x.entregueEm ? null : x.codigo,
+          })),
+          {
+            ordem: lista.length + 1,
+            encomenda: soAEncomenda(p.ride.entrega?.descricao ?? p.encomenda),
+            destinatario: base.destinatario,
+            endereco: base.enderecoDeEntrega,
+            entregueEm: base.entregueEm,
+            codigoDeEntrega: codigo,
+          },
+        ]
+      : [];
+    // Mapa: cada entrega num ponto, com o "feito" (✔ verde no app) quando o motorista confirmou o codigo.
+    let mapaFinal = mapa as (Record<string, unknown> | null);
+    if (mapaFinal && entregas.length) {
+      const stops = ((p.ride as { stops?: Array<{ sequence: number; latitude: unknown; longitude: unknown }> }).stops ?? []);
+      const num = (v: unknown) => (v == null ? null : Number(v));
+      mapaFinal = {
+        ...mapaFinal,
+        pontos: entregas.map((e) => {
+          const st = stops.find((x) => x.sequence === e.ordem);
+          const ultima = e.ordem === entregas.length;
+          return {
+            ordem: e.ordem,
+            latitude: ultima ? num(p.ride.dropoffLat) : num(st?.latitude),
+            longitude: ultima ? num(p.ride.dropoffLng) : num(st?.longitude),
+            entregue: !!e.entregueEm,
+          };
+        }),
+      };
+    }
+    return { ...base, codigoDeEntrega: codigo, entregas, mapa: mapaFinal };
   }
 
   /**

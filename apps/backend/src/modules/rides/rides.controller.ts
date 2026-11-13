@@ -280,6 +280,19 @@ export class DriverRidesController {
     return r;
   }
 
+  @Post(':id/paradas/:sequencia/entregar')
+  @ApiOperation({ summary: 'Entrega com varias paradas: confirma uma entrega do caminho com o codigo de quem recebeu' })
+  async entregarParada(
+    @CurrentUser('driverId') driverId: string,
+    @Param('id', new ParseUUIDPipe()) rideId: string,
+    @Param('sequencia') sequencia: string,
+    @Body(new ZodValidationPipe(z.object({ codigoEntrega: z.string().trim().max(10).optional() }))) body: { codigoEntrega?: string },
+  ) {
+    const n = Number(sequencia);
+    if (!Number.isInteger(n) || n < 1 || n > 10) throw BusinessException.validation('Parada inválida.');
+    return this.rides.entregarParada(driverId, rideId, n, body.codigoEntrega);
+  }
+
   @Post(':id/taximetro')
   @ApiOperation({ summary: 'Taximetro ao vivo: o que o celular mediu ate agora (o passageiro acompanha)' })
   taximetro(
