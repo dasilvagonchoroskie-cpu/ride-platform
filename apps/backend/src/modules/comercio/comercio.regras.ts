@@ -245,6 +245,27 @@ export type EntregaCentralInput = z.infer<typeof entregaCentralSchema>;
 export const cotarCentralSchema = cotarSchema.omit({ paradas: true }).extend({ comercioId: z.string().uuid() });
 export type CotarCentralInput = z.infer<typeof cotarCentralSchema>;
 
+/**
+ * Estabelecimento NAO cadastrado no Comercio (13/11/2026, entrega avulsa pela
+ * Central): so o que a Central precisa para a coleta: nome, telefone de contato e
+ * o endereco de coleta, ja confirmado no mapa.
+ */
+export const estabelecimentoAvulsoSchema = z.object({
+  nome: texto(2, 120, 'Nome do estabelecimento'),
+  telefone: z.string().trim().refine((t) => /^\d{10,13}$/.test(digitos(t)), 'Telefone do estabelecimento com DDD.'),
+  coleta: pontoSchema,
+});
+export type EstabelecimentoAvulso = z.infer<typeof estabelecimentoAvulsoSchema>;
+
+/** Igual ao pedido da loja, mas sem cadastro: o estabelecimento vem digitado e a coleta e o endereco dele. */
+export const entregaAvulsaSchema = entregaSchema
+  .omit({ paradas: true, coletaAlternativa: true })
+  .extend({ estabelecimento: estabelecimentoAvulsoSchema, motoristaId: z.string().uuid().optional() });
+export type EntregaAvulsaInput = z.infer<typeof entregaAvulsaSchema>;
+
+export const cotarAvulsaSchema = cotarSchema.omit({ paradas: true, coletaAlternativa: true }).extend({ estabelecimento: estabelecimentoAvulsoSchema });
+export type CotarAvulsaInput = z.infer<typeof cotarAvulsaSchema>;
+
 export type TipoDeBusca = { tipo: 'EMAIL' | 'TELEFONE' | 'NOME'; valor: string };
 
 /** E-mail se tem "@"; telefone se so tem numeros e simbolos de telefone (8+ numeros); senao, nome. */
@@ -328,9 +349,17 @@ export function enderecoPorExtenso(e: {
  * app dele, que nao muda): quem e o comercio, o telefone para a coleta, a
  * encomenda e a observacao. A observacao e a primeira a ser cortada.
  */
-export function descricaoParaMotorista(d: { nome: string; telefone: string; encomenda: string; observacoes?: string | null; referencia?: string | null }): string {
+export function descricaoParaMotorista(d: {
+  nome: string;
+  telefone: string;
+  encomenda: string;
+  observacoes?: string | null;
+  referencia?: string | null;
+  /** "COMERCIO" (cadastrado, padrao) ou "AVULSO" (coleta lancada pela Central, sem cadastro). */
+  rotulo?: string;
+}): string {
   const tel = digitos(d.telefone).replace(/^55(\d{10,11})$/, '$1');
-  const cabeca = `COMÉRCIO ${d.nome.trim()} (${tel}): ${d.encomenda.trim()}`;
+  const cabeca = `${d.rotulo ?? 'COMÉRCIO'} ${d.nome.trim()} (${tel}): ${d.encomenda.trim()}`;
   const extras = [d.observacoes ? `Obs: ${d.observacoes.trim()}` : '', d.referencia ? `Ref: ${d.referencia.trim()}` : ''].filter(Boolean);
   const cheio = extras.length ? `${cabeca} | ${extras.join(' | ')}` : cabeca;
   if (cheio.length <= 200) return cheio;
