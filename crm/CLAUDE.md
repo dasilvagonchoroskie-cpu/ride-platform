@@ -47,6 +47,17 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## CNH na ficha do motorista (13/11/2026 noite, pedido do dono; 2.1.0-rc.9, cache segue `fm-crm-v36`)
+- Campos novos em motoristas e entregadores: `cnh_primeira_habilitacao` e `cnh_validade` (date). A IA os preenche pelo texto lido da CNH
+  (`extrairDadosDocumentos` só em textos `tipoDocumento === 'cnh'`; `dataISO` converte dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa; data impossível é descartada).
+  `mascararNumeros` NÃO mascara datas (antes "05-10-2030" virava pontinhos). Categoria também aceita "Cat. Hab.". `db.js` roda `acrescentarColunas`
+  de novo depois das migrações (tabelas entregadores/comércios criadas por migração ganham campos opcionais novos).
+- O NÚMERO DE REGISTRO da CNH NÃO entra no formulário (decisão de segurança, a combinar com o dono): continua mascarado no texto lido e o número
+  inteiro fica só no arquivo da CNH no arquivo digital (cifrado). Se for guardar: campo cifrado (`protegidos.js`), só admin, com finalidade, sem passar
+  pelo CRUD genérico (que não tem permissão por campo). Testes: `test/cnh-campos.test.js`.
+- "Não enviado" nos documentos da ficha com PDF enviado pelo WhatsApp = arquivo digital desligado (falta `DOCS_SUPABASE_KEY`; `/api/admin/saude`
+  mostra `armazenamento_pronto:false`). Texto lido NUNCA marca comprovante. Arquivos enviados ANTES de ligar não foram guardados: reenviar ou anexar na ficha.
+
 ## Cartões do painel todos funcionais (13/11/2026 noite, pedido do dono; 2.1.0-rc.8, cache `fm-crm-v36`)
 - Todos os cartões do dashboard abrem a lista já filtrada (`ir(modulo,{situacao,etapa,de,ate,rotulo})` em `dashboard.js`; `data-ir`, role=button, teclado).
   A rota aceita `#/modulo?f_situacao=A|B&etapa=&de=&ate=&rotulo=`; `entities.montarFiltro` aceita vários valores com "|" (IN parametrizado, máx. 12);

@@ -12,7 +12,7 @@ const PROVEDOR_PADRAO = 'gemini';
 const tipoParaPerfil = { motoristas: 'motorista', passageiros: 'passageiro', parceiros: 'parceiro' };
 const preenchido = (v) => v !== null && v !== undefined && String(v).trim() !== '';
 
-const { extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos } = require('./documentos');
+const { dataISO, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos } = require('./documentos');
 const C = require('./central');
 const { DOCUMENTOS_MOTORISTA } = require('../defs');
 
@@ -237,6 +237,9 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       if (resultado.campos.cnh_categoria) {
         const c = normalizarCategoria(resultado.campos.cnh_categoria);
         if (c) resultado.campos.cnh_categoria = c; else delete resultado.campos.cnh_categoria;
+      }
+      for (const k of ['cnh_primeira_habilitacao', 'cnh_validade']) {
+        if (resultado.campos[k]) { const d = dataISO(resultado.campos[k]); if (d) resultado.campos[k] = d; else delete resultado.campos[k]; }
       }
       if (resultado.campos.placa) resultado.campos.placa = normalizarPlaca(resultado.campos.placa) || resultado.campos.placa;
       if (tipoAlvo) resultado.perfil = tipoParaPerfil[tipoAlvo]; // com cadastro vinculado, o perfil é o do cadastro

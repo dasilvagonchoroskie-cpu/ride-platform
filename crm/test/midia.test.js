@@ -109,7 +109,7 @@ test('reforço sem IA: categoria da CNH, placa e veículo saem do texto lido de 
     { direcao: 'in', texto: '[imagem] 📎 Tipo: CRLV\nPlaca: QWE-1A23\nMarca/Modelo: VW/GOL 1.0\nAno modelo: 2015\nCor: PRATA' },
     { direcao: 'out', texto: 'Categoria: E' }
   ];
-  assert.deepEqual(extrairDadosDocumentos(msgs), { cnh_categoria: 'AB', placa: 'QWE1A23', veiculo: 'VW/GOL 1.0, PRATA, 2015' });
+  assert.deepEqual(extrairDadosDocumentos(msgs), { cnh_categoria: 'AB', cnh_validade: '2030-05-10', placa: 'QWE1A23', veiculo: 'VW/GOL 1.0, PRATA, 2015' });
   assert.equal(normalizarCategoria('Categoria B'), 'B');
   assert.equal(normalizarCategoria('xyz'), null);
   assert.equal(normalizarPlaca('abc-1234'), 'ABC1234');

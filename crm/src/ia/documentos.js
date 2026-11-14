@@ -10,6 +10,23 @@ function normalizarCategoria(v) {
   return m && CATEGORIAS.includes(m[1]) ? m[1] : null;
 }
 
+// Datas lidas de documentos (dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa ou aaaa-mm-dd) → "AAAA-MM-DD"; null se não for uma data real.
+function dataISO(v) {
+  const t = String(v || '').trim();
+  let d; let m; let a;
+  let x = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/);
+  if (x) { d = +x[1]; m = +x[2]; a = +x[3]; } else {
+    x = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!x) return null;
+    a = +x[1]; m = +x[2]; d = +x[3];
+  }
+  if (a < 1940 || a > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(Date.UTC(a, m - 1, d));
+  if (dt.getUTCFullYear() !== a || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+const DATA_NO_TEXTO = '(\\d{1,2}[\\/.\\-]\\d{1,2}[\\/.\\-]\\d{4}|\\d{4}-\\d{2}-\\d{2})';
+
 function normalizarPlaca(v) {
   const m = String(v || '').toUpperCase().match(PLACA);
   return m ? `${m[1]}${m[2]}` : null;
@@ -19,8 +36,17 @@ function extrairDadosDocumentos(mensagens) {
   const textos = (mensagens || []).filter((m) => m.direcao === 'in' && /📎/u.test(String(m.texto || ''))).map((m) => String(m.texto));
   const tudo = textos.join('\n');
   const r = {};
-  const cat = tudo.match(/categoria(?:\s+(?:da\s+)?(?:cnh|habilita[çc][ãa]o))?\s*[:\-]\s*([A-Ea-e]{1,2})\b/i);
+  const cat = tudo.match(/(?:categoria(?:\s+(?:da\s+)?(?:cnh|habilita[çc][ãa]o))?|cat\.?\s*hab\.?)\s*[:\-]\s*([A-Ea-e]{1,2})\b/i);
   if (cat) { const c = normalizarCategoria(cat[1]); if (c) r.cnh_categoria = c; }
+  // Datas da CNH: só de textos lidos que são CNH (a "validade" de outros papéis não entra).
+  for (const t of textos.filter((x) => tipoDocumento(x) === 'cnh')) {
+    const prim = t.match(new RegExp(`(?:primeira|1[ªa°º]?)\\s*habilita[çc][ãa]o\\s*[:\\-]\\s*${DATA_NO_TEXTO}`, 'i'));
+    const val = t.match(new RegExp(`validade(?:\\s+da\\s+(?:cnh|habilita[çc][ãa]o))?\\s*[:\\-]\\s*${DATA_NO_TEXTO}`, 'i'));
+    const p1 = prim && dataISO(prim[1]);
+    const v1 = val && dataISO(val[1]);
+    if (p1 && !r.cnh_primeira_habilitacao) r.cnh_primeira_habilitacao = p1;
+    if (v1 && !r.cnh_validade) r.cnh_validade = v1;
+  }
   const placaRotulo = tudo.match(/placa\s*[:\-]\s*([A-Za-z]{3}[-\s]?\d[A-Za-z0-9]\d{2})/i);
   const placa = normalizarPlaca(placaRotulo ? placaRotulo[1] : (/crlv|renavam|ve[ií]culo/i.test(tudo) ? tudo : ''));
   if (placa) r.placa = placa;
@@ -77,13 +103,18 @@ function documentosRecebidos(mensagens) {
 // Mascara números de documentos no texto lido (CPF, RG, registro da CNH, Renavam, chassi numérico...): o cadastro
 // não precisa deles, e assim não ficam guardados nem aparecem para toda a equipe. Mantém os 3 últimos dígitos.
 function mascararNumeros(texto) {
-  return String(texto || '')
+  // Datas (nascimento, validade, 1ª habilitação) NÃO são números de documento: ficam de fora da máscara
+  // (senão "05-10-2008" virava pontinhos e o CRM perdia a validade da CNH).
+  const datas = [];
+  const semDatas = String(texto || '').replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{4}\b/g, (d) => { datas.push(d); return `\u0001${datas.length - 1}\u0002`; });
+  return semDatas
     .replace(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, (m) => `***.***.***-${m.slice(-2)}`)
     .replace(/\b\d(?:[\d.\- ]{6,}\d)\b/g, (m) => {
       const digitos = m.replace(/\D/g, '');
       if (digitos.length < 8) return m;
       return `${'•'.repeat(digitos.length - 3)}${digitos.slice(-3)}`;
-    });
+    })
+    .replace(/\u0001(\d+)\u0002/g, (_, i) => datas[Number(i)]);
 }
 
-module.exports = { TIPOS_DOCUMENTO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };
+module.exports = { TIPOS_DOCUMENTO, dataISO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };
