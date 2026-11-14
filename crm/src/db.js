@@ -17,7 +17,7 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
 
 // Migração simples e segura: campo novo em defs.js que ainda não existe na tabela vira coluna (TEXT, opcional).
 // Só ACRESCENTA colunas; nunca apaga nem altera dados. Nomes vêm só de defs.js (lista fechada, sem entrada de usuário).
-(function acrescentarColunas() {
+function acrescentarColunas() {
   // Colunas de sistema (fora de defs.js).
   const usuarios = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
   for (const [col, tipo] of [['totp_segredo', 'TEXT'], ['totp_pendente', 'TEXT'], ['totp_ativo', 'INTEGER NOT NULL DEFAULT 0'], ['totp_ultimo_passo', 'INTEGER NOT NULL DEFAULT 0'], ['email_2fa', 'INTEGER NOT NULL DEFAULT 0']]) {
@@ -57,11 +57,16 @@ db.exec(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
       db.exec(`ALTER TABLE ${def.table} ADD COLUMN ${f.key} TEXT`);
     }
   }
-})();
+}
+acrescentarColunas();
 
 // Etapa 2 (pessoas, empresas, vínculos): migrações versionadas, SÓ com FM_ETAPA2=1 (desligado em produção até a
 // autorização do dono). Cada migração roda numa transação com verificação; falhou → nada muda e o CRM não liga.
-if (process.env.FM_ETAPA2 === '1') require('./migracoes').migrarAoLigar(db, DATA_DIR);
+if (process.env.FM_ETAPA2 === '1') {
+  require('./migracoes').migrarAoLigar(db, DATA_DIR);
+  // Tabelas criadas pelas migrações (entregadores, comércios) também ganham os campos opcionais novos de defs.js.
+  acrescentarColunas();
+}
 
 const nowISO = () => new Date().toISOString();
 

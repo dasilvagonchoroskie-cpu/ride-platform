@@ -13,6 +13,7 @@ import { ComercioAvisosService } from '../comercio/comercio.avisos';
 import { ComercioService } from '../comercio/comercio.service';
 import { EntregaManualController } from './entrega-manual.controller';
 import { EntregaManualCentralController } from './entrega-manual-central.controller';
+import { entregaAvulsaSchema } from '../comercio/comercio.regras';
 import { EntregaManualService } from './entrega-manual.service';
 
 /**
@@ -101,7 +102,15 @@ function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: strin
 
   const comJoin = (p: any) => (p ? { ...p, ride: corridas[p.rideId] } : null);
   const prisma: any = {
-    user: { findUnique: async ({ where }: any) => users[where.id] ?? null },
+    user: {
+      findUnique: async ({ where }: any) => users[where.id] ?? null,
+      findFirst: async ({ where }: any) => Object.values(users).find((u: any) => u.phone === where.phone) ?? null,
+      create: jest.fn(async ({ data }: any) => {
+        const novo = { id: `uNovo${++n}`, ...data };
+        users[novo.id] = novo;
+        return novo;
+      }),
+    },
     driver: { findFirst: async ({ where }: any) => (where.userId === 'uMot' ? { ...motorista } : null) },
     vehicle: {
       findFirst: async () => (op.semVeiculo ? null : { category: op.categoria ?? 'MOTO' }),
@@ -141,10 +150,16 @@ function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: strin
     },
     ride: {
       update: jest.fn(async ({ where, data }: any) => Object.assign(corridas[where.id], data)),
+      findUnique: async ({ where }: any) => corridas[where.id] ?? null,
+      count: async ({ where }: any) => Object.values(corridas).filter((c: any) => c.passengerId === where.passengerId && where.status.in.includes(c.status)).length,
     },
     rideStatusHistory: { create: jest.fn(async ({ data }: any) => void historico.push(data)) },
     setting: { findUnique: async ({ where }: any) => (config[where.key] === undefined ? null : { key: where.key, value: config[where.key] }) },
-    auditLog: { create: jest.fn(async ({ data }: any) => void auditoria.push(data)) },
+    auditLog: {
+      create: jest.fn(async ({ data }: any) => void auditoria.push(data)),
+      findFirst: async ({ where }: any) =>
+        auditoria.find((a) => a.actorId === where.actorId && a.action === where.action && a.entity === where.entity && a.after?.chave === where.after.equals) ?? null,
+    },
     notification: { findFirst: async () => null },
     $executeRawUnsafe: jest.fn(),
     withTransaction: async (fn: any) => fn(prisma),
@@ -165,6 +180,7 @@ function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: strin
       await o.aoCriar(prisma, id);
       corridas[id] = {
         id,
+        passengerId: _uid,
         code: `FM${n}`,
         status: 'SEARCHING',
         category: 'ENTREGA_MOTO',
@@ -201,7 +217,7 @@ function montar(op: { chaveLigada?: boolean; online?: boolean; categoria?: strin
   const avisos = new ComercioAvisosService(prisma, { avisar: jest.fn() } as never);
   const comercio = new ComercioService(prisma, rides as never, pracas as never, avisos, entregasFalsas as never);
   const manual = new EntregaManualService(prisma, comercio, central as never, rides as never, pracas as never);
-  return { prisma, rides, central, comercio, manual, comercios, pedidos, corridas, historico, auditoria, motorista, config };
+  return { prisma, rides, central, comercio, manual, comercios, pedidos, corridas, historico, auditoria, motorista, config, users };
 }
 
 describe('Lancamento manual: busca do estabelecimento pelo motorista', () => {
@@ -576,5 +592,161 @@ describe('Lancamento manual pela Central', () => {
     expect(Reflect.getMetadata(ROLES_KEY, EntregaManualCentralController)).toEqual([UserRole.ADMIN]);
     expect(Reflect.getMetadata('path', EntregaManualCentralController)).toBe('admin/manual-deliveries');
     expect(Reflect.getMetadata(ROLES_KEY, EntregaManualController)).toEqual([UserRole.DRIVER]);
+  });
+});
+
+describe('Lancamento manual pela Central: estabelecimento NAO cadastrado (avulso)', () => {
+  const admin = { id: 'uAdmin', role: UserRole.ADMIN } as never;
+  const estabelecimento = (extra: Record<string, unknown> = {}) => ({
+    nome: 'Lanchonete do Zé',
+    telefone: '(64) 99111-2233',
+    coleta: { address: 'Av. Brasil, 300, Centro, Goiatuba/GO', latitude: -18.01, longitude: -49.36 },
+    ...extra,
+  });
+  const pedidoAvulso = (extra: Record<string, unknown> = {}) => ({
+    chave: 'chave-avulsa-000000001',
+    estabelecimento: estabelecimento(),
+    encomenda: { descricao: '3 marmitas' },
+    destinatario: { nome: 'Ana Lima', telefone: '(64) 98888-7777' },
+    destino,
+    veiculo: 'MOTO',
+    ...extra,
+  });
+
+  it('lanca sem cadastro: cria a conta de contato, coleta no endereco digitado e NAO cria pedido do Comercio', async () => {
+    const ctx = montar();
+    const r = await ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never);
+    expect(r).toMatchObject({ repetido: false, codigo: expect.stringMatching(/^FM/) });
+    expect(ctx.pedidos).toHaveLength(0);
+    expect(ctx.comercios).toHaveLength(6);
+    const [passageiro, entrada] = ctx.rides.pedir.mock.calls[0] as unknown as [string, any];
+    expect(ctx.users[passageiro]).toMatchObject({ phone: '+5564991112233', role: 'PASSENGER', name: 'Lanchonete do Zé', metadata: { criadoPelaCentral: true } });
+    expect(entrada.pickup.address).toBe('Av. Brasil, 300, Centro, Goiatuba/GO');
+    expect(entrada.paymentMethodType).toBe('CASH');
+    expect(entrada.entrega).toMatchObject({ veiculo: 'MOTO', destinatarioNome: 'Ana Lima' });
+    expect(entrada.entrega.descricao).toBe('AVULSO Lanchonete do Zé (64991112233): 3 marmitas');
+    expect(ctx.central.atribuir).not.toHaveBeenCalled();
+    expect(ctx.historico[0]).toMatchObject({ actorId: 'uAdmin', note: expect.stringContaining('sem cadastro') });
+    expect(ctx.auditoria[0]).toMatchObject({
+      actorId: 'uAdmin',
+      actorRole: UserRole.ADMIN,
+      action: 'ENTREGA_AVULSA_LANCADA_PELA_CENTRAL',
+      entity: 'ride',
+      after: { chave: 'chave-avulsa-000000001', estabelecimento: { nome: 'Lanchonete do Zé', telefone: '64991112233' } },
+    });
+  });
+
+  it('o mesmo telefone reaproveita a conta (nao cria outra) e o veiculo e o que a Central escolheu', async () => {
+    const ctx = montar();
+    await ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never);
+    await ctx.manual.lancarAvulsa(admin, pedidoAvulso({ chave: 'chave-avulsa-000000002', veiculo: 'CARRO' }) as never);
+    expect(ctx.prisma.user.create).toHaveBeenCalledTimes(1);
+    const [p1] = ctx.rides.pedir.mock.calls[0] as unknown as [string];
+    const [p2, e2] = ctx.rides.pedir.mock.calls[1] as unknown as [string, any];
+    expect(p2).toBe(p1);
+    expect(e2.entrega.veiculo).toBe('CARRO');
+  });
+
+  it('com motorista escolhido: so envia a ele; se falhar, a entrega e cancelada e nao fica solta', async () => {
+    const ctx = montar();
+    const motoristaId = '11111111-1111-4111-8111-111111111111';
+    const r = await ctx.manual.lancarAvulsa(admin, pedidoAvulso({ motoristaId }) as never);
+    expect(ctx.central.atribuir).toHaveBeenCalledWith('uAdmin', r.rideId, motoristaId);
+    ctx.central.atribuir.mockRejectedValueOnce(new Error('Motorista desconectado'));
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso({ chave: 'chave-avulsa-000000003', motoristaId }) as never)).rejects.toThrow('Motorista desconectado');
+    const ultima = Object.values(ctx.corridas).pop() as any;
+    expect(ultima.status).toBe('CANCELLED_BY_SYSTEM');
+  });
+
+  it('repetir a mesma chave (queda de rede) devolve a mesma entrega, sem duplicar', async () => {
+    const ctx = montar();
+    const a = await ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never);
+    const b = await ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never);
+    expect(b).toMatchObject({ repetido: true, rideId: a.rideId, codigo: a.codigo });
+    expect(ctx.rides.pedir).toHaveBeenCalledTimes(1);
+  });
+
+  it('duas chamadas ao mesmo tempo com a mesma chave criam uma entrega so', async () => {
+    const ctx = montar();
+    const r = await Promise.allSettled([ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never), ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never)]);
+    expect(ctx.rides.pedir).toHaveBeenCalledTimes(1);
+    expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
+  });
+
+  it('chave geral do Comercio desligada: nada e criado (nem a conta de contato)', async () => {
+    const ctx = montar({ chaveLigada: false });
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never)).rejects.toThrow();
+    await expect(ctx.manual.cotarAvulsa(admin, { estabelecimento: estabelecimento(), destino } as never)).rejects.toThrow();
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    expect(ctx.prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('cidade sem Entrega / veiculo nao aceito: o erro do pedido oficial chega e nada fica pela metade', async () => {
+    const ctx = montar();
+    ctx.rides.pedir.mockRejectedValueOnce(new Error('Entrega de moto não está disponível nesta cidade.'));
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never)).rejects.toThrow('não está disponível');
+    expect(ctx.historico).toHaveLength(0);
+    expect(ctx.auditoria).toHaveLength(0);
+  });
+
+  it('operador de OUTRA cidade nao cota nem lanca coleta fora da cidade dele', async () => {
+    const ctx = montar({ operadorDaCidade: 'itumbiara' });
+    await expect(ctx.manual.cotarAvulsa(admin, { estabelecimento: estabelecimento(), destino } as never)).rejects.toThrow('outra cidade');
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never)).rejects.toThrow('outra cidade');
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    // ...mas na cidade dele funciona.
+    const coletaItu = estabelecimento({ coleta: { address: 'Rua Central, 10, Itumbiara/GO', latitude: -18.41, longitude: -49.21 } });
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso({ estabelecimento: coletaItu }) as never)).resolves.toMatchObject({ repetido: false });
+  });
+
+  it('o preco confirmado precisa ser o oficial: se mudou, 409 e nada e criado', async () => {
+    const ctx = montar();
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso({ valorEsperadoCents: 500 }) as never)).rejects.toThrow('preço mudou');
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso({ valorEsperadoCents: 700 }) as never)).resolves.toMatchObject({ repetido: false });
+  });
+
+  it('telefone bloqueado nao lanca', async () => {
+    const ctx = montar();
+    ctx.users.uBloq = { id: 'uBloq', role: 'PASSENGER', phone: '+5564991112233', status: 'BLOCKED' };
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never)).rejects.toThrow('bloqueado');
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+  });
+
+  it('teto de entregas abertas por contato', async () => {
+    const ctx = montar();
+    await ctx.manual.lancarAvulsa(admin, pedidoAvulso() as never);
+    const [passageiro] = ctx.rides.pedir.mock.calls[0] as unknown as [string];
+    for (let i = 0; i < 19; i++) ctx.corridas[`x${i}`] = { id: `x${i}`, passengerId: passageiro, status: 'SEARCHING' };
+    await expect(ctx.manual.lancarAvulsa(admin, pedidoAvulso({ chave: 'chave-avulsa-000000009' }) as never)).rejects.toThrow('em andamento');
+  });
+
+  it('cota o preco oficial (moto e carro) com a coleta digitada, sem criar nada', async () => {
+    const ctx = montar();
+    const r = await ctx.manual.cotarAvulsa(admin, { estabelecimento: estabelecimento(), destino } as never);
+    expect(r.opcoes).toEqual([
+      { veiculo: 'MOTO', nome: 'Moto', valorCents: 700 },
+      { veiculo: 'CARRO', nome: 'Carro', valorCents: 1200 },
+    ]);
+    expect(r).toMatchObject({ coleta: { endereco: 'Av. Brasil, 300, Centro, Goiatuba/GO', alternativa: false }, cotacao: 'cotacao-assinada', totalDeEntregas: 1 });
+    expect(ctx.rides.pedir).not.toHaveBeenCalled();
+    expect(ctx.prisma.user.create).not.toHaveBeenCalled();
+    expect(ctx.pedidos).toHaveLength(0);
+  });
+
+  it('dados do estabelecimento: telefone com DDD e endereco de coleta obrigatorios', () => {
+    expect(entregaAvulsaSchema.safeParse(pedidoAvulso()).success).toBe(true);
+    expect(entregaAvulsaSchema.safeParse(pedidoAvulso({ estabelecimento: estabelecimento({ telefone: '9111' }) })).success).toBe(false);
+    expect(entregaAvulsaSchema.safeParse(pedidoAvulso({ estabelecimento: estabelecimento({ nome: ' ' }) })).success).toBe(false);
+    expect(entregaAvulsaSchema.safeParse(pedidoAvulso({ estabelecimento: { nome: 'X Y', telefone: '64991112233' } })).success).toBe(false);
+  });
+
+  it('rotas: so ADMIN, em admin/manual-deliveries/avulsa (e a entrega de loja cadastrada continua como estava)', () => {
+    expect(Reflect.getMetadata(ROLES_KEY, EntregaManualCentralController)).toEqual([UserRole.ADMIN]);
+    const proto = EntregaManualCentralController.prototype as any;
+    expect(Reflect.getMetadata('path', proto.lancarAvulsa)).toBe('avulsa');
+    expect(Reflect.getMetadata('method', proto.lancarAvulsa)).toBe(RequestMethod.POST);
+    expect(Reflect.getMetadata('path', proto.cotarAvulsa)).toBe('avulsa/cotar');
+    expect(Reflect.getMetadata('path', proto.lancar)).toBe('/');
   });
 });

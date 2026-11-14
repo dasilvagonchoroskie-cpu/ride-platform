@@ -22,6 +22,10 @@ const Color _corDoComercio = Color(0xFF00B8D4);
 /// 1) procura o estabelecimento; 2) confere o perfil; 3) encomenda e destino;
 /// 4) escolhe o veiculo (Moto ou Carro, com o preco oficial de cada um) e quem
 /// leva (automatico ou um motorista); 5) lanca.
+///
+/// Estabelecimento NAO cadastrado (Evandro, 13/11/2026): em vez de procurar, a
+/// Central digita o nome, o telefone e o endereco de coleta (confirmado no
+/// mapa) e segue as mesmas etapas 3 a 5: mesmo preco oficial e mesmo despacho.
 class EntregaManualCentralTela extends StatefulWidget {
   const EntregaManualCentralTela({super.key});
 
@@ -29,7 +33,7 @@ class EntregaManualCentralTela extends StatefulWidget {
   State<EntregaManualCentralTela> createState() => _EntregaManualCentralTelaState();
 }
 
-enum _Etapa { buscar, perfil, dados, conferir }
+enum _Etapa { buscar, perfil, avulso, dados, conferir }
 
 class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
   _Etapa _etapa = _Etapa.buscar;
@@ -39,6 +43,20 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
   final _busca = TextEditingController();
   ResultadoDaBuscaDeLoja? _resultado;
   PerfilDaLoja? _perfil;
+
+  // Estabelecimento sem cadastro (avulso): digitado pela Central.
+  bool _avulso = false;
+  final _aNome = TextEditingController();
+  final _aTelefone = TextEditingController();
+  final _aRua = TextEditingController();
+  final _aNumero = TextEditingController();
+  final _aBairro = TextEditingController();
+  final _aCidade = TextEditingController();
+  final _aUf = TextEditingController();
+  double? _aLatitude;
+  double? _aLongitude;
+  List<Lugar>? _aAchados;
+  bool _aPreenchendo = false;
 
   final _descricao = TextEditingController();
   final _observacoes = TextEditingController();
@@ -73,11 +91,14 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
     for (final c in [_rua, _numero, _bairro, _cidade, _uf, _cep]) {
       c.addListener(_mudouEndereco);
     }
+    for (final c in [_aRua, _aNumero, _aBairro, _aCidade, _aUf]) {
+      c.addListener(_mudouEnderecoDaColeta);
+    }
   }
 
   @override
   void dispose() {
-    for (final c in [_busca, _descricao, _observacoes, _nomeQuemRecebe, _telefoneQuemRecebe, _rua, _numero, _complemento, _bairro, _cidade, _uf, _cep, _referencia]) {
+    for (final c in [_busca, _aNome, _aTelefone, _aRua, _aNumero, _aBairro, _aCidade, _aUf, _descricao, _observacoes, _nomeQuemRecebe, _telefoneQuemRecebe, _rua, _numero, _complemento, _bairro, _cidade, _uf, _cep, _referencia]) {
       c.dispose();
     }
     super.dispose();
@@ -89,6 +110,14 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
     setState(() {
       _latitude = null;
       _longitude = null;
+    });
+  }
+
+  void _mudouEnderecoDaColeta() {
+    if (_aPreenchendo || _aLatitude == null) return;
+    setState(() {
+      _aLatitude = null;
+      _aLongitude = null;
     });
   }
 
@@ -127,12 +156,89 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
       if (!mounted) return;
       setState(() {
         _perfil = p;
+        _avulso = false;
         _etapa = _Etapa.perfil;
         if (_cidade.text.isEmpty) _cidade.text = p.cidade;
         if (_uf.text.isEmpty) _uf.text = p.uf;
       });
     });
   }
+
+  // ------------------------------------------------------------ 2b) estabelecimento sem cadastro
+
+  String get _enderecoDaColeta => '${_aRua.text.trim()}, ${_aNumero.text.trim()}, ${_aBairro.text.trim()}, ${_aCidade.text.trim()}/${_aUf.text.trim().toUpperCase()}';
+
+  Future<void> _buscarColetaNoMapa() async {
+    if (_aRua.text.trim().length < 3) {
+      setState(() => _erro = 'Digite a rua (e o número) da coleta antes de buscar no mapa.');
+      return;
+    }
+    final texto = '${_aRua.text} ${_aNumero.text} ${_aBairro.text} ${_aCidade.text}'.trim();
+    final centro = Provider.of<PainelState>(context, listen: false).centro;
+    await _fazer(() async {
+      final r = await _api.buscarEndereco(texto, centro);
+      if (!mounted) return;
+      setState(() {
+        _aAchados = r;
+        if (r.isEmpty) _erro = 'Nenhum endereço encontrado. Confira a rua, o número e o bairro.';
+      });
+    });
+  }
+
+  void _escolherLugarDaColeta(Lugar l) {
+    _aPreenchendo = true;
+    final partes = l.endereco.split(',').map((s) => s.trim()).toList();
+    if (_aRua.text.trim().isEmpty && partes.isNotEmpty) _aRua.text = partes.first;
+    if (_aNumero.text.trim().isEmpty && partes.length > 1 && RegExp(r'^\d+\w?$').hasMatch(partes[1])) _aNumero.text = partes[1];
+    _aPreenchendo = false;
+    setState(() {
+      _aLatitude = l.coords.latitude;
+      _aLongitude = l.coords.longitude;
+      _aAchados = null;
+      _erro = null;
+    });
+  }
+
+  void _comecarAvulso() => setState(() {
+        _erro = null;
+        _etapa = _Etapa.avulso;
+      });
+
+  void _continuarAvulso() {
+    String? problema;
+    if (_aNome.text.trim().length < 2) {
+      problema = 'Digite o nome do estabelecimento.';
+    } else if (_digitos(_aTelefone.text).length < 10) {
+      problema = 'Digite o telefone do estabelecimento, com DDD.';
+    } else if (_aRua.text.trim().length < 3) {
+      problema = 'Digite a rua da coleta.';
+    } else if (_aNumero.text.trim().isEmpty) {
+      problema = 'Digite o número da coleta (ou S/N).';
+    } else if (_aBairro.text.trim().length < 2) {
+      problema = 'Digite o bairro da coleta.';
+    } else if (_aCidade.text.trim().length < 2) {
+      problema = 'Digite a cidade da coleta.';
+    } else if (_aUf.text.trim().length != 2) {
+      problema = 'Digite a UF com 2 letras (ex.: GO).';
+    } else if (_aLatitude == null || _aLongitude == null) {
+      problema = 'Toque em "Confirmar coleta no mapa" para marcar o ponto exato da retirada.';
+    }
+    if (problema != null) {
+      setState(() => _erro = problema);
+      return;
+    }
+    setState(() {
+      _erro = null;
+      _avulso = true;
+      // A entrega costuma ser na mesma cidade da coleta: adianta o preenchimento.
+      if (_cidade.text.isEmpty) _cidade.text = _aCidade.text.trim();
+      if (_uf.text.isEmpty) _uf.text = _aUf.text.trim().toUpperCase();
+      _etapa = _Etapa.dados;
+    });
+  }
+
+  String get _nomeDoEstabelecimento => _avulso ? _aNome.text.trim() : _perfil!.nome;
+  String get _retirada => _avulso ? _enderecoDaColeta : _perfil!.enderecoDeRetirada;
 
   // ------------------------------------------------------------ 3) dados
 
@@ -197,7 +303,14 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
       };
 
   Map<String, dynamic> _corpoBase() => {
-        'comercioId': _perfil!.id,
+        if (_avulso)
+          'estabelecimento': {
+            'nome': _aNome.text.trim(),
+            'telefone': _digitos(_aTelefone.text),
+            'coleta': {'address': _enderecoDaColeta, 'latitude': _aLatitude, 'longitude': _aLongitude},
+          }
+        else
+          'comercioId': _perfil!.id,
         'encomenda': {
           'descricao': _descricao.text.trim(),
           if (_observacoes.text.trim().isNotEmpty) 'observacoes': _observacoes.text.trim(),
@@ -210,6 +323,8 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
 
   // ------------------------------------------------------------ 4) conferir
 
+  Future<Map<String, dynamic>> _cotarNoServidor() => _avulso ? _api.cotarEntregaAvulsaDaCentral(_corpoBase()) : _api.cotarEntregaDaCentral(_corpoBase());
+
   Future<void> _consultarPreco() async {
     final problema = _conferirDados();
     if (problema != null) {
@@ -218,7 +333,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
     }
     _destino = _destinoJson();
     await _fazer(() async {
-      final c = CotacaoDaCentral.fromJson(await _api.cotarEntregaDaCentral(_corpoBase()));
+      final c = CotacaoDaCentral.fromJson(await _cotarNoServidor());
       if (!mounted) return;
       if (c.opcoes.isEmpty) {
         setState(() => _erro = 'Nenhum veículo tem preço para esta entrega agora (a Entrega pode estar desligada nesta cidade). Confira em Cidades.');
@@ -263,14 +378,15 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
       _erro = null;
     });
     try {
-      final r = await _api.lancarEntregaDaCentral({
+      final Map<String, dynamic> corpo = {
         ..._corpoBase(),
         'chave': _chave,
         'veiculo': _veiculo,
         if (c.cotacao != null && c.cotacao!.isNotEmpty) 'cotacao': c.cotacao,
         'valorEsperadoCents': opcao.valorCents,
         if (_motorista != null) 'motoristaId': _motorista!.id,
-      });
+      };
+      final r = _avulso ? await _api.lancarEntregaAvulsaDaCentral(corpo) : await _api.lancarEntregaDaCentral(corpo);
       final codigo = r['codigo'] is String ? ' (${r['codigo']})' : '';
       aviso.showSnackBar(SnackBar(
         content: Text(_motorista == null
@@ -301,7 +417,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
   /// O preco oficial mudou: consulta de novo, mostra o valor novo e pede nova confirmacao (chave nova).
   Future<void> _novoPreco(String mensagem) async {
     try {
-      final c = CotacaoDaCentral.fromJson(await _api.cotarEntregaDaCentral(_corpoBase()));
+      final c = CotacaoDaCentral.fromJson(await _cotarNoServidor());
       if (!mounted) return;
       setState(() {
         if (c.opcoes.isNotEmpty) _cotacao = c;
@@ -324,7 +440,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
       _erro = null;
       _etapa = switch (_etapa) {
         _Etapa.conferir => _Etapa.dados,
-        _Etapa.dados => _Etapa.perfil,
+        _Etapa.dados => _avulso ? _Etapa.avulso : _Etapa.perfil,
         _ => _Etapa.buscar,
       };
     });
@@ -354,6 +470,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
                 ...switch (_etapa) {
                   _Etapa.buscar => _telaBuscar(),
                   _Etapa.perfil => _telaPerfil(),
+                  _Etapa.avulso => _telaAvulso(),
                   _Etapa.dados => _telaDados(),
                   _Etapa.conferir => _telaConferir(),
                 },
@@ -408,7 +525,7 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
         if (r.itens.isEmpty)
           Text(
             'Nenhum estabelecimento com esses dados na sua cidade. Confira o telefone, o e-mail ou o nome. '
-            'Se ele ainda não tem cadastro no Comércio, ele precisa se cadastrar pelo aplicativo.',
+            'Se ele não tem cadastro no Comércio, use "Estabelecimento não cadastrado" logo abaixo.',
             style: AppText.body.copyWith(color: AppColors.textMuted),
           )
         else ...[
@@ -417,6 +534,73 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
           for (final e in r.itens) _CartaoDaLoja(achada: e, aoTocar: _ocupado ? null : () => _abrirPerfil(e)),
         ],
       ],
+      const SizedBox(height: Spacing.xl),
+      const Divider(),
+      const SizedBox(height: Spacing.sm),
+      Text('Não tem cadastro no Comércio?', style: AppText.bodyStrong),
+      const SizedBox(height: Spacing.xs),
+      Text(
+        'Dá para lançar a coleta e a entrega mesmo assim: digite o nome, o telefone e o endereço de retirada. O preço e o despacho são os mesmos.',
+        style: AppText.body.copyWith(color: AppColors.textMuted),
+      ),
+      const SizedBox(height: Spacing.sm),
+      OutlinedButton.icon(
+        key: const Key('entrega-avulsa'),
+        onPressed: _ocupado ? null : _comecarAvulso,
+        icon: const Icon(Icons.add_business_outlined),
+        label: const Text('Estabelecimento não cadastrado'),
+      ),
+    ];
+  }
+
+  List<Widget> _telaAvulso() {
+    return [
+      Text('Estabelecimento não cadastrado', style: AppText.heading),
+      const SizedBox(height: Spacing.xs),
+      Text(
+        'Só para esta entrega: não cria cadastro no Comércio. O telefone serve para o motorista ligar na coleta.',
+        style: AppText.body.copyWith(color: AppColors.textMuted),
+      ),
+      const SizedBox(height: Spacing.md),
+      _campo('Nome do estabelecimento', _aNome, caps: TextCapitalization.words, icone: Icons.storefront),
+      _campo('Telefone do estabelecimento (com DDD)', _aTelefone, teclado: TextInputType.phone, icone: Icons.phone),
+      const SizedBox(height: Spacing.sm),
+      Text('Endereço da coleta (retirada)', style: AppText.bodyStrong),
+      const SizedBox(height: Spacing.sm),
+      _campo('Rua / avenida', _aRua, caps: TextCapitalization.words),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(flex: 2, child: _campo('Número', _aNumero)),
+        const SizedBox(width: Spacing.sm),
+        Expanded(flex: 3, child: _campo('Bairro', _aBairro, caps: TextCapitalization.words)),
+      ]),
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(flex: 3, child: _campo('Cidade', _aCidade, caps: TextCapitalization.words)),
+        const SizedBox(width: Spacing.sm),
+        Expanded(flex: 1, child: _campo('UF', _aUf, caps: TextCapitalization.characters, max: 2)),
+      ]),
+      if (_aLatitude != null)
+        _AvisoLinha(icone: Icons.check_circle_outline, texto: 'Coleta confirmada no mapa.', cor: AppColors.success)
+      else
+        OutlinedButton.icon(
+          key: const Key('confirmar-coleta-no-mapa'),
+          onPressed: _ocupado ? null : _buscarColetaNoMapa,
+          icon: const Icon(Icons.pin_drop_outlined),
+          label: const Text('Confirmar coleta no mapa'),
+        ),
+      if (_aAchados != null && _aAchados!.isNotEmpty) ...[
+        const SizedBox(height: Spacing.sm),
+        Text('Toque no endereço certo:', style: AppText.bodyStrong),
+        for (final l in _aAchados!)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.place_outlined),
+            title: Text(l.endereco),
+            subtitle: l.detalhe.isEmpty ? null : Text(l.detalhe),
+            onTap: () => _escolherLugarDaColeta(l),
+          ),
+      ],
+      const SizedBox(height: Spacing.lg),
+      AppButton(label: 'Continuar', enabled: !_ocupado, onPressed: _continuarAvulso),
     ];
   }
 
@@ -462,15 +646,15 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
   }
 
   List<Widget> _telaDados() {
-    final p = _perfil!;
     return [
       Row(children: [
         const Icon(Icons.storefront, color: _corDoComercio, size: 20),
         const SizedBox(width: Spacing.sm),
-        Expanded(child: Text(p.nome, style: AppText.bodyStrong)),
+        Expanded(child: Text(_nomeDoEstabelecimento, style: AppText.bodyStrong)),
+        if (_avulso) Text('sem cadastro', style: AppText.body.copyWith(color: AppColors.textMuted)),
       ]),
       const SizedBox(height: Spacing.xs),
-      Text('Retirada em: ${p.enderecoDeRetirada}', style: AppText.body.copyWith(color: AppColors.textMuted)),
+      Text('Retirada em: $_retirada', style: AppText.body.copyWith(color: AppColors.textMuted)),
       const SizedBox(height: Spacing.lg),
       Text('Encomenda', style: AppText.heading),
       const SizedBox(height: Spacing.sm),
@@ -526,7 +710,6 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
   }
 
   List<Widget> _telaConferir() {
-    final p = _perfil!;
     final c = _cotacao!;
     final opcao = c.opcao(_veiculo) ?? c.opcoes.first;
     return [
@@ -536,8 +719,9 @@ class _EntregaManualCentralTelaState extends State<EntregaManualCentralTela> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Linha('Estabelecimento', p.nome),
-            Linha('Retirada', c.coleta.isEmpty ? p.enderecoDeRetirada : c.coleta),
+            Linha('Estabelecimento', _avulso ? '$_nomeDoEstabelecimento (sem cadastro)' : _nomeDoEstabelecimento),
+            if (_avulso) Linha('Telefone', telefoneBonito(_digitos(_aTelefone.text))),
+            Linha('Retirada', c.coleta.isEmpty ? _retirada : c.coleta),
             Linha('Entrega em', _enderecoPorExtenso),
             Linha('Encomenda', _descricao.text.trim()),
             Linha('Quem recebe', '${_nomeQuemRecebe.text.trim()} · ${telefoneBonito(_digitos(_telefoneQuemRecebe.text))}'),

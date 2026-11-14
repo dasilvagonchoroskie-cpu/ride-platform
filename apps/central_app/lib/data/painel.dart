@@ -1625,6 +1625,13 @@ class PainelApi {
   Future<Map<String, dynamic>> lancarEntregaDaCentral(Map<String, dynamic> corpo) async =>
       await _c.request('POST', '/admin/manual-deliveries', body: corpo) as Map<String, dynamic>;
 
+  // Estabelecimento NAO cadastrado (entrega avulsa): mesmo preco oficial e mesmo despacho, sem loja por tras.
+  Future<Map<String, dynamic>> cotarEntregaAvulsaDaCentral(Map<String, dynamic> corpo) async =>
+      await _c.request('POST', '/admin/manual-deliveries/avulsa/cotar', body: corpo) as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> lancarEntregaAvulsaDaCentral(Map<String, dynamic> corpo) async =>
+      await _c.request('POST', '/admin/manual-deliveries/avulsa', body: corpo) as Map<String, dynamic>;
+
   Future<void> enviarParaMotorista(String rideId, String driverId) =>
       _c.request('POST', '/admin/rides/$rideId/assign', body: {'driverId': driverId});
 

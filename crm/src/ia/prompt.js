@@ -14,8 +14,8 @@ const MOTIVOS_TRANSF = Object.keys(C.MOTIVOS_TRANSFERENCIA);
 
 // Campos que a IA pode preencher em cada cadastro (nada de situação, datas, valores ou telefone).
 const CAMPOS_IA = {
-  motoristas: ['nome', 'cidade', 'endereco', 'veiculo', 'placa', 'cnh_categoria', 'proxima_acao', 'observacoes'],
-  entregadores: ['nome', 'cidade', 'endereco', 'modalidade', 'veiculo', 'placa', 'cnh_categoria', 'proxima_acao', 'observacoes'],
+  motoristas: ['nome', 'cidade', 'endereco', 'veiculo', 'placa', 'cnh_categoria', 'cnh_primeira_habilitacao', 'cnh_validade', 'proxima_acao', 'observacoes'],
+  entregadores: ['nome', 'cidade', 'endereco', 'modalidade', 'veiculo', 'placa', 'cnh_categoria', 'cnh_primeira_habilitacao', 'cnh_validade', 'proxima_acao', 'observacoes'],
   passageiros: ['nome', 'cidade', 'proxima_acao', 'observacoes'],
   parceiros: ['nome_estabelecimento', 'categoria', 'responsavel', 'cidade', 'beneficio', 'proxima_acao', 'observacoes'],
   // Etapa 2 (M3): comércio parceiro ligado à mão na conversa (a IA não cria comércios); só campos descritivos.
@@ -45,6 +45,7 @@ function especificarCampos(tipo, def) {
     if (!f) return null;
     const item = { chave: k, descricao: f.label };
     if (f.type === 'select') item.opcoes = f.options;
+    if (f.type === 'date') item.formato = 'AAAA-MM-DD';
     return item;
   }).filter(Boolean);
 }
