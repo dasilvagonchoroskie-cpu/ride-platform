@@ -83,5 +83,7 @@ jobs:
           grep -E "^Total:|Total:" trivy.txt | head -5
           echo "TRIVY_PACOTES:"
           grep -E "│ .* │ CVE" trivy.txt | awk -F'│' '{print $2}' | sort | uniq -c | sort -rn | head -15
+          echo "TRIVY_CRITICOS:"
+          grep "│" trivy.txt | grep "CRITICAL" | cut -c1-220
       - if: always()
         run: echo "RESULTADO imagem construir=${{ steps.construir.outcome }} tamanho=${{ steps.tamanho.outcome }} ligar=${{ steps.ligar.outcome }} health=${{ steps.health.outcome }} trivy=${{ steps.trivy.outcome }}"
