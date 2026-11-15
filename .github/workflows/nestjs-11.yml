@@ -24,7 +24,7 @@ jobs:
       - id: instalar
         run: pnpm install --frozen-lockfile
       - id: subir
-        run: pnpm --filter @ride/backend up "@nestjs/core@^11" "@nestjs/common@^11"
+        run: pnpm --filter @ride/backend up "@nestjs/core@^11" "@nestjs/common@^11" "@nestjs/platform-express@^11" "@nestjs/jwt@^11" "@nestjs/passport@^11" "@nestjs/swagger@^11" "@nestjs/testing@^11" "@nestjs/cli@^11" "@nestjs/config@^4" "@nestjs/schedule@^6"
       - id: versoes
         run: pnpm --filter @ride/backend list "@nestjs/*" zod file-type typescript --depth 0
       - id: shared
