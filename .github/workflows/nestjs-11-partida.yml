@@ -1,0 +1,89 @@
+name: nestjs-11-partida
+
+# Prova que a API LIGA de verdade com o NestJS 11 do ramo:
+# sobe Postgres e Redis temporarios, liga a API e confere /api/health.
+# Nao toca no servidor, nem nos dados reais, nem na main.
+on:
+  push:
+    branches: [nestjs-11]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  partida:
+    name: partida
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ride
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ride
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      JWT_ACCESS_SECRET: segredo-de-teste-so-no-github-actions-0001
+      JWT_REFRESH_SECRET: segredo-de-teste-so-no-github-actions-0002
+      BACKEND_PORT: "3333"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - id: instalar
+        run: pnpm install --frozen-lockfile
+      - id: shared
+        run: pnpm --filter @ride/shared build
+      - id: prisma
+        run: pnpm --filter @ride/backend exec prisma generate
+      - id: build
+        run: pnpm --filter @ride/backend build
+      - id: migrar
+        continue-on-error: true
+        run: pnpm --filter @ride/backend exec prisma migrate deploy
+      - id: ligar
+        run: |
+          MAIN=$(find apps/backend/dist -name main.js | head -1)
+          echo "arquivo de partida: $MAIN"
+          nohup node "$MAIN" > ~/api.log 2>&1 &
+          echo "API iniciada"
+      - id: health
+        run: |
+          for i in $(seq 1 30); do
+            R=$(curl -s http://localhost:3333/api/health || true)
+            if echo "$R" | grep -q '"status"'; then
+              echo "HEALTH: $R"
+              echo "$R" | grep -q '"status":"ok"' && exit 0
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "HEALTH: sem resposta em 60 segundos"
+          exit 1
+      - if: always()
+        run: |
+          echo "=== fim do log da API ==="
+          tail -40 ~/api.log || true
+      - if: always()
+        run: echo "RESULTADO partida instalar=${{ steps.instalar.outcome }} shared=${{ steps.shared.outcome }} prisma=${{ steps.prisma.outcome }} build=${{ steps.build.outcome }} migrar=${{ steps.migrar.outcome }} ligar=${{ steps.ligar.outcome }} health=${{ steps.health.outcome }}"
