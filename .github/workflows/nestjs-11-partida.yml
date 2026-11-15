@@ -7,6 +7,10 @@ on:
   push:
     branches: [nestjs-11]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "ramo ou commit a testar"
+        required: false
 
 permissions:
   contents: read
@@ -46,6 +50,8 @@ jobs:
       BACKEND_PORT: "3333"
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
