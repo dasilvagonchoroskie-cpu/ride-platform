@@ -37,7 +37,7 @@ jobs:
         run: pnpm --filter @ride/backend test
       - id: auditoria
         continue-on-error: true
-        run: pnpm --filter @ride/backend audit --prod || true
+        run: pnpm audit --prod
       - id: guardar
         run: |
           git config user.name "github-actions"
