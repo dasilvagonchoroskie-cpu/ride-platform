@@ -53,10 +53,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - id: subir
         continue-on-error: true
-        run: pnpm --filter @ride/backend up --latest "@nestjs/*" zod
+        run: pnpm --filter @ride/backend up --latest "@nestjs/*" zod && pnpm --filter @ride/backend add -D typescript@5
       - id: versoes
         continue-on-error: true
-        run: pnpm --filter @ride/backend list "@nestjs/core" zod file-type --depth 0
+        run: pnpm --filter @ride/backend list "@nestjs/core" zod file-type typescript --depth 0
       - id: shared
         continue-on-error: true
         run: pnpm --filter @ride/shared build
