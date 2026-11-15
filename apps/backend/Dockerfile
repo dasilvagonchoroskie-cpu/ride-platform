@@ -1,5 +1,5 @@
 # ---------- build ----------
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 # OpenSSL tambem aqui: e neste estagio que o Prisma gera o motor de
 # consulta. Sem ele, o Prisma chuta a versao 1.1 e o motor gerado nao
 # roda no estagio final, que tem OpenSSL 3.
@@ -17,8 +17,10 @@ RUN pnpm --filter @ride/shared build \
  && pnpm --filter @ride/backend exec prisma generate \
  && pnpm --filter @ride/backend build
 
+RUN pnpm prune --prod
+
 # ---------- runtime ----------
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 RUN apk add --no-cache openssl curl && corepack enable
 ENV NODE_ENV=production
 WORKDIR /app

@@ -1,0 +1,87 @@
+name: nestjs-11-imagem
+
+# Constroi a imagem da API com o Dockerfile do ramo (Node 22 + prune),
+# liga num Postgres/Redis temporarios, confere /api/health e roda o Trivy.
+# Nao publica nada, nao toca no servidor nem na main.
+on:
+  push:
+    branches: [nestjs-11]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  imagem:
+    name: imagem
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ride
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - id: construir
+        run: docker build -f apps/backend/Dockerfile -t fm-api:teste .
+      - id: tamanho
+        continue-on-error: true
+        run: |
+          docker image ls fm-api:teste --format "TAMANHO: {{.Size}}"
+          echo "TYPESCRIPT_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls /app/node_modules/.pnpm | grep -c "^typescript@" || true')"
+          echo "JEST_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls /app/node_modules/.pnpm | grep -c "^jest@" || true')"
+          echo "PRISMA_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls /app/node_modules/.pnpm | grep -c "^prisma@" || true')"
+      - id: ligar
+        run: |
+          docker run -d --name api --network host \
+            -e NODE_ENV=production \
+            -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ride \
+            -e REDIS_HOST=localhost -e REDIS_PORT=6379 \
+            -e JWT_ACCESS_SECRET=segredo-de-teste-so-no-github-actions-0001 \
+            -e JWT_REFRESH_SECRET=segredo-de-teste-so-no-github-actions-0002 \
+            -e BACKEND_PORT=3333 \
+            fm-api:teste
+      - id: health
+        run: |
+          for i in $(seq 1 30); do
+            R=$(curl -s http://localhost:3333/api/health || true)
+            if echo "$R" | grep -q '"status"'; then
+              echo "HEALTH: $R"
+              echo "$R" | grep -q '"status":"ok"' && exit 0
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "HEALTH: sem resposta em 60 segundos"
+          exit 1
+      - if: always()
+        run: |
+          echo "=== fim do log da API ==="
+          docker logs api 2>&1 | tail -30 || true
+      - id: trivy
+        continue-on-error: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --ignore-unfixed --severity HIGH,CRITICAL --scanners vuln fm-api:teste > trivy.txt 2>&1
+          echo "TRIVY_RESUMO:"
+          grep -E "^Total:|Total:" trivy.txt | head -5
+          echo "TRIVY_PACOTES:"
+          grep -E "│ .* │ CVE" trivy.txt | awk -F'│' '{print $2}' | sort | uniq -c | sort -rn | head -15
+      - if: always()
+        run: echo "RESULTADO imagem construir=${{ steps.construir.outcome }} tamanho=${{ steps.tamanho.outcome }} ligar=${{ steps.ligar.outcome }} health=${{ steps.health.outcome }} trivy=${{ steps.trivy.outcome }}"
