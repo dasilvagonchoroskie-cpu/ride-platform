@@ -12,7 +12,7 @@
 #        2 = atrasado e sem RENDER_DEPLOY_HOOK para atualizar sozinho
 #        1 = mandou atualizar e nao ficou no ar a tempo
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 
 # Ultimo envio que mexeu no codigo do servidor (precisa do historico).
 git fetch -q --unshallow 2>/dev/null || true

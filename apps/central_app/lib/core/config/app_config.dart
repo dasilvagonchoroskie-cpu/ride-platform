@@ -5,7 +5,7 @@
 class AppConfig {
   const AppConfig._();
 
-  static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://fortaleza-mov-backend.onrender.com');
+  static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://api.fortalezadigitalsecurity.com.br');
   static const bool forceDemo = bool.fromEnvironment('FORCE_DEMO', defaultValue: false);
 
   /// Projeto Firebase (Firestore) usado quando API_URL nao esta definido.

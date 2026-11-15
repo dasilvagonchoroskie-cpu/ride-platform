@@ -7,7 +7,7 @@
 # Sem NOME nem CENTRAL so lista quem tem sessao aberta. O relatorio mostra so
 # o primeiro nome, o tipo de conta e o modelo do aparelho (repositorio publico).
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 REL="${REL:-/tmp/desconectar-aparelhos.txt}"
 : > "$REL"
 CHAVE="${OTP_CHAVE_TESTE:-}"

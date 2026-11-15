@@ -13,6 +13,7 @@ import { AppConfigService } from './config/app-config.service';
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: false, bodyParser: false });
+  app.set('trust proxy', 1);
   // Fotos (perfil, documentos, carro e logotipos) chegam em base64: ate
   // 4 MB so nas rotas de envio de foto (terminam em /foto ou /logo). O
   // resto aceita ate 256 KB (auditoria de 06/11/2026: corpo gigante de

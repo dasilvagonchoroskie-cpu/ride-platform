@@ -4,7 +4,7 @@
 # Entra com o e-mail atual (segredo ADMIN_EMAIL), muda para NOVO_EMAIL e
 # confere que o login com o e-mail novo funciona. Nunca mostra codigo.
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 CHAVE="${OTP_CHAVE_TESTE:-}"
 post() { curl -s -m 120 -X POST "$API$1" -H 'Content-Type: application/json' ${CHAVE:+-H "x-chave-teste: $CHAVE"} ${3:+-H "Authorization: Bearer $3"} -d "$2"; }
 patch() { curl -s -m 120 -X PATCH "$API$1" -H 'Content-Type: application/json' ${3:+-H "Authorization: Bearer $3"} -d "$2"; }

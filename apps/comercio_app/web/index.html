@@ -19,12 +19,12 @@
   <link rel="manifest" href="manifest.json">
   <!-- Abrir mais rapido (11/11/2026): o navegador ja conecta no servidor, nas
        imagens do mapa (TomTom) e no motor do Flutter enquanto baixa o resto. -->
-  <link rel="preconnect" href="https://fortaleza-mov-backend.onrender.com" crossorigin>
+  <link rel="preconnect" href="https://api.fortalezadigitalsecurity.com.br" crossorigin>
   <link rel="preconnect" href="https://api.tomtom.com" crossorigin>
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://api.tomtom.com">
   <!-- Seguranca: so carrega do proprio site, do servidor da plataforma, das imagens do mapa (TomTom) e do motor do Flutter (gstatic). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tomtom.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com https://www.gstatic.com; connect-src 'self' https://fortaleza-mov-backend.onrender.com https://*.tomtom.com https://www.gstatic.com https://fonts.gstatic.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tomtom.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com https://www.gstatic.com; connect-src 'self' https://api.fortalezadigitalsecurity.com.br https://*.tomtom.com https://www.gstatic.com https://fonts.gstatic.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Fortaleza Move Comércio</title>
   <style>
