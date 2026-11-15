@@ -1,0 +1,53 @@
+name: Comercio na web (VPS)
+
+# Comercio pelo navegador (10/11/2026): monta a versao web da Comercio e
+# publica no ramo "comercio-web-vps", que o Render (site estatico gratis)
+# serve. Tambem instala como aplicativo no computador e no celular (PWA).
+on:
+  push:
+    branches: [migracao-vps]
+    paths:
+      - 'apps/comercio_app/**'
+      - '.github/workflows/comercio-web-vps.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: comercio-web-vps
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Montar a Comercio para a web
+        working-directory: apps/comercio_app
+        run: |
+          flutter pub get
+          sed -i "s#https://fortaleza-mov-backend.onrender.com#https://api.fortalezadigitalsecurity.com.br#g" web/index.html
+          flutter build web --release --base-href / \
+            --dart-define=API_URL=https://api.fortalezadigitalsecurity.com.br \
+            --dart-define=APP_VERSION=web-${{ github.run_number }}
+          echo "web-${{ github.run_number }} ($(date -u '+%d/%m/%Y %H:%M UTC'), commit ${GITHUB_SHA::7})" > build/web/versao.txt
+          du -sh build/web
+      - name: Publicar no ramo do site
+        working-directory: apps/comercio_app/build/web
+        run: |
+          git init -q -b comercio-web-vps
+          git config user.name "CI Fortaleza"
+          git config user.email "ci@fortalezadigitalsecurity.com.br"
+          git add -A
+          git commit -q -m "Comercio web ${{ github.run_number }} (commit ${GITHUB_SHA::7})"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" comercio-web-vps
