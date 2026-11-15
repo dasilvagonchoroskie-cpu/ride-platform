@@ -4,7 +4,7 @@
 # confere, compacta e CRIPTOGRAFA com a chave publica (infra/copia-banco.age.pub).
 # So abre com a chave privada, que fica com o Evandro (arquivo do projeto).
 set -euo pipefail
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 REL="${REL:-/tmp/copia-banco.txt}"
 SAIDA="${SAIDA:-copia}"
 : > "$REL"

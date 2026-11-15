@@ -3,7 +3,7 @@
 class AppConfig {
   const AppConfig._();
 
-  static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://fortaleza-mov-backend.onrender.com');
+  static const String apiUrl = String.fromEnvironment('API_URL', defaultValue: 'https://api.fortalezadigitalsecurity.com.br');
 
   /// Versao montada pela esteira: 1.0.N.
   static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');

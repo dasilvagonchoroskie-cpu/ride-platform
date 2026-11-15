@@ -38,7 +38,7 @@ jobs:
             else echo "$n: nao ($(echo "$r" | sed 's/<[^>]*>//g' | head -c 80))" >> logs/testar-email.txt; fi
           done
           if [ -n "${EMAIL:-}" ]; then
-            r=$(curl -s -m 90 -X POST https://fortaleza-mov-backend.onrender.com/api/auth/otp/request -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"purpose\":\"LOGIN\"}")
+            r=$(curl -s -m 90 -X POST https://api.fortalezadigitalsecurity.com.br/api/auth/otp/request -H 'Content-Type: application/json' -d "{\"email\":\"$EMAIL\",\"purpose\":\"LOGIN\"}")
             echo "codigo para ${EMAIL%%@*}@...: sucesso=$(echo "$r" | jq -r '.success') $(echo "$r" | jq -r '.error.message // empty')" >> logs/testar-email.txt
           fi
           cat logs/testar-email.txt

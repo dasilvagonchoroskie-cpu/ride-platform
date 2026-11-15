@@ -2,7 +2,7 @@
 # Teste de ponta a ponta no servidor REAL: Central, passageiro, motorista e
 # uma corrida inteira. Cada etapa grava OK ou FALHA com a resposta do servidor.
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 REL="${REL:-/tmp/relatorio.txt}"
 : > "$REL"
 FALHAS=0

@@ -6,7 +6,7 @@
 #                      recargas, saques, SOS, avaliacoes), apaga as contas de
 #                      teste e as contas que NAO estao na lista MANTER.
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 ACAO="${ACAO:-listar}"
 MANTER="${MANTER:-+5564992686632,+5564996472794,+5554996421415}"
 MANTER_EMAILS="${MANTER_EMAILS:-dasilvagonchoroskie@gmail.com}"

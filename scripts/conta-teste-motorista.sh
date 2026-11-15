@@ -7,7 +7,7 @@
 # na tela enquanto o servidor estiver em modo de teste.
 # APAGAR antes de operar de verdade (lista de pendencias do arquivo mestre).
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 REL="${REL:-/tmp/conta-teste.txt}"
 : > "$REL"
 CHAVE="${OTP_CHAVE_TESTE:-}"

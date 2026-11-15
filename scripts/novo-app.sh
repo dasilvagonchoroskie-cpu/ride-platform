@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OPERADOR=""; NOME=""; COR="#1E5BB8"; PACOTE=""; API="https://fortaleza-mov-backend.onrender.com"
+OPERADOR=""; NOME=""; COR="#1E5BB8"; PACOTE=""; API="https://api.fortalezadigitalsecurity.com.br"
 ICONE_P=""; ICONE_M=""; FUNDO="#0070B8"; ENVIAR=0
 while [ $# -gt 0 ]; do
   case "$1" in

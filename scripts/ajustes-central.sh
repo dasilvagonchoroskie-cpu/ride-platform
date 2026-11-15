@@ -3,7 +3,7 @@
 # app), sem mexer direto no banco. Uso pela esteira "Ajustes da Central".
 #   COBRANCA=TAXIMETRO|FECHADO  -> Central > Tarifas > Como cobrar a corrida
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 REL="${REL:-/tmp/ajustes-central.txt}"
 : > "$REL"
 CHAVE="${OTP_CHAVE_TESTE:-}"

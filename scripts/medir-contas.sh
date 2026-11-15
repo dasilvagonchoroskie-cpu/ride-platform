@@ -10,7 +10,7 @@
 # Os nomes e e-mails sao os do teste automatico (a Central reconhece como
 # teste). Nenhum token e impresso: tudo fica em arquivos dentro de <pasta>.
 set -u
-API="${API:-https://fortaleza-mov-backend.onrender.com/api}"
+API="${API:-https://api.fortalezadigitalsecurity.com.br/api}"
 CHAVE="${OTP_CHAVE_TESTE:-}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 EMB_LAT=-18.0125
