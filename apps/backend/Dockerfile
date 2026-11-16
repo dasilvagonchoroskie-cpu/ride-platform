@@ -33,6 +33,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 FROM node:22-alpine AS runner
 RUN apk add --no-cache openssl curl && corepack enable
 ENV NODE_ENV=production
+ARG GIT_COMMIT=local
+ENV GIT_COMMIT=$GIT_COMMIT
 WORKDIR /app
 
 COPY --from=proddeps /app/node_modules ./node_modules
