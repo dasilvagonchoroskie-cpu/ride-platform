@@ -42,6 +42,6 @@ jobs:
         continue-on-error: true
         run: pnpm audit --prod
       - if: always()
-        run: grep "error TS" build.txt | cut -c1-200 || true
+        run: grep -E "TS[0-9]{4}" build.txt | cut -c1-200 | sort -u || true
       - if: always()
         run: echo "RESULTADO zod-4 instalar=${{ steps.instalar.outcome }} subir=${{ steps.subir.outcome }} shared=${{ steps.shared.outcome }} prisma=${{ steps.prisma.outcome }} build=${{ steps.build.outcome }} teste=${{ steps.teste.outcome }} guardar=${{ steps.guardar.outcome }}"
