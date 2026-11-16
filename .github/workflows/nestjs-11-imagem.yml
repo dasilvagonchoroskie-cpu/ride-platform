@@ -88,5 +88,7 @@ jobs:
           grep "CVE-" trivy.txt | cut -c1-200
           echo "ONDE_HANDLEBARS:"
           docker run --rm --entrypoint sh fm-api:teste -c "find /app /usr/local -type d -name handlebars*" | head -20
+          echo "PRISMA_DENTRO:"
+          docker run --rm --entrypoint sh fm-api:teste -c "ls /app/node_modules/prisma; ls /app/node_modules/.bin | grep -c prisma" | head -20
       - if: always()
         run: echo "RESULTADO imagem construir=${{ steps.construir.outcome }} tamanho=${{ steps.tamanho.outcome }} ligar=${{ steps.ligar.outcome }} health=${{ steps.health.outcome }} trivy=${{ steps.trivy.outcome }}"
