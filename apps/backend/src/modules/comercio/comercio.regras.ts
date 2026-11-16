@@ -129,7 +129,7 @@ export const cadastroSchema = enderecoSchema
     /** So vale se a conta ainda nao tem senha. */
     senha: passwordSchema.optional(),
     /** Aceite dos termos de uso do Comercio (obrigatorio; o servidor grava a versao vigente). */
-    aceiteTermos: z.literal(true, { errorMap: () => ({ message: 'Leia e aceite os termos de uso do Comércio.' }) }),
+    aceiteTermos: z.literal(true, { message: 'Leia e aceite os termos de uso do Comércio.' }),
   })
   .refine((d) => (d.latitude == null) === (d.longitude == null), { message: 'Informe latitude e longitude juntas.', path: ['latitude'] });
 
