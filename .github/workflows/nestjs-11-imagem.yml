@@ -45,9 +45,9 @@ jobs:
         continue-on-error: true
         run: |
           docker image ls fm-api:teste --format "TAMANHO: {{.Size}}"
-          echo "TYPESCRIPT_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls /app/node_modules/.pnpm | grep -c "^typescript@" || true')"
-          echo "JEST_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls /app/node_modules/.pnpm | grep -c "^jest@" || true')"
-          echo "PRISMA_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls /app/node_modules/.pnpm | grep -c "^prisma@" || true')"
+          echo "TYPESCRIPT_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls -d /app/node_modules/typescript 2>/dev/null | wc -l')"
+          echo "JEST_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls -d /app/node_modules/jest 2>/dev/null | wc -l')"
+          echo "PRISMA_NA_IMAGEM: $(docker run --rm --entrypoint sh fm-api:teste -c 'ls -d /app/node_modules/prisma 2>/dev/null | wc -l')"
       - id: ligar
         run: |
           docker run -d --name api --network host \
