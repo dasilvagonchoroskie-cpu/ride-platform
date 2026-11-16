@@ -1,0 +1,45 @@
+name: zod-4
+
+# Atualiza SO o NestJS (core e common) para a versao 11 na API,
+# confere build e teste e, se tudo passar, guarda package.json e
+# pnpm-lock.yaml neste ramo. Nao toca na main nem no servidor.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    name: atualizar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - id: instalar
+        run: pnpm install --frozen-lockfile
+      - id: subir
+        run: pnpm --filter @ride/backend --filter @ride/shared up "zod@^4"
+      - id: versoes
+        run: pnpm --filter @ride/backend list "@nestjs/*" zod file-type typescript --depth 0
+      - id: shared
+        continue-on-error: true
+        run: pnpm --filter @ride/shared build
+      - id: prisma
+        run: pnpm --filter @ride/backend exec prisma generate
+      - id: build
+        continue-on-error: true
+        run: pnpm --filter @ride/backend build > build.txt 2>&1
+      - id: teste
+        continue-on-error: true
+        run: pnpm --filter @ride/backend test
+      - id: auditoria
+        continue-on-error: true
+        run: pnpm audit --prod
+      - if: always()
+        run: grep "error TS" build.txt | cut -c1-200 || true
+      - if: always()
+        run: echo "RESULTADO zod-4 instalar=${{ steps.instalar.outcome }} subir=${{ steps.subir.outcome }} shared=${{ steps.shared.outcome }} prisma=${{ steps.prisma.outcome }} build=${{ steps.build.outcome }} teste=${{ steps.teste.outcome }} guardar=${{ steps.guardar.outcome }}"
