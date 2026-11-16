@@ -4,6 +4,8 @@ name: zod-4
 # confere build e teste e, se tudo passar, guarda package.json e
 # pnpm-lock.yaml neste ramo. Nao toca na main nem no servidor.
 on:
+  push:
+    branches: [zod-4]
   workflow_dispatch:
 
 permissions:
