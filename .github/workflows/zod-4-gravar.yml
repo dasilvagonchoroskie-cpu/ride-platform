@@ -1,0 +1,76 @@
+name: Zod 4 gravar (temporario)
+
+# Fluxo TEMPORARIO: sobe o zod para a 4, confere, constroi, testa e SO ENTAO grava no ramo zod-4.
+# Remover do ramo antes de juntar na main.
+
+on:
+  push:
+    branches: [zod-4]
+    paths:
+      - '.github/workflows/zod-4-gravar.yml'
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  gravar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: pnpm
+        run: corepack enable
+
+      - name: instalar
+        run: pnpm install --frozen-lockfile
+
+      - name: subir zod
+        run: pnpm --filter @ride/backend --filter @ride/shared up "zod@^4"
+
+      - name: conferir versoes gravadas
+        run: |
+          grep -n '"zod"' apps/backend/package.json packages/shared/package.json
+          grep -q '"zod": "^4' apps/backend/package.json
+          grep -q '"zod": "^4' packages/shared/package.json
+          grep -n -E "^  zod@" pnpm-lock.yaml
+          grep -q -E "^  zod@4" pnpm-lock.yaml
+          if grep -q -E "^  zod@3" pnpm-lock.yaml; then echo "ainda ha zod 3 no lockfile"; exit 1; fi
+
+      - name: shared build
+        run: pnpm --filter @ride/shared build
+
+      - name: prisma generate
+        run: pnpm --filter @ride/backend exec prisma generate
+
+      - name: backend build
+        run: pnpm --filter @ride/backend build
+
+      - name: backend teste
+        run: |
+          pnpm --filter @ride/backend test 2>&1 | tee teste.txt
+          grep -E "Tests:|Test Suites:" teste.txt
+          grep -q "Test Suites: 41 passed, 41 total" teste.txt
+          grep -q "Tests:       494 passed, 494 total" teste.txt
+
+      - name: audit
+        run: pnpm audit --prod
+
+      - name: gravar no ramo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add apps/backend/package.json packages/shared/package.json pnpm-lock.yaml
+          git status --short
+          git commit -m "zod 4: gravar versao nos package.json e no lockfile"
+          git push origin HEAD:zod-4
+
+      - name: resultado
+        run: echo "RESULTADO zod-4-gravar tudo=success gravado=sim"
