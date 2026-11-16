@@ -31,7 +31,7 @@ import { DoisFatoresService } from './dois-fatores';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 const generoSchema = z.enum(['FEMININO', 'MASCULINO', 'OUTRO', 'NAO_INFORMAR'], {
-  errorMap: () => ({ message: 'Selecione o genero.' }),
+  message: 'Selecione o genero.',
 });
 
 /** "Nome e sobrenome", igual ao do CPF: pelo menos duas palavras. */
