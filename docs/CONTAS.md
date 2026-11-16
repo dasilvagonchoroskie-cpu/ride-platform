@@ -3,7 +3,7 @@
 Este arquivo fica no repositório (hoje **público**; ver PENDENCIAS.md para
 torná-lo privado): aqui só vão os NOMES das
 contas e das variáveis, e onde cada coisa fica. Nenhuma senha, chave ou
-endereço de banco entra aqui. Os valores ficam no Render, nos segredos do
+endereço de banco entra aqui. Os valores ficam no `api.env` do servidor, nos segredos do
 GitHub e no cofre de senhas do Evandro — nunca no arquivo do projeto nem no
 chat (regra de 30/10/2026).
 
@@ -12,16 +12,16 @@ chat (regra de 30/10/2026).
 | Serviço | Para quê | Onde ficam as credenciais | Dono |
 |---|---|---|---|
 | GitHub (este repositório) | código, esteiras (APK, testes, cópia do banco) | Settings → Secrets and variables → Actions | Evandro |
-| Render | servidor (NestJS) | Environment do serviço `fortaleza-mov-backend` | Evandro |
-| Supabase | banco PostgreSQL + PostGIS | `DATABASE_URL` no Render | Evandro |
-| TomTom | mapa, busca de endereço e rotas | `TOMTOM_API_KEY` no Render (nunca no app nem no código) | Evandro |
-| Firebase (projeto fortaleza-mov) | aviso push | `FCM_*` no Render; configuração pública em `infra/firebase-apps.b64` | Evandro |
-| Gmail (Apps Script) | e-mail com o código de entrada | `EMAIL_GOOGLE_SCRIPT_URL` e `EMAIL_GOOGLE_SCRIPT_SEGREDO` no Render | Evandro |
+| Servidor (VPS) | servidor (NestJS) | `api.env` no servidor | Evandro |
+| Supabase | banco PostgreSQL + PostGIS | `DATABASE_URL` no `api.env` do servidor | Evandro |
+| TomTom | mapa, busca de endereço e rotas | `TOMTOM_API_KEY` no `api.env` do servidor (nunca no app nem no código) | Evandro |
+| Firebase (projeto fortaleza-mov) | aviso push | `FCM_*` no `api.env` do servidor; configuração pública em `infra/firebase-apps.b64` | Evandro |
+| Gmail (Apps Script) | e-mail com o código de entrada | `EMAIL_GOOGLE_SCRIPT_URL` e `EMAIL_GOOGLE_SCRIPT_SEGREDO` no `api.env` do servidor | Evandro |
 | Google Cloud (opcional) | Google Maps, se um dia ligar | `infra/mapas.b64` (chave restrita aos apps) e `GOOGLE_MAPS_API_KEY` | Evandro |
 | Google Play (quando publicar) | loja; também registra os pacotes fora da loja (Central, operadores) na verificação de desenvolvedor do Android | conta de **organização** no CNPJ (ver `docs/GOOGLE-PLAY.md`) | empresa |
-| Registro.br (quando registrar) | domínio próprio (`api.<domínio>` → Render) | conta do titular (CNPJ) | empresa |
+| Registro.br (quando registrar) | domínio próprio (`api.<domínio>` → servidor VPS) | conta do titular (CNPJ) | empresa |
 
-## 2. Variáveis do servidor (Render → Environment)
+## 2. Variáveis do servidor (`api.env` no servidor)
 
 - Banco e cache: `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_DB`.
 - Login: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, `OTP_*`.
@@ -35,7 +35,7 @@ chat (regra de 30/10/2026).
   - `OTP_CONTAS_REVISAO`: contas de revisão da loja (Google Play), `e-mail=código` separados por
     vírgula. **Desligada por padrão (vazia).** Só e-mail da lista, só entrada por e-mail, só
     passageiro/motorista (nunca ADMIN), sem envio de e-mail, com o limite de 6 pedidos/hora e as
-    5 tentativas do código normal. Valor só no Render, nunca no repositório (`docs/GOOGLE-PLAY.md`, 5.5).
+    5 tentativas do código normal. Valor só no `api.env`, nunca no repositório (`docs/GOOGLE-PLAY.md`, 5.5).
 - Mapa: `TOMTOM_API_KEY` (busca, endereço e rota; nunca sai do servidor),
   `TOMTOM_API_KEY_MAPA` (opcional: chave só das imagens do mapa, a única que
   chega aos celulares; sem ela, vale a `TOMTOM_API_KEY`), `TOMTOM_COTA_MES`,
@@ -55,8 +55,6 @@ chat (regra de 30/10/2026).
   e-mail). `ADMIN_SENHA` não é usado por nenhuma esteira desde 30/10/2026: pode ser apagado.
 - Teste de restauração (só quando for testar): `COPIA_BANCO_CHAVE` (chave privada da cópia)
   e `BANCO_TESTE_URL` (banco de teste vazio).
-- `RENDER_DEPLOY_HOOK` (opcional): publica o servidor sozinho a cada mudança.
-  Sem ele, a publicação é feita pelo conector do Render.
 - `DATABASE_URL` (antigo): aponta para o banco velho; só a esteira
   `db-bootstrap` (que não se usa) lê. Pode ser apagado (passo a passo, item 6.2).
 
@@ -98,7 +96,7 @@ Para restaurar (só em caso de perda de dados):
    confira Central → Tarifas depois da restauração.
 4. Rodar o `restaurar.sql` no banco (Supabase → SQL Editor, ou `psql`).
    Linhas que já existem são puladas.
-5. Trocar o `DATABASE_URL` no Render e publicar o servidor.
+5. Trocar o `DATABASE_URL` no `api.env` do servidor e reiniciar a API.
 6. Rodar a esteira **Teste de ponta a ponta** para conferir.
 
 Teste de restauração: precisa da chave privada do Evandro (pendente, ver
@@ -119,18 +117,17 @@ pessoa. Nenhuma senha vai aqui.
 | Serviço | Titular hoje | Como compartilhar / passar | Nome da empresa? |
 |---|---|---|---|
 | **Google Play** (ainda não criada) | — | Criar já como **conta de organização** (CNPJ + número D-U-N-S, grátis, até ~30 dias; verificação do Google 1–3 semanas). Conta de organização não precisa do teste fechado com 12 testadores por 14 dias que vale para conta pessoal criada depois de 13/11/2023. Dá para transferir app entre contas depois (pedido no Play Console; o Google pode pedir documentos), mas é mais demorado. A chave de assinatura (segredos `ANDROID_*`) vai junto e não pode se perder. | **Sim, obrigatório** |
-| **TomTom** (mapa, busca, rota) | conta do Evandro | Não precisa transferir: a empresa cria a conta dela, gera a chave (e a chave só do mapa), troca `TOMTOM_API_KEY` (e `TOMTOM_API_KEY_MAPA`) no Render e apaga a chave antiga. Uso comercial pede plano pago (cláusula 2.2, ver docs/TOMTOM-TERMOS.md): o contrato deve ser da empresa. Cada operador com servidor próprio usa a chave dele. | **Sim** |
-| **Render** (servidor) | conta/workspace do Evandro | Membros só no plano Pro ou maior (Settings → Team members → Invite). O Render **não transfere** serviço entre workspaces (resposta do suporte; pedido aberto desde 2020): a empresa cria o workspace dela, cria um serviço novo ligado ao mesmo repositório e copia as variáveis. Como o app chama `fortaleza-mov-backend.onrender.com`, o serviço novo teria outro endereço: **antes de publicar na loja, pôr um domínio próprio** (ex.: api.<domínio>) apontando para o Render, para poder trocar de conta sem atualizar o app. | **Sim** |
+| **TomTom** (mapa, busca, rota) | conta do Evandro | Não precisa transferir: a empresa cria a conta dela, gera a chave (e a chave só do mapa), troca `TOMTOM_API_KEY` (e `TOMTOM_API_KEY_MAPA`) no `api.env` do servidor e apaga a chave antiga. Uso comercial pede plano pago (cláusula 2.2, ver docs/TOMTOM-TERMOS.md): o contrato deve ser da empresa. Cada operador com servidor próprio usa a chave dele. | **Sim** |
+| **Servidor (VPS)** | contrato do Evandro na Integrator Host | A plataforma já roda no servidor novo (Debian); o Render não é mais usado. A API fica em api.fortalezadigitalsecurity.com.br (domínio próprio), então trocar de servidor não exige atualizar os apps: basta apontar o DNS. Confirmar com a Integrator Host como passar o contrato para a empresa. | **Sim** |
 | **Supabase** (banco) | organização do Evandro | Convidar: Organization → Team → Invite. Passar: Project Settings → General → **Transfer project** (dono da organização de origem e membro da de destino; sem integração com GitHub nem log drains; no plano grátis, máximo de 2 projetos por organização). O endereço do banco não muda. | **Sim** |
 | **Firebase** (aviso push, projeto fortaleza-mov) | conta Google do Evandro | ⚙ Project settings ("Configurações do projeto") → Users and permissions ("Usuários e permissões") → Add member ("Adicionar membro") → Owner ("Proprietário"). A conta da empresa aceita o convite; depois o Evandro pode sair. O projeto é o mesmo: nada muda nos apps. | **Sim** |
-| **GitHub** (código e esteiras) | conta pessoal `dasilvagonchoroskie-cpu` | Compartilhar: Settings → Collaborators ("Colaboradores") → Add people. Passar: criar uma organização da empresa (grátis) → no repositório Settings → General → Danger Zone ("Zona de perigo") → Transfer ownership ("Transferir"). Depois conferir os segredos das Actions e a ligação do Render com o GitHub. | **Sim** |
-| **Domínio** | o app ainda **não tem domínio próprio** (servidor no endereço do Render). `fortalezadigitalsecurity.com.br` é da marca de desenvolvimento do Evandro | Registrar o domínio do app já no CNPJ. Se for registrado no CPF antes: Registro.br → transferência de titularidade (documento gerado no site, assinado pelo gov.br, análise em 2 dias úteis; .com.br pode passar de CPF para CNPJ). | **Sim** |
-| **Gmail** (e-mail com o código de entrada) | Gmail do Evandro, pelo Apps Script | Conta Gmail não se transfere. A empresa cria o e-mail dela (de preferência no domínio próprio), refaz o Apps Script nessa conta (pasta `scripts/email-gmail`) e troca `EMAIL_GOOGLE_SCRIPT_URL`, `EMAIL_GOOGLE_SCRIPT_SEGREDO`, `EMAIL_REMETENTE` no Render. | **Sim** (quem envia) |
+| **GitHub** (código e esteiras) | conta pessoal `dasilvagonchoroskie-cpu` | Compartilhar: Settings → Collaborators ("Colaboradores") → Add people. Passar: criar uma organização da empresa (grátis) → no repositório Settings → General → Danger Zone ("Zona de perigo") → Transfer ownership ("Transferir"). Depois conferir os segredos das Actions. | **Sim** |
+| **Domínio** | a API roda em `api.fortalezadigitalsecurity.com.br`. `fortalezadigitalsecurity.com.br` é da marca de desenvolvimento do Evandro | Registrar o domínio do app já no CNPJ. Se for registrado no CPF antes: Registro.br → transferência de titularidade (documento gerado no site, assinado pelo gov.br, análise em 2 dias úteis; .com.br pode passar de CPF para CNPJ). | **Sim** |
+| **Gmail** (e-mail com o código de entrada) | Gmail do Evandro, pelo Apps Script | Conta Gmail não se transfere. A empresa cria o e-mail dela (de preferência no domínio próprio), refaz o Apps Script nessa conta (pasta `scripts/email-gmail`) e troca `EMAIL_GOOGLE_SCRIPT_URL`, `EMAIL_GOOGLE_SCRIPT_SEGREDO`, `EMAIL_REMETENTE` no `api.env` do servidor. | **Sim** (quem envia) |
 | **Google Cloud** (chave do Google Maps, opcional) | Evandro | Só se for usar o Google Maps: projeto na conta da empresa, chave restrita aos pacotes + SHA-1. A chave antiga que esteve no repositório deve ser apagada (PENDENCIAS.md). | Sim, se usar |
 | **Chave privada da cópia do banco** | só o Evandro | Não se compartilha por chat nem e-mail. Guardar em papel/cofre; para o teste de restauração, vai como segredo do GitHub (`COPIA_BANCO_CHAVE`). | Guardar com o responsável legal |
 
-Fontes: [Render – membros](https://render.com/docs/team-members) ·
-[Render – transferir serviço (suporte)](https://community.render.com/t/transfer-services-from-one-team-to-another/12318) ·
+Fontes: 
 [Supabase – transferir projeto](https://supabase.com/docs/guides/platform/project-transfer) ·
 [Firebase – membros do projeto](https://support.google.com/firebase/answer/7000272) ·
 [Google Play – conta de organização e 12 testadores](https://ontest.app/blog/personal-vs-organization-google-play-account-12-testers) ·

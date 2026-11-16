@@ -39,8 +39,7 @@ Central → tela de entrada → **Esqueci a senha** → código no e-mail → se
    visibilidade do repositório") → Change to private ("Tornar privado").
 4. Digite o nome que ele pedir e confirme (I want to make this repository
    private → "Quero tornar este repositório privado").
-5. Me avise "repositório privado": eu confiro se o Render continua
-   publicando o servidor e se as esteiras rodam. Links dos Releases passam a
+5. Me avise "repositório privado": eu confiro se as esteiras rodam. Links dos Releases passam a
    pedir login (eu continuo mandando os APKs aqui no chat).
 
 ---
@@ -63,10 +62,8 @@ servidor e aparecem na Central (Configurações → Mapa → "ATENÇÃO: passou 
 1. Keys → Add Key / Create a new key ("Adicionar / criar chave") → nome `Fortaleza Move - mapa`.
 2. Products: marque **só Map Display API** → Create ("Criar").
 3. Copie a chave nova (não mande no chat).
-4. Abra dashboard.render.com → serviço **fortaleza-mov-backend** →
-   Environment ("Ambiente") → Add Environment Variable ("Adicionar variável").
-5. Key ("Nome"): `TOMTOM_API_KEY_MAPA` · Value ("Valor"): cole a chave →
-   Save Changes ("Salvar alterações"). O Render republica sozinho (~2 min).
+4. No servidor (VPS), abra o arquivo `/opt/fortaleza/api.env` e adicione a variável `TOMTOM_API_KEY_MAPA` com a chave nova.
+5. Reinicie a API no servidor (eu te guio nesse passo).
 6. Me avise "pus a chave do mapa": eu confiro que os celulares passaram a
    receber a chave nova (sem mostrar nenhuma das duas).
 
@@ -180,18 +177,11 @@ conector do GitHub)
 2. Project Settings ("Configurações do projeto") → General ("Geral") → no fim,
    Delete project ("Excluir projeto") → digite o nome que ele pedir → confirme.
 
-**6.6 (Opcional) Servidor publicar sozinho a cada mudança**
-1. dashboard.render.com → **fortaleza-mov-backend** → Settings
-   ("Configurações") → Deploy Hook ("Gancho de publicação") → copie (não
-   mande no chat).
-2. GitHub → Settings → Secrets and variables → Actions → New repository
-   secret ("Novo segredo do repositório") → Name ("Nome") `RENDER_DEPLOY_HOOK` →
-   Secret ("Segredo"): cole → Add secret ("Adicionar segredo").
-Sem isso tudo funciona: eu publico o servidor pelo conector do Render.
+**6.6 Publicação do servidor:** já resolvido. A migração para o servidor novo (VPS da Integrator Host) foi feita; não existe mais gancho nem segredo do Render.
 
 **6.7 (Opcional) Trocar a senha do banco**
 - Só se quiser trocar por segurança. Me avise antes ("vou trocar a senha do
-  banco"): a troca derruba o servidor até o endereço novo ir para o Render, e
+  banco"): a troca derruba o servidor até a senha nova ser aplicada no servidor (VPS), e
   eu te guio passo a passo sem a senha passar pelo chat.
 
 ---
@@ -212,7 +202,7 @@ precisam ser iguais aos do CNPJ.
 **7.3 Domínio próprio** (ex.: `fortalezamove.com.br`)
 1. registro.br → digite o nome → se estiver livre, Registrar.
 2. Titular: o **CNPJ** da empresa. Pague a taxa anual (confira o valor na
-   tela). Me avise "registrei o domínio": eu ligo no Render e te passo os 2
+   tela). Me avise "registrei o domínio": eu ligo no servidor (VPS) e te passo os 2
    campos para preencher no DNS do Registro.br.
 
 **7.4 Conta da Google Play** (taxa única de US$ 25)

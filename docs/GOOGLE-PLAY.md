@@ -56,13 +56,11 @@ empresa (docs/CONTAS.md).
 | # | O quê | Quem | Situação |
 |---|---|---|---|
 | 2.1 | Registrar o domínio (ex.: `fortalezamove.com.br`) no **Registro.br**, já no CNPJ. Tem taxa anual: confira o valor na tela antes de pagar | E | ⏳ |
-| 2.2 | No Render: serviço `fortaleza-mov-backend` → Settings ("Configurações") → Custom Domains ("Domínios próprios") → `api.<domínio>`. O Render emite o certificado HTTPS sozinho | C (com o domínio pronto) | ⏳ |
-| 2.3 | No Registro.br: DNS → registro **CNAME** `api` → `fortaleza-mov-backend.onrender.com` (eu mando o passo a passo com os valores na hora) | E | ⏳ |
-| 2.4 | Apps passam a chamar `https://api.<domínio>` (com o endereço do Render de reserva) e o teste de ponta a ponta roda no endereço novo | C | ⏳ |
+| 2.2 | No servidor (VPS): configurar `api.<domínio>` no Nginx (arquivo `api`) e emitir o certificado HTTPS | C (com o domínio pronto) | ⏳ |
+| 2.3 | No Registro.br: DNS → registro **A** `api` → IP do servidor (VPS) (eu mando o passo a passo com os valores na hora) | E | ⏳ |
+| 2.4 | Apps passam a chamar `https://api.<domínio>` e o teste de ponta a ponta roda no endereço novo | C | ⏳ |
 
-Por que: hoje os apps chamam `fortaleza-mov-backend.onrender.com`. O Render
-não transfere serviço entre contas; com domínio próprio, dá para trocar de
-conta ou de servidor **sem atualizar o app na loja**.
+Por que: hoje os apps chamam `api.fortalezadigitalsecurity.com.br`, que aponta para o servidor (VPS). Com domínio próprio, dá para trocar de servidor **sem atualizar o app na loja**: basta apontar o DNS.
 
 ## 3. Páginas públicas que a loja pede
 
@@ -106,7 +104,7 @@ conta ou de servidor **sem atualizar o app na loja**.
 | 6.2 | Alvo **Android 16 (API 36)** — obrigatório para app novo e atualização desde 31/08/2026 | C | ✅ a esteira confere no APK pronto |
 | 6.3 | Bibliotecas nativas alinhadas em **16 KB** | C | ✅ a esteira confere no APK pronto |
 | 6.4 | Assinatura: a mesma chave dos APKs vira a **chave de envio** (upload key); o Google guarda a chave do app (Play App Signing). Segredos `ANDROID_*` do GitHub + cópia do .jks fora do GitHub | C | ✅ (perder a chave = não atualiza mais) |
-| 6.5 | **Desligar o modo teste do código de entrada** (`OTP_DEBUG_RETURN` no Render; estava ligado desde o começo, sem SMS). Ligado, conta só com telefone (sem e-mail) recebe o código **na tela**: na loja, qualquer pessoa entraria nessas contas. Antes de desligar: e-mail funcionando e as contas de revisão do item 5.5 (variável `OTP_CONTAS_REVISAO`) testadas em celular | C | ⏳ **obrigatório antes de publicar** |
+| 6.5 | **Desligar o modo teste do código de entrada** (`OTP_DEBUG_RETURN` no `api.env` do servidor; estava ligado desde o começo, sem SMS). Ligado, conta só com telefone (sem e-mail) recebe o código **na tela**: na loja, qualquer pessoa entraria nessas contas. Antes de desligar: e-mail funcionando e as contas de revisão do item 5.5 (variável `OTP_CONTAS_REVISAO`) testadas em celular | C | ⏳ **obrigatório antes de publicar** |
 | 6.6 | Primeira versão pelo **teste interno** (Internal testing — "Teste interno", até 100 pessoas), depois produção | E + C | ⏳ |
 
 ## 7. Verificação de desenvolvedor do Android (regra nova de 2026)
@@ -148,6 +146,4 @@ Fontes (consultadas em 30/10/2026):
 [Verificação de desenvolvedor — perguntas (Google)](https://developer.android.com/developer-verification/guides/faq) ·
 [Verificação de desenvolvedor — junho/2026 (blog Android)](https://android-developers.googleblog.com/2026/06/android-developer-verification.html) ·
 [D-U-N-S grátis (Dun & Bradstreet)](https://www.dnb.com/en-us/smb/duns/get-a-duns.html) ·
-[Domínio próprio no Render](https://render.com/docs/custom-domains) ·
-[Certificado HTTPS automático no Render](https://render.com/docs/tls) ·
 conta de organização e 12 testadores: fonte em docs/CONTAS.md.

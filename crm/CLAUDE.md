@@ -144,7 +144,7 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Motorista: `DOCUMENTOS_MOTORISTA` em defs.js (7 itens: tipo/categoria/campo/rótulo/pedido) usado por M4, ficha, IA e Central;
   `OBRIGATORIOS_FIXOS` em documentos/service.js (política não retira). Cache `fm-crm-v27`. Testes: `test/ia-atendimento.test.js`.
 
-## Candidatos, avaliador e Hostinger (12/11/2026, ramo `etapa2`, "requisição final"; NÃO está em produção)
+## Candidatos, avaliador e hospedagem (12/11/2026, ramo `etapa2`, "requisição final"; NÃO está em produção)
 - Migração 006 (congelada): `candidaturas` (etapas em `src/candidaturas.js`, CHECK decisao↔etapa, sem DELETE), `candidatura_pareceres`
   e `candidatura_eventos` (append-only por gatilho), `integracao_vinculos|documentos|nonces`. Docs só movem entre cadastro_recebido /
   documentacao_pendente / documentacao_recebida. Decisão: só admin, `confirmo:true`, recusa com motivo; aprovar NÃO contrata a ficha
@@ -156,7 +156,7 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
   exceção em `docs.anexar`). Os dois caminhos são independentes: app → Central (aprovação lá); CRM → ficha/documentos/avaliação, e o dono
   usa a ficha para preencher o cadastro na Central. Tabelas `integracao_*` da 006 ficam vazias (migração congelada). NÃO recriar.
 - IA: só Gemini, sem reserva (decisão do dono); `INFO_EXTRAS` (entregadores, comerciantes) + `situacaoInformacoes()`; nada inventado.
-- Hostinger: `deploy/hostinger/` (guia + scripts, nada executado); `SNAPSHOT_MODO=copia` em `persist.js`. Cache `fm-crm-v26`.
+- Hospedagem: plano da Hostinger descartado; o CRM roda no VPS da Integrator Host (Debian, Docker); `SNAPSHOT_MODO=copia` em `persist.js`. Cache `fm-crm-v26`.
 
 ## M2 entregadores e relatórios em PDF (12/11/2026, ramo `etapa2`, pedido do dono)
 - `entregadores`: módulo funcional como o motorista (mesmas situações, `Contratado` verde, documentos, `modalidade`), só existe em
@@ -215,7 +215,7 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - Regras: conferir NUNCA muda a situação da função (`sincronizarLegado` só mexe em `doc_*`/`documentos`); permissão no servidor
   (`policy.docs*`, política em setting `docs_politica`: gestor só anexa por padrão; ver/conferir por categoria liberada; exclusão definitiva
   desligada); todo acesso/negação/integridade vira evento + auditoria; CPF/CNPJ só cifrado, só admin, coleta desligada por padrão.
-- Decididos em 12/11: 7 documentos obrigatórios do motorista (ver acima); manter TODAS as versões; armazenamento definitivo no disco da VPS Hostinger (na migração). Pendentes: o que o gestor vê;
+- Decididos em 12/11: 7 documentos obrigatórios do motorista (ver acima); manter TODAS as versões; armazenamento definitivo no disco do VPS (migração para a Integrator Host já feita). Pendentes: o que o gestor vê;
   quais CPF/CNPJ exigir; prazo de retenção. Sem exclusão automática. `FM_DOCS_KEY` precisa existir antes de qualquer uso real.
 - Front: `public/js/documentos.js` (painel por ficha, tela Documentos, política, bloco CPF/CNPJ); cache `fm-crm-v23`. Testes: `test/m4-documentos.test.js`.
 
@@ -313,15 +313,15 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 
 ## Mudança de conta (09/11/2026)
 - O dono perdeu o acesso às contas da Fortaleza Move (vendeu o celular). O CRM foi montado de novo, do zero, nas contas
-  pessoais dele: Render "Evandro's workspace" (serviço `crm-fortaleza-move`, srv-dbp6u4utlv9c73en3b0g, Oregon,
-  https://crm-fortaleza-move-ilv9.onrender.com, auto-deploy DESLIGADO: publicar com deploy manual) e Supabase org
+  pessoais dele: VPS da Integrator Host (Debian, Docker, pasta `/opt/fortaleza`,
+  https://crm.fortalezadigitalsecurity.com.br) e Supabase org
   dasilvagonchoroskie-cpu, projeto `crm-fortaleza-move` (ref jjrcfoxhzpaguskeywkf, us-west-1). Dados antigos ficaram no
   cofre da conta antiga (cifrados): não há como trazer sem a SNAPSHOT_KEY antiga. Instalação nova: admin, WhatsApp e
   chave do Gemini cadastrados de novo.
 - SQL do cofre agora versionado em `supabase/cofre.sql` (antes só existia no Supabase antigo).
 - Mesma conta Render tem o `fortaleza-mov-backend` mantido acordado 24 h: o plano grátis dá 750 h/mês POR CONTA.
   Dois serviços acordados 24 h estouram (~1440 h) e o Render suspende os dois até o mês seguinte.
-  Decisão do dono (09/11, temporária até contratar Hostinger): CRM acordado 24 h (pg_cron `crm-manter-acordado` no
+  Decisão do dono (09/11, temporária até migrar para o VPS): CRM acordado 24 h (pg_cron `crm-manter-acordado` no
   projeto do CRM, a cada 10 min) e o cron `manter-servidor-acordado` do backend (projeto fortaleza-mov-eua) DESATIVADO
   (cron.alter_job active=false; reativar com active := true). O backend dorme quando ninguém usa e acorda no 1º acesso.
 
