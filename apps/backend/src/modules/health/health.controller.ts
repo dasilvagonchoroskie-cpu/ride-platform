@@ -30,8 +30,8 @@ export class HealthController {
       // Versao no ar: o commit do GitHub que o Render publicou. O teste de
       // ponta a ponta e a esteira dos APKs conferem se o servidor esta em
       // dia com o codigo (servidor esquecido desatualizado = app quebrado).
-      versao: (process.env.RENDER_GIT_COMMIT ?? 'local').slice(0, 7),
-      commit: process.env.RENDER_GIT_COMMIT ?? null,
+      versao: (process.env.GIT_COMMIT ?? 'local').slice(0, 7),
+      commit: process.env.GIT_COMMIT ?? null,
       noArDesde: HealthController.inicio,
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),

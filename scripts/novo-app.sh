@@ -4,7 +4,7 @@
 #
 # Uso:
 #   bash scripts/novo-app.sh --operador goiatuba --nome "Goiatuba Mov" --cor "#12AB34" \
-#        --pacote br.com.goiatubamov [--api https://servidor-do-operador.onrender.com] \
+#        --pacote br.com.goiatubamov [--api https://api.exemplo.com.br] \
 #        [--icone-passageiro simbolo.png] [--icone-motorista simbolo.png] [--fundo "#0070B8"] [--enviar]
 #
 # Cria operadores/<operador>/app.env (+ os simbolos). Com --enviar, grava no

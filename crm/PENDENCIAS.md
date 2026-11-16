@@ -4,12 +4,12 @@ Atualizado em 13/11/2026 (horário de Brasília). Lista única do que falta. Ao 
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
-## 0. Publicação 2.1.0-rc.1 no Render (13/11/2026)
+## 0. Publicação 2.1.0-rc.1 (13/11/2026, feita no Render; hoje o CRM roda no VPS)
 
 - [x] 13/11 Merge `etapa2 → main` nos dois repositórios, deploy manual, 7 migrações aplicadas, bucket privado `crm-documentos`,
-      cópia do cofre antes (`cofre.copia_pre_publicacao`). Rotas sem login → 401; setup fechado. Registro: `docs/PUBLICACAO-RENDER-2026-11-13.md`.
-- [ ] **Dono: cadastrar no Render `FM_DOCS_KEY`, `FM_DADOS_KEY` e `DOCS_SUPABASE_KEY`** (passo a passo no registro acima) e
-      guardar as duas primeiras no cofre de senhas. Até lá, o arquivo digital fica desligado.
+      cópia do cofre antes (`cofre.copia_pre_publicacao`). Rotas sem login → 401; setup fechado. (registro antigo apagado na limpeza do Render).
+- [ ] Chaves `FM_DOCS_KEY`, `FM_DADOS_KEY` e `DOCS_SUPABASE_KEY`: já estão no `crm.env` do VPS (conferido em 16/11). Falta o dono
+      guardar as duas primeiras no cofre de senhas.
 - [ ] Depois das chaves: abrir `/api/admin/saude` logado e conferir `prova: "ok"` (Claude confere o log).
 - [ ] Dono: testes reais do `docs/ROTEIRO-TESTES-REAIS.md` (WhatsApp, áudio, documento fictício, IA, notificações). Nenhum feito ainda.
 - [x] 13/11 2.1.0-rc.2 no ar (commit e1dc4d8): "Contato pessoal (sem IA)" para família/amigos; regras de conversa informal e
@@ -28,7 +28,6 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       Lista de conversas abre em "Todas" (conversa concluída não "some"). Teste que reproduz a conversa real (falha na rc.3).
 - [ ] Dono: repetir pelo número da mãe: concluir no CRM e clicar "Vim pelo site" (saudação de retorno + menu, sem equipe);
       depois o botão "Tenho um comércio" (saudação + pedido dos dados do comércio).
-- [ ] Opcional: "Health Check Path" `/api/health` no painel do Render (a ferramenta do Claude não altera essa opção).
 
 ## 1. Depende do dono (testes e ações que só ele pode fazer)
 
@@ -43,9 +42,9 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       encomendas, Clube de Vantagens, outros; depois, o site oficial.
 - [ ] Trocar a senha inicial do administrador e gerar os códigos de recuperação.
 - [ ] Conferir em Configurações se a chave do Gemini está salva e o "Testar conexão" passa.
-- [ ] Verificação em duas etapas no Render, Supabase e GitHub (quando tiver o próprio celular).
-- [x] 12/11 Hospedagem definitiva decidida: VPS da Hostinger, antes do lançamento. Preparação pronta em `deploy/hostinger/`.
-- [ ] **Contratar a VPS e o domínio** e marcar o dia da migração (guia `deploy/hostinger/README.md`). Nada foi contratado nem migrado.
+- [ ] Verificação em duas etapas no Supabase e GitHub (quando tiver o próprio celular).
+- [x] 12/11 Hospedagem definitiva decidida: VPS. Ficou o VPS da Integrator Host (o plano da Hostinger foi descartado).
+- [x] Migração para o VPS da Integrator Host feita (Debian, Docker, pasta `/opt/fortaleza`).
 - [ ] Gestão de frota: auditoria no chat próprio (inclui apagar o projeto Supabase vazio myfktvjbdczfxgppnbua).
 
 ## 2. Ordem de desenvolvimento de 11/11 (executar uma etapa por vez, com relatório)
@@ -56,7 +55,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       deploys. **Análise feita em 11/11 (plano em módulos M0–M6 no arquivo-mestre). Aguardando: teste das
       notificações + autorização do dono + 5 decisões:** (1) diferença entre "Parceiro do Clube" e "Comércio parceiro";
       (2) guardar a foto/PDF original dos documentos (necessário para o PDF da Etapa 3); (3) onde guardar os arquivos até
-      a Hostinger (proposta: Supabase Storage, cifrado); (4) gestor pode ver documentos?; (5) guardar CPF/CNPJ?
+      o VPS (proposta: Supabase Storage, cifrado); (4) gestor pode ver documentos?; (5) guardar CPF/CNPJ?
       Preparação autorizada em 11/11 (só no ramo `etapa2`, sem produção):
       - [x] M0 migrações versionadas + simulação em cópia + relatório de duplicados (11/11, testado com dados fictícios).
       - [x] M1 (parte do banco) pessoas, empresas, vínculos e CPF/CNPJ protegidos (11/11, testado com dados fictícios).
@@ -76,7 +75,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
             Limitações: adaptador Supabase só testado com servidor falso; sem antivírus; sem rotação da `FM_DOCS_KEY`; CPF/CNPJ
             "obrigatório" não existe (só desligado/opcional).
       - [ ] DECISÕES DO DONO (M4): (1) manter originais em todas as substituições; (2) armazenamento definitivo (pasta persistente
-            da Hostinger ou Supabase Storage privado) e configuração; (3) quais documentos o gestor pode ver/baixar/conferir;
+            do VPS ou Supabase Storage privado) e configuração; (3) quais documentos o gestor pode ver/baixar/conferir;
             (4) quais dados de CPF/CNPJ exigir e guardar em cada cadastro; (5) prazo de retenção de documentos e cadastros encerrados.
             Antes de qualquer uso real: gerar `FM_DOCS_KEY` e `FM_DADOS_KEY` (64 hex) e guardá-las fora do servidor e do repositório.
       - [ ] Próximo (aguardando avaliação do M4 e autorização do dono): etapa seguinte. Depois: IA/WhatsApp ligados à pessoa (hoje o
@@ -120,7 +119,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] 12/11 ~~Integração assinada app do motorista → CRM~~ RETIRADA no mesmo dia (decisão do dono: os dois cadastros são independentes).
       Documentos: todas as versões guardadas (decisão do dono).
 - [x] 12/11 Informações oficiais da IA organizadas em 8 assuntos com situação "preenchido/falta" (nada inventado).
-- [x] 12/11 Preparação da migração para a Hostinger (scripts + guia + `SNAPSHOT_MODO=copia`), sem executar nada. 175/175 testes.
+- [x] 12/11 Preparação da migração para o VPS (o plano da Hostinger foi descartado; scripts + guia + `SNAPSHOT_MODO=copia`), sem executar nada. 175/175 testes.
 - [ ] **Dono:** criar o usuário do avaliador (Configurações → Usuários → perfil "Avaliador de cadastros") quando for usar.
 - [ ] **Dono:** escrever as informações oficiais dos 8 assuntos da IA (hoje vazias: a IA não inventa).
 - [ ] **Configuração futura (na migração):** `FM_DOCS_KEY`, `FM_DADOS_KEY` geradas na VPS e guardadas no cofre
@@ -146,17 +145,14 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] 13/11 Fotos/PDFs do WhatsApp guardados cifrados na ficha (ou na espera / pendentes de classificação); texto não conta mais.
 - [x] 13/11 Botões do site: os 4 textos reconhecidos como origem "Site"; "Vim pelo site" → menu geral (testado com o texto real do site).
 - [x] 13/11 Versão candidata 2.1.0-rc.1, `/api/admin/saude`, procedimento de publicação/rollback e roteiro de testes reais. 199/199 testes.
-- [ ] **Dono — decidir o destino:** Render agora (precisa de bucket PRIVADO no Supabase Storage + chave de serviço) ou VPS Hostinger.
-- [ ] **Dono — gerar e guardar** `FM_DOCS_KEY` e `FM_DADOS_KEY` (cofre de senhas) e autorizar a publicação (`docs/PUBLICACAO-ETAPA2.md`).
+- [x] **Dono — destino decidido:** VPS da Integrator Host (Render e Hostinger descartados).
+- [ ] **Dono — gerar e guardar** `FM_DOCS_KEY` e `FM_DADOS_KEY` (cofre de senhas).
 - [ ] **Dono — testes reais** (`docs/ROTEIRO-TESTES-REAIS.md`): WhatsApp, Gemini, áudio, troca IA/equipe, site, 7 documentos, PWA,
       PDF e notificação no celular. Nada disso foi testado com WhatsApp/Gemini reais nem em aparelho físico.
 - [ ] Decisão pendente (LGPD): prazo de guarda dos arquivos do WhatsApp que nunca viraram documento (hoje: nada é apagado sozinho).
 
 ## 3. Riscos e avisos em aberto
 
-- [ ] **Horas grátis do Render**: CRM e servidor da plataforma acordados 24 h na mesma conta. Estimativa: as 750 h
-      acabam por volta de 20–22/11 e os dois ficam suspensos até 01/12 (dados seguros no cofre). Dono decidiu manter
-      assim até a Hostinger. Acompanhar em Billing ("Cobrança") → Free Usage ("Uso gratuito").
 - [ ] Notificações no PWA (pelo Chrome): os 3 tipos se diferenciam por vibração/silêncio, não por som próprio; som
       diferente por tipo com o app fechado só no app Android.
 - [ ] WhatsApp por "Dispositivos conectados" (não oficial): risco de bloqueio do número; migração futura para a via
@@ -167,9 +163,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       mascarados); a foto/PDF original é descartada, e o link do WhatsApp expira. Resolver na Etapa 2 (módulo M5).
 - [ ] **Crescimento do cofre**: cada retrato leva o banco inteiro (hoje 673 KB) e o histórico guarda até ~63 versões
       (hoje 34 versões = 17 MB; banco do Supabase 31 MB de 500 MB grátis). Documentos NUNCA podem entrar no retrato;
-      acompanhar o tamanho até a mudança para a Hostinger.
-- [ ] Render grátis sem disco persistente (conferido 11/11): os dados só sobrevivem pelo cofre (até ~30 s de perda) e,
-      se o Supabase estiver fora do ar, o CRM não liga (proteção contra subir vazio).
+      acompanhar o tamanho no VPS.
 
 ## 4. Itens técnicos ainda não validados em uso real
 
@@ -184,7 +178,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] 13/11 (rc.8) Todos os cartões do dashboard são clicáveis e abrem a lista já filtrada (faixa "Filtro do painel" com "Ver todos").
 - [x] 13/11 (rc.9) Ficha do motorista/entregador com 1ª habilitação e validade da CNH, preenchidas pelo documento lido.
 - [ ] Decidir com o dono: guardar o NÚMERO DE REGISTRO da CNH? (proposta: campo cifrado, só admin; hoje fica só no arquivo da CNH no arquivo digital).
-- [ ] Dono: colocar `DOCS_SUPABASE_KEY` no Render (chave secreta do Supabase) para ligar o arquivo digital; depois conferir `armazenamento_pronto` e `prova: ok` em `/api/admin/saude`.
+- [ ] Dono: conferir `armazenamento_pronto` e `prova: ok` em `/api/admin/saude` (a `DOCS_SUPABASE_KEY` já está no `crm.env` do VPS).
 - [ ] Testar no WhatsApp real o menu novo (2 e 3 e seus segundos menus, 0) e conferir o painel com conversas de verdade.
 
 ## 5. Backlog (melhorias conhecidas, sem prazo)

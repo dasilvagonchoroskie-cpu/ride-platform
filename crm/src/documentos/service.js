@@ -43,7 +43,7 @@ const LEGADO = Object.fromEntries(DOCUMENTOS_MOTORISTA.map((d) => [d.categoria, 
 
 const DECISOES_PENDENTES = [
   // 12/11/2026: o dono decidiu PRESERVAR TODAS AS VERSÕES (nenhuma é apagada automaticamente) — não é mais pendência.
-  { chave: 'armazenamento', texto: 'Armazenamento definitivo: decidido Hostinger (VPS), a configurar na migração. Até lá nenhum documento real é guardado.' },
+  { chave: 'armazenamento', texto: 'Armazenamento definitivo: decidido o disco do VPS (Integrator Host). Hoje os arquivos ficam no Supabase Storage privado, até configurar o disco do VPS.' },
   { chave: 'gestor', texto: 'Quais documentos o gestor poderá visualizar e baixar? (hoje: nenhum arquivo; só a situação)' },
   { chave: 'cpf_cnpj', texto: 'Quais dados de CPF/CNPJ serão exigidos e guardados em cada cadastro? (hoje: coleta desligada)' },
   { chave: 'retencao', texto: 'Por quanto tempo documentos e cadastros encerrados serão mantidos? (hoje: sem prazo; nenhuma exclusão automática)' }

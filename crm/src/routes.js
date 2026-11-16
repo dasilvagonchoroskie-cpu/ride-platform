@@ -1488,7 +1488,7 @@ router.get('/admin/saude', requireAdmin, seguro(async (req, res) => {
   const pkg = require('../package.json');
   let cache = null;
   try { cache = (/const CACHE = '([^']+)'/.exec(fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8')) || [])[1] || null; } catch (_) { /* sem sw */ }
-  let commit = process.env.RENDER_GIT_COMMIT || null;
+  let commit = process.env.GIT_COMMIT || null;
   try { if (!commit) commit = fs.readFileSync(path.join(__dirname, '..', 'VERSAO'), 'utf8').trim().slice(0, 40) || null; } catch (_) { /* sem arquivo */ }
   const banco = db.prepare('PRAGMA quick_check').get();
   const documentos = { ativo: docs.ativo(), ...docs.estadoArmazenamento(), prova: null };

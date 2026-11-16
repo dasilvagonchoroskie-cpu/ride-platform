@@ -364,12 +364,11 @@ entrega/leitura. Só texto por enquanto: mídia (foto, áudio, documento) aparec
 - Rotas: `GET /wa/anexos`, `POST /wa/anexos/:id/classificar`, `POST /wa/anexos/:id/resolver` (quem pode anexar documentos);
   `GET /wa/anexos/:id/arquivo` (só admin, auditado). `GET /admin/saude` (admin): versão, banco, migrações e prova real de gravar/ler
   um arquivo cifrado. Origem "Site" reconhece os 4 botões do site público.
-- Versão `2.1.0-rc.1`, cache `fm-crm-v28`. Publicação: `docs/PUBLICACAO-ETAPA2.md`; publicada no Render em 13/11/2026 (`docs/PUBLICACAO-RENDER-2026-11-13.md`). Testes reais: `docs/ROTEIRO-TESTES-REAIS.md`.
+- Versão `2.1.0-rc.1`, cache `fm-crm-v28`. Publicada em 13/11/2026; hoje roda no VPS. Testes reais: `docs/ROTEIRO-TESTES-REAIS.md`.
   Testes: `test/wa-anexos.test.js` (rotas, banco, disco e cifra reais; WhatsApp e Gemini simulados).
 
-## Hospedagem definitiva: VPS da Hostinger (preparado, NÃO executado)
-Guia simples e scripts em `deploy/hostinger/` (provisionamento, systemd endurecido, Nginx + HTTPS, firewall, cópia diária cifrada,
-teste de restauração, verificação de saúde, migração controlada e volta atrás). `SNAPSHOT_MODO=copia`: com banco no disco, o CRM usa
+## Hospedagem: VPS da Integrator Host (no ar)
+O CRM roda no VPS da Integrator Host (Debian, Docker, pasta `/opt/fortaleza`). O plano da Hostinger foi descartado e os scripts de `deploy/hostinger/` foram removidos. `SNAPSHOT_MODO=copia`: com banco no disco, o CRM usa
 o disco como fonte e manda só cópias cifradas ao cofre; sem banco (dia da migração), traz o retrato uma vez.
 
 ## Dashboard, notificações e planejamento (11/11/2026)

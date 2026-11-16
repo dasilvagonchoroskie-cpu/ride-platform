@@ -103,7 +103,7 @@ function criarCliente({ fetchImpl = globalThis.fetch } = {}) {
   };
 }
 
-const DONO = `${process.env.RENDER_INSTANCE_ID || 'local'}-${crypto.randomBytes(6).toString('hex')}`;
+const DONO = `${process.env.INSTANCE_ID || 'local'}-${crypto.randomBytes(6).toString('hex')}`;
 const modoCopia = () => String(process.env.SNAPSHOT_MODO || '').trim().toLowerCase() === 'copia';
 let cliente = null;
 let ativo = false;
@@ -122,7 +122,7 @@ async function restaurar({ log = console, fetchImpl } = {}) {
     throw new Error(`Não consegui falar com o cofre de dados (${err.message}). O CRM não vai subir vazio para não apagar os dados.`);
   }
   ativo = true;
-  // Modo cópia (servidor com disco PERSISTENTE, ex.: VPS da Hostinger): se já existe banco local, ele é a fonte da verdade e o
+  // Modo cópia (servidor com disco PERSISTENTE, ex.: o VPS): se já existe banco local, ele é a fonte da verdade e o
   // cofre só recebe cópias cifradas (fora do servidor). Sem banco local (dia da migração), restaura do cofre uma vez.
   // Assumir o cofre faz o processo antigo (Render) parar de gravar; religar o Render traz de volta a última cópia (rollback).
   if (modoCopia() && fs.existsSync(dbPath)) {
