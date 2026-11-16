@@ -10,7 +10,7 @@ on:
       - '.github/workflows/zod-4-gravar.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 defaults:
   run:
@@ -63,14 +63,15 @@ jobs:
       - name: audit
         run: pnpm audit --prod
 
-      - name: gravar no ramo
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add apps/backend/package.json packages/shared/package.json pnpm-lock.yaml
-          git status --short
-          git commit -m "zod 4: gravar versao nos package.json e no lockfile"
-          git push origin HEAD:zod-4
+      - name: guardar os 3 arquivos
+        uses: actions/upload-artifact@v4
+        with:
+          name: zod4-arquivos
+          retention-days: 1
+          path: |
+            apps/backend/package.json
+            packages/shared/package.json
+            pnpm-lock.yaml
 
       - name: resultado
-        run: echo "RESULTADO zod-4-gravar tudo=success gravado=sim"
+        run: echo "RESULTADO zod-4-gravar tudo=success guardado=sim"
