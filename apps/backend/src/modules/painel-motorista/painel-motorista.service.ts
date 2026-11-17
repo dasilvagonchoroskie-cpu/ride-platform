@@ -277,13 +277,15 @@ export class PainelMotoristaService {
    */
   async resumoCarteira(driverId: string | null | undefined) {
     const id = this.exigirMotorista(driverId);
-    const carteira = await this.prisma.wallet.upsert({ where: { driverId: id }, update: {}, create: { driverId: id } });
-    const ultimo = await this.prisma.walletTransaction.findFirst({
-      where: { walletId: carteira.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    const { minimoCents, bloquear } = await regrasDaCarteira(this.prisma);
-    const aviso = await this.avisoDoMotorista(id, minimoCents);
+    const [carteira, ultimo, regras, avisoCfg, praca] = await Promise.all([
+      this.prisma.wallet.upsert({ where: { driverId: id }, update: {}, create: { driverId: id } }),
+      this.prisma.walletTransaction.findFirst({ where: { wallet: { driverId: id } }, orderBy: { createdAt: 'desc' } }),
+      regrasDaCarteira(this.prisma),
+      lerAvisoDeSaldo(this.prisma),
+      this.pracas.pracaDoMotorista(id).catch(() => null),
+    ]);
+    const { minimoCents, bloquear } = regras;
+    const aviso = limiteDoAviso(avisoCfg, praca, minimoCents).cents;
     return {
       balanceCents: carteira.balanceCents,
       minimumCents: minimoCents,
