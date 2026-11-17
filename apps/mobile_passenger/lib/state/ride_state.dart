@@ -725,7 +725,6 @@ class RideState extends ChangeNotifier {
       }
       if (nova.mensagensNaoLidas > atual.mensagensNaoLidas) {
         unawaited(HapticFeedback.heavyImpact());
-        avisar('Nova mensagem do motorista. Toque em "chat" para ler.');
       }
       // Evandro (10/10/2026): o motorista chegou e o app do passageiro nao
       // alarmava. Agora, aberto ou minimizado, toca o assobio como alarme.
