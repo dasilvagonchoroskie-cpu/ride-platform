@@ -31,7 +31,7 @@ String telefoneBonito(String? e164) {
 
 String formatDateTime(String iso) {
   try {
-    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso));
+    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso).toLocal());
   } catch (_) {
     return iso;
   }
