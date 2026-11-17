@@ -168,7 +168,10 @@ export class PushService implements OnApplicationBootstrap {
     const destino = doMotorista ? r.passengerId : r.driver?.userId;
     if (!destino) return;
     const resumo = texto.length > 80 ? `${texto.slice(0, 80)}…` : texto;
-    this.paraUsuario(destino, { tipo: 'chat', rideId, titulo: 'Nova mensagem', texto: resumo }, 120);
+    const dados: Record<string, string> = doMotorista
+      ? { tipo: 'corrida', evento: 'MENSAGEM', rideId, titulo: 'Nova mensagem', texto: resumo }
+      : { tipo: 'aviso', rideId, titulo: 'Nova mensagem', texto: resumo };
+    this.paraUsuario(destino, dados, 120);
   }
 
   /** Etapa da corrida para o passageiro. */
