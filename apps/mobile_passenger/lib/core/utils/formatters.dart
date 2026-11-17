@@ -22,7 +22,7 @@ String onlyDigits(String value) => value.replaceAll(RegExp(r'\D'), '');
 
 String formatDateTime(String iso) {
   try {
-    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso));
+    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso).toLocal());
   } catch (_) {
     return iso;
   }
