@@ -22,7 +22,7 @@ String onlyDigits(String value) => value.replaceAll(RegExp(r'\D'), '');
 
 String formatDateTime(String iso) {
   try {
-    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso));
+    return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(iso).toLocal());
   } catch (_) {
     return iso;
   }
@@ -43,7 +43,7 @@ String formatCompactNumber(int value) {
 /// Data curta: "24/09"
 String formatShortDate(String iso) {
   try {
-    final date = DateTime.parse(iso);
+    final date = DateTime.parse(iso).toLocal();
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
   } catch (_) {
     return iso;
@@ -53,7 +53,7 @@ String formatShortDate(String iso) {
 /// Hora curta: "14:32"
 String formatTime(String iso) {
   try {
-    final date = DateTime.parse(iso);
+    final date = DateTime.parse(iso).toLocal();
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   } catch (_) {
     return iso;
