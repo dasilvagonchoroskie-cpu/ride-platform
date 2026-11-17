@@ -68,12 +68,12 @@ public class MensagensService extends FirebaseMessagingService {
     private void avisoSimples(String titulo, String texto) {
         if (titulo == null || titulo.isEmpty()) return;
         Context c = getApplicationContext();
-        String canal = "motorista_avisos_v1";
+        String canal = "motorista_avisos_v2";
         if (android.os.Build.VERSION.SDK_INT >= 26) {
             android.app.NotificationManager g = c.getSystemService(android.app.NotificationManager.class);
             if (g != null && g.getNotificationChannel(canal) == null) {
                 g.createNotificationChannel(new android.app.NotificationChannel(
-                        canal, "Avisos da Central", android.app.NotificationManager.IMPORTANCE_DEFAULT));
+                        canal, "Avisos da Central", android.app.NotificationManager.IMPORTANCE_HIGH));
             }
         }
         Intent abrir = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -86,6 +86,8 @@ public class MensagensService extends FirebaseMessagingService {
                 .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(texto == null ? "" : texto))
                 .setContentIntent(toque)
                 .setAutoCancel(true)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
                 .build();
         try {
             androidx.core.app.NotificationManagerCompat.from(c).notify(12, n);
