@@ -80,7 +80,7 @@ public class MensagensService extends FirebaseMessagingService {
         android.app.PendingIntent toque = android.app.PendingIntent.getActivity(c, 11, abrir,
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
         android.app.Notification n = new androidx.core.app.NotificationCompat.Builder(c, canal)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle(titulo)
                 .setContentText(texto == null ? "" : texto)
                 .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(texto == null ? "" : texto))

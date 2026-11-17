@@ -332,7 +332,7 @@ public class CorridasService extends Service {
         PendingIntent toque = PendingIntent.getActivity(this, 9, abrir,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification aviso = new NotificationCompat.Builder(this, CANAL_CARTEIRA)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle(titulo)
                 .setContentText(texto)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(texto))
@@ -411,7 +411,7 @@ public class CorridasService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         String texto = "Abra o aplicativo e entre de novo para voltar a receber corridas.";
         Notification aviso = new NotificationCompat.Builder(this, CANAL_CARTEIRA)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle("Você parou de receber corridas")
                 .setContentText(texto)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(texto))
@@ -456,7 +456,7 @@ public class CorridasService extends Service {
         PendingIntent telaCheia = PendingIntent.getActivity(c, 7, abrir, marcas);
 
         Notification aviso = new NotificationCompat.Builder(c, CANAL_CHAMADA)
-                .setSmallIcon(android.R.drawable.ic_dialog_map)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle("Corrida nova!")
                 .setContentText(embarque.isEmpty() ? "Toque para ver." : "Buscar em: " + embarque)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(
@@ -664,7 +664,7 @@ public class CorridasService extends Service {
         PendingIntent toque = PendingIntent.getActivity(this, 3, abrir,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CANAL_FIXO)
-                .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle("Fortaleza Move — disponível")
                 .setContentText(texto)
                 .setOngoing(true)
