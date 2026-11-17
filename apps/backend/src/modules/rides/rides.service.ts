@@ -1757,6 +1757,7 @@ export class RidesService {
     const mensagensNaoLidas = quem
       ? await this.prisma.rideMessage.count({ where: { rideId, authorId: { not: quem.userId }, readAt: null } })
       : 0;
+    const ultimaMensagemNaoLida = quem ? ((await this.prisma.rideMessage.findFirst({ where: { rideId, authorId: { not: quem.userId }, readAt: null }, orderBy: { createdAt: "desc" }, select: { text: true } }))?.text.slice(0, 80) ?? null) : null;
     let favorito = false;
     let bloqueado = false;
     if (quem && corrida.driverId && corrida.passengerId === quem.userId) {
@@ -1773,6 +1774,7 @@ export class RidesService {
         driverPosition,
         minhaNota,
         mensagensNaoLidas,
+        ultimaMensagemNaoLida,
         favorito,
         bloqueado,
         cobranca: aoVivo?.cobranca ?? null,

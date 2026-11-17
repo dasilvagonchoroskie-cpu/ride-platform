@@ -188,7 +188,8 @@ public class CorridaService extends Service {
             principal.post(() -> atualizarFixo(texto));
         }
         if (ultimasMensagens >= 0 && mensagens > ultimasMensagens) {
-            avisar(ID_MENSAGEM, "Nova mensagem do motorista", "Toque para abrir a conversa.", false);
+            String textoUltima = ride.isNull("ultimaMensagemNaoLida") ? "" : ride.optString("ultimaMensagemNaoLida", "");
+            avisar(ID_MENSAGEM, "Nova mensagem do motorista", textoUltima.isEmpty() ? "Toque para abrir a conversa." : textoUltima, false);
         }
         ultimasMensagens = mensagens;
     }
