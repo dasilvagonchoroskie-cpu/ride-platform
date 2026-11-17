@@ -1569,6 +1569,7 @@ export class RidesService {
     const m = await this.prisma.rideMessage.create({
       data: { rideId, authorId: quem.userId, authorRole: papel, text: limpo },
     });
+    void this.push.mensagemDaCorrida(rideId, papel === 'DRIVER', limpo).catch(() => undefined);
     return { id: m.id, minha: true, autor: papel, texto: m.text, criadaEm: m.createdAt.toISOString(), lida: false };
   }
 
