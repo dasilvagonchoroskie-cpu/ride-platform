@@ -157,6 +157,23 @@ export class PushService implements OnApplicationBootstrap {
     if (d) this.paraUsuario(d.userId, { tipo: 'chamado' }, 30);
   }
 
+  /** Mensagem nova no chat da corrida: avisa o outro lado. */
+  async mensagemDaCorrida(rideId: string, doMotorista: boolean, texto: string): Promise<void> {
+    if (!this.ligado) return;
+    const r = await this.prisma.ride.findUnique({
+      where: { id: rideId },
+      select: { passengerId: true, driver: { select: { userId: true } } },
+    });
+    if (!r) return;
+    const destino = doMotorista ? r.passengerId : r.driver?.userId;
+    if (!destino) return;
+    const resumo = texto.length > 80 ? `${texto.slice(0, 80)}…` : texto;
+    const dados: Record<string, string> = doMotorista
+      ? { tipo: 'corrida', evento: 'MENSAGEM', rideId, titulo: 'Nova mensagem', texto: resumo }
+      : { tipo: 'aviso', rideId, titulo: 'Nova mensagem', texto: resumo };
+    this.paraUsuario(destino, dados, 120);
+  }
+
   /** Etapa da corrida para o passageiro. */
   async etapaParaPassageiro(rideId: string, evento: 'ACEITA' | 'CHEGANDO' | 'CHEGOU' | 'INICIOU' | 'TERMINOU' | 'CANCELADA'): Promise<void> {
     if (!this.ligado) return;
