@@ -278,7 +278,7 @@ export class PainelMotoristaService {
   async resumoCarteira(driverId: string | null | undefined) {
     const id = this.exigirMotorista(driverId);
     const [carteira, ultimo, regras, avisoCfg, praca] = await Promise.all([
-      this.prisma.wallet.upsert({ where: { driverId: id }, update: {}, create: { driverId: id } }),
+      this.prisma.wallet.findUnique({ where: { driverId: id } }).then((c) => c ?? this.prisma.wallet.upsert({ where: { driverId: id }, update: {}, create: { driverId: id } })),
       this.prisma.walletTransaction.findFirst({ where: { wallet: { driverId: id } }, orderBy: { createdAt: 'desc' } }),
       regrasDaCarteira(this.prisma),
       lerAvisoDeSaldo(this.prisma),
