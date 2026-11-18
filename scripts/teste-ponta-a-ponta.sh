@@ -7,7 +7,7 @@ REL="${REL:-/tmp/relatorio.txt}"
 : > "$REL"
 FALHAS=0
 ok()    { echo "OK     $1" | tee -a "$REL"; }
-falha() { echo "FALHA  $1" | tee -a "$REL"; echo "       resposta: $(echo "$2" | head -c 400)" | tee -a "$REL"; FALHAS=$((FALHAS+1)); }
+falha() { echo "FALHA  $1" | tee -a "$REL"; echo "       resposta: $(echo "$2" | sed -E 's/("(accessToken|refreshToken|token|debugCode|[A-Za-z]*[Ss]enha[A-Za-z]*|[Pp]assword|[Cc]odigo)"[[:space:]]*:[[:space:]]*")[^"]*"/\1***"/g' | head -c 400)" | tee -a "$REL"; FALHAS=$((FALHAS+1)); }
 # A chave do teste (segredo do GitHub) faz o servidor devolver o codigo
 # na resposta so para esta esteira; ninguem mais recebe codigo assim.
 CHAVE="${OTP_CHAVE_TESTE:-}"
