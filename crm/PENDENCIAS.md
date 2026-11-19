@@ -183,6 +183,14 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       desfaz pelo botão). Coluna `wa_contatos.pessoal_manual`. Cache `fm-crm-v39`.
 - [ ] Dono: conferir a lista de contatos pessoais e desfazer os que forem da Fortaleza Move (ex.: "Motorista APP").
 - [ ] Ideia do dono: responder por áudio no CRM (gravar e enviar como mensagem de voz). Hoje dá para ditar pelo microfone do teclado.
+- [x] 19/11 Etapa 1 (3cf4496): menu e segundos menus "premium" (emojis e negrito; continua em texto porque botões/listas de
+      toque não funcionam bem pelo "Dispositivos conectados"); modelo `atendente_iniciou` enviado ao apertar Assumir no CRM
+      (não vai pelo celular); foto de perfil dos usuários (`src/fotos.js`, tabela `user_fotos`), no menu, topo, Configurações,
+      usuários e conversas. Cache `fm-crm-v40`.
+- [x] 19/11 Etapa 2: Configurações com menu lateral por seções (Minha conta, Segurança, Notificações, Organização, Usuários,
+      WhatsApp, IA, Central de atendimento, Auditoria, Sobre); no celular vira faixa de abas. Cache `fm-crm-v41`.
+- [ ] Dono: conferir no celular as Configurações novas, colocar a foto de perfil e testar o "Assumir" numa conversa.
+- [ ] Ideia: botões/listas de toque de verdade só com a API oficial do WhatsApp (Meta). Estudar custo e migração no futuro.
 - [x] 19/11 Pausa depois da resposta da equipe: 2 min → 12 h (ajuste único `ajuste_20261119_pausa`).
 - [x] 19/11 Gemini: prefere o Flash mais novo; Flash-Lite só se não houver Flash da mesma geração. Cache `fm-crm-v38`.
 - [ ] Dono: religar o WhatsApp em Configurações e acompanhar as primeiras respostas (o Flash tem cota grátis diária menor;

@@ -2,6 +2,66 @@ import { api } from '../api.js';
 import * as ui from '../ui.js';
 import * as notif from '../notificacoes.js';
 
+// ---------- 19/11/2026 (etapa 2): Configurações com menu lateral ----------
+// Cada quadro da tela vai para a sua seção pelo título (h3). Quadro novo sem seção cai em "Sobre".
+const SECOES_CFG = [
+  { id: 'conta', nome: 'Minha conta', desc: 'Foto de perfil e senha', icone: 'users', h3: ['Alterar minha senha'] },
+  { id: 'seguranca', nome: 'Segurança', desc: 'Duas etapas, códigos e sessões', icone: 'lock', h3: ['Verificação em duas etapas', 'Códigos de recuperação', 'Sessões ativas'] },
+  { id: 'notificacoes', nome: 'Notificações', desc: 'Avisos neste aparelho', icone: 'alert', h3: ['Notificações'] },
+  { id: 'organizacao', nome: 'Organização', desc: 'Nome, slogan e padrões', icone: 'building', h3: ['Dados da organização'] },
+  { id: 'usuarios', nome: 'Usuários', desc: 'Quem acessa o CRM', icone: 'users', h3: ['Usuários com acesso'] },
+  { id: 'whatsapp', nome: 'WhatsApp', desc: 'Número conectado ao CRM', icone: 'phone', h3: ['WhatsApp de suporte'] },
+  { id: 'ia', nome: 'Inteligência (IA)', desc: 'Provedor, chave e modo', icone: 'chat', h3: ['Inteligência (IA)'] },
+  { id: 'central', nome: 'Central de atendimento', desc: 'Menu, mensagens e informações', icone: 'headset', h3: ['Modelos de Comunicação da IA'] },
+  { id: 'auditoria', nome: 'Auditoria', desc: 'Últimas operações', icone: 'list', h3: ['Trilha de auditoria'] },
+  { id: 'sobre', nome: 'Sobre', desc: 'Versão e informações', icone: 'file', h3: ['Sobre o sistema'] }
+];
+let secaoAtiva = (() => { try { return localStorage.getItem('fm-cfg-secao'); } catch (e) { return null; } })();
+
+function organizarSecoes(view) {
+  const cards = [...view.querySelectorAll('.card')].filter((c) => !c.parentElement.closest('.card'));
+  if (!cards.length) return;
+  const sobre = SECOES_CFG[SECOES_CFG.length - 1];
+  const porSecao = new Map(SECOES_CFG.map((s) => [s.id, []]));
+  for (const c of cards) {
+    const t = ((c.querySelector('h3') || {}).textContent || '').trim();
+    const s = c.classList.contains('perfil-card') ? SECOES_CFG[0] : (SECOES_CFG.find((x) => x.h3.some((h) => t.startsWith(h))) || sobre);
+    porSecao.get(s.id).push(c);
+  }
+  const presentes = SECOES_CFG.filter((s) => porSecao.get(s.id).length);
+  const layout = document.createElement('div');
+  layout.className = 'cfg-layout';
+  layout.innerHTML = `<nav class="cfg-nav" aria-label="Seções das configurações">${presentes.map((s) => `<button type="button" class="cfg-item" data-cfg="${s.id}">${ui.icon(s.icone, 18)}<span><b>${ui.esc(s.nome)}</b><small>${ui.esc(s.desc)}</small></span></button>`).join('')}</nav><div class="cfg-conteudo"></div>`;
+  const conteudo = layout.querySelector('.cfg-conteudo');
+  for (const s of presentes) {
+    const bloco = document.createElement('section');
+    bloco.className = 'cfg-secao stack';
+    bloco.dataset.cfg = s.id;
+    bloco.innerHTML = `<div class="cfg-titulo"><h2>${ui.esc(s.nome)}</h2><p class="sub">${ui.esc(s.desc)}</p></div>`;
+    for (const c of porSecao.get(s.id)) bloco.appendChild(c);
+    conteudo.appendChild(bloco);
+  }
+  // O que sobrou fora dos quadros (se houver) vai para "Sobre"; a grade antiga, vazia, sai.
+  const grid = view.querySelector('.settings-grid');
+  if (grid) {
+    if (grid.textContent.trim()) (conteudo.querySelector('[data-cfg="sobre"]') || conteudo.lastElementChild).appendChild(grid);
+    else grid.remove();
+  }
+  const head = view.querySelector('.page-head');
+  if (head) head.after(layout); else view.prepend(layout);
+  const mostrar = (id) => {
+    secaoAtiva = id;
+    try { localStorage.setItem('fm-cfg-secao', id); } catch (e) { /* sem armazenamento: só não lembra */ }
+    layout.querySelectorAll('.cfg-secao').forEach((b) => b.classList.toggle('hidden', b.dataset.cfg !== id));
+    layout.querySelectorAll('.cfg-item').forEach((b) => b.classList.toggle('active', b.dataset.cfg === id));
+  };
+  layout.querySelectorAll('.cfg-item').forEach((b) => b.addEventListener('click', () => {
+    mostrar(b.dataset.cfg);
+    if (window.matchMedia('(max-width: 860px)').matches) b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }));
+  mostrar((presentes.find((s) => s.id === secaoAtiva) || presentes[0]).id);
+}
+
 export async function renderSettings(view, state) {
   const isAdmin = state.user.role === 'admin';
   // /settings, /usuários e /audit são exclusivos de administradores (403 para gestor). Pedir tudo de uma vez
@@ -407,6 +467,7 @@ export async function renderSettings(view, state) {
       });
     }));
   }
+  organizarSecoes(view);
 }
 
 
