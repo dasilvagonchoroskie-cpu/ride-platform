@@ -1,6 +1,6 @@
 # Pendências — CRM Fortaleza Move
 
-Atualizado em 13/11/2026 (horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
+Atualizado em 19/11/2026 (horário de Brasília). Lista única do que falta. Ao concluir um item, marcar com [x]
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
@@ -170,6 +170,21 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [ ] Transcrição de áudio e leitura de documentos com mensagens reais do WhatsApp (primeiros casos reais são o teste).
 - [ ] Contatos do WhatsApp com identificador LID sem telefone (vínculo manual).
 - [ ] Restauração de uma versão antiga do cofre (histórico existe; restauração nunca foi ensaiada).
+
+## 4a. Entregue em 19/11/2026 (VPS Integrator Host; commits cd83f1e e d3c9ae0)
+
+- [x] 19/11 Tirados os dois avisos amarelos das Configurações (WhatsApp "não oficial" e envio ao provedor de IA): uso interno,
+      o dono conhece os riscos. Cache `fm-crm-v37`.
+- [x] 19/11 Diagnóstico das respostas "fora do combinado": o número ligado é o WhatsApp PESSOAL do dono; a IA respondia família,
+      amigos e o Dr. Jean como Central (ex.: pediu CNH ao Dr. Jean). Modelo escolhido sozinho era o `gemini-3.5-flash-lite`.
+- [x] 19/11 Conversa em que o dono já escreveu pelo celular vira PESSOAL sozinha (sem análise, leitura de mídia, cadastro ou resposta).
+      Escolha manual sempre vale (`wa_contatos.pessoal_manual`); "Devolver para a IA" (admin) também desfaz. No ar: 15 de 20 conversas.
+- [x] 19/11 Pausa depois da resposta da equipe: 2 min → 12 h (ajuste único `ajuste_20261119_pausa`).
+- [x] 19/11 Gemini: prefere o Flash mais novo; Flash-Lite só se não houver Flash da mesma geração. Cache `fm-crm-v38`.
+- [ ] Dono: religar o WhatsApp em Configurações e acompanhar as primeiras respostas (o Flash tem cota grátis diária menor;
+      se estourar, a conversa vai para a equipe com o motivo "falha_ia").
+- [ ] 20 testes já falhavam antes de 19/11 no ambiente de teste do VPS (arquivo digital, e-mail, `urlBaseValida`): conferir
+      se são só de ambiente.
 
 ## 4b. Entregue em 13/11/2026 (rc.7)
 
