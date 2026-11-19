@@ -37,7 +37,10 @@ export async function renderConversas(view, state) {
   const isAdmin = state.user.role === 'admin';
   // 19/11: equipe (nome + foto) para mostrar quem atendeu cada mensagem enviada pelo CRM.
   const equipe = {};
-  try { for (const u of (await api.get('/usuarios/equipe')).items) equipe[u.id] = u; } catch (err) { /* sem fotos: segue com iniciais */ }
+  api.get('/usuarios/equipe').then((r) => {
+    for (const u of r.items) equipe[u.id] = u;
+    if (atual) { assinatura = ''; carregarMensagens().catch(() => {}); }
+  }).catch(() => { /* sem fotos: segue com iniciais */ });
   // 13/11 (pedido do dono): a lista abre em "Todas" (conversa concluída não some da tela) e lembra o filtro escolhido.
   const FILTROS = ['todas', 'Aberta', 'at:aguardando', 'at:humano', 'at:ia', 'naolidas', 'at:concluido'];
   let salvo = null;
@@ -306,7 +309,7 @@ export async function renderConversas(view, state) {
     const id = atual.id;
     const data = await api.get(`/wa/conversas/${id}/mensagens`);
     if (!atual || atual.id !== id || !view.isConnected) return;
-    const assin = data.items.map((m) => `${m.id}:${m.status}`).join(',');
+    const assin = data.items.map((m) => `${m.id}:${m.status}:${String(m.texto || '').length}`).join(',');
     if (assin === assinatura && !forcarRolagem) return;
     const box = $('#wa-msgs');
     const noFim = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
@@ -735,7 +738,7 @@ export async function renderConversas(view, state) {
       await carregarMensagens(true);
       atualizarAtual().catch(() => {});
       carregarLista().catch(() => {});
-      setTimeout(() => { if (atual) carregarMensagens(true).catch(() => {}); }, 8000); // a transcrição chega depois
+      for (const ms of [3000, 6000, 10000, 16000]) setTimeout(() => { if (atual) carregarMensagens().catch(() => {}); }, ms); // a transcrição chega depois
     } catch (err) {
       ui.toast(err.message, 'error');
     } finally {
@@ -757,11 +760,21 @@ export async function renderConversas(view, state) {
   });
 
   // Atualização periódica (consulta leve). Para sozinha quando a tela é trocada.
+  // 19/11: mais leve no celular. A lista vem a cada 8 s; a conversa aberta só pergunta "tem mensagem nova?" (resposta
+  // minúscula) e é redesenhada inteira a cada 12 s (confirmações de leitura e transcrições de áudio).
+  async function verificarNovas() {
+    if (!atual) return;
+    const id = atual.id;
+    const data = await api.get(`/wa/conversas/${id}/mensagens?depois=${ultimoMsgId || 0}`);
+    if (atual && atual.id === id && data.items && data.items.length) await carregarMensagens();
+  }
+  let tique = 0;
   const timer = setInterval(() => {
     if (!view.isConnected) { clearInterval(timer); return; }
     if (document.hidden) return;
-    carregarLista().catch(() => {});
-    carregarMensagens().catch(() => {});
+    tique += 1;
+    if (tique % 2 === 0) carregarLista().catch(() => {});
+    if (atual) (tique % 3 === 0 ? carregarMensagens() : verificarNovas()).catch(() => {});
     if (atual) atualizarAtual().catch(() => {});
     if (atual && iaSt.pronta && iaSt.modo === 'automatico') carregarAnalise().catch(() => {});
     carregarStatus();

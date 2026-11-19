@@ -190,6 +190,11 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] 19/11 Barra de baixo do celular sem "Configurações" (fica no menu lateral e na foto do topo). Faixa de abas das
       Configurações abre na aba escolhida. Cache `fm-crm-v42`.
 - [ ] Dono: testar a mensagem de voz com o WhatsApp conectado (o navegador vai pedir permissão do microfone).
+- [x] 19/11 tarde: telas mais rápidas. No VPS, nginx do CRM com HTTP/2 e gzip para JSON/JS/CSS (`/etc/nginx/snippets/crm-proxy.conf`
+      e `sites-enabled/crm`; backups em `/var/backups/fortaleza-painel/nginx-*`): JS de 47 KB caiu para 13 KB. Conversa aberta:
+      a cada 4 s só pergunta se há mensagem nova (`?depois=`), redesenha tudo a cada 12 s, lista a cada 8 s; fotos da equipe não
+      seguram a abertura da tela. Transcrição de áudio agora aparece sozinha (a tela não percebia texto mudado). Cache `fm-crm-v43`.
+- [ ] Decisão do dono: transcrever também os áudios que ele manda para contatos marcados como pessoais (hoje não transcreve).
 - [x] 19/11 Etapa 1 (3cf4496): menu e segundos menus "premium" (emojis e negrito; continua em texto porque botões/listas de
       toque não funcionam bem pelo "Dispositivos conectados"); modelo `atendente_iniciou` enviado ao apertar Assumir no CRM
       (não vai pelo celular); foto de perfil dos usuários (`src/fotos.js`, tabela `user_fotos`), no menu, topo, Configurações,
