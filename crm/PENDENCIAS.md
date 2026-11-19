@@ -209,6 +209,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       se estourar, a conversa vai para a equipe com o motivo "falha_ia").
 - [x] 19/11 Tipo de contato (Comercial / cliente ou Pessoal): escolha clara no ⋯, no segurar o dedo e no topo da conversa;
       etiqueta laranja "Pessoal" na lista e filtro "Contatos pessoais". Pessoal = a IA não lê nem responde. Cache `fm-crm-v44`.
+- [x] 19/11 Botão direto "Pessoal" / "Comercial" na faixa do atendimento (ao lado de Devolver/Concluir). Cache `fm-crm-v45`.
 - [ ] 20 testes já falhavam antes de 19/11 no ambiente de teste do VPS (arquivo digital, e-mail, `urlBaseValida`): conferir
       se são só de ambiente.
 
