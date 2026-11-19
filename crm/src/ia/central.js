@@ -250,8 +250,18 @@ function opcaoDoMenu(texto, assuntoAtual) {
   return ASSUNTO_IDS.find((id) => ASSUNTOS[id].numero === m[1]) || null;
 }
 
-// "0" volta ao menu inicial (de qualquer opção ou do segundo menu), como "menu".
-const pediuMenu = (texto) => /^(0|menu|opcoes|ver (o )?menu|mostrar (o )?menu|voltar( ao menu( inicial)?)?|inicio)$/.test(semAcento(texto).replace(/[^\w\s]/g, '').trim());
+// "0" volta ao menu inicial; também reconhece o pedido do menu em frase (escrito ou transcrito de voz):
+// "me manda o menu", "tem um menu?", "quais as opções de atendimento", "que tipos de atendimento vocês têm".
+function pediuMenu(texto) {
+  const t = semAcento(texto).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return false;
+  if (/^(0|menu|opcoes|ver (o )?menu|mostrar (o )?menu|voltar( ao menu( inicial)?)?|inicio)$/.test(t)) return true;
+  if (/\bmenu\b/.test(t)) return true;                                   // "me manda o menu", "menu de atendimento", "tem um menu"
+  if (/\bopc(ao|oes)\b/.test(t) && /\b(atendimento|servico|servicos|voces|vcs|disponiv|ofere)/.test(t)) return true;
+  if (/\b(quais|que|qual|quais sao|tipos?)\b/.test(t) && /\b(atendimento|servico|servicos)\b/.test(t)
+      && /\b(ofere|tem|disponibiliz|voces|vcs|dispoe|oferec|possui|existe)/.test(t)) return true;
+  return false;
+}
 
 // ORIGEM do contato ≠ INTENÇÃO (12/11 noite). "Olá! Vim pelo site da Fortaleza Move." diz de onde a pessoa veio, não o que
 // ela quer: não pode virar cadastro de motorista. A origem fica registrada (relatórios) e a conversa recebe o menu geral.

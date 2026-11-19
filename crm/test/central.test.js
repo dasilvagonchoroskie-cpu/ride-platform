@@ -220,3 +220,14 @@ test('devolvida pelo botão logo depois da resposta da equipe: a IA responde na 
   await receber('quero me cadastrar como motorista');
   assert.equal(daIA().length, antes + 1);
 });
+
+test('pediuMenu reconhece o pedido do menu em frase (voz/escrito), sem pegar pedidos de serviço', () => {
+  const C = require('../src/ia/central');
+  for (const t of ['menu', '0', 'me manda o menu', 'você tem um menu de atendimento?',
+    'quais são as opções de atendimento', 'que tipos de atendimento vocês têm']) {
+    assert.equal(C.pediuMenu(t), true, `devia abrir o menu: ${t}`);
+  }
+  for (const t of ['quero enviar uma encomenda', '3', 'qual o valor da corrida', 'preciso de um carro agora']) {
+    assert.equal(C.pediuMenu(t), false, `não devia abrir o menu: ${t}`);
+  }
+});
