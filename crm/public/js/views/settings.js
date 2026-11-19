@@ -78,7 +78,6 @@ export async function renderSettings(view, state) {
           <div class="card-head"><div><h3>WhatsApp de suporte</h3><p class="sub">Conectar o número ao CRM por "Dispositivos conectados"</p></div></div>
           <div class="card-body">
             <div class="wa-state" id="wa-state">Carregando…</div>
-            <div class="wa-risk">Este é um método <b>não oficial</b>: o WhatsApp pode limitar ou bloquear o número. O CRM não importa o histórico antigo nem grupos, e a sessão fica guardada só neste servidor.</div>
             <div id="wa-pair-box">
               <div class="field"><label for="wa-phone">Número do WhatsApp (com DDD)</label><input id="wa-phone" type="tel" placeholder="85 99999-0000" maxlength="20" autocomplete="off"></div>
               <button class="btn btn-primary" id="wa-pair" type="button">Gerar código de pareamento</button>
@@ -100,7 +99,6 @@ export async function renderSettings(view, state) {
           <div class="card-head"><div><h3>Inteligência (IA)</h3><p class="sub">Resumo, classificação e preenchimento de cadastro a partir das conversas</p></div></div>
           <div class="card-body">
             <div class="wa-state" id="ia-state">Carregando…</div>
-            <div class="wa-risk">As mensagens analisadas são enviadas à API do provedor escolhido (<b id="ia-prov-nome">…</b>), que pode processar os dados fora do Brasil (informe isso no aviso de privacidade). A IA só envia mensagens sozinha se você ligar "responde sozinha" abaixo; fora isso, ela sugere a resposta e você revisa. As chaves ficam só neste servidor, uma para cada provedor.</div>
             <div class="field"><label for="ia-provedor">Provedor de IA</label><select id="ia-provedor"></select>
               <div class="form-hint" id="ia-prov-info"></div></div>
             <div class="field hidden" id="ia-url-box"><label for="ia-url">Endereço da API (formato OpenAI)</label>
@@ -424,7 +422,6 @@ function setupIA(view) {
   // Mostra o que depende do provedor escolhido: nome, campo de endereço (só "Outro") e o modelo guardado para ele.
   function mostrarProvedor(id, { modelo } = {}) {
     const p = provedores.find((x) => x.id === id) || {};
-    $('#ia-prov-nome').textContent = p.nome || '';
     $('#ia-url-box').classList.toggle('hidden', id !== 'personalizado');
     $('#ia-modelo').value = modelo !== undefined ? modelo : (p.modelo || '');
     $('#ia-modelo').placeholder = p.modelo ? '' : 'Opcional: deixe vazio e o CRM escolhe sozinho';
