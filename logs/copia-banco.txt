@@ -1,4 +1,4 @@
-Copia do banco - 18/11/2026 15:49 UTC
+Copia do banco - 19/11/2026 15:53 UTC
 Tabelas e linhas:
   arquivos: 6
   audit_logs: 2016
@@ -35,5 +35,5 @@ Tabelas e linhas:
   vehicles: 1
   wallet_transactions: 47
   wallets: 1
-Arquivo: fortaleza-mov-20261118-1549.json.gz.age (900K, criptografado)
+Arquivo: fortaleza-mov-20261119-1554.json.gz.age (900K, criptografado)
 OK
