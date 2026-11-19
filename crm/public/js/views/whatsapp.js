@@ -223,6 +223,10 @@ export async function renderConversas(view, state) {
     }
     if (c.pessoal) curto = 'Contato pessoal (a IA não atende)';
     if (c.atendimento === 'ia' && iaLigada && !c.pessoal && ['tentando', 'falhou', 'sem_chave'].includes(c.ia_estado) && c.ultima_direcao === 'in') botoes.unshift('<button class="btn btn-sm btn-soft" data-at="reprocessar" type="button" title="Pedir à IA para responder de novo">Tentar<span class="so-desk"> de novo</span></button>');
+    // 19/11 (pedido do dono): botão direto ao lado de Devolver/Concluir para trocar o tipo do contato.
+    if (isAdmin) botoes.push(c.pessoal
+      ? '<button class="btn btn-sm btn-soft" data-at="tipo-comercial" type="button" title="A IA volta a atender este contato">Comercial</button>'
+      : '<button class="btn btn-sm btn-soft wa-bt-pessoal" data-at="tipo-pessoal" type="button" title="A IA não lê nem responde este contato">Pessoal</button>');
     const detalhe = alertaIA || (c.atendimento === 'aguardando' && c.atend_motivo ? c.atend_motivo : (c.atend_assunto ? ASSUNTO_MENU[c.atend_assunto] || '' : ''));
     const dica = c.atendimento === 'humano' ? 'A IA não responde enquanto a equipe atende.' : est[0];
     $('#wa-atend').innerHTML = `<div class="wa-atend-linha est-${ui.esc(c.atendimento || 'ia')}${alertaIA ? ' ia-alerta' : ''}" title="${ui.esc(alertaIA || dica)}">
@@ -268,6 +272,16 @@ export async function renderConversas(view, state) {
     if (!atual) return;
     if (nome === 'historico') { modalHistorico(); return; }
     const id = atual.id;
+    if (nome === 'tipo-pessoal' || nome === 'tipo-comercial') {
+      const pessoal = nome === 'tipo-pessoal';
+      try {
+        await api.post(`/wa/contatos/${atual.contato_id}/pessoal`, { pessoal });
+        ui.toast(pessoal ? 'Marcado como pessoal: a IA não vai ler nem responder.' : 'Marcado como comercial: a IA volta a atender.', 'success');
+      } catch (err) { ui.toast(err.message, 'error'); return; }
+      if (atual && atual.id === id) await atualizarAtual().catch(() => {});
+      carregarLista().catch(() => {});
+      return;
+    }
     if (nome === 'reprocessar') {
       try {
         const r = await api.post(`/wa/conversas/${id}/ia/reprocessar`, {});
