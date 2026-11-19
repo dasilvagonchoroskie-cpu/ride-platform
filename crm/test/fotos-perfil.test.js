@@ -94,6 +94,9 @@ test('rotas de foto: cada um troca a própria; administrador troca a de todos; e
   assert.equal((await adm('POST', `/usuarios/${meG.id}/foto`, { imagem: url('png', PNG) })).s, 200, 'administrador troca a de todos');
   assert.equal((await g('POST', `/usuarios/${meG.id}/foto`, { imagem: 'data:text/html;base64,PGI+' })).s, 422);
   assert.ok((await g('GET', '/auth/me')).j.user.foto, '/auth/me traz a versão da foto');
+  // 19/11: ao abrir o app (/meta e /auth/status) a foto também vem — antes "sumia" depois de cada atualização.
+  assert.ok((await g('GET', '/meta')).j.user.foto, '/meta traz a versão da foto');
+  assert.ok((await g('GET', '/auth/status')).j.user.foto, '/auth/status traz a versão da foto');
   const foto = await g('GET', `/usuarios/${meG.id}/foto`);
   assert.equal(foto.s, 200);
   assert.equal(foto.tipo, 'image/png');

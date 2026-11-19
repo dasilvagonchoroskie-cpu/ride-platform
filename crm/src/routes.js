@@ -236,7 +236,7 @@ router.get('/auth/status', (req, res) => {
     needsSetup,
     recuperacao_email: correio.configurado(),
     org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') },
-    user: session ? { id: session.id, nome: session.nome, email: session.email, role: session.role } : null
+    user: session ? { id: session.id, nome: session.nome, email: session.email, role: session.role, foto: fotos.versao(session.id) } : null
   });
 });
 
@@ -681,7 +681,7 @@ router.get('/meta', (req, res) => {
   if (req.user.role === 'avaliador') {
     const pick = ['motoristas', 'entregadores'].filter((k) => hasOwn(ENTITIES, k));
     return res.json({
-      user: req.user, org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') }, settings: { org_nome: getSetting('org_nome') },
+      user: { ...req.user, foto: fotos.versao(req.user.id) }, org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') }, settings: { org_nome: getSetting('org_nome') },
       entities: Object.fromEntries(pick.map((k) => [k, { key: k, label: ENTITIES[k].label, singular: ENTITIES[k].singular, icon: ENTITIES[k].icon, fields: ENTITIES[k].fields.filter((f) => ['nome', 'cidade', 'veiculo', 'placa', 'cnh_categoria', 'modalidade', 'origem', 'data_primeiro_contato', 'situacao', 'documentos'].includes(f.key)) }])),
       pendentes: { candidaturas: candidaturas.ativo() ? db.prepare(`SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado') AND funcao IN (${candidaturas.escopoAvaliador().map(() => '?').join(',') || "''"})`).get(...candidaturas.escopoAvaliador()).c : 0 },
       can: policy.permissionsFor('avaliador', []), etapa2: null, documentos: docs.ativo(), candidaturas: candidaturas.ativo(), hoje: todayISO()
@@ -722,7 +722,8 @@ router.get('/meta', (req, res) => {
   if (recebidos && docs.ativo() && policy.docsAnexar(req.user.role, docs.politica())) pendentes.anexos_wa = recebidos.contarPendentes();
 
   res.json({
-    user: req.user,
+    // 19/11: a versão da foto de perfil vai junto, senão a foto "sumia" a cada vez que o app abria (ex.: depois de atualizar).
+    user: { ...req.user, foto: fotos.versao(req.user.id) },
     org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') },
     settings: {
       org_nome: getSetting('org_nome'),
