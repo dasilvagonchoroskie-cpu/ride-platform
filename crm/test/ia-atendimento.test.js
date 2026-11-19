@@ -246,7 +246,6 @@ test('resposta pelo celular assume (auditado) e volta sozinha para a IA depois d
   await receber('oi');
   const antiga = new Date(Date.now() - 40 * 60000).toISOString();
   waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', externoId: 'CEL1', texto: 'Oi, sou eu da equipe', tipo: 'text', quando: antiga, deMim: true });
-  waStore.definirPessoal(conv().contato_id, false); // 19/11: o dono decidiu que a IA atende este contato
   await new Promise((ok) => setImmediate(ok));
   assert.equal(conv().atendimento, 'humano');
   assert.ok(auditados.some((a) => a.acao === 'wa_assumir' && /celular/.test(a.det)));

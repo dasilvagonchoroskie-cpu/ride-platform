@@ -177,27 +177,18 @@ test('filtro de anotação interna: trecho que também está na conversa ou no m
     { ok: false, motivo: 'dado_interno' }, 'anotação de verdade continua bloqueada');
 });
 
-test('19/11: conversa em que o dono escreveu pelo celular vira pessoal sozinha; o botão desfaz e a escolha manual vale', async () => {
-  const { receber, waStore, daIA, estado, espere, db } = montar();
-  // O dono puxa conversa pelo celular (WhatsApp pessoal dele ligado ao CRM).
+test('19/11: responder pelo celular NÃO marca o contato como pessoal; contatos de antes viram pessoais uma vez só', async () => {
+  const { waStore, db } = montar();
   const eu = waStore.ingerir({ jid: '5564999990001@s.whatsapp.net', telefone: '5564999990001', nome: 'Tia Fictícia', externoId: 'EU1', texto: 'Oi tia, tudo bem?', tipo: 'text', quando: new Date().toISOString(), deMim: true });
-  const c0 = waStore.obterConversa(eu.conversaId);
-  assert.equal(c0.pessoal, 1, 'virou pessoal sozinha');
-  assert.equal(c0.pessoal_auto, 1, 'marcada como automática');
-  await receber('Tudo ótimo! E aí, vai vir no domingo?');
-  await espere(60);
-  assert.equal(daIA().length, 0, 'a IA não manda nada (nem saudação, nem menu, nem confirmação rápida)');
-  assert.equal(estado.chamadas, 0, 'nenhuma chamada ao Gemini');
-  // O dono decide à mão que a IA atende esse contato: vale a escolha manual, mesmo com mensagem dele pelo celular.
-  waStore.definirPessoal(c0.contato_id, false);
-  const c1 = waStore.obterConversa(eu.conversaId);
-  assert.equal(c1.pessoal, 0);
-  assert.equal(c1.pessoal_auto, 0);
-  assert.equal(db.prepare('SELECT pessoal_manual FROM wa_contatos WHERE id = ?').get(c0.contato_id).pessoal_manual, 1);
-  // E se marcar como pessoal à mão, continua pessoal.
-  waStore.definirPessoal(c0.contato_id, true);
+  assert.equal(waStore.obterConversa(eu.conversaId).pessoal, 0, 'responder pelo celular não muda nada');
+  const { marcarPessoaisDeAntes } = require('../src/db');
+  db.prepare("DELETE FROM settings WHERE key = 'ajuste_20261119_pessoais'").run();
+  assert.equal(marcarPessoaisDeAntes(db), 1, 'o contato que já conversava pelo celular vira pessoal');
   assert.equal(waStore.obterConversa(eu.conversaId).pessoal, 1);
-  assert.equal(waStore.obterConversa(eu.conversaId).pessoal_auto, 0);
+  assert.equal(db.prepare('SELECT pessoal_manual FROM wa_contatos').get().pessoal_manual, 1, 'como escolha manual');
+  waStore.definirPessoal(waStore.obterConversa(eu.conversaId).contato_id, false);
+  assert.equal(marcarPessoaisDeAntes(db), 0, 'roda uma vez só: não marca de novo o que foi desfeito');
+  assert.equal(waStore.obterConversa(eu.conversaId).pessoal, 0);
 });
 
 test('19/11: contato novo, sem mensagem do dono pelo celular, continua com a IA', async () => {

@@ -205,7 +205,7 @@ export async function renderConversas(view, state) {
       else if (c.ia_estado === 'tentando') { curto = 'IA tentando de novo'; alertaIA = `Falha do serviço de IA (${IA_ERRO[c.ia_erro] || c.ia_erro || 'erro'}). Nova tentativa ${c.ia_proxima ? `às ${ui.fmtDateTime(c.ia_proxima).split(' ').pop()}` : 'em instantes'}.`; }
       else if (c.ia_estado === 'falhou' || c.ia_estado === 'sem_chave') { curto = 'IA não respondeu'; alertaIA = `Falha: ${IA_ERRO[c.ia_erro] || c.ia_erro || 'erro'}. Assuma ou tente de novo.`; }
     }
-    if (c.pessoal) curto = c.pessoal_auto ? 'Contato pessoal: você conversa com ele pelo celular (a IA não atende)' : 'Contato pessoal (a IA não atende)';
+    if (c.pessoal) curto = 'Contato pessoal (a IA não atende)';
     if (c.atendimento === 'ia' && iaLigada && !c.pessoal && ['tentando', 'falhou', 'sem_chave'].includes(c.ia_estado) && c.ultima_direcao === 'in') botoes.unshift('<button class="btn btn-sm btn-soft" data-at="reprocessar" type="button" title="Pedir à IA para responder de novo">Tentar<span class="so-desk"> de novo</span></button>');
     const detalhe = alertaIA || (c.atendimento === 'aguardando' && c.atend_motivo ? c.atend_motivo : (c.atend_assunto ? ASSUNTO_MENU[c.atend_assunto] || '' : ''));
     const dica = c.atendimento === 'humano' ? 'A IA não responde enquanto a equipe atende.' : est[0];

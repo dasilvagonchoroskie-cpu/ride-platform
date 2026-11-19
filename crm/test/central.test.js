@@ -179,7 +179,6 @@ test('humano: volta sozinha para a IA depois do tempo sem resposta da equipe (0 
   // Equipe respondeu pelo celular há 40 min.
   const antiga = new Date(Date.now() - 40 * 60000).toISOString();
   waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', externoId: 'CEL1', texto: 'Oi, já te respondo', tipo: 'text', quando: antiga, deMim: true });
-  waStore.definirPessoal(conv().contato_id, false); // 19/11: o dono decidiu que a IA atende este contato
   assert.equal(conv().atendimento, 'humano');
   db.prepare('UPDATE wa_conversas SET atend_em = ? WHERE id = ?').run(antiga, r.conversaId);
 
@@ -215,7 +214,6 @@ test('devolvida pelo botão logo depois da resposta da equipe: a IA responde na 
   const { receber, daIA, waStore, conv } = montar();
   const r = await receber('oi');
   waStore.ingerir({ jid: '5564999990000@s.whatsapp.net', telefone: '5564999990000', externoId: 'CEL3', texto: 'Oi, aqui é o Evandro', tipo: 'text', quando: new Date(Date.now() - 60000).toISOString(), deMim: true });
-  waStore.definirPessoal(conv().contato_id, false); // 19/11: o dono decidiu que a IA atende este contato
   assert.equal(conv().atendimento, 'humano');
   waStore.mudarAtendimento(r.conversaId, 'ia', { detalhe: 'botão' });
   const antes = daIA().length;

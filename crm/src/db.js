@@ -27,9 +27,7 @@ function acrescentarColunas() {
   // continua guardada e visível. Marcado pela equipe na conversa.
   const contatos = new Set(db.prepare('PRAGMA table_info(wa_contatos)').all().map((c) => c.name));
   if (contatos.size && !contatos.has('pessoal')) db.exec('ALTER TABLE wa_contatos ADD COLUMN pessoal INTEGER NOT NULL DEFAULT 0');
-  // 19/11 (pedido do dono): conversa em que ele já escreveu pelo celular conta como PESSOAL sozinha (o número do
-  // atendimento é o WhatsApp pessoal dele). pessoal_manual = 1 quando a equipe decidiu à mão (marcar ou desfazer):
-  // aí vale a escolha manual e a regra automática não mexe.
+  // 19/11: pessoal_manual = 1 quando a equipe decidiu à mão (marcar ou desfazer) se o contato é pessoal.
   if (contatos.size && !contatos.has('pessoal_manual')) db.exec('ALTER TABLE wa_contatos ADD COLUMN pessoal_manual INTEGER NOT NULL DEFAULT 0');
   // Central de atendimento: estado da conversa (ia | aguardando | humano | concluido), assunto do menu e motivo.
   const conversas = new Set(db.prepare('PRAGMA table_info(wa_conversas)').all().map((c) => c.name));
@@ -97,6 +95,23 @@ if (!db.prepare("SELECT 1 FROM settings WHERE key = 'ajuste_20261119_pausa'").ge
   gravar.run('ajuste_20261119_pausa', '1', agoraIso);
 }
 
+/**
+ * Ajuste único de 19/11/2026 (pedido do dono): os contatos com quem ele já conversava pelo celular ANTES desta data
+ * (família, advogado, cartório…) ficam marcados como pessoais, para a IA não falar com eles. Daqui em diante não há
+ * regra automática: ele atende clientes da Fortaleza Move pelo celular também. Cada um se desfaz pelo botão da conversa.
+ */
+function marcarPessoaisDeAntes(banco) {
+  if (banco.prepare("SELECT 1 FROM settings WHERE key = 'ajuste_20261119_pessoais'").get()) return 0;
+  if (!banco.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'wa_contatos'").get()) return 0;
+  const agoraIso = new Date().toISOString();
+  const n = banco.prepare(`UPDATE wa_contatos SET pessoal = 1, pessoal_manual = 1, updated_at = ?
+    WHERE pessoal = 0 AND pessoal_manual = 0 AND id IN (SELECT c.contato_id FROM wa_conversas c
+      JOIN wa_mensagens m ON m.conversa_id = c.id WHERE m.direcao = 'out' AND m.origem = 'celular')`).run(agoraIso).changes;
+  banco.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO NOTHING').run('ajuste_20261119_pessoais', String(n), agoraIso);
+  return n;
+}
+marcarPessoaisDeAntes(db);
+
 const SETTINGS_DEFAULTS = {
   org_nome: 'Fortaleza Move',
   slogan: 'Seu caminho, sua viagem, sua segurança.',
@@ -141,4 +156,4 @@ if (getSetting('seed_cenarios', '0') !== '1') {
   tx();
 }
 
-module.exports = { db, DB_PATH, DATA_DIR, ROOT, nowISO, getSetting, setSetting };
+module.exports = { marcarPessoaisDeAntes, db, DB_PATH, DATA_DIR, ROOT, nowISO, getSetting, setSetting };

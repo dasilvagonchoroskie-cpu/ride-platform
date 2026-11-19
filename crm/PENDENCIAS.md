@@ -177,8 +177,12 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       o dono conhece os riscos. Cache `fm-crm-v37`.
 - [x] 19/11 Diagnóstico das respostas "fora do combinado": o número ligado é o WhatsApp PESSOAL do dono; a IA respondia família,
       amigos e o Dr. Jean como Central (ex.: pediu CNH ao Dr. Jean). Modelo escolhido sozinho era o `gemini-3.5-flash-lite`.
-- [x] 19/11 Conversa em que o dono já escreveu pelo celular vira PESSOAL sozinha (sem análise, leitura de mídia, cadastro ou resposta).
-      Escolha manual sempre vale (`wa_contatos.pessoal_manual`); "Devolver para a IA" (admin) também desfaz. No ar: 15 de 20 conversas.
+- [x] 19/11 Regra automática "respondeu pelo celular = pessoal" foi feita e DESFEITA no mesmo dia: o dono atende clientes da
+      Fortaleza Move pelo celular também. Ficou: marcação manual (botão da conversa) + ajuste único `marcarPessoaisDeAntes`
+      (os 15 contatos com quem ele já conversava pelo celular antes de 19/11 viraram pessoais, como escolha manual; cada um se
+      desfaz pelo botão). Coluna `wa_contatos.pessoal_manual`. Cache `fm-crm-v39`.
+- [ ] Dono: conferir a lista de contatos pessoais e desfazer os que forem da Fortaleza Move (ex.: "Motorista APP").
+- [ ] Ideia do dono: responder por áudio no CRM (gravar e enviar como mensagem de voz). Hoje dá para ditar pelo microfone do teclado.
 - [x] 19/11 Pausa depois da resposta da equipe: 2 min → 12 h (ajuste único `ajuste_20261119_pausa`).
 - [x] 19/11 Gemini: prefere o Flash mais novo; Flash-Lite só se não houver Flash da mesma geração. Cache `fm-crm-v38`.
 - [ ] Dono: religar o WhatsApp em Configurações e acompanhar as primeiras respostas (o Flash tem cota grátis diária menor;
