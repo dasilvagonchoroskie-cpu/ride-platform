@@ -353,6 +353,15 @@ function criar({ authDir, libDir, log = console } = {}) {
       }
       const r = await sock.sendMessage(jid, { text: texto });
       return { externalId: r && r.key ? r.key.id : null };
+    },
+    // 19/11: mensagem de voz (OGG/Opus) gravada no CRM; aparece "gravando áudio…" para o cliente antes.
+    async sendAudio(jid, audio) {
+      if (!sock || estado !== 'conectado') throw new Error('WhatsApp desconectado');
+      try { await sock.sendPresenceUpdate('recording', jid); } catch (e) { /* ok */ }
+      await dormir(900);
+      try { await sock.sendPresenceUpdate('paused', jid); } catch (e) { /* ok */ }
+      const r = await sock.sendMessage(jid, { audio: audio.dados, mimetype: 'audio/ogg; codecs=opus', ptt: true, seconds: audio.segundos });
+      return { externalId: r && r.key ? r.key.id : null };
     }
   };
 }

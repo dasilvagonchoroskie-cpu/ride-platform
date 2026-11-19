@@ -48,6 +48,7 @@ export async function renderConversas(view, state) {
   let atual = null;      // conversa aberta
   let assinatura = '';   // identifica o estado das mensagens exibidas (evita redesenhar à toa)
   let seqLista = 0;
+  let itensLista = new Map(); // 19/11: conversas da lista (para o menu de segurar o dedo)
   let estadoWa = null;
   let iaSt = { ativo: false, pronta: false, modo: 'sugerir' };
   let analise = null;      // última análise da IA da conversa aberta
@@ -90,7 +91,11 @@ export async function renderConversas(view, state) {
             <div class="wa-msgs" id="wa-msgs"></div>
             <div class="wa-composer">
               <textarea id="wa-text" rows="2" maxlength="4000" placeholder="Escreva uma mensagem… (Ctrl+Enter envia)"></textarea>
+              <button class="btn btn-soft wa-mic" id="wa-mic" type="button" title="Gravar mensagem de voz" aria-label="Gravar mensagem de voz"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
               <button class="btn btn-primary" id="wa-send" type="button">${ui.icon('send', 16)} Enviar</button>
+              <div class="wa-gravando" id="wa-gravando"><span class="wa-rec-ponto"></span><b id="wa-grav-tempo">0:00</b><span class="muted">Gravando…</span>
+                <button class="btn btn-ghost btn-sm" id="wa-grav-cancelar" type="button">${ui.icon('trash', 15)} Cancelar</button>
+                <button class="btn btn-primary btn-sm" id="wa-grav-enviar" type="button">${ui.icon('send', 15)} Enviar</button></div>
             </div>
           </div>
         </section>
@@ -140,6 +145,7 @@ export async function renderConversas(view, state) {
     const seq = ++seqLista;
     const data = await api.get(`/wa/conversas?${consulta()}`);
     if (seq !== seqLista || !view.isConnected) return;
+    itensLista = new Map((data.items || []).map((c) => [c.id, c]));
     const box = $('#wa-items');
     // Contagem por estado no filtro (a fila "Aguardando" chama atenção).
     if (data.contagem) {
@@ -545,9 +551,10 @@ export async function renderConversas(view, state) {
     });
   }
 
-  async function acao(nome) {
-    if (!atual) return;
-    const c = atual;
+  async function acao(nome, alvo) {
+    const c = alvo || atual;
+    if (!c) return;
+    const eAtual = !!(atual && atual.id === c.id);
     try {
       if (nome === 'mais') modalMais();
       else if (nome === 'historico') modalHistorico();
@@ -555,7 +562,7 @@ export async function renderConversas(view, state) {
       else if (nome === 'tarefa') modalTarefa();
       else if (nome === 'situacao') {
         await api.patch(`/wa/conversas/${c.id}`, { situacao: c.situacao === 'Aberta' ? 'Resolvida' : 'Aberta' });
-        await atualizarAtual();
+        if (eAtual) await atualizarAtual();
         carregarLista().catch(() => {});
       } else if (nome === 'pessoal') {
         const marcar = !c.pessoal;
@@ -567,7 +574,7 @@ export async function renderConversas(view, state) {
         });
         if (!ok) return;
         await api.post(`/wa/contatos/${c.contato_id}/pessoal`, { pessoal: marcar });
-        await atualizarAtual();
+        if (eAtual) await atualizarAtual(); else carregarLista().catch(() => {});
         ui.toast(marcar ? 'Contato marcado como pessoal: a IA não vai responder.' : 'A IA volta a atender este contato.', 'success');
       } else if (nome === 'ignorar') {
         const ok = await ui.confirmDialog({
@@ -576,7 +583,7 @@ export async function renderConversas(view, state) {
         });
         if (!ok) return;
         await api.post(`/wa/contatos/${c.contato_id}/ignorar`, {});
-        fecharConversa();
+        if (eAtual) fecharConversa(); else carregarLista().catch(() => {});
         ui.toast('Contato ignorado.', 'success');
       } else if (nome === 'excluir') {
         const ok = await ui.confirmDialog({
@@ -585,7 +592,7 @@ export async function renderConversas(view, state) {
         });
         if (!ok) return;
         await api.del(`/wa/conversas/${c.id}`);
-        fecharConversa();
+        if (eAtual) fecharConversa(); else carregarLista().catch(() => {});
         ui.toast('Conversa excluída.', 'success');
       }
     } catch (err) { ui.toast(err.message, 'error'); }
@@ -602,8 +609,61 @@ export async function renderConversas(view, state) {
   }
 
   /* ----------------------------------- eventos ------------------------------------- */
-  $('#wa-items').addEventListener('click', (e) => {
+  // 19/11 (pedido do dono): segurar o dedo numa conversa abre as opções (no computador: botão direito).
+  let toque = null;
+  let menuEm = 0;
+  function menuConversa(c) {
+    if (Date.now() - menuEm < 900) return;
+    menuEm = Date.now();
+    try { if (navigator.vibrate) navigator.vibrate(15); } catch (err) { /* sem vibração */ }
+    const opcoes = [
+      ['abrir', 'Abrir conversa', 'chat'],
+      ...(c.nao_lidas ? [['lida', 'Marcar como lida', 'check']] : []),
+      ['situacao', c.situacao === 'Aberta' ? 'Marcar como resolvida' : 'Reabrir conversa', 'check'],
+      ...(isAdmin ? [['pessoal', c.pessoal ? 'Voltar a IA para este contato' : 'Contato pessoal (sem IA)', 'users'],
+        ['excluir', 'Excluir conversa', 'trash']] : [])
+    ];
+    const corpo = document.createElement('div');
+    corpo.className = 'wa-sheet';
+    corpo.innerHTML = opcoes.map(([id, rotulo, ic]) => `<button type="button" class="wa-sheet-item${id === 'excluir' ? ' perigo' : ''}" data-op="${id}">${ui.icon(ic, 18)}<span>${ui.esc(rotulo)}</span></button>`).join('');
+    const m = ui.modal({ title: nomeDe(c), subtitle: c.telefone_exibicao || '', body: corpo, size: 'small' });
+    corpo.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-op]');
+      if (!b) return;
+      m.close();
+      try {
+        if (b.dataset.op === 'abrir') await abrir(c.id);
+        else if (b.dataset.op === 'lida') { await api.post(`/wa/conversas/${c.id}/lida`, {}); carregarLista().catch(() => {}); }
+        else await acao(b.dataset.op, c);
+      } catch (err) { ui.toast(err.message, 'error'); }
+    });
+  }
+  const lista = $('#wa-items');
+  lista.addEventListener('pointerdown', (e) => {
     const b = e.target.closest('[data-id]');
+    if (!b || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    clearTimeout(toque && toque.t);
+    toque = { x: e.clientX, y: e.clientY, longo: false, t: setTimeout(() => {
+      toque.longo = true;
+      const c = itensLista.get(Number(b.dataset.id));
+      if (c) menuConversa(c);
+    }, 550) };
+  });
+  lista.addEventListener('pointermove', (e) => {
+    if (toque && !toque.longo && Math.hypot(e.clientX - toque.x, e.clientY - toque.y) > 10) clearTimeout(toque.t);
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) lista.addEventListener(ev, () => { if (toque) clearTimeout(toque.t); });
+  lista.addEventListener('contextmenu', (e) => {
+    const b = e.target.closest('[data-id]');
+    if (!b) return;
+    e.preventDefault();
+    if (toque) { clearTimeout(toque.t); toque.longo = true; }
+    const c = itensLista.get(Number(b.dataset.id));
+    if (c) menuConversa(c);
+  });
+  lista.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-id]');
+    if (toque && toque.longo) { toque = null; e.preventDefault(); return; }
     if (b) abrir(Number(b.dataset.id)).catch((err) => ui.toast(err.message, 'error'));
   });
   $('#wa-q').addEventListener('input', ui.debounce((e) => { filtro.q = e.target.value.trim(); carregarLista().catch(() => {}); }, 300));
@@ -614,6 +674,77 @@ export async function renderConversas(view, state) {
     carregarLista().catch(() => {});
   });
   $('#wa-send').addEventListener('click', enviar);
+
+  // 19/11 (pedido do dono): mensagem de voz. Grava aqui, o servidor converte e envia como áudio de WhatsApp;
+  // depois a IA transcreve e o texto aparece na conversa. Máximo de 2 minutos.
+  let gravador = null;
+  let pedacos = [];
+  let inicioGrav = 0;
+  let relogioGrav = null;
+  let fluxoGrav = null;
+  const composer = view.querySelector('.wa-composer');
+  const mostrarGravando = (sim) => composer.classList.toggle('gravando', sim);
+  async function comecarGravacao() {
+    if (!atual || gravador) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { ui.toast('Este navegador não grava áudio.', 'error'); return; }
+    try { fluxoGrav = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); } catch (err) {
+      ui.toast('Sem permissão para usar o microfone. Libere o microfone para o CRM no navegador e tente de novo.', 'error');
+      return;
+    }
+    const tipo = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((t) => MediaRecorder.isTypeSupported(t)) || '';
+    pedacos = [];
+    gravador = new MediaRecorder(fluxoGrav, tipo ? { mimeType: tipo, audioBitsPerSecond: 32000 } : {});
+    gravador.addEventListener('dataavailable', (e) => { if (e.data && e.data.size) pedacos.push(e.data); });
+    gravador.start(250);
+    inicioGrav = Date.now();
+    $('#wa-grav-tempo').textContent = '0:00';
+    mostrarGravando(true);
+    relogioGrav = setInterval(() => {
+      const s = Math.floor((Date.now() - inicioGrav) / 1000);
+      $('#wa-grav-tempo').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      if (s >= 120) pararGravacao(true);
+    }, 250);
+  }
+  function pararGravacao(enviarDepois) {
+    clearInterval(relogioGrav);
+    const g = gravador;
+    gravador = null;
+    if (!g) { mostrarGravando(false); return; }
+    g.addEventListener('stop', () => {
+      if (fluxoGrav) fluxoGrav.getTracks().forEach((t) => t.stop());
+      fluxoGrav = null;
+      mostrarGravando(false);
+      const segundos = Math.max(1, Math.round((Date.now() - inicioGrav) / 1000));
+      if (enviarDepois && pedacos.length) enviarAudio(new Blob(pedacos, { type: g.mimeType || 'audio/webm' }), segundos);
+    }, { once: true });
+    try { g.stop(); } catch (err) { mostrarGravando(false); }
+  }
+  async function enviarAudio(blob, segundos) {
+    if (!atual) return;
+    if (blob.size < 500) { ui.toast('Áudio muito curto.', 'error'); return; }
+    const botao = $('#wa-mic');
+    botao.disabled = true;
+    try {
+      const dados = await new Promise((ok, falha) => {
+        const r = new FileReader();
+        r.onload = () => ok(r.result);
+        r.onerror = () => falha(new Error('Não consegui ler o áudio gravado.'));
+        r.readAsDataURL(blob);
+      });
+      await api.post(`/wa/conversas/${atual.id}/audio`, { audio: dados, segundos });
+      await carregarMensagens(true);
+      atualizarAtual().catch(() => {});
+      carregarLista().catch(() => {});
+      setTimeout(() => { if (atual) carregarMensagens(true).catch(() => {}); }, 8000); // a transcrição chega depois
+    } catch (err) {
+      ui.toast(err.message, 'error');
+    } finally {
+      botao.disabled = false;
+    }
+  }
+  $('#wa-mic').addEventListener('click', () => { comecarGravacao().catch((err) => ui.toast(err.message, 'error')); });
+  $('#wa-grav-cancelar').addEventListener('click', () => pararGravacao(false));
+  $('#wa-grav-enviar').addEventListener('click', () => pararGravacao(true));
   $('#wa-text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); enviar(); } });
   $('#wa-back').addEventListener('click', fecharConversa);
   $('#wa-ia').addEventListener('click', (e) => { const b = e.target.closest('[data-ia]'); if (b) acaoIA(b.dataset.ia); });

@@ -16,6 +16,8 @@ app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
 app.locals.db = db;
 
 // Corpo bruto guardado SÓ para a integração assinada (a assinatura HMAC é conferida sobre os bytes exatos recebidos).
+// 19/11: mensagem de voz (até 2 min, em base64) precisa de um corpo um pouco maior só nesta rota.
+app.use('/api/wa/conversas/:id/audio', express.json({ limit: '1300kb' }));
 app.use(express.json({ limit: '1mb' }));
 // Bloqueia chamadas de escrita originadas em outros sites (proteção CSRF adicional).
 app.use('/api', (req, res, next) => {
@@ -52,7 +54,7 @@ app.use((req, res, next) => {
   if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=15552000');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(self), camera=()'); // 19/11: microfone para a mensagem de voz
   next();
 });
 

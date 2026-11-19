@@ -30,6 +30,13 @@ const likeEscape = (text) => String(text).replace(/[\\%_]/g, (c) => `\\${c}`);
 
 function createStore(db, opts = {}) {
   const agora = opts.now || (() => new Date().toISOString());
+  // 19/11: arquivo das mensagens de voz gravadas no CRM (OGG/Opus), até e depois do envio (permite reenviar).
+  db.exec(`CREATE TABLE IF NOT EXISTS wa_audio_envio (
+    mensagem_id INTEGER PRIMARY KEY REFERENCES wa_mensagens(id) ON DELETE CASCADE,
+    dados BLOB NOT NULL,
+    segundos INTEGER NOT NULL DEFAULT 1,
+    criado_em TEXT NOT NULL
+  )`);
 
   /* ----------------------------- vínculo por telefone ---------------------------- */
   function acharCadastroPorTelefone(telefone) {
@@ -255,6 +262,27 @@ function createStore(db, opts = {}) {
     return { mensagem: db.prepare('SELECT * FROM wa_mensagens WHERE id = ?').get(info.lastInsertRowid) };
   }
 
+  // 19/11: mensagem de voz gravada no CRM (já convertida para OGG/Opus).
+  function enfileirarAudio({ conversaId, usuarioId, dados, segundos }) {
+    if (!Buffer.isBuffer(dados) || !dados.length) return { erro: 'Áudio vazio.' };
+    const conversa = db.prepare('SELECT * FROM wa_conversas WHERE id = ?').get(conversaId);
+    if (!conversa) return { erro: 'Conversa não encontrada.', status: 404 };
+    const t = agora();
+    const id = db.transaction(() => {
+      const info = db.prepare(
+        `INSERT INTO wa_mensagens (conversa_id, direcao, tipo, texto, status, proxima_tentativa_em, enviada_por, origem, ocorrida_em, created_at)
+         VALUES (?, 'out', 'audio', '[mensagem de voz]', 'pendente', ?, ?, 'crm', ?, ?)`
+      ).run(conversaId, t, usuarioId || null, t, t);
+      const mid = Number(info.lastInsertRowid);
+      db.prepare('INSERT INTO wa_audio_envio (mensagem_id, dados, segundos, criado_em) VALUES (?, ?, ?, ?)').run(mid, dados, Math.max(1, Math.round(Number(segundos) || 1)), t);
+      return mid;
+    })();
+    atualizarResumo(conversa, { texto: '🎤 Mensagem de voz', quando: t, direcao: 'out' });
+    db.prepare('UPDATE wa_conversas SET nao_lidas = 0, updated_at = ? WHERE id = ?').run(t, conversaId);
+    return { mensagem: db.prepare('SELECT * FROM wa_mensagens WHERE id = ?').get(id) };
+  }
+  const audioDeEnvio = (mensagemId) => db.prepare('SELECT dados, segundos FROM wa_audio_envio WHERE mensagem_id = ?').get(mensagemId) || null;
+
   // Mensagens que ficaram "enviando" por queda do processo voltam para a fila.
   function recolocarEnviando() {
     return db.prepare(`UPDATE wa_mensagens SET status = 'pendente' WHERE status = 'enviando'`).run().changes;
@@ -264,7 +292,7 @@ function createStore(db, opts = {}) {
   function reservarPendentes(limite = 5) {
     const t = agora();
     const candidatas = db.prepare(
-      `SELECT m.id, m.texto, k.jid, k.ignorado FROM wa_mensagens m
+      `SELECT m.id, m.texto, m.tipo, k.jid, k.ignorado FROM wa_mensagens m
          JOIN wa_conversas c ON c.id = m.conversa_id JOIN wa_contatos k ON k.id = c.contato_id
         WHERE m.direcao = 'out' AND m.status = 'pendente' AND (m.proxima_tentativa_em IS NULL OR m.proxima_tentativa_em <= ?)
         ORDER BY m.id LIMIT ?`
@@ -457,7 +485,7 @@ function createStore(db, opts = {}) {
   return {
     acharCadastroPorTelefone, existeCadastro, obterOuCriarContato, ingerir, enfileirar, recolocarEnviando,
     reservarPendentes, concluirEnvio, falharEnvio, reenviar, registrarStatus, listarConversas, obterConversa,
-    listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, definirPessoal, excluirConversa,
+    listarMensagens, marcarLida, atualizarConversa, definirVinculo, ignorarContato, definirPessoal, excluirConversa, enfileirarAudio, audioDeEnvio,
     contarNaoLidas, resumoFila, definirTranscricao,
     ouvir, mudarAtendimento, marcarSaudado, marcarEspera, definirAssunto, listarEventos, contarPorAtendimento
   };

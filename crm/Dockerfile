@@ -11,6 +11,8 @@ COPY wa-lib/package.json wa-lib/package-lock.json /opt/wa-lib/
 RUN cd /opt/wa-lib && npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 FROM node:22-slim
+# 19/11: ffmpeg converte a mensagem de voz gravada no navegador para OGG/Opus (formato de áudio do WhatsApp).
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production WA_LIB_DIR=/opt/wa-lib FM_DATA_DIR=/app/data
 ARG GIT_COMMIT=local
 ENV GIT_COMMIT=$GIT_COMMIT

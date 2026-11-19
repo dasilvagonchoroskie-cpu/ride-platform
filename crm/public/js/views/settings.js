@@ -54,10 +54,13 @@ function organizarSecoes(view) {
     try { localStorage.setItem('fm-cfg-secao', id); } catch (e) { /* sem armazenamento: só não lembra */ }
     layout.querySelectorAll('.cfg-secao').forEach((b) => b.classList.toggle('hidden', b.dataset.cfg !== id));
     layout.querySelectorAll('.cfg-item').forEach((b) => b.classList.toggle('active', b.dataset.cfg === id));
+    // No celular, a faixa de abas mostra a aba escolhida (antes abria rolada até o fim).
+    const nav = layout.querySelector('.cfg-nav');
+    const ativo = layout.querySelector('.cfg-item.active');
+    if (nav && ativo && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, ativo.offsetLeft - 8);
   };
   layout.querySelectorAll('.cfg-item').forEach((b) => b.addEventListener('click', () => {
     mostrar(b.dataset.cfg);
-    if (window.matchMedia('(max-width: 860px)').matches) b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }));
   mostrar((presentes.find((s) => s.id === secaoAtiva) || presentes[0]).id);
 }

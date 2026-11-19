@@ -1735,7 +1735,24 @@ router.post('/documentos/:id/excluir-definitivo', docsAtivo, comDoc(async (req, 
 
 /* -------------------------------- WhatsApp -------------------------------- */
 // Antes do CRUD genérico: "/wa/..." não pode ser tratado como um módulo chamado "wa".
-whatsappRoutes.registrar(router, { service: wa, fail, audit, requireAdmin, ENTITIES, entities, db, central: ia.central });
+// 19/11: mensagem de voz gravada no CRM: transcreve (Gemini) para a equipe e a IA lerem o contexto da conversa.
+async function transcreverAudioEnviado(mensagemId, arquivo, segundos) {
+  const cfg = ia.config();
+  if (!cfg.ativo || !cfg.transcrever || cfg.transcricoesHoje >= LIMITE_TRANSCRICOES_DIA) return false;
+  const registrar = (ok, provedor, erro) => db.prepare('INSERT INTO ia_transcricoes (mensagem_id, provedor, segundos, ok, erro, criado_em) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(mensagemId, provedor ? `${provedor}:audio` : 'audio', Math.round(segundos || 0), ok ? 1 : 0, erro ? String(erro).slice(0, 200) : null, nowISO());
+  try {
+    const r = await transcritor.lerMidia({ tipo: 'audio', arquivo, mime: 'audio/ogg', segundos });
+    wa.store.definirTranscricao(mensagemId, r.texto === '[sem fala]' ? '[mensagem de voz] (sem fala)' : `[mensagem de voz] 🎤 ${r.texto}`);
+    registrar(true, r.provedor);
+    return true;
+  } catch (err) {
+    registrar(false, null, err.message);
+    console.error(`[ia] transcrição da mensagem de voz ${mensagemId}: ${err.message}`);
+    return false;
+  }
+}
+whatsappRoutes.registrar(router, { service: wa, fail, audit, requireAdmin, ENTITIES, entities, db, central: ia.central, transcreverAudio: transcreverAudioEnviado });
 iaRoutes.registrar(router, { ia, cofre: cofreIA, fail, audit, requireAdmin });
 
 /* ------------------------------ CRUD genérico ----------------------------- */

@@ -67,7 +67,15 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
         for (const m of lote) {
           if (m.ignorado) { store.falharEnvio(m.id, 'Contato ignorado'); continue; }
           try {
-            const r = await canal.sendText(m.jid, m.texto);
+            let r;
+            if (m.tipo === 'audio') {
+              const audio = store.audioDeEnvio(m.id);
+              if (!audio) throw new Error('Arquivo do áudio não encontrado');
+              if (typeof canal.sendAudio !== 'function') throw new Error('Este canal não envia áudio');
+              r = await canal.sendAudio(m.jid, audio);
+            } else {
+              r = await canal.sendText(m.jid, m.texto);
+            }
             store.concluirEnvio(m.id, r && r.externalId);
             enviadas += 1;
           } catch (err) {

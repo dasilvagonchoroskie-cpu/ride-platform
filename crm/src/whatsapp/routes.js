@@ -7,7 +7,9 @@ const { VINCULOS, MAX_TEXTO } = require('./store');
 
 const { ESTADOS } = require('../ia/central');
 
-function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entities, db, central }) {
+const { formatoDoAudio, converterParaOgg, MAX_ENTRADA } = require('./audio');
+
+function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entities, db, central, transcreverAudio }) {
   const store = service.store;
   const idDe = (req) => Number(req.params.id);
   const ID_INVALIDO = (res) => fail(res, 400, 'invalid_id', 'Identificador inválido.');
@@ -86,6 +88,40 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
     }
     service.cutucar();
     res.status(201).json({ item: r.mensagem });
+  });
+
+  // 19/11 (pedido do dono): mensagem de voz gravada no CRM. Vai como áudio de WhatsApp; depois a IA transcreve o que foi
+  // dito e o texto fica na conversa (para a equipe e para a IA entenderem o contexto). Contato pessoal: não transcreve.
+  router.post('/wa/conversas/:id/audio', async (req, res, next) => {
+    try {
+      const id = idDe(req);
+      if (!Number.isInteger(id)) return ID_INVALIDO(res);
+      const c = store.obterConversa(id);
+      if (!c) return fail(res, 404, 'not_found', 'Conversa não encontrada.');
+      if (c.ignorado) return fail(res, 409, 'ignored', 'Este contato está ignorado.');
+      if (!service.conectado()) return fail(res, 409, 'wa_offline', 'O WhatsApp está desconectado. Peça a um administrador para reconectar.');
+      const m = /^data:audio\/[a-z0-9.+-]+(?:;[a-z0-9=.+-]+)*;base64,([A-Za-z0-9+/]+={0,2})$/i.exec(String((req.body && req.body.audio) || ''));
+      if (!m) return fail(res, 422, 'invalid', 'Áudio inválido.');
+      const bruto = Buffer.from(m[1], 'base64');
+      if (bruto.length < 200) return fail(res, 422, 'invalid', 'Áudio muito curto.');
+      if (bruto.length > MAX_ENTRADA) return fail(res, 413, 'too_large', 'Áudio longo demais (máximo 2 minutos).');
+      if (!formatoDoAudio(bruto)) return fail(res, 422, 'invalid', 'Formato de áudio não aceito.');
+      const segundos = Math.min(130, Math.max(1, Math.round(Number(req.body.segundos) || 1)));
+      let ogg;
+      try { ogg = await converterParaOgg(bruto); } catch (err) {
+        console.error(`[whatsapp] áudio da conversa ${id}: ${err.message}`);
+        return fail(res, 422, 'invalid', 'Não consegui preparar o áudio para o WhatsApp. Tente gravar de novo.');
+      }
+      const r = store.enfileirarAudio({ conversaId: id, usuarioId: req.user.id, dados: ogg, segundos });
+      if (r.erro) return fail(res, r.status || 422, 'invalid', r.erro);
+      if (c.atendimento !== 'humano' && c.atendimento !== 'concluido') {
+        store.mudarAtendimento(id, 'humano', { usuarioId: req.user.id, detalhe: 'Respondeu por áudio pelo CRM' });
+      }
+      audit(req, 'wa_audio', 'wa_conversas', id, `Mensagem de voz enviada (${segundos} s)`);
+      service.cutucar();
+      res.status(201).json({ item: r.mensagem });
+      if (transcreverAudio && !c.pessoal) transcreverAudio(r.mensagem.id, ogg, segundos).catch(() => {});
+    } catch (err) { next(err); }
   });
 
   router.post('/wa/mensagens/:id/reenviar', (req, res) => {

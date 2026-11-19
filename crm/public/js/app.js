@@ -499,7 +499,7 @@ async function enterApp() {
         </header>
         <main class="view" id="view"></main>
         <nav class="bottom-nav" id="bottom-nav">
-          ${(ehAvaliador ? ['candidatos'] : ['dashboard', 'conversas', 'motoristas', 'tarefas', 'configuracoes']).map((key) => {
+          ${(ehAvaliador ? ['candidatos'] : ['dashboard', 'conversas', 'motoristas', 'tarefas']).map((key) => {
             const item = NAV.find((n) => n.key === key);
             return `<button class="bn-item" data-route="${key}">${ui.icon(item.icon, 20)}<span>${ui.esc(item.label.split(' ')[0])}</span></button>`;
           }).join('')}

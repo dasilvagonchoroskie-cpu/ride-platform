@@ -182,7 +182,14 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
       (os 15 contatos com quem ele já conversava pelo celular antes de 19/11 viraram pessoais, como escolha manual; cada um se
       desfaz pelo botão). Coluna `wa_contatos.pessoal_manual`. Cache `fm-crm-v39`.
 - [ ] Dono: conferir a lista de contatos pessoais e desfazer os que forem da Fortaleza Move (ex.: "Motorista APP").
-- [ ] Ideia do dono: responder por áudio no CRM (gravar e enviar como mensagem de voz). Hoje dá para ditar pelo microfone do teclado.
+- [x] 19/11 Mensagem de voz pelo CRM: microfone na conversa (até 2 min); o servidor converte para OGG/Opus com o ffmpeg
+      (instalado na imagem) e envia como áudio de WhatsApp; depois a IA transcreve e o texto fica na mensagem
+      (`[mensagem de voz] 🎤 …`) para o contexto. Arquivo em `wa_audio_envio`. Contato pessoal: não transcreve.
+- [x] 19/11 Segurar o dedo numa conversa da lista (ou botão direito) abre as opções: abrir, marcar como lida, resolver/reabrir,
+      contato pessoal e excluir (as duas últimas só administrador).
+- [x] 19/11 Barra de baixo do celular sem "Configurações" (fica no menu lateral e na foto do topo). Faixa de abas das
+      Configurações abre na aba escolhida. Cache `fm-crm-v42`.
+- [ ] Dono: testar a mensagem de voz com o WhatsApp conectado (o navegador vai pedir permissão do microfone).
 - [x] 19/11 Etapa 1 (3cf4496): menu e segundos menus "premium" (emojis e negrito; continua em texto porque botões/listas de
       toque não funcionam bem pelo "Dispositivos conectados"); modelo `atendente_iniciou` enviado ao apertar Assumir no CRM
       (não vai pelo celular); foto de perfil dos usuários (`src/fotos.js`, tabela `user_fotos`), no menu, topo, Configurações,

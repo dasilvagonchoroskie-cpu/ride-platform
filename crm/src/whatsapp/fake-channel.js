@@ -28,6 +28,13 @@ function criarCanalFalso(opts = {}) {
       enviados.push({ jid, texto, externalId });
       return { externalId };
     },
+    async sendAudio(jid, audio) {
+      if (estado !== 'conectado') throw new Error('WhatsApp desconectado');
+      seq += 1;
+      const externalId = `FAKEA${seq}`;
+      enviados.push({ jid, audio: true, segundos: audio.segundos, tamanho: audio.dados.length, externalId });
+      return { externalId };
+    },
     // ---- auxiliares de teste ----
     conectar() { estado = 'conectado'; if (handlers && handlers.onConnection) handlers.onConnection(canal.getState()); },
     desconectar() { estado = 'desconectado'; },
