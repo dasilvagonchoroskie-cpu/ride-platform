@@ -35,6 +35,9 @@ function quando(iso) {
 
 export async function renderConversas(view, state) {
   const isAdmin = state.user.role === 'admin';
+  // 19/11: equipe (nome + foto) para mostrar quem atendeu cada mensagem enviada pelo CRM.
+  const equipe = {};
+  try { for (const u of (await api.get('/usuarios/equipe')).items) equipe[u.id] = u; } catch (err) { /* sem fotos: segue com iniciais */ }
   // 13/11 (pedido do dono): a lista abre em "Todas" (conversa concluída não some da tela) e lembra o filtro escolhido.
   const FILTROS = ['todas', 'Aberta', 'at:aguardando', 'at:humano', 'at:ia', 'naolidas', 'at:concluido'];
   let salvo = null;
@@ -161,8 +164,10 @@ export async function renderConversas(view, state) {
     const st = STATUS_MSG[m.status] || ['', ''];
     const saida = m.direcao === 'out';
     const quem = saida ? (m.origem === 'celular' ? 'pelo celular' : (m.tipo === 'aviso' ? 'confirmação automática (não é a resposta)' : (m.origem === 'ia' ? 'resposta da IA' : ''))) : '';
+    const autor = saida && m.enviada_por && m.origem !== 'ia' && m.origem !== 'celular' ? equipe[m.enviada_por] : null;
     return `<div class="wa-msg ${saida ? 'out' : 'in'}${m.origem === 'ia' ? ' ia' : ''}" data-mid="${m.id}">
       <div class="wa-bubble">
+        ${autor ? `<div class="wa-autor">${ui.avatar(autor, { tamanho: 18 })}<span>${ui.esc(autor.nome)}</span></div>` : ''}
         <div class="wa-text">${ui.esc(m.texto)}</div>
         <div class="wa-meta">${quem ? `<span>${quem}</span>` : ''}<span>${ui.esc(ui.fmtDateTime(m.ocorrida_em).slice(-5))}</span>
           ${saida ? `<span class="wa-tick ${st[1]}">${ui.esc(st[0])}</span>` : ''}
@@ -175,7 +180,7 @@ export async function renderConversas(view, state) {
   function desenharCabecalho() {
     const c = atual;
     $('#wa-who').innerHTML = `<strong>${ui.esc(nomeDe(c))}</strong>
-      <span class="muted">${ui.esc(c.telefone_exibicao || 'sem telefone')}${c.vinculo_tipo ? ` · ${ui.esc(TIPOS[c.vinculo_tipo])}` : ' · sem cadastro'}${c.responsavel_nome ? ` · ${ui.esc(c.responsavel_nome)}` : ''}</span>`;
+      <span class="muted">${ui.esc(c.telefone_exibicao || 'sem telefone')}${c.vinculo_tipo ? ` · ${ui.esc(TIPOS[c.vinculo_tipo])}` : ' · sem cadastro'}${c.responsavel_nome ? ` · <span class="wa-resp">${ui.avatar(equipe[c.responsavel_id] || { nome: c.responsavel_nome }, { tamanho: 16 })} ${ui.esc(c.responsavel_nome)}</span>` : ''}</span>`;
     // No celular, estas ações ficam no menu "⋯" (mais espaço para a conversa).
     $('#wa-actions').innerHTML = `
       <button class="btn btn-sm btn-ghost wa-mais" data-act="mais" type="button" aria-label="Mais ações">⋯</button>

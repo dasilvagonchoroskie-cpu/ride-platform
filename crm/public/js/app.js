@@ -475,7 +475,7 @@ async function enterApp() {
         <div class="side-foot">
           <button class="btn btn-ghost btn-sm hidden" id="install-btn">${ui.icon('install', 16)} Instalar aplicativo</button>
           <div class="user-chip">
-            <div class="avatar">${ui.esc(initials(state.user.nome))}</div>
+            <span data-me-avatar="34">${ui.avatar(state.user, { tamanho: 34 })}</span>
             <div style="min-width:0">
               <strong>${ui.esc(state.user.nome)}</strong>
               <span>${ui.esc(state.user.email)}</span>
@@ -494,7 +494,7 @@ async function enterApp() {
           </div>
           <div class="top-actions">
             <span class="pill-date">${ui.fmtDate(state.meta.hoje)}</span>
-            <div class="avatar" title="${ui.esc(state.user.nome)}">${ui.esc(initials(state.user.nome))}</div>
+            <a href="#/configuracoes" data-me-avatar="38" title="Minha conta">${ui.avatar(state.user, { tamanho: 38 })}</a>
           </div>
         </header>
         <main class="view" id="view"></main>

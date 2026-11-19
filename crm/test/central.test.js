@@ -69,7 +69,7 @@ test('primeiro contato: saudação + menu uma vez; número escolhe o assunto e a
   assert.match(ctx, /"ja_saudou":true/);
 
   await receber('menu');
-  assert.match(daIA().pop(), /^Para direcionarmos seu atendimento/, 'cliente pode pedir o menu de novo');
+  assert.match(daIA().pop(), /^(📋 \*)?Para direcionarmos seu atendimento/, 'cliente pode pedir o menu de novo (19/11: menu premium começa com 📋)');
 });
 
 test('primeira mensagem já com o assunto: saúda e responde direto (sem menu)', async () => {

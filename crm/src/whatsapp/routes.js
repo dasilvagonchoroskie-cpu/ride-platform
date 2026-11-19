@@ -125,8 +125,16 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
     if (!c) return fail(res, 404, 'not_found', 'Conversa não encontrada.');
     const acao = String(req.body.acao || '');
     if (acao === 'assumir') {
+      const jaEra = c.atendimento === 'humano' && Number(c.atend_por) === Number(req.user.id);
       store.mudarAtendimento(id, 'humano', { usuarioId: req.user.id, detalhe: c.atend_motivo ? `Motivo: ${c.atend_motivo}` : '' });
       audit(req, 'wa_assumir', 'wa_conversas', id, 'Atendimento assumido');
+      // 19/11: avisa o cliente quem vai atender (modelo editável; desativado ou WhatsApp desligado = não envia, sem erro).
+      const modelo = central && !jaEra && !c.ignorado && !c.pessoal ? central.texto('atendente_iniciou') : '';
+      const nomeAtendente = String(req.user.nome || '').trim();
+      if (modelo && nomeAtendente && service.conectado()) {
+        const r = store.enfileirar({ conversaId: id, texto: modelo.replace(/\{atendente\}/g, nomeAtendente), usuarioId: req.user.id });
+        if (!r.erro) service.cutucar();
+      }
     } else if (acao === 'devolver') {
       store.mudarAtendimento(id, 'ia', { usuarioId: req.user.id, detalhe: 'Devolvida para o atendimento automático' });
       audit(req, 'wa_devolver_ia', 'wa_conversas', id, 'Conversa devolvida para a IA');

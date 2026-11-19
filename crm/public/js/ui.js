@@ -430,3 +430,49 @@ export function buildForm(def, values = {}, opts = {}) {
   };
   return api2;
 }
+
+// ---------- 19/11/2026: foto de perfil dos usuários (ou iniciais) ----------
+export function iniciais(nome) {
+  return String(nome || 'FM').replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || '?';
+}
+/** u: { id, nome, foto } (foto = versão; vazia = mostra as iniciais). */
+export function avatar(u, { tamanho = 34 } = {}) {
+  const nome = (u && u.nome) || '';
+  const est = `width:${tamanho}px;height:${tamanho}px;font-size:${Math.max(9, Math.round(tamanho * 0.36))}px`;
+  if (u && u.id && u.foto) return `<img class="avatar avatar-img" style="${est}" src="/api/usuarios/${Number(u.id)}/foto?v=${encodeURIComponent(u.foto)}" alt="${esc(nome)}" title="${esc(nome)}">`;
+  return `<span class="avatar" style="${est}" title="${esc(nome)}">${esc(iniciais(nome))}</span>`;
+}
+/** Abre a galeria/câmera e devolve a imagem recortada no centro, 256x256 em JPEG (data URL), ou null se cancelar. */
+export function escolherFoto() {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp,image/*';
+    input.addEventListener('change', () => {
+      const f = input.files && input.files[0];
+      if (!f) { resolve(null); return; }
+      if (f.size > 15 * 1024 * 1024) { reject(new Error('Imagem grande demais (máximo 15 MB).')); return; }
+      const leitor = new FileReader();
+      leitor.onerror = () => reject(new Error('Não consegui ler a imagem.'));
+      leitor.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Esse arquivo não é uma imagem que o navegador consiga abrir (use JPG ou PNG).'));
+        img.onload = () => {
+          const lado = Math.min(img.naturalWidth, img.naturalHeight);
+          const c = document.createElement('canvas');
+          c.width = 256;
+          c.height = 256;
+          c.getContext('2d').drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 2, lado, lado, 0, 0, 256, 256);
+          resolve(c.toDataURL('image/jpeg', 0.86));
+        };
+        img.src = leitor.result;
+      };
+      leitor.readAsDataURL(f);
+    });
+    input.click();
+  });
+}
+/** Atualiza as fotos do usuário logado no menu e no topo (sem recarregar a página). */
+export function atualizarMeuAvatar(user) {
+  document.querySelectorAll('[data-me-avatar]').forEach((el) => { el.innerHTML = avatar(user, { tamanho: Number(el.dataset.meAvatar) || 34 }); });
+}

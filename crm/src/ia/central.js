@@ -88,9 +88,12 @@ const MOTIVOS_TRANSFERENCIA = {
   falha_ia: 'A IA não conseguiu responder (falha ou limite do serviço de IA)'
 };
 
-const MENU_NOVO = 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n*Passageiros e clientes*\n1. Atendimento ao passageiro.\n2. Enviar ou receber uma encomenda.\n\n*Comércios*\n3. Sou comerciante ou quero entregas para o meu comércio.\n\n*Motoristas*\n4. Cadastro de motorista e veículo.\n5. Clube de Vantagens para motoristas.\n\n*Outros*\n6. Outros assuntos.\n\nDigite o número da opção desejada.';
+// 19/11 (pedido do dono, "estilo premium"): o menu ganha emojis por público e títulos em negrito. Botões e listas de
+// toque do WhatsApp não funcionam de forma confiável pela conexão "Dispositivos conectados"; por isso continua em texto.
+const MENU_NOVO = '📋 *Para direcionarmos seu atendimento, escolha uma das opções:*\n\n🚖 *Passageiros e clientes*\n1. Atendimento ao passageiro.\n2. Enviar ou receber uma encomenda.\n\n🏪 *Comércios*\n3. Sou comerciante ou quero entregas para o meu comércio.\n\n🚗 *Motoristas*\n4. Cadastro de motorista e veículo.\n5. Clube de Vantagens para motoristas.\n\n💬 *Outros*\n6. Outros assuntos.\n\n👉 Digite o número da opção desejada.';
+const MENU_V3 = 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n*Passageiros e clientes*\n1. Atendimento ao passageiro.\n2. Enviar ou receber uma encomenda.\n\n*Comércios*\n3. Sou comerciante ou quero entregas para o meu comércio.\n\n*Motoristas*\n4. Cadastro de motorista e veículo.\n5. Clube de Vantagens para motoristas.\n\n*Outros*\n6. Outros assuntos.\n\nDigite o número da opção desejada.';
 const MODELOS_PADRAO = {
-  saudacao: { nome: 'Saudação inicial', texto: 'Olá! Seja bem-vindo(a) à Fortaleza Move!\n\nAgradecemos pelo seu contato. Será um prazer ajudar você!' },
+  saudacao: { nome: 'Saudação inicial', texto: 'Olá! Seja bem-vindo(a) à Fortaleza Move! 👋\n\nAgradecemos pelo seu contato. Será um prazer ajudar você!' },
   // 13/11 (pedido do dono): quem já falou com a Fortaleza Move antes recebe uma saudação de retorno a cada novo atendimento.
   saudacao_retorno: { nome: 'Saudação de retorno (novo atendimento de quem já falou conosco)', texto: 'Olá! A Fortaleza Move agradece por entrar em contato conosco novamente. Em que podemos ajudar desta vez?' },
   menu: { nome: 'Apresentação do menu', texto: MENU_NOVO },
@@ -113,11 +116,13 @@ const MODELOS_PADRAO = {
   // 13/11: botão "Tenho um comércio e quero entregas" do site.
   abertura_comercio: { nome: 'Comércios, opção 2 e botão do site "Tenho um comércio e quero entregas"', texto: 'Que bom ter você por aqui! A Fortaleza Move tem atendimento para comércios que precisam de coleta e entrega.\n\nPara a nossa equipe preparar o seu atendimento, informe, por favor:\n\n• o nome do estabelecimento;\n• a cidade e o endereço;\n• o que você vende ou costuma entregar;\n• quantas entregas faz, em média, por dia ou por semana.\n\nCom essas informações, a nossa equipe entra em contato para combinar os detalhes.' },
   // Opção 2 (encomendas) e opção 3 (comércios) abrem um segundo menu cada; as respostas seguintes são as opções desses menus.
-  voltar_menu: { nome: 'Aviso para voltar ao menu (final das respostas das opções)', texto: 'Para voltar ao menu inicial, digite 0.' },
-  menu_encomendas: { nome: 'Opção 2 escolhida (encomendas): segundo menu', texto: 'Certo! Sobre encomendas, escolha uma das opções:\n\n1. Quero solicitar uma coleta e entrega.\n2. Estou aguardando uma encomenda que ainda não chegou.\n3. Outras informações sobre entregas.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.' },
+  voltar_menu: { nome: 'Aviso para voltar ao menu (final das respostas das opções)', texto: '↩️ Para voltar ao menu inicial, digite 0.' },
+  menu_encomendas: { nome: 'Opção 2 escolhida (encomendas): segundo menu', texto: '📦 Certo! *Sobre encomendas, escolha uma das opções:*\n\n1. Quero solicitar uma coleta e entrega.\n2. Estou aguardando uma encomenda que ainda não chegou.\n3. Outras informações sobre entregas.\n\n↩️ 0. Voltar ao menu inicial.\n\n👉 Digite o número da opção desejada.' },
   abertura_encomendas_aguardando: { nome: 'Encomendas, opção 2 (aguardando uma encomenda)', texto: 'Certo! Para a nossa equipe verificar a sua encomenda, informe, por favor:\n\n• o nome do comércio ou de quem enviou;\n• o que você está aguardando;\n• o endereço de entrega (rua e bairro);\n• quando o pedido foi feito.\n\nCom essas informações, a nossa equipe verifica e retorna para você.' },
   abertura_encomendas_outros: { nome: 'Encomendas, opção 3 (outras informações)', texto: 'Certo! Escreva, por favor, o que você gostaria de saber sobre coleta e entrega de encomendas.' },
-  menu_comercio: { nome: 'Opção 3 escolhida (comércios): segundo menu', texto: 'Certo! Sobre comércios, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio para pedir entregas.\n3. Outras informações para comércios.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.' },
+  menu_comercio: { nome: 'Opção 3 escolhida (comércios): segundo menu', texto: '🏪 Certo! *Sobre comércios, escolha uma das opções:*\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio para pedir entregas.\n3. Outras informações para comércios.\n\n↩️ 0. Voltar ao menu inicial.\n\n👉 Digite o número da opção desejada.' },
+  // 19/11 (pedido do dono): quando alguém da equipe aperta "Assumir" no CRM, o cliente fica sabendo quem vai atender.
+  atendente_iniciou: { nome: 'Atendente assumiu a conversa no CRM ({atendente} vira o nome do usuário)', texto: '👤 *{atendente}* iniciou o seu atendimento e já vai responder você.' },
   abertura_comercio_cadastrado: { nome: 'Comércios, opção 1 (já sou comerciante cadastrado)', texto: 'Certo! Informe, por favor, o nome do seu estabelecimento e como podemos ajudar.\n\nCom essas informações, a nossa equipe dá sequência ao seu atendimento.' },
   abertura_comercio_outros: { nome: 'Comércios, opção 3 (outras informações)', texto: 'Certo! Escreva, por favor, o que você gostaria de saber como comerciante ou sobre o cadastro do seu comércio.' },
   documento_recusado: { nome: 'Arquivo de documento não aceito', texto: 'Não consegui receber esse arquivo. Pode enviar de novo como foto (JPG ou PNG) ou PDF, com até 10 MB, por favor?' }
@@ -127,7 +132,14 @@ const MODELOS_PADRAO = {
 const MENU_V1 = 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Outros assuntos.\n\nDigite o número da opção desejada.';
 const MENU_V2 = 'Para direcionarmos seu atendimento, escolha uma das opções:\n\n1. Cadastro de motorista e veículo.\n2. Atendimento ao passageiro.\n3. Coleta e entrega de encomendas.\n4. Clube de Vantagens para motoristas.\n5. Comércio e entregas.\n6. Outros assuntos.\n\nDigite o número da opção desejada.';
 const MENU_COMERCIO_V2 = 'Certo! Sobre comércio e entregas, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio.\n3. Estou aguardando uma encomenda ou entrega.\n4. Outras informações.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.';
-const TEXTOS_ANTIGOS = { menu: [MENU_V1, MENU_V2], menu_comercio: [MENU_COMERCIO_V2] };
+// Padrões antigos (sem edição do dono) que passam a mostrar o padrão novo (19/11: versões "premium").
+const TEXTOS_ANTIGOS = {
+  menu: [MENU_V1, MENU_V2, MENU_V3],
+  menu_comercio: [MENU_COMERCIO_V2, 'Certo! Sobre comércios, escolha uma das opções:\n\n1. Já sou comerciante cadastrado.\n2. Quero cadastrar o meu comércio para pedir entregas.\n3. Outras informações para comércios.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.'],
+  menu_encomendas: ['Certo! Sobre encomendas, escolha uma das opções:\n\n1. Quero solicitar uma coleta e entrega.\n2. Estou aguardando uma encomenda que ainda não chegou.\n3. Outras informações sobre entregas.\n\n0. Voltar ao menu inicial.\n\nDigite o número da opção desejada.'],
+  voltar_menu: ['Para voltar ao menu inicial, digite 0.'],
+  saudacao: ['Olá! Seja bem-vindo(a) à Fortaleza Move!\n\nAgradecemos pelo seu contato. Será um prazer ajudar você!']
+};
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
 const MAX_MODELO = 1500;
 const MAX_INFO = 4000;

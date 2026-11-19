@@ -21,6 +21,16 @@ export async function renderSettings(view, state) {
       </div>
     </div>
 
+    <div class="card perfil-card">
+      <div class="card-body perfil-linha">
+        <span id="minha-foto">${ui.avatar(state.user, { tamanho: 72 })}</span>
+        <div class="perfil-info"><h3>${ui.esc(state.user.nome)}</h3><p class="sub">${ui.esc(state.user.email || '')} · ${(state.user.role === 'admin' ? 'Administrador' : (state.user.role === 'avaliador' ? 'Avaliador de cadastros' : 'Gestor'))}</p>
+          <p class="small muted">Sua foto aparece no CRM para a equipe e nas conversas que você atender.</p></div>
+        <div class="row" style="gap:8px"><button class="btn btn-soft btn-sm" id="foto-trocar" type="button">${state.user.foto ? 'Trocar foto' : 'Colocar foto'}</button>
+          <button class="btn btn-ghost btn-sm${state.user.foto ? '' : ' hidden'}" id="foto-remover" type="button">Remover</button></div>
+      </div>
+    </div>
+
     <div class="settings-grid">
       ${isAdmin ? `<div class="stack">
         <div class="card">
@@ -46,12 +56,13 @@ export async function renderSettings(view, state) {
           <div class="card-body" style="padding-top:10px">
             ${ui.tableHtml({
               columns: [
-                { label: 'Usuário', render: (u) => `<b>${ui.esc(u.nome)}</b><span class="sub">${ui.esc(u.email)}</span>` },
+                { label: 'Usuário', render: (u) => `<div class="user-cell">${ui.avatar(u, { tamanho: 32 })}<div><b>${ui.esc(u.nome)}</b><span class="sub">${ui.esc(u.email)}</span></div></div>` },
                 { label: 'Perfil', render: (u) => ui.badge(u.role === 'admin' ? 'Administrador' : (u.role === 'avaliador' ? 'Avaliador de cadastros' : 'Gestor'), u.role === 'admin' ? 'info' : 'neutral') },
                 { label: 'Situação', render: (u) => ui.badge(u.ativo ? 'Ativo' : 'Inativo', u.ativo ? 'success' : 'danger') },
                 { label: 'Último acesso', render: (u) => u.last_login_at ? ui.fmtDateTime(u.last_login_at) : '<span class="muted">Nunca</span>' },
                 {
                   label: 'Ações', cls: 'right row-actions-cell', render: (u) => `<div class="row-actions">
+                    <button class="btn btn-sm btn-ghost" data-user-foto="${u.id}" title="Trocar foto de perfil">${ui.icon('users', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-email="${u.id}" data-email-atual="${ui.esc(u.email)}" title="Alterar e-mail de acesso">${ui.icon('edit', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-pass="${u.id}" title="Redefinir senha">${ui.icon('lock', 14)}</button>
                     <button class="btn btn-sm btn-ghost" data-user-toggle="${u.id}" data-ativo="${u.ativo}" title="${u.ativo ? 'Desativar' : 'Ativar'}">${ui.icon(u.ativo ? 'x' : 'check', 14)}</button>
@@ -216,6 +227,32 @@ export async function renderSettings(view, state) {
     } catch (err) { ui.toast(err.message, 'error'); }
   });
 
+  // 19/11: foto de perfil do usuário logado.
+  view.querySelector('#foto-trocar').addEventListener('click', async () => {
+    try {
+      const imagem = await ui.escolherFoto();
+      if (!imagem) return;
+      const r = await api.post(`/usuarios/${state.user.id}/foto`, { imagem });
+      state.user.foto = r.foto;
+      ui.atualizarMeuAvatar(state.user);
+      view.querySelector('#minha-foto').innerHTML = ui.avatar(state.user, { tamanho: 72 });
+      view.querySelector('#foto-trocar').textContent = 'Trocar foto';
+      view.querySelector('#foto-remover').classList.remove('hidden');
+      ui.toast('Foto de perfil atualizada.', 'success');
+    } catch (err) { ui.toast(err.message, 'error'); }
+  });
+  view.querySelector('#foto-remover').addEventListener('click', async () => {
+    try {
+      await api.del(`/usuarios/${state.user.id}/foto`);
+      state.user.foto = null;
+      ui.atualizarMeuAvatar(state.user);
+      view.querySelector('#minha-foto').innerHTML = ui.avatar(state.user, { tamanho: 72 });
+      view.querySelector('#foto-trocar').textContent = 'Colocar foto';
+      view.querySelector('#foto-remover').classList.add('hidden');
+      ui.toast('Foto removida.', 'success');
+    } catch (err) { ui.toast(err.message, 'error'); }
+  });
+
   view.querySelector('#pwd-save').addEventListener('click', async () => {
     const errorBox = view.querySelector('#pwd-error');
     errorBox.hidden = true;
@@ -312,6 +349,18 @@ export async function renderSettings(view, state) {
       } catch (err) { ui.toast(err.message, 'error'); }
     }));
 
+    // 19/11: o administrador troca a foto de qualquer usuário.
+    view.querySelectorAll('[data-user-foto]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        const imagem = await ui.escolherFoto();
+        if (!imagem) return;
+        const id = Number(b.dataset.userFoto);
+        const r = await api.post(`/usuarios/${id}/foto`, { imagem });
+        if (id === state.user.id) { state.user.foto = r.foto; ui.atualizarMeuAvatar(state.user); }
+        ui.toast('Foto de perfil atualizada.', 'success');
+        renderSettings(view, state);
+      } catch (err) { ui.toast(err.message, 'error'); }
+    }));
     view.querySelectorAll('[data-user-email]').forEach((b) => b.addEventListener('click', () => {
       const body = document.createElement('div');
       body.innerHTML = `<div class="form-errors" id="re-error" hidden></div>

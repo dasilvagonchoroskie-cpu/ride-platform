@@ -181,7 +181,7 @@ test('opção 0 volta ao menu inicial dos segundos menus e de qualquer opção; 
   assert.equal(conv().atend_assunto, null);
   await receber('4');
   assert.match(daIA().pop(), /7 itens/, 'depois do 0, o 4 é cadastro de motorista');
-  assert.match(daIA().pop(), /Para voltar ao menu inicial, digite 0\./);
+  assert.match(daIA().pop(), /Para voltar ao menu inicial, digite 0\./); // 19/11: agora com ↩️ na frente
   await receber('0');
   assert.match(daIA().pop(), /Para direcionarmos seu atendimento/);
   assert.equal(conv().atendimento, 'ia', '0 nunca manda para a equipe');

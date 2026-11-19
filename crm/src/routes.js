@@ -28,6 +28,9 @@ const hasOwn = (obj, chave) => Object.prototype.hasOwnProperty.call(obj, chave);
 // Rota assíncrona: erro vira resposta 500 do Express (sem rejeição solta que derrubaria o processo).
 const seguro = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+const { criarFotos } = require('./fotos');
+const fotos = criarFotos(db);
+
 const router = express.Router();
 
 // Serviço do WhatsApp (canal, fila de envio). Fica desligado até um administrador ativar em Configurações.
@@ -476,7 +479,7 @@ function requireAdmin(req, res, next) {
 }
 
 router.get('/auth/me', (req, res) => {
-  res.json({ user: req.user, org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') } });
+  res.json({ user: { ...req.user, foto: fotos.versao(req.user.id) }, org: { nome: getSetting('org_nome'), slogan: getSetting('slogan') } });
 });
 
 router.post('/auth/logout', (req, res) => {
@@ -1226,8 +1229,47 @@ router.delete('/finance/simulacoes/:id', requireAdmin, (req, res) => {
 });
 
 /* -------------------------------- configurações ---------------------------- */
+/* ------------------------- fotos de perfil (19/11/2026) ------------------------- */
+// Equipe (só nomes e versão da foto) para mostrar quem atendeu: qualquer usuário logado.
+router.get('/usuarios/equipe', (req, res) => {
+  const v = fotos.versoes();
+  const itens = db.prepare('SELECT id, nome FROM users WHERE ativo = 1 ORDER BY nome').all().map((u) => ({ id: u.id, nome: u.nome, foto: v[u.id] || null }));
+  res.json({ items: itens });
+});
+const idUsuario = (req) => { const n = Number(req.params.id); return Number.isInteger(n) && n > 0 ? n : null; };
+// Cada um troca a própria foto; o administrador troca a de qualquer um.
+const podeMudarFoto = (req, id) => req.user.id === id || req.user.role === 'admin';
+router.get('/usuarios/:id/foto', (req, res) => {
+  const id = idUsuario(req);
+  const f = id ? fotos.obter(id) : null;
+  if (!f) return fail(res, 404, 'not_found', 'Sem foto.');
+  res.setHeader('Content-Type', `image/${f.tipo}`);
+  res.setHeader('Content-Length', f.dados.length);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.end(f.dados);
+});
+router.post('/usuarios/:id/foto', (req, res) => {
+  const id = idUsuario(req);
+  if (!id) return fail(res, 404, 'not_found', 'Usuário não encontrado.');
+  if (!podeMudarFoto(req, id)) return fail(res, 403, 'forbidden', 'Você só pode trocar a sua própria foto.');
+  const r = fotos.salvar(id, req.body && req.body.imagem);
+  if (r.erro) return fail(res, r.status || 422, 'invalid', r.erro);
+  audit(req, 'foto_perfil', 'users', id, 'Foto de perfil atualizada');
+  res.json({ ok: true, foto: r.versao });
+});
+router.delete('/usuarios/:id/foto', (req, res) => {
+  const id = idUsuario(req);
+  if (!id) return fail(res, 404, 'not_found', 'Usuário não encontrado.');
+  if (!podeMudarFoto(req, id)) return fail(res, 403, 'forbidden', 'Você só pode remover a sua própria foto.');
+  fotos.apagar(id);
+  audit(req, 'foto_perfil_removida', 'users', id, 'Foto de perfil removida');
+  res.json({ ok: true, foto: null });
+});
+
 router.get('/settings', requireAdmin, (req, res) => {
-  const users = db.prepare('SELECT id, nome, email, role, ativo, totp_ativo, email_2fa, last_login_at, created_at FROM users ORDER BY id').all();
+  const versoesFoto = fotos.versoes();
+  const users = db.prepare('SELECT id, nome, email, role, ativo, totp_ativo, email_2fa, last_login_at, created_at FROM users ORDER BY id').all()
+    .map((u) => ({ ...u, foto: versoesFoto[u.id] || null }));
   res.json({
     settings: {
       org_nome: getSetting('org_nome'),
