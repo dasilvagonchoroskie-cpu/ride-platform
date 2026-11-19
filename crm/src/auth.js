@@ -7,8 +7,8 @@ const { db, DATA_DIR } = require('./db');
 const { COOKIE_NAME, parseCookies, setCookie, clearCookie, isSecure, clientIp } = require('./http');
 const { createLimiter } = require('./limiter');
 
-const SESSION_HOURS = 12;
-const INATIVIDADE_MIN = Number(process.env.SESSAO_INATIVIDADE_MIN) || 60;
+const SESSION_HOURS = Number(process.env.SESSAO_HORAS) || 720; // 30 dias (CRM de uso próprio): não fica pedindo login.
+const INATIVIDADE_MIN = Number(process.env.SESSAO_INATIVIDADE_MIN) || 43200; // 30 dias sem uso nenhum.
 const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64, maxmem: 64 * 1024 * 1024 };
 
 function hashPassword(password) {
@@ -75,13 +75,14 @@ function currentSession(req) {
      WHERE s.token_hash = ?`
   ).get(sha256(token));
   if (!row) return null;
-  // Expira no prazo máximo (12 h) e também por inatividade (padrão 60 min sem uso).
+  // Sessão deslizante: só cai se ficar 30 dias sem nenhum uso (ou a conta for desativada). Cada uso renova o prazo.
   const parada = Date.now() - new Date(row.last_seen_at || 0).getTime();
   if (new Date(row.expires_at) < new Date() || !row.ativo || parada > INATIVIDADE_MIN * 60000) {
     db.prepare('DELETE FROM sessions WHERE id = ?').run(row.sid);
     return null;
   }
-  if (parada > 60000) db.prepare('UPDATE sessions SET last_seen_at = ? WHERE id = ?').run(nowISO(), row.sid);
+  if (parada > 60000) db.prepare('UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id = ?')
+    .run(nowISO(), new Date(Date.now() + SESSION_HOURS * 3600 * 1000).toISOString(), row.sid);
   return { sid: row.sid, id: row.id, nome: row.nome, email: row.email, role: row.role };
 }
 
@@ -91,6 +92,9 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: { code: 'unauthenticated', message: 'Sessão expirada ou inexistente. Entre novamente.' } });
   }
   req.user = session;
+  // Mantém o login deslizando: a cada uso o cookie ganha prazo novo, então não pede login à toa.
+  const tok = parseCookies(req.headers.cookie || '')[COOKIE_NAME];
+  if (tok) setCookie(res, COOKIE_NAME, tok, { maxAge: SESSION_HOURS * 3600, secure: isSecure(req) });
   next();
 }
 

@@ -56,7 +56,7 @@ test('sessão parada além do limite de inatividade expira', () => {
     const tok = auth.createSession(1, req, res);
     const r = { headers: { cookie: 'fm_sid=' + tok } };
     const antes = !!auth.currentSession(r);
-    db.prepare("UPDATE sessions SET last_seen_at = ?").run(new Date(Date.now() - 61 * 60000).toISOString());
+    db.prepare("UPDATE sessions SET last_seen_at = ?").run(new Date(Date.now() - 31 * 24 * 60 * 60000).toISOString());
     console.log(JSON.stringify({ antes, depois: !!auth.currentSession(r) }));`], { env: { ...process.env, FM_DATA_DIR: dir } }).toString();
   assert.deepEqual(JSON.parse(out.trim().split('\n').pop()), { antes: true, depois: false });
 });
