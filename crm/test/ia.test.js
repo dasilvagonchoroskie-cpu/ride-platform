@@ -320,6 +320,10 @@ test('Groq: manda reasoning_effort e piso de tokens para modelo que pensa', asyn
   assert.equal(f.chamadas[0].init.headers.authorization, 'Bearer gsk_chave_de_teste_000000');
 });
 
+test('Gemini: prefere o flash mais novo; sem flash, usa o flash-lite (19/11)', () => {
+  assert.equal(escolherModelo(['models/gemini-3.5-flash-lite', 'models/gemini-3.5-flash', 'models/gemini-3.5-pro', 'models/gemini-2.5-flash', 'models/gemini-3.5-flash-image']), 'gemini-3.5-flash');
+});
+
 test('Gemini: descobre modelo estável, preferindo flash-lite mais novo', () => {
   const m = provGratis.escolherModelo(['models/gemini-2.5-pro', 'models/gemini-3-flash-preview', 'models/gemini-2.5-flash',
     'models/gemini-3.1-flash-lite', 'models/gemini-2.5-flash-lite', 'models/gemini-embedding-001', 'models/gemini-2.5-flash-preview-tts']);

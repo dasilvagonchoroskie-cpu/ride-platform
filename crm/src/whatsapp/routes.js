@@ -129,6 +129,9 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
       audit(req, 'wa_assumir', 'wa_conversas', id, 'Atendimento assumido');
     } else if (acao === 'devolver') {
       store.mudarAtendimento(id, 'ia', { usuarioId: req.user.id, detalhe: 'Devolvida para o atendimento automático' });
+      // 19/11: o administrador devolver à IA uma conversa que estava como pessoal só porque ele escreveu pelo celular
+      // vale como decisão manual de que a IA atende esse contato.
+      if (c.pessoal_auto && req.user.role === 'admin') store.definirPessoal(c.contato_id, false);
       audit(req, 'wa_devolver_ia', 'wa_conversas', id, 'Conversa devolvida para a IA');
     } else if (acao === 'concluir') {
       let enviou = false;

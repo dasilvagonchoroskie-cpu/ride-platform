@@ -338,7 +338,8 @@ function createStore(db, opts = {}) {
     SELECT c.id, c.situacao, c.responsavel_id, c.nao_lidas, c.ultima_mensagem, c.ultima_em, c.ultima_direcao,
            c.atendimento, c.atend_assunto, c.atend_motivo, c.atend_em, c.saudado_em, c.espera_em,
            c.ia_estado, c.ia_estado_em, c.ia_erro, c.ia_tentativas, c.ia_proxima, c.atend_inicio, c.origem_contato, c.created_at,
-           k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado, k.pessoal,
+           k.id AS contato_id, k.jid, k.telefone, k.nome, k.vinculo_tipo, k.vinculo_id, k.ignorado, CASE WHEN k.pessoal = 1 THEN 1 WHEN k.pessoal_manual = 1 THEN 0 WHEN EXISTS (SELECT 1 FROM wa_mensagens pm WHERE pm.conversa_id = c.id AND pm.direcao = 'out' AND pm.origem = 'celular') THEN 1 ELSE 0 END AS pessoal,
+           CASE WHEN k.pessoal = 0 AND k.pessoal_manual = 0 AND EXISTS (SELECT 1 FROM wa_mensagens pm WHERE pm.conversa_id = c.id AND pm.direcao = 'out' AND pm.origem = 'celular') THEN 1 ELSE 0 END AS pessoal_auto,
            CASE k.vinculo_tipo WHEN 'motoristas' THEN m.nome WHEN 'passageiros' THEN p.nome
                                WHEN 'parceiros' THEN r.nome_estabelecimento${temEntregadores ? ' WHEN \'entregadores\' THEN e.nome' : ''}${temComercios ? ' WHEN \'comercios\' THEN cm.nome_estabelecimento' : ''} END AS vinculo_nome,
            u.nome AS responsavel_nome
@@ -436,7 +437,7 @@ function createStore(db, opts = {}) {
 
   // Contato pessoal (família/amigos): a IA fica fora da conversa; nada é apagado.
   function definirPessoal(contatoId, pessoal) {
-    return db.prepare('UPDATE wa_contatos SET pessoal = ?, updated_at = ? WHERE id = ?').run(pessoal ? 1 : 0, agora(), contatoId).changes > 0;
+    return db.prepare('UPDATE wa_contatos SET pessoal = ?, pessoal_manual = 1, updated_at = ? WHERE id = ?').run(pessoal ? 1 : 0, agora(), contatoId).changes > 0;
   }
 
   function excluirConversa(conversaId) {

@@ -27,6 +27,10 @@ function acrescentarColunas() {
   // continua guardada e visível. Marcado pela equipe na conversa.
   const contatos = new Set(db.prepare('PRAGMA table_info(wa_contatos)').all().map((c) => c.name));
   if (contatos.size && !contatos.has('pessoal')) db.exec('ALTER TABLE wa_contatos ADD COLUMN pessoal INTEGER NOT NULL DEFAULT 0');
+  // 19/11 (pedido do dono): conversa em que ele já escreveu pelo celular conta como PESSOAL sozinha (o número do
+  // atendimento é o WhatsApp pessoal dele). pessoal_manual = 1 quando a equipe decidiu à mão (marcar ou desfazer):
+  // aí vale a escolha manual e a regra automática não mexe.
+  if (contatos.size && !contatos.has('pessoal_manual')) db.exec('ALTER TABLE wa_contatos ADD COLUMN pessoal_manual INTEGER NOT NULL DEFAULT 0');
   // Central de atendimento: estado da conversa (ia | aguardando | humano | concluido), assunto do menu e motivo.
   const conversas = new Set(db.prepare('PRAGMA table_info(wa_conversas)').all().map((c) => c.name));
   if (conversas.size) {
@@ -81,6 +85,16 @@ function setSetting(key, value) {
     `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
   ).run(key, String(value), nowISO());
+}
+
+// Ajuste único de 19/11/2026 (pedido do dono): a IA espera 12 h depois que a equipe responde (antes estava em 2 min).
+// Roda uma vez só; se o dono mudar o tempo depois, nada aqui sobrescreve.
+if (!db.prepare("SELECT 1 FROM settings WHERE key = 'ajuste_20261119_pausa'").get()) {
+  const atual = Number((db.prepare("SELECT value FROM settings WHERE key = 'ia_humano_pausa_min'").get() || {}).value);
+  const agoraIso = new Date().toISOString();
+  const gravar = db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at');
+  if (!Number.isFinite(atual) || atual < 720) gravar.run('ia_humano_pausa_min', '720', agoraIso);
+  gravar.run('ajuste_20261119_pausa', '1', agoraIso);
 }
 
 const SETTINGS_DEFAULTS = {

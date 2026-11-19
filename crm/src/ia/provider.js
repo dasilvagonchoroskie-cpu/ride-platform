@@ -114,10 +114,17 @@ function escolherModelo(ids) {
   const pool = estaveis.length ? estaveis : base;
   const gratis = pool.find((x) => /:free$/.test(x) && PREFERIDOS.test(x)) || base.find((x) => /:free$/.test(x));
   if (gratis) return gratis;
-  // Gemini: "flash-lite" tem o maior limite grátis; ordena pela versão mais nova.
+  // Gemini (19/11, pedido do dono): prefere o "flash" mais novo, que segue melhor as regras do atendimento;
+  // "flash-lite" (maior limite grátis, respostas mais fracas) só se não houver flash. Ordena pela versão mais nova.
   const porVersao = (a, b) => b.localeCompare(a, 'en', { numeric: true });
   const gem = pool.filter((x) => /^gemini-/.test(x)).sort(porVersao);
-  if (gem.length) return gem.find((x) => /flash-lite/.test(x)) || gem.find((x) => /flash/.test(x)) || gem[0];
+  if (gem.length) {
+    const versao = (x) => parseFloat((/^gemini-(\d+(?:\.\d+)?)/.exec(x) || [])[1] || '0');
+    const flash = gem.find((x) => /flash/.test(x) && !/lite/.test(x));
+    const lite = gem.find((x) => /flash-lite/.test(x));
+    if (flash && (!lite || versao(flash) >= versao(lite))) return flash;
+    return lite || flash || gem[0];
+  }
   return pool.find((x) => PREFERIDOS.test(x)) || pool[0];
 }
 
