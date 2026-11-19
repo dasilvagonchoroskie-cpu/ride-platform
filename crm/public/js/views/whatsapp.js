@@ -343,7 +343,7 @@ export async function renderConversas(view, state) {
     atual = data.item;
     eventos = data.eventos || [];
     assinatura = '';
-    assinaturaAtual = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}|${atual.ia_estado}|${atual.ia_tentativas}`;
+    assinaturaAtual = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}|${atual.ia_estado}|${atual.ia_tentativas}|${atual.pessoal ? 1 : 0}|${atual.vinculo_tipo || ''}`;
     $('#wa-empty').classList.add('hidden');
     $('#wa-inner').classList.remove('hidden');
     wa.classList.add('open-thread');
@@ -458,7 +458,7 @@ export async function renderConversas(view, state) {
     atual = data.item;
     eventos = data.eventos || [];
     // Só redesenha quando o atendimento mudou (não fecha o histórico aberto à toa).
-    const assin = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}|${atual.ia_estado}|${atual.ia_tentativas}`;
+    const assin = `${atual.atendimento}|${atual.atend_motivo}|${atual.atend_assunto}|${eventos.length}|${atual.ia_estado}|${atual.ia_tentativas}|${atual.pessoal ? 1 : 0}|${atual.vinculo_tipo || ''}`;
     if (assin === assinaturaAtual) return;
     assinaturaAtual = assin;
     desenharCabecalho();
