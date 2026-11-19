@@ -42,7 +42,7 @@ export async function renderConversas(view, state) {
     if (atual) { assinatura = ''; carregarMensagens().catch(() => {}); }
   }).catch(() => { /* sem fotos: segue com iniciais */ });
   // 13/11 (pedido do dono): a lista abre em "Todas" (conversa concluída não some da tela) e lembra o filtro escolhido.
-  const FILTROS = ['todas', 'Aberta', 'at:aguardando', 'at:humano', 'at:ia', 'naolidas', 'at:concluido'];
+  const FILTROS = ['todas', 'Aberta', 'at:aguardando', 'at:humano', 'at:ia', 'naolidas', 'pessoais', 'at:concluido'];
   let salvo = null;
   try { salvo = localStorage.getItem('fm-wa-filtro'); } catch (e) { salvo = null; }
   const filtro = { modo: FILTROS.includes(salvo) ? salvo : 'todas', q: '' };
@@ -72,6 +72,7 @@ export async function renderConversas(view, state) {
               <option value="at:humano">Em atendimento humano</option>
               <option value="at:ia">IA atendendo</option>
               <option value="naolidas">Não lidas</option>
+              <option value="pessoais">Contatos pessoais</option>
               <option value="at:concluido">Concluídas</option>
             </select>
           </div>
@@ -126,6 +127,7 @@ export async function renderConversas(view, state) {
     const p = new URLSearchParams({ size: '50' });
     if (filtro.modo === 'Aberta' || filtro.modo === 'Resolvida') p.set('situacao', filtro.modo);
     if (filtro.modo === 'naolidas') p.set('nao_lidas', '1');
+    if (filtro.modo === 'pessoais') p.set('pessoal', '1');
     if (filtro.modo.startsWith('at:')) p.set('atendimento', filtro.modo.slice(3));
     if (filtro.q) p.set('q', filtro.q);
     return p.toString();
@@ -139,7 +141,7 @@ export async function renderConversas(view, state) {
       <div class="wa-item-main">
         <div class="wa-item-top"><strong>${ui.esc(nome)}</strong><span class="wa-time">${ui.esc(quando(c.ultima_em))}</span></div>
         <div class="wa-item-sub"><span class="wa-preview">${ui.esc(prefixo + (c.ultima_mensagem || ''))}</span>${c.nao_lidas ? `<span class="wa-unread">${c.nao_lidas}</span>` : ''}</div>
-        <div class="wa-tags">${c.atendimento && c.atendimento !== 'ia' ? `<span class="wa-tag est-${ui.esc(c.atendimento)}">${ui.esc(ESTADO_CURTO[c.atendimento] || '')}</span>` : ''}${c.vinculo_tipo ? `<span class="wa-tag">${ui.esc(TIPOS[c.vinculo_tipo] || '')}</span>` : ''}${c.atend_assunto ? `<span class="wa-tag sub">${ui.esc(ASSUNTO_MENU[c.atend_assunto] || '')}</span>` : ''}</div>
+        <div class="wa-tags">${c.pessoal ? '<span class="wa-tag pessoal">Pessoal</span>' : ''}${c.atendimento && c.atendimento !== 'ia' ? `<span class="wa-tag est-${ui.esc(c.atendimento)}">${ui.esc(ESTADO_CURTO[c.atendimento] || '')}</span>` : ''}${c.vinculo_tipo ? `<span class="wa-tag">${ui.esc(TIPOS[c.vinculo_tipo] || '')}</span>` : ''}${c.atend_assunto ? `<span class="wa-tag sub">${ui.esc(ASSUNTO_MENU[c.atend_assunto] || '')}</span>` : ''}</div>
       </div>
     </button>`;
   }
@@ -196,7 +198,7 @@ export async function renderConversas(view, state) {
       <button class="btn btn-sm btn-soft" data-act="vincular" type="button">${c.vinculo_tipo ? 'Trocar cadastro' : 'Vincular cadastro'}</button>
       <button class="btn btn-sm btn-soft" data-act="tarefa" type="button">Criar tarefa</button>
       <button class="btn btn-sm btn-ghost" data-act="historico" type="button">Histórico</button>
-      ${isAdmin ? `<button class="btn btn-sm btn-soft" data-act="pessoal" type="button">${c.pessoal ? 'Voltar a IA para este contato' : 'Contato pessoal (sem IA)'}</button>
+      ${isAdmin ? `<button class="btn btn-sm btn-soft" data-act="tipo" type="button">Tipo: ${c.pessoal ? 'Pessoal' : 'Comercial'}</button>
       <button class="btn btn-sm btn-danger" data-act="ignorar" type="button">Ignorar contato</button>
       <button class="btn btn-sm btn-danger" data-act="excluir" type="button">Excluir</button>` : ''}`;
   }
@@ -248,7 +250,7 @@ export async function renderConversas(view, state) {
       ['vincular', c.vinculo_tipo ? 'Trocar cadastro vinculado' : 'Vincular a um cadastro', 'btn-soft'],
       ['tarefa', 'Criar tarefa', 'btn-soft'],
       ['historico', 'Histórico do atendimento', 'btn-soft'],
-      ...(isAdmin ? [['pessoal', c.pessoal ? 'Voltar a IA para este contato' : 'Contato pessoal (a IA não atende)', 'btn-soft'], ['ignorar', 'Ignorar contato', 'btn-danger'], ['excluir', 'Excluir conversa', 'btn-danger']] : [])
+      ...(isAdmin ? [['tipo', `Tipo de contato: ${c.pessoal ? 'Pessoal' : 'Comercial'}`, 'btn-soft'], ['ignorar', 'Ignorar contato', 'btn-danger'], ['excluir', 'Excluir conversa', 'btn-danger']] : [])
     ];
     const m = ui.modal({
       title: nomeDe(c), subtitle: c.telefone_exibicao || '', size: 'small',
@@ -554,6 +556,26 @@ export async function renderConversas(view, state) {
     });
   }
 
+  // 19/11 (pedido do dono): escolha clara do tipo de contato. Resolve true (pessoal), false (comercial) ou null.
+  function escolherTipoContato(c) {
+    return new Promise((resolve) => {
+      let feito = false;
+      const fim = (v) => { if (!feito) { feito = true; resolve(v); } };
+      const op = (id, ic, titulo, desc, marcado) => `<button type="button" class="wa-sheet-item wa-tipo${marcado ? ' marcado' : ''}" data-tipo="${id}">${ui.icon(ic, 20)}<span class="wa-tipo-txt"><strong>${ui.esc(titulo)}</strong><small>${ui.esc(desc)}</small></span>${marcado ? ui.icon('check', 18) : ''}</button>`;
+      const corpo = document.createElement('div');
+      corpo.className = 'wa-sheet';
+      corpo.innerHTML = op('comercial', 'headset', 'Comercial / cliente', 'Clientes, motoristas, comércios e terceiros: a IA da Central atende.', !c.pessoal)
+        + op('pessoal', 'users', 'Pessoal', 'Família, amigos e assuntos seus: a IA não lê nem responde. Você responde pelo celular ou pelo CRM.', !!c.pessoal);
+      const m = ui.modal({ title: 'Tipo de contato', subtitle: nomeDe(c), body: corpo, size: 'small', onClose: () => fim(null) });
+      corpo.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-tipo]');
+        if (!b) return;
+        fim(b.dataset.tipo === 'pessoal');
+        m.close();
+      });
+    });
+  }
+
   async function acao(nome, alvo) {
     const c = alvo || atual;
     if (!c) return;
@@ -567,6 +589,12 @@ export async function renderConversas(view, state) {
         await api.patch(`/wa/conversas/${c.id}`, { situacao: c.situacao === 'Aberta' ? 'Resolvida' : 'Aberta' });
         if (eAtual) await atualizarAtual();
         carregarLista().catch(() => {});
+      } else if (nome === 'tipo') {
+        const escolha = await escolherTipoContato(c);
+        if (escolha === null || escolha === !!c.pessoal) return;
+        await api.post(`/wa/contatos/${c.contato_id}/pessoal`, { pessoal: escolha });
+        if (eAtual) await atualizarAtual(); else carregarLista().catch(() => {});
+        ui.toast(escolha ? 'Contato pessoal: a IA não vai ler nem responder.' : 'Contato comercial: a IA volta a atender.', 'success');
       } else if (nome === 'pessoal') {
         const marcar = !c.pessoal;
         const ok = await ui.confirmDialog({
@@ -623,7 +651,7 @@ export async function renderConversas(view, state) {
       ['abrir', 'Abrir conversa', 'chat'],
       ...(c.nao_lidas ? [['lida', 'Marcar como lida', 'check']] : []),
       ['situacao', c.situacao === 'Aberta' ? 'Marcar como resolvida' : 'Reabrir conversa', 'check'],
-      ...(isAdmin ? [['pessoal', c.pessoal ? 'Voltar a IA para este contato' : 'Contato pessoal (sem IA)', 'users'],
+      ...(isAdmin ? [['tipo', `Tipo de contato: ${c.pessoal ? 'Pessoal' : 'Comercial'}`, 'users'],
         ['excluir', 'Excluir conversa', 'trash']] : [])
     ];
     const corpo = document.createElement('div');

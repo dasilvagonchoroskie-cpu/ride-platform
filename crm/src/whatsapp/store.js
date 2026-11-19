@@ -379,12 +379,13 @@ function createStore(db, opts = {}) {
       ${temComercios ? "LEFT JOIN comercios cm ON k.vinculo_tipo = 'comercios' AND cm.id = k.vinculo_id" : ''}
       LEFT JOIN users u ON u.id = c.responsavel_id`;
 
-  function listarConversas({ situacao, atendimento, naoLidas, q, responsavelId, page = 1, size = 30 } = {}) {
+  function listarConversas({ situacao, atendimento, naoLidas, pessoal, q, responsavelId, page = 1, size = 30 } = {}) {
     const where = [];
     const params = [];
     if (situacao === 'Aberta' || situacao === 'Resolvida') { where.push('c.situacao = ?'); params.push(situacao); }
     if (ESTADOS_VALIDOS.includes(atendimento)) { where.push('c.atendimento = ?'); params.push(atendimento); }
     if (naoLidas) where.push('c.nao_lidas > 0');
+    if (pessoal) where.push('k.pessoal = 1');
     if (responsavelId) { where.push('c.responsavel_id = ?'); params.push(Number(responsavelId)); }
     const busca = String(q || '').trim().slice(0, 80);
     if (busca) {

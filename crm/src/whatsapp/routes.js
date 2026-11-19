@@ -52,7 +52,7 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
   /* ------------------------------- conversas ------------------------------ */
   router.get('/wa/conversas', (req, res) => {
     const r = store.listarConversas({
-      situacao: req.query.situacao, atendimento: req.query.atendimento, naoLidas: req.query.nao_lidas === '1', q: req.query.q,
+      situacao: req.query.situacao, atendimento: req.query.atendimento, naoLidas: req.query.nao_lidas === '1', pessoal: req.query.pessoal === '1', q: req.query.q,
       responsavelId: req.query.responsavel_id, page: req.query.page, size: req.query.size
     });
     res.json({ ...r, items: r.items.map(publica), contagem: store.contarPorAtendimento() });
