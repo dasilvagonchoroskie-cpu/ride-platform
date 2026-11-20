@@ -598,7 +598,7 @@ export class DriversService {
     if (existente && existente.driverId !== driverId) {
       throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
     }
-    const novo = await this.vehicles.adminCriar(driverId, adminId, vehicle);
+    const novo = await this.vehicles.adminCriar(driverId, adminId, { ...vehicle, isActive: true });
     try {
       if (novo?.id) await this.vehicles.adminUsar(novo.id);
     } catch (e) {
