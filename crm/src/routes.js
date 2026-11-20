@@ -1615,6 +1615,49 @@ function contratar(tabela, rotulo) {
   };
 }
 router.post('/motoristas/:id/contratar', contratar('motoristas', 'Motorista'));
+
+// Ponte CRM -> Central (20/11/2026): envia o motorista aprovado para a Central (fm-api), que cria a conta/cadastro ja aprovado.
+// So admin. Nao dispara sozinho: e acionado pelo botao "Enviar para a Central". CPF/CNH/RG ja estao no cadastro (extraidos no servidor).
+router.post('/motoristas/:id/enviar-central', async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') return fail(res, 403, 'forbidden', 'Só o administrador envia para a Central.');
+  const id = Number(req.params.id);
+  const m = db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id);
+  if (!m) return fail(res, 404, 'not_found', 'Motorista não encontrado.');
+  if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação.');
+  const faltando = [];
+  const obrig = (v, nome) => { const t = String(v == null ? '' : v).trim(); if (!t) faltando.push(nome); return t; };
+  const ano = Number(m.veiculo_ano);
+  if (!Number.isInteger(ano) || ano < 1990) faltando.push('ano do veículo');
+  const payload = {
+    name: obrig(m.nome, 'nome'), phone: obrig(m.telefone, 'telefone'), cpf: obrig(m.cpf, 'CPF'),
+    birthDate: obrig(m.data_nascimento, 'data de nascimento'), cnhNumber: obrig(m.cnh_numero, 'número da CNH'),
+    cnhCategory: obrig(m.cnh_categoria, 'categoria da CNH'), cnhExpiresAt: obrig(m.cnh_validade, 'validade da CNH'),
+    vehicle: { plate: obrig(m.placa, 'placa'), brand: obrig(m.veiculo_marca, 'marca do veículo'), model: obrig(m.veiculo_modelo, 'modelo do veículo'), year: ano, color: obrig(m.veiculo_cor, 'cor do veículo') },
+    aprovar: true,
+  };
+  if (String(m.email || '').trim()) payload.email = m.email.trim();
+  if (String(m.cidade || '').trim()) payload.praca = m.cidade.trim();
+  if (faltando.length) return fail(res, 422, 'incompleto', 'Faltam dados para enviar: ' + faltando.join(', ') + '.');
+  const base = String(process.env.CENTRAL_API_URL || '').replace(/\/+$/, '');
+  const token = process.env.CRM_INTEGRACAO_TOKEN || '';
+  if (!base || !token) return fail(res, 500, 'config', 'Integração com a Central não configurada.');
+  let r; let txt;
+  try {
+    r = await fetch(`${base}/integracao/motoristas`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-integracao-token': token }, body: JSON.stringify(payload) });
+    txt = await r.text();
+  } catch (e) { return fail(res, 502, 'sem_resposta', 'Não consegui falar com a Central: ' + e.message); }
+  let data = {}; try { data = JSON.parse(txt); } catch (e) { /* texto cru */ }
+  if (!r.ok) {
+    const msg = (data.error && data.error.message) || 'A Central recusou o envio.';
+    const campos = data.error && Array.isArray(data.error.details) ? ' (' + data.error.details.map((d) => d.path).join(', ') + ')' : '';
+    audit(req, 'enviar_central', 'motoristas', id, `Falha ao enviar para a Central: ${msg}`);
+    return fail(res, 502, 'central_recusou', msg + campos);
+  }
+  db.prepare('UPDATE motoristas SET updated_at = ? WHERE id = ?').run(nowISO(), id);
+  audit(req, 'enviar_central', 'motoristas', id, 'Motorista enviado e criado na Central');
+  res.json({ ok: true });
+});
+
 if (hasOwn(ENTITIES, 'entregadores')) router.post('/entregadores/:id/contratar', contratar('entregadores', 'Entregador'));
 
 // Comércio parceiro (Etapa 2, M3): marcar como "Ativo na plataforma" (já pedindo entregas) é manual, datado e com confirmação.

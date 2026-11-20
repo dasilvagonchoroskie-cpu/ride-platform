@@ -256,6 +256,7 @@ export async function renderEntity(view, state, key, params) {
 
     const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
     const podeContratar = ehCondutor && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
+    const podeEnviarCentral = key === 'motoristas' && state.user && state.user.role === 'admin';
     const podeAtivar = key === 'comercios' && item.situacao !== 'Ativo na plataforma' && item.situacao !== 'Não concretizado';
     const ficha = (data.titular
       ? (data.titular.tipo === 'pessoa'
@@ -276,6 +277,7 @@ export async function renderEntity(view, state, key, params) {
         ${def.interactions ? `<button class="btn btn-ghost btn-sm" data-detail-hist>${ui.icon('headset', 15)} Registrar acompanhamento</button>` : ''}
         ${podeConfirmar ? `<button class="btn btn-gold btn-sm" data-detail-confirm>${ui.icon('check', 15)} Confirmar parceria</button>` : ''}
         ${podeContratar ? `<button class="btn btn-gold btn-sm" data-detail-contratar>${ui.icon('check', 15)} Marcar como contratado</button>` : ''}
+        ${podeEnviarCentral ? `<button class="btn btn-soft btn-sm" data-detail-central>${ui.icon('send', 15)} Enviar para a Central</button>` : ''}
         ${podeAtivar ? `<button class="btn btn-gold btn-sm" data-detail-ativar>${ui.icon('check', 15)} Marcar como ativo na plataforma</button>` : ''}
         <button class="btn btn-primary btn-sm" data-detail-edit>${ui.icon('edit', 15)} Editar</button>`
     });
@@ -322,6 +324,23 @@ export async function renderEntity(view, state, key, params) {
         m.close();
         loadList();
       } catch (err) { ui.toast(err.message, 'error'); }
+    });
+    const centralBtn = m.dialog.querySelector('[data-detail-central]');
+    if (centralBtn) centralBtn.addEventListener('click', async () => {
+      const ok = await ui.confirmDialog({
+        title: 'Enviar para a Central',
+        message: `“${item.nome}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado. Faça isso só depois de conferir tudo.`,
+        confirmLabel: 'Enviar para a Central',
+        requireCheck: 'Confirmo que conferi os dados e aprovo este motorista na plataforma.'
+      });
+      if (!ok) return;
+      centralBtn.disabled = true;
+      try {
+        await api.post(`/${key}/${item.id}/enviar-central`, { confirmo: true });
+        ui.toast('Motorista criado na Central. Avise ele para entrar no app com o e-mail.', 'success');
+        m.close();
+        loadList();
+      } catch (err) { centralBtn.disabled = false; ui.toast(err.message, 'error'); }
     });
 
     const ativarBtn = m.dialog.querySelector('[data-detail-ativar]');
