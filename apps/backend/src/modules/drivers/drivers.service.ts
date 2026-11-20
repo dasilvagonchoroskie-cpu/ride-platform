@@ -435,6 +435,21 @@ export class DriversService {
       });
       return criado;
     });
+    // Cadastro aprovado pela Central (documentos conferidos fora do app, ex.: WhatsApp/CRM):
+    // registra a conferencia presencial para que o motorista possa ficar online sem reenviar
+    // as fotos pelo aplicativo. A opcao de enviar pelo app continua existindo normalmente.
+    if (input.aprovar) {
+      await this.prisma.auditLog.create({
+        data: {
+          actorId: adminId,
+          actorRole: 'ADMIN',
+          action: APROVACAO_PRESENCIAL,
+          entity: 'Driver',
+          entityId: driver.id,
+          after: { conferencia: 'Documentos conferidos pela Central (cadastro direto/ponte)', origem: 'adminCreate' },
+        },
+      });
+    }
     this.logger.log(`Central ${adminId} cadastrou o motorista ${driver.id} (${existente ? 'conta existente' : 'conta nova'})`);
     return { ...(await this.withProgress(driver.id)), contaExistente: !!existente };
   }
