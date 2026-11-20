@@ -154,7 +154,7 @@ jobs:
           APK="${{ steps.apk.outputs.path }}"
           "$AAPT2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
           grep -q "application-label:'Fortaleza Move Comércio'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Nome no celular nao e 'Fortaleza Move Comércio'"; grep application-label "$RUNNER_TEMP/badging.txt" || true; exit 1; }
-          grep -q "package: name='br.com.fortalezamov.comercio'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Pacote inesperado"; grep '^package' "$RUNNER_TEMP/badging.txt" || true; exit 1; }
+          grep -q "package: name='br.com.fortalezadigitalsecurity.move.comercio'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Pacote inesperado"; grep '^package' "$RUNNER_TEMP/badging.txt" || true; exit 1; }
           grep -q "application-icon-" "$RUNNER_TEMP/badging.txt" || { echo "::error::APK sem icone"; exit 1; }
           echo "OK: nome, pacote e icone"
 
