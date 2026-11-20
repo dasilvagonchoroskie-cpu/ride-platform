@@ -30,7 +30,6 @@ class _MotoristasState extends State<Motoristas> {
   PainelApi get _api => Provider.of<PainelState>(context, listen: false).api;
 
   late final PainelState _painel;
-  String? _ultimoPendenteVisto;
 
   /// Modo "Selecionar para excluir" e quem esta marcado.
   bool _selecionando = false;
@@ -43,7 +42,6 @@ class _MotoristasState extends State<Motoristas> {
   void initState() {
     super.initState();
     _painel = Provider.of<PainelState>(context, listen: false);
-    _ultimoPendenteVisto = _painel.indicadores.ultimoPendente?.id;
     _painel.addListener(_cadastroNovo);
     _lista = _api.motoristas(_situacao);
   }
@@ -61,7 +59,6 @@ class _MotoristasState extends State<Motoristas> {
     // anterior na tela enquanto busca (sem piscar). Assim motorista novo — inclusive ja
     // aprovado — aparece sozinho em poucos segundos, sem precisar reabrir ou puxar.
     if (!mounted || _selecionando) return;
-    _ultimoPendenteVisto = _painel.indicadores.ultimoPendente?.id;
     _recarregar();
   }
 
