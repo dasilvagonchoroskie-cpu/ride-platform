@@ -48,6 +48,28 @@ export class IntegracaoController {
     return criado;
   }
 
+  @Post('motoristas/atualizar')
+  @ApiOperation({ summary: 'Atualiza o motorista que ja existe na Central (CNH, validade, veiculo) vindo do CRM' })
+  async atualizarMotorista(
+    @Body(new ZodValidationPipe(criarMotoristaSchema)) body: CriarMotoristaInput,
+  ) {
+    const admin = await this.prisma.user.findFirst({
+      where: { role: UserRole.ADMIN },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (!admin) {
+      throw BusinessException.validation('Nenhum administrador na Central para registrar a atualizacao.');
+    }
+    const praca = body.praca ? (await this.pracas.buscar(body.praca))?.id : null;
+    const { praca: _praca, ...dados } = body;
+    const r = await this.drivers.adminAtualizarDoCrm(admin.id, dados as CriarMotoristaInput);
+    const u = await this.prisma.user.findUnique({ where: { phone: body.phone }, select: { id: true } });
+    if (u && praca) await this.pracas.definirPracaDoMotorista(u.id, praca);
+    this.pracas.esquecerMotoristas();
+    return r;
+  }
+
   @Get('pracas')
   @ApiOperation({ summary: 'Lista as cidades abertas na Central (para o CRM direcionar o motorista)' })
   async listarPracas() {

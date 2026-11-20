@@ -1,8 +1,10 @@
 import { abrirJornada, fecharJornada } from '../painel-motorista/jornada';
 import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira';
 import { Injectable, Logger } from '@nestjs/common';
-import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus } from '@ride/shared';
+import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus, normalizePlate } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '@prisma/client';
+import { VehiclesService } from '../vehicles/vehicles.service';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
 import { PracasService } from '../pracas/pracas.service';
 import { CATEGORIA_UTILITARIO, lerCategorias } from '../rides/categorias';
@@ -36,6 +38,7 @@ export class DriversService {
     private readonly notifications: NotificationService,
     private readonly pracas: PracasService,
     private readonly caixa: CaixaDeEntradaService,
+    private readonly vehicles: VehiclesService,
   ) {}
 
   /** Onboarding do motorista: cria o registro e a carteira virtual. */
@@ -457,6 +460,150 @@ export class DriversService {
     }
     this.logger.log(`Central ${adminId} cadastrou o motorista ${driver.id} (${existente ? 'conta existente' : 'conta nova'})`);
     return { ...(await this.withProgress(driver.id)), contaExistente: !!existente };
+  }
+
+  /**
+   * Atualiza um motorista que JA existe na Central, a partir do CRM (depois
+   * da aprovacao do dono). Acha pela CNH, CPF, e-mail ou telefone. Atualiza
+   * dados pessoais, CNH e validade, re-registra a conferencia presencial e
+   * cuida do veiculo: corrige o carro da mesma placa ou, se a placa mudou
+   * (trocou de carro), cadastra o novo e passa a usa-lo.
+   */
+  async adminAtualizarDoCrm(adminId: string, input: CriarMotoristaInput) {
+    const alvo = await this.acharMotoristaParaAtualizar({
+      phone: input.phone,
+      email: input.email,
+      cpf: input.cpf,
+      cnhNumber: input.cnhNumber,
+    });
+    if (!alvo) {
+      throw BusinessException.notFound(
+        'Nao achei esse motorista na Central para atualizar. Use "Enviar para a Central" para cadastrar.',
+      );
+    }
+    await this.conferirSemConflito(alvo.userId, alvo.id, input);
+
+    const agora = new Date();
+    const nome = input.name.replace(/\s+/g, ' ').trim();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: alvo.userId },
+        data: {
+          name: nome,
+          cpf: input.cpf,
+          birthDate: input.birthDate,
+          ...(input.email ? { email: input.email.trim().toLowerCase() } : {}),
+        },
+      });
+      await tx.driver.update({
+        where: { id: alvo.id },
+        data: {
+          cpf: input.cpf,
+          birthDate: input.birthDate,
+          cnhNumber: input.cnhNumber,
+          cnhCategory: input.cnhCategory,
+          cnhExpiresAt: input.cnhExpiresAt,
+          ...(input.aprovar
+            ? { status: DriverStatus.APPROVED, approvedAt: agora, approvedBy: adminId, rejectionReason: null }
+            : {}),
+        },
+      });
+    });
+
+    await this.cuidarDoVeiculoNaAtualizacao(alvo.id, adminId, input.vehicle);
+
+    if (input.aprovar) {
+      await this.prisma.auditLog.create({
+        data: {
+          actorId: adminId,
+          actorRole: 'ADMIN',
+          action: APROVACAO_PRESENCIAL,
+          entity: 'Driver',
+          entityId: alvo.id,
+          after: { conferencia: 'Atualizacao conferida pela Central (ponte CRM)', origem: 'adminAtualizarDoCrm' },
+        },
+      });
+    }
+    this.logger.log(`Central ${adminId} atualizou o motorista ${alvo.id} (ponte CRM)`);
+    return { ...(await this.withProgress(alvo.id)), atualizado: true };
+  }
+
+  /** Acha o motorista ja cadastrado na Central pela CNH, CPF, e-mail ou telefone. */
+  private async acharMotoristaParaAtualizar(d: {
+    phone?: string | null;
+    email?: string | null;
+    cpf?: string | null;
+    cnhNumber?: string | null;
+  }): Promise<{ id: string; userId: string } | null> {
+    const ou: Prisma.UserWhereInput[] = [];
+    if (d.cnhNumber) ou.push({ driver: { cnhNumber: d.cnhNumber } });
+    if (d.cpf) ou.push({ cpf: d.cpf }, { driver: { cpf: d.cpf } });
+    if (d.email) ou.push({ email: d.email.trim().toLowerCase() });
+    if (d.phone) ou.push({ phone: d.phone });
+    if (ou.length === 0) return null;
+    const u = await this.prisma.user.findFirst({
+      where: {
+        status: { not: UserStatus.DELETED },
+        role: { not: UserRole.ADMIN },
+        driver: { isNot: null },
+        OR: ou,
+      },
+      select: { id: true, driver: { select: { id: true } } },
+    });
+    if (!u?.driver) return null;
+    return { id: u.driver.id, userId: u.id };
+  }
+
+  /** E-mail, CPF ou CNH que ja sejam de OUTRA conta barram a atualizacao. */
+  private async conferirSemConflito(userId: string, driverId: string, input: CriarMotoristaInput) {
+    if (input.email) {
+      const email = input.email.trim().toLowerCase();
+      const dono = await this.prisma.user.findFirst({
+        where: { email, status: { not: UserStatus.DELETED }, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (dono) throw BusinessException.conflict('Este e-mail ja e de outra conta na Central.', ERROR_CODES.CONTA_EXISTENTE);
+    }
+    const outroCpf = input.cpf
+      ? await this.prisma.user.findFirst({
+          where: {
+            status: { not: UserStatus.DELETED },
+            NOT: { id: userId },
+            OR: [{ cpf: input.cpf }, { driver: { cpf: input.cpf } }],
+          },
+          select: { id: true },
+        })
+      : null;
+    if (outroCpf) throw BusinessException.conflict('Este CPF ja e de outro cadastro na Central.', ERROR_CODES.CONTA_EXISTENTE);
+    const outraCnh = input.cnhNumber
+      ? await this.prisma.driver.findFirst({ where: { cnhNumber: input.cnhNumber, NOT: { id: driverId } }, select: { id: true } })
+      : null;
+    if (outraCnh) throw BusinessException.conflict('Esta CNH ja e de outro motorista na Central.', ERROR_CODES.CONTA_EXISTENTE);
+  }
+
+  /** Corrige o carro da mesma placa ou cadastra o novo e passa a usa-lo (trocou de carro). */
+  private async cuidarDoVeiculoNaAtualizacao(driverId: string, adminId: string, vehicle: CriarMotoristaInput['vehicle']) {
+    const placa = normalizePlate(vehicle.plate);
+    const existente = await this.prisma.vehicle.findUnique({ where: { plate: placa } });
+    if (existente && existente.driverId === driverId) {
+      await this.vehicles.adminEditar(existente.id, {
+        brand: vehicle.brand,
+        model: vehicle.model,
+        year: vehicle.year,
+        color: vehicle.color,
+        ...(vehicle.categoria ? { categoria: vehicle.categoria } : {}),
+      });
+      return;
+    }
+    if (existente && existente.driverId !== driverId) {
+      throw BusinessException.conflict('Esta placa ja esta cadastrada para outro motorista.', ERROR_CODES.VEHICLE_PLATE_ALREADY_USED);
+    }
+    const novo = await this.vehicles.adminCriar(driverId, adminId, vehicle);
+    try {
+      if (novo?.id) await this.vehicles.adminUsar(novo.id);
+    } catch (e) {
+      this.logger.warn(`Carro novo ${placa} cadastrado, mas nao virou o em uso agora: ${(e as Error).message}`);
+    }
   }
 
   /** Aprova, reprova ou suspende o motorista. */
