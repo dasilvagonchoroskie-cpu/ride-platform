@@ -11,8 +11,12 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 **Como a Central funciona (investigado 20/11):** backend `fm-api` (apps/backend, NestJS + Prisma/Postgres), porta 3333, no mesmo VPS. Endpoint pronto: `POST /admin/drivers` (@Roles ADMIN) — cria **User (login) + Driver + Vehicle, já aprovado** (`aprovar:true` por padrão). Login do motorista é por **e-mail + OTP** (`/auth/otp/request` + `/auth/otp/verify`) e tem passo de criar senha. Campos exigidos pelo endpoint: name, phone (+55), email(opcional), cpf, birthDate, cnhNumber(11), cnhCategory(enum), cnhExpiresAt, pixKey(opcional), vehicle{plate,brand,model,year,color}, praca(cidade), aprovar.
 
 **Decisões aprovadas pelo dono:**
-- Autenticação do CRM na Central: criar uma **chave de integração própria** na Central (não usar login de admin).
-- Gatilho: **botão "Enviar para a Central"** primeiro (testar), automático-na-aprovação depois.
+- Autenticação do CRM na Central: **chave de integração própria** na Central (não usa login de admin).
+- Gatilho: **SEMPRE MANUAL** (decisão do dono, 20/11). O cadastro só vai para a Central quando o dono aprovar no CRM
+  (situação "Aprovado") e clicar em "Enviar para a Central". **Não haverá disparo automático** — nunca vai sem decisão humana.
+- Cidade de atuação: na hora de enviar, o CRM **mostra a lista de cidades abertas na Central** e o dono **escolhe** para
+  qual cidade o motorista vai. A cidade do comprovante de residência é **pré-selecionada** como sugestão, mas quem decide é o dono.
+  Assim acompanha as cidades que o dono abre na Central ("adicionar cidade") sem mexer em código.
 - Fotos dos documentos: começar **só com os dados**; fotos ficam no CRM.
 - E-mail: a IA pede o e-mail do motorista junto com os documentos e guarda no campo `email`.
 
@@ -21,10 +25,10 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 **PRÓXIMOS PASSOS (fazer com o dono acordado):**
 1. [x] 20/11 Extração **server-side segura** de CPF, número da CNH e **RG** (commit 05c2aba): lidos do texto completo do documento no servidor, gravados direto no cadastro do motorista vinculado; NUNCA vão para a IA (Gemini só vê o texto mascarado) nem para logs. CPF validado pelo dígito verificador.
 2. [x] 20/11 Chave de integração no fm-api: endpoint `POST /api/integracao/motoristas` protegido por `CRM_INTEGRACAO_TOKEN` (header `x-integracao-token`), @Public ao login, cria o motorista APROVADO (commit 1a2df94). Testado: sem chave=401, com chave cria 201.
-3. [ ] Confirmar o **código da praça/cidade** de Goiatuba na Central (hoje o envio vai sem praça; o motorista é criado e a praça pode ser definida depois).
+3. [x] 20/11 Cidade/praça resolvida: Goiatuba já existe como **cidade padrão** na Central (código `goiatuba`). Endpoint `GET /api/integracao/pracas` lista as cidades abertas; no envio o CRM mostra a lista e o dono escolhe (pré-seleciona a cidade de residência). Commit fm-api 083fa74 / CRM 7db4313.
 4. [x] 20/11 Botão **"Enviar para a Central"** no CRM (ficha do motorista, só admin, com confirmação) → `POST /motoristas/:id/enviar-central` → chama a Central via `CENTRAL_API_URL` (http://fm-api:3333/api). Commit 894c7a5.
 5. [x] 20/11 Testado de ponta a ponta com dados FICTÍCIOS (CRM→fm-api): criou motorista APROVADO (HTTP 201) e o teste foi apagado. Dedup de CPF/CNH/e-mail funciona (409).
-6. [ ] Depois: disparo automático na aprovação + **backfill** dos já aprovados.
+6. [x] 20/11 Disparo automático **DESCARTADO** por decisão do dono — fica sempre manual (aprovar + enviar). Falta ainda: **backfill** dos já aprovados (quando houver).
 7. [ ] Avisar o motorista (mensagem) com as instruções de login por e-mail.
 
 ## 0. Publicação 2.1.0-rc.1 (13/11/2026, feita no Render; hoje o CRM roda no VPS)
