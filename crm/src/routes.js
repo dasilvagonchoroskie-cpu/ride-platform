@@ -714,7 +714,8 @@ router.get('/meta', (req, res) => {
     motoristas: db.prepare("SELECT COUNT(*) c FROM motoristas WHERE situacao NOT IN ('Aprovado','Contratado','Não prosseguiu')").get().c,
     passageiros: db.prepare("SELECT COUNT(*) c FROM passageiros WHERE situacao NOT IN ('Usuário cadastrado','Não prosseguiu')").get().c,
     parceiros: db.prepare("SELECT COUNT(*) c FROM parceiros WHERE situacao NOT IN ('Parceria confirmada','Não concretizada')").get().c,
-    wa: wa.store.contarNaoLidas()
+    wa: wa.store.contarNaoLidas(),
+    wa_aguardando: wa.store.contarPorAtendimento().aguardando
   };
   if (hasOwn(ENTITIES, 'comercios')) pendentes.comercios = db.prepare("SELECT COUNT(*) c FROM comercios WHERE situacao NOT IN ('Ativo na plataforma','Não concretizado')").get().c;
   if (candidaturas.ativo()) pendentes.candidaturas = db.prepare("SELECT COUNT(*) c FROM candidaturas WHERE etapa NOT IN ('aprovado','recusado')").get().c;

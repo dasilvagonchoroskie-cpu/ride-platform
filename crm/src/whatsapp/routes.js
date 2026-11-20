@@ -50,6 +50,9 @@ function registrar(router, { service, fail, audit, requireAdmin, ENTITIES, entit
   });
 
   /* ------------------------------- conversas ------------------------------ */
+  // Contagem leve por estado (para o contador do menu). Qualquer usuário logado.
+  router.get('/wa/contagem', (req, res) => { res.json(store.contarPorAtendimento()); });
+
   router.get('/wa/conversas', (req, res) => {
     const r = store.listarConversas({
       situacao: req.query.situacao, atendimento: req.query.atendimento, naoLidas: req.query.nao_lidas === '1', pessoal: req.query.pessoal === '1', q: req.query.q,

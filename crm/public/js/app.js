@@ -501,7 +501,8 @@ async function enterApp() {
         <nav class="bottom-nav" id="bottom-nav">
           ${(ehAvaliador ? ['candidatos'] : ['dashboard', 'conversas', 'motoristas', 'tarefas']).map((key) => {
             const item = NAV.find((n) => n.key === key);
-            return `<button class="bn-item" data-route="${key}">${ui.icon(item.icon, 20)}<span>${ui.esc(item.label.split(' ')[0])}</span></button>`;
+            const bc = key === 'conversas' ? (state.meta.pendentes.wa_aguardando || 0) : 0;
+            return `<button class="bn-item" data-route="${key}">${ui.icon(item.icon, 20)}<span>${ui.esc(item.label.split(' ')[0])}</span>${bc ? `<span class="bn-badge">${bc > 99 ? '99+' : bc}</span>` : ''}</button>`;
           }).join('')}
         </nav>
       </div>
@@ -524,7 +525,7 @@ async function enterApp() {
   window.addEventListener('hashchange', route);
   await route();
   // Avisos de conversas e push são da equipe (o avaliador não acessa o WhatsApp).
-  if (!ehAvaliador) { iniciarAvisos(); sincronizarPush(); }
+  if (!ehAvaliador) { iniciarAvisos(); sincronizarPush(); iniciarBadgeConversas(); }
   // Lembrete só quando dá para ativar a verificação por e-mail (envio configurado) e ela ainda está desligada.
   if (state.user && state.user.role === 'admin') {
     api.get('/auth/2fa').then((st) => {
@@ -535,6 +536,22 @@ async function enterApp() {
 
 function initials(name) {
   return String(name || 'FM').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+}
+
+let badgeTimer = null;
+// Contador de conversas aguardando atendimento no menu do rodapé (atualiza sozinho).
+function atualizarBadgeConversas(n) {
+  if (state.meta && state.meta.pendentes) state.meta.pendentes.wa_aguardando = n;
+  const btn = document.querySelector('.bn-item[data-route="conversas"]');
+  if (!btn) return;
+  const ex = btn.querySelector('.bn-badge');
+  if (ex) ex.remove();
+  if (n > 0) btn.insertAdjacentHTML('beforeend', `<span class="bn-badge">${n > 99 ? '99+' : n}</span>`);
+}
+function iniciarBadgeConversas() {
+  const tick = () => api.get('/wa/contagem').then((c) => atualizarBadgeConversas(c.aguardando || 0)).catch(() => {});
+  tick();
+  if (!badgeTimer) badgeTimer = setInterval(() => { if (!document.hidden) tick(); }, 10000);
 }
 
 function paintBadges() {
@@ -552,6 +569,8 @@ function paintBadges() {
 async function logout() {
   try { await api.post('/auth/logout'); } catch (err) { /* ignore */ }
   pararAvisos();
+  if (badgeTimer) clearInterval(badgeTimer);
+  badgeTimer = null;
   state.user = null;
   state.meta = null;
   history.replaceState(null, '', '/');
