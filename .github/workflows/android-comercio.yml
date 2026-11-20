@@ -166,7 +166,7 @@ jobs:
           set -euo pipefail
           B="$RUNNER_TEMP/badging.txt"
           # 13/11/2026 (pedido do dono): o Comercio pede as mesmas autorizacoes dos outros apps (notificacoes, localizacao) e vibra no alarme.
-          PERMITIDAS="android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE android.permission.ACCESS_FINE_LOCATION android.permission.ACCESS_COARSE_LOCATION android.permission.POST_NOTIFICATIONS android.permission.VIBRATE br.com.fortalezamov.comercio.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+          PERMITIDAS="android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE android.permission.ACCESS_FINE_LOCATION android.permission.ACCESS_COARSE_LOCATION android.permission.POST_NOTIFICATIONS android.permission.VIBRATE br.com.fortalezadigitalsecurity.move.comercio.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
           for P in $(grep -o "^uses-permission: name='[^']*'" "$B" | sed "s/.*name='//; s/'$//"); do
             case " $PERMITIDAS " in *" $P "*) ;; *) echo "::error::Permissao nao prevista no app: $P"; exit 1;; esac
           done
