@@ -1,2 +1,4 @@
-Conferir o servidor - 20/11/2026 21:23 UTC - commit a84babb
-RESULTADO: servidor montado sem erro.
+Conferir o servidor - 20/11/2026 22:11 UTC - commit 969d53d
+[96msrc/modules/drivers/drivers.service.ts[0m:[93m601[0m:[93m68[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ model: string; plate: string; brand: string; year: number; color: string; categoria?: string | undefined; }' is not assignable to parameter of type '{ plate: string; brand: string; model: string; year: number; color: string; isActive: boolean; categoria?: string | undefined; }'.
+Found 1 error(s).
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @ride/backend@0.1.0 build: `nest build`
