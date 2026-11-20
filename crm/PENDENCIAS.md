@@ -19,7 +19,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 **FEITO (20/11, commit 0d61470):** campos novos no cadastro de motorista do CRM (email, cpf, data_nascimento, cnh_numero, veiculo_marca/modelo/ano/cor) — colunas criadas no banco. IA preenche sozinha email, data_nascimento e veículo estruturado (marca/modelo/ano/cor) e **pede o e-mail**. CPF e número da CNH NÃO entram na IA (são mascarados de propósito).
 
 **PRÓXIMOS PASSOS (fazer com o dono acordado):**
-1. [ ] Extração **server-side segura** de CPF e número da CNH (hoje mascarados da IA) para os campos `cpf`/`cnh_numero`, sem expor à IA/logs. Delicado (números completos de documento).
+1. [x] 20/11 Extração **server-side segura** de CPF, número da CNH e **RG** (commit 05c2aba): lidos do texto completo do documento no servidor, gravados direto no cadastro do motorista vinculado; NUNCA vão para a IA (Gemini só vê o texto mascarado) nem para logs. CPF validado pelo dígito verificador.
 2. [ ] Criar a **chave de integração** no fm-api (auth máquina-a-máquina) para o CRM chamar `POST /admin/drivers`.
 3. [ ] Confirmar o **código da praça/cidade** de Goiatuba na Central.
 4. [ ] Botão **"Enviar para a Central"** no CRM (monta o payload e chama o endpoint). Mapa: nome→name, email→email, telefone→phone, cpf→cpf, data_nascimento→birthDate, cnh_numero→cnhNumber, cnh_categoria→cnhCategory, cnh_validade→cnhExpiresAt, veiculo_marca/modelo/ano/cor+placa→vehicle, aprovar:true.
