@@ -68,6 +68,18 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
     res.json({ modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes(), informacoes_situacao: ia.central.situacaoInformacoes() });
   });
 
+  router.get('/ia/aprendizado', requireAdmin, (req, res) => {
+    res.json(ia.aprendizado.listar());
+  });
+
+  router.post('/ia/aprendizado/:id', requireAdmin, (req, res) => {
+    const b = req.body || {};
+    const r = ia.aprendizado.decidir(req.params.id, { acao: b.acao, pergunta: b.pergunta, resposta: b.resposta, usuarioId: req.user.id });
+    if (r.erro) return fail(res, r.status || 422, 'invalid', r.erro);
+    audit(req, 'ia_aprendizado', 'ia', Number(req.params.id) || null, `Resposta aprendida: ${b.acao}`);
+    res.json({ ok: true, ...ia.aprendizado.listar() });
+  });
+
   router.put('/ia/modelos', requireAdmin, (req, res) => {
     const b = req.body || {};
     try {

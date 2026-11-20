@@ -35,6 +35,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
   const travas = new Set();
   const respondendo = new Set();
   const central = C.criarCentral({ getSetting, setSetting });
+  const aprendizado = require('./aprendizado').criarAprendizado(db);
   const timers = new Map();
   const ackTimers = new Map();
   // Áudios/mídias que ainda estão sendo lidos (a IA espera a leitura antes de decidir; a varredura não atropela).
@@ -667,6 +668,12 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const transferir = (motivo, partes) => {
       const rotulo = C.MOTIVOS_TRANSFERENCIA[motivo] || C.MOTIVOS_TRANSFERENCIA.sem_informacao;
       waStore.mudarAtendimento(conversaId, 'aguardando', { motivo: rotulo });
+      // Respostas aprendidas: a IA não soube → guarda a pergunta para o dono ensinar depois.
+      if (motivo === 'sem_informacao') {
+        const q = ultimaDoCliente(conversaId);
+        const pergunta = q && q.texto ? String(q.texto).replace(/^\[[^\]]{1,40}\]\s*/, '').trim() : '';
+        if (pergunta) { try { aprendizado.registrarLacuna({ conversaId, contatoId: conv.contato_id, pergunta }); } catch (e) { /* não atrapalha o atendimento */ } }
+      }
       audit(reqIA(), 'wa_transferir', 'wa_conversas', conversaId, `IA transferiu para atendimento humano: ${rotulo}`);
       const r = enviar([...partes, central.texto('transferencia')], { tipo: 'transferência', transferida: motivo });
       return r.enviada ? r : { ...r, transferida: motivo };
@@ -780,7 +787,8 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const doAtendimento = msgs.filter((m) => String(m.created_at || '') >= inicio);
     const { system, user } = P.montarPromptResposta({
       mensagens: doAtendimento.length ? doAtendimento : msgs.slice(-1), perfil: a.resultado.perfil, faltando, assunto,
-      informacoes: central.informacoes(), jaSaudou: jaSaudou || partes.length > 0, confirmacaoEnviada: !!confirmaInfo
+      informacoes: central.informacoes(), jaSaudou: jaSaudou || partes.length > 0, confirmacaoEnviada: !!confirmaInfo,
+      aprendidas: aprendizado.ativas()
     });
     let r;
     try {
@@ -792,7 +800,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     if (r.transferir) return transferir(r.motivo, partes);
     if (!r.texto) return partes.length ? enviar(partes, { tipo: 'saudação' }) : { motivo: 'sem_resposta' };
     const publicos = [...msgs.map((m) => m.texto), ...central.modelos().map((m) => m.texto), ...Object.values(central.informacoes() || {}),
-      ...Object.values(C.ASSUNTOS).map((x) => x.nome)];
+      ...aprendizado.ativas().flatMap((x) => [x.pergunta, x.resposta]), ...Object.values(C.ASSUNTOS).map((x) => x.nome)];
     const filtro = P.respostaSegura(r.texto, { internos, publicos });
     if (!filtro.ok) {
       const motivo = `filtro_${filtro.motivo}`;
@@ -899,7 +907,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
 
   const usarProvedor = (novo) => { provedor = novo; };
 
-  return { central, encerrarInativas, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
+  return { central, aprendizado, encerrarInativas, obterModelo, config, salvarConfig, analisar, ultimaAnalise, aplicar, agendarAutomatico, executarAutomatico, responderAutomatico, testar, usarProvedor, usoDoDia, resolverProvedor, provedorAtual,
     recuperarPendentes, iniciarRecuperacao, pararRecuperacao, reprocessar, registrarChegada, enviarConfirmacao, marcarLeitura, definirRecebidos };
 }
 

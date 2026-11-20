@@ -12,7 +12,7 @@ const SECOES_CFG = [
   { id: 'usuarios', nome: 'Usuários', desc: 'Quem acessa o CRM', icone: 'users', h3: ['Usuários com acesso'] },
   { id: 'whatsapp', nome: 'WhatsApp', desc: 'Número conectado ao CRM', icone: 'phone', h3: ['WhatsApp de suporte'] },
   { id: 'ia', nome: 'Inteligência (IA)', desc: 'Provedor, chave e modo', icone: 'chat', h3: ['Inteligência (IA)'] },
-  { id: 'central', nome: 'Central de atendimento', desc: 'Menu, mensagens e informações', icone: 'headset', h3: ['Modelos de Comunicação da IA'] },
+  { id: 'central', nome: 'Central de atendimento', desc: 'Menu, mensagens e informações', icone: 'headset', h3: ['Modelos de Comunicação da IA', 'Respostas aprendidas'] },
   { id: 'auditoria', nome: 'Auditoria', desc: 'Últimas operações', icone: 'list', h3: ['Trilha de auditoria'] },
   { id: 'sobre', nome: 'Sobre', desc: 'Versão e informações', icone: 'file', h3: ['Sobre o sistema'] }
 ];
@@ -205,6 +205,10 @@ export async function renderSettings(view, state) {
           <div class="card-head"><div><h3>Modelos de Comunicação da IA</h3><p class="sub">Textos fixos da Central de Atendimento e informações oficiais que a IA pode usar</p></div></div>
           <div class="card-body" id="modelos-corpo">Carregando…</div>
         </div>
+        <div class="card" id="aprendizado-card">
+          <div class="card-head"><div><h3>Respostas aprendidas</h3><p class="sub">Perguntas que a IA não soube responder. Você aprova a resposta e a IA passa a responder sozinha.</p></div></div>
+          <div class="card-body" id="aprendizado-corpo">Carregando…</div>
+        </div>
       </div>` : ''}
 
       <div class="stack">
@@ -277,6 +281,7 @@ export async function renderSettings(view, state) {
   if (isAdmin) setupWhatsapp(view);
   if (isAdmin) setupIA(view);
   if (isAdmin) setupModelos(view);
+  if (isAdmin) setupAprendizado(view);
   if (isAdmin) view.querySelector('#cfg-save').addEventListener('click', async () => {
     try {
       await api.patch('/settings', {
@@ -662,6 +667,54 @@ function setupModelos(view) {
         await api.put('/ia/modelos', { modelos, site_url: corpo.querySelector('#mod-site').value.trim(), informacoes });
         ui.toast('Modelos salvos.', 'success');
       } catch (e) { erro.hidden = false; erro.textContent = e.message; }
+    });
+  }
+  desenhar();
+}
+
+function setupAprendizado(view) {
+  const corpo = view.querySelector('#aprendizado-corpo');
+  if (!corpo) return;
+  async function desenhar() {
+    let d;
+    try { d = await api.get('/ia/aprendizado'); } catch (e) { corpo.textContent = e.message; return; }
+    const pend = d.pendentes || [];
+    const ativ = d.ativas || [];
+    corpo.innerHTML = `
+      <p class="muted small">Quando a IA não sabe responder, a pergunta aparece aqui. Escreva (ou ajuste) a resposta e toque em <b>Aprovar</b>: a IA passa a responder sozinha quando perguntarem algo parecido. Nada entra sem você aprovar.</p>
+      <h4 style="margin:14px 0 4px">Para aprovar ${pend.length ? `<span class="badge success">${pend.length}</span>` : ''}</h4>
+      ${pend.length ? pend.map((r) => `<div class="field apr-item" data-id="${r.id}">
+          <label>Pergunta do cliente</label>
+          <p class="apr-perg">${ui.esc(r.pergunta)}</p>
+          <label for="apr-r-${r.id}">Resposta que a IA deve dar</label>
+          <textarea id="apr-r-${r.id}" class="apr-resp" rows="3" maxlength="2000" placeholder="Escreva a resposta…">${ui.esc(r.resposta || '')}</textarea>
+          <div class="row" style="gap:8px;margin-top:6px">
+            <button class="btn btn-sm btn-primary apr-aprovar" type="button">Aprovar</button>
+            <button class="btn btn-sm btn-ghost apr-descartar" type="button">Descartar</button>
+          </div>
+        </div>`).join('') : '<p class="muted small">Nenhuma pergunta pendente. 👍</p>'}
+      <h4 style="margin:18px 0 4px">Respostas ativas ${ativ.length ? `(${ativ.length})` : ''}</h4>
+      ${ativ.length ? ativ.map((r) => `<div class="field apr-item apr-ativa" data-id="${r.id}">
+          <p class="apr-perg">${ui.esc(r.pergunta)}</p>
+          <textarea class="apr-resp" rows="2" maxlength="2000">${ui.esc(r.resposta)}</textarea>
+          <div class="row" style="gap:8px;margin-top:6px">
+            <button class="btn btn-sm btn-soft apr-salvar" type="button">Salvar</button>
+            <button class="btn btn-sm btn-ghost apr-desativar" type="button">Desativar</button>
+          </div>
+        </div>`).join('') : '<p class="muted small">Ainda não há respostas ativas.</p>'}`;
+    const executar = async (id, payload, msg) => {
+      try { await api.post(`/ia/aprendizado/${id}`, payload); ui.toast(msg, 'success'); desenhar(); }
+      catch (e) { ui.toast(e.message, 'error'); }
+    };
+    corpo.querySelectorAll('.apr-item').forEach((item) => {
+      const id = item.dataset.id;
+      const resp = () => item.querySelector('.apr-resp').value;
+      const perg = () => item.querySelector('.apr-perg').textContent;
+      const b = (sel) => item.querySelector(sel);
+      if (b('.apr-aprovar')) b('.apr-aprovar').addEventListener('click', () => executar(id, { acao: 'aprovar', pergunta: perg(), resposta: resp() }, 'Aprovada: a IA já pode usar essa resposta.'));
+      if (b('.apr-descartar')) b('.apr-descartar').addEventListener('click', () => executar(id, { acao: 'descartar' }, 'Pergunta descartada.'));
+      if (b('.apr-salvar')) b('.apr-salvar').addEventListener('click', () => executar(id, { acao: 'aprovar', pergunta: perg(), resposta: resp() }, 'Resposta atualizada.'));
+      if (b('.apr-desativar')) b('.apr-desativar').addEventListener('click', () => executar(id, { acao: 'desativar' }, 'Resposta desativada.'));
     });
   }
   desenhar();

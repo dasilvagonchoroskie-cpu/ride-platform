@@ -212,6 +212,7 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 - [x] 19/11 Botão direto "Pessoal" / "Comercial" na faixa do atendimento (ao lado de Devolver/Concluir). Cache `fm-crm-v45`.
 - [x] 19/11 Foto de perfil não some mais ao abrir/atualizar o app: `/meta` e `/auth/status` passam a trazer a versão da foto.
 - [x] 19/11 Menu do chat: a IA manda o menu quando pedem em frase ("me manda o menu", "quais as opções de atendimento", "tem um menu?"), não só com a palavra exata. Cache `fm-crm-v46`.
+- [x] 19/11 Respostas aprendidas: quando a IA transfere por falta de informação, guarda a pergunta; em Configurações > Central de atendimento, o dono vê a dupla (pergunta + sugestão de resposta da equipe), ajusta e aprova. Aprovadas entram no prompt (`respostas_prontas`) e a IA responde sozinha perguntas parecidas. Tabela `ia_aprendizado`. Cache `fm-crm-v47`.
 - [ ] 20 testes já falhavam antes de 19/11 no ambiente de teste do VPS (arquivo digital, e-mail, `urlBaseValida`): conferir
       se são só de ambiente.
 

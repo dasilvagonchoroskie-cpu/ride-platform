@@ -827,6 +827,8 @@ span.avatar { display: inline-grid; }
 .wa-sheet-item.perigo svg { color: var(--red); }
 .wa-tag.pessoal { color: #7c2d12; background: #ffedd5; font-weight: 600; }
 .wa-bt-pessoal { color: #9a3412; background: #ffedd5; }
+.apr-item { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+.apr-perg { background: var(--bg); border-radius: 8px; padding: 8px 10px; margin: 2px 0 8px; font-weight: 600; color: var(--text); white-space: pre-wrap; }
 .wa-tipo { align-items: flex-start; text-align: left; border: 1px solid var(--border, #e2e8f0); }
 .wa-tipo + .wa-tipo { margin-top: 6px; }
 .wa-tipo.marcado { border-color: var(--royal-600); background: var(--royal-100); }
