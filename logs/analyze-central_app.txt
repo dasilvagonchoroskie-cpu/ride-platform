@@ -1,5 +1,2 @@
 Analyzing central_app...                                        
-
-warning • The value of the field '_ultimoPendenteVisto' isn't used. Try removing the field, or using it • lib/painel/motoristas.dart:33:11 • unused_field
-
-1 issue found. (ran in 7.3s)
+No issues found! (ran in 9.3s)
