@@ -14,7 +14,7 @@ const MOTIVOS_TRANSF = Object.keys(C.MOTIVOS_TRANSFERENCIA);
 
 // Campos que a IA pode preencher em cada cadastro (nada de situação, datas, valores ou telefone).
 const CAMPOS_IA = {
-  motoristas: ['nome', 'cidade', 'endereco', 'veiculo', 'placa', 'cnh_categoria', 'cnh_primeira_habilitacao', 'cnh_validade', 'proxima_acao', 'observacoes'],
+  motoristas: ['nome', 'email', 'cidade', 'endereco', 'data_nascimento', 'veiculo', 'veiculo_marca', 'veiculo_modelo', 'veiculo_ano', 'veiculo_cor', 'placa', 'cnh_categoria', 'cnh_primeira_habilitacao', 'cnh_validade', 'proxima_acao', 'observacoes'],
   entregadores: ['nome', 'cidade', 'endereco', 'modalidade', 'veiculo', 'placa', 'cnh_categoria', 'cnh_primeira_habilitacao', 'cnh_validade', 'proxima_acao', 'observacoes'],
   passageiros: ['nome', 'cidade', 'proxima_acao', 'observacoes'],
   parceiros: ['nome_estabelecimento', 'categoria', 'responsavel', 'cidade', 'beneficio', 'proxima_acao', 'observacoes'],
