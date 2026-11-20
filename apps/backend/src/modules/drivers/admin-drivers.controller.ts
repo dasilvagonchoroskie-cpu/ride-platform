@@ -26,7 +26,7 @@ import { DriversService } from './drivers.service';
  * O motorista depois so entra no app do motorista com este telefone e o
  * codigo — o cadastro ja esta pronto.
  */
-const criarMotoristaSchema = driverOnboardingSchema
+export const criarMotoristaSchema = driverOnboardingSchema
   .omit({ name: true, email: true, phone: true, pixKey: true })
   .extend({
     name: nameSchema,

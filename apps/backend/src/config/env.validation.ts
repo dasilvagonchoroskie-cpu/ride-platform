@@ -13,6 +13,7 @@ export const envSchema = z.object({
   API_PREFIX: z.string().default('api'),
   API_URL: z.string().default('http://localhost:3333'),
   CORS_ORIGINS: z.string().default('*'),
+  CRM_INTEGRACAO_TOKEN: z.string().optional(),
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL e obrigatoria.'),
 

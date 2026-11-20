@@ -21,6 +21,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { DriversModule } from './modules/drivers/drivers.module';
+import { IntegracaoModule } from './modules/integracao/integracao.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { HealthModule } from './modules/health/health.module';
@@ -54,6 +55,7 @@ import { ComercioModule } from './modules/comercio/comercio.module';
     AuthModule,
     UsersModule,
     DriversModule,
+    IntegracaoModule,
     DocumentsModule,
     VehiclesModule,
     RidesModule,
