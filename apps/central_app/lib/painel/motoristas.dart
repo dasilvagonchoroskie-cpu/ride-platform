@@ -36,6 +36,7 @@ class _MotoristasState extends State<Motoristas> {
   bool _selecionando = false;
   final Set<String> _marcados = {};
   List<MotoristaCadastro> _ultimaLista = const [];
+  bool _jaCarregou = false;
   bool _excluindo = false;
 
   @override
@@ -56,10 +57,12 @@ class _MotoristasState extends State<Motoristas> {
   /// Chegou cadastro novo enquanto a lista de pendentes esta aberta: a lista
   /// se atualiza sozinha (antes so ao trocar de aba).
   void _cadastroNovo() {
-    final id = _painel.indicadores.ultimoPendente?.id;
-    if (id == _ultimoPendenteVisto) return;
-    _ultimoPendenteVisto = id;
-    if (_situacao == 'PENDING' && mounted) _recarregar();
+    // A cada atualizacao do painel (5s): recarrega a lista em silencio, mantendo a lista
+    // anterior na tela enquanto busca (sem piscar). Assim motorista novo — inclusive ja
+    // aprovado — aparece sozinho em poucos segundos, sem precisar reabrir ou puxar.
+    if (!mounted || _selecionando) return;
+    _ultimoPendenteVisto = _painel.indicadores.ultimoPendente?.id;
+    _recarregar();
   }
 
   void _recarregar() => setState(() { _lista = _api.motoristas(_situacao); });
@@ -190,10 +193,10 @@ class _MotoristasState extends State<Motoristas> {
           child: FutureBuilder<List<MotoristaCadastro>>(
             future: _lista,
             builder: (context, s) {
-              if (s.hasError) return Aviso(texto: 'Não foi possível carregar: ${s.error}', tentarDeNovo: _recarregar);
-              if (!s.hasData) return const Center(child: CircularProgressIndicator());
-              final lista = s.data!;
-              _ultimaLista = lista;
+              if (s.hasError && !_jaCarregou) return Aviso(texto: 'Não foi possível carregar: ${s.error}', tentarDeNovo: _recarregar);
+              if (!s.hasData && !_jaCarregou) return const Center(child: CircularProgressIndicator());
+              final lista = s.hasData ? s.data! : _ultimaLista;
+              if (s.hasData) { _ultimaLista = lista; _jaCarregou = true; }
               if (lista.isEmpty) return const Aviso(texto: 'Nenhum motorista nesta situação.');
               return RefreshIndicator(
                 onRefresh: () async => _recarregar(),
