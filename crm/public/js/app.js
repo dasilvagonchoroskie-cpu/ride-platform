@@ -523,6 +523,9 @@ async function enterApp() {
 
   window.removeEventListener('hashchange', route);
   window.addEventListener('hashchange', route);
+  ajustarRodape();
+  window.removeEventListener('resize', ajustarRodape);
+  window.addEventListener('resize', ajustarRodape);
   await route();
   // Avisos de conversas e push são da equipe (o avaliador não acessa o WhatsApp).
   if (!ehAvaliador) { iniciarAvisos(); sincronizarPush(); iniciarBadgeConversas(); }
@@ -532,6 +535,14 @@ async function enterApp() {
       if (st.email_configurado && !st.email_ativo && !st.ativo) ui.toast('Dica: ative a verificação por e-mail em Configurações (código só em aparelho novo).', 'info');
     }).catch(() => {});
   }
+}
+
+// Mede a altura real do menu do rodapé (varia por aparelho e área segura) e guarda em --bottomnav-h,
+// para a tela de conversas encostar exatamente no menu, sem sobrar espaço, em qualquer celular.
+function ajustarRodape() {
+  const nav = document.getElementById('bottom-nav');
+  const h = nav && getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0;
+  document.documentElement.style.setProperty('--bottomnav-h', h + 'px');
 }
 
 function initials(name) {
