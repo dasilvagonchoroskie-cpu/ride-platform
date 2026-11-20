@@ -106,6 +106,7 @@ const ENTITIES = {
       { key: 'doc_foto_traseira', label: 'Foto do veículo — traseira', type: 'select', options: STATUS_DOC },
       { key: 'endereco', label: 'Endereço', type: 'text', max: 200, full: true },
       { key: 'contratado_em', label: 'Contratado em', type: 'date' },
+      { key: 'central_enviado_em', label: 'Enviado à Central em', type: 'date' },
       { key: 'proxima_acao', label: 'Próxima ação', type: 'text', max: 160 },
       { key: 'data_acompanhamento', label: 'Data do acompanhamento', type: 'date' },
       { key: 'observacoes', label: 'Observações', type: 'textarea', max: 2000, full: true }

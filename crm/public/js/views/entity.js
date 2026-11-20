@@ -350,24 +350,39 @@ export async function renderEntity(view, state, key, params) {
                  <select id="central-praca">${opcoes}</select>
                </div>
                ${aviso}
-               <label class="check" style="margin-top:14px"><input type="checkbox" id="central-check"><span>Confirmo que conferi os dados e aprovo este motorista na plataforma.</span></label>`,
+               <label class="check" style="margin-top:14px"><input type="checkbox" id="central-check"><span>Confirmo que conferi os dados e aprovo este motorista na plataforma.</span></label>
+               <div id="central-status" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13.5px;white-space:pre-line"></div>`,
         footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button>
                  <button class="btn btn-primary" data-ok disabled>${ui.icon('send', 15)} Enviar para a Central</button>`,
         size: 'small'
       });
       const okBtn = dlg.dialog.querySelector('[data-ok]');
-      dlg.dialog.querySelector('#central-check').addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; });
-      dlg.dialog.querySelector('[data-cancel]').addEventListener('click', () => dlg.close());
+      const checkEl = dlg.dialog.querySelector('#central-check');
+      const cancelEl = dlg.dialog.querySelector('[data-cancel]');
+      const statusEl = dlg.dialog.querySelector('#central-status');
+      const mostrar = (texto, tipo) => {
+        statusEl.textContent = texto;
+        statusEl.style.display = 'block';
+        const cores = { erro: ['#991b1b', '#fef2f2'], ok: ['#166534', '#dcfce7'], info: ['#33455e', '#eef2f8'] }[tipo] || ['#33455e', '#eef2f8'];
+        statusEl.style.color = cores[0]; statusEl.style.background = cores[1];
+      };
+      checkEl.addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; });
+      cancelEl.addEventListener('click', () => dlg.close());
       okBtn.addEventListener('click', async () => {
-        okBtn.disabled = true;
+        okBtn.disabled = true; checkEl.disabled = true;
+        mostrar('Enviando para a Central…', 'info');
         const praca = dlg.dialog.querySelector('#central-praca').value;
         try {
           await api.post(`/${key}/${item.id}/enviar-central`, { confirmo: true, praca });
-          dlg.close();
-          ui.toast('Motorista criado na Central. Avise ele para entrar no app com o e-mail.', 'success');
-          m.close();
-          loadList();
-        } catch (err) { okBtn.disabled = false; ui.toast(err.message, 'error'); }
+          mostrar('✓ Enviado! Motorista criado na Central como APROVADO e APTO. Avise ele para entrar no app pelo e-mail.', 'ok');
+          okBtn.style.display = 'none'; cancelEl.textContent = 'Fechar';
+          setTimeout(() => { dlg.close(); m.close(); loadList(); }, 1800);
+        } catch (err) {
+          let msg = err.message || 'Não foi possível enviar para a Central.';
+          if (/Faltam dados/i.test(msg)) msg += '\nPreencha na ficha (botão Editar) e tente de novo.';
+          mostrar(msg, 'erro');
+          okBtn.disabled = false; checkEl.disabled = false;
+        }
       });
     });
 
