@@ -102,10 +102,12 @@ export class DocumentsService {
     });
 
     const progress = await this.drivers.getDocumentProgress(driver.id);
+    const aprovadoPelaCentral = driver.status === 'APPROVED' && (await this.drivers.aprovadoPelaCentral(driver.id));
 
     return {
       documents: await Promise.all(documents.map((doc) => this.withSignedUrl(doc))),
       progress,
+      aprovadoPelaCentral,
     };
   }
 

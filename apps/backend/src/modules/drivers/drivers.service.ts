@@ -331,6 +331,11 @@ export class DriversService {
   }
 
   /** A Central aprovou este motorista conferindo os documentos pessoalmente? */
+  /** Exposto para o app: a Central aprovou conferindo os documentos fora do app? */
+  async aprovadoPelaCentral(driverId: string): Promise<boolean> {
+    return this.aprovadoPresencialmente(driverId);
+  }
+
   private async aprovadoPresencialmente(driverId: string): Promise<boolean> {
     const registro = await this.prisma.auditLog.findFirst({
       where: { entity: 'Driver', entityId: driverId, action: APROVACAO_PRESENCIAL },

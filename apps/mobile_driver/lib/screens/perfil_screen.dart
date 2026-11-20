@@ -371,6 +371,7 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
   Set<String> _aprovados = const {};
   String? _enviando;
   bool _carregou = false;
+  bool _conferidoPelaCentral = false;
 
   @override
   void initState() {
@@ -387,10 +388,12 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
         mapa.putIfAbsent('${d['type']}', () => d);
         if (d['status'] == 'APPROVED') aprovados.add('${d['type']}');
       }
+      final conferido = r['aprovadoPelaCentral'] == true;
       if (mounted) {
         setState(() {
           _ultimos = mapa;
           _aprovados = aprovados;
+          _conferidoPelaCentral = conferido;
           _carregou = true;
         });
       }
@@ -447,6 +450,7 @@ class _DocumentosDoMotoristaState extends State<DocumentosDoMotorista> {
               icone: icone,
               doc: _ultimos[tipo],
               temAprovado: _aprovados.contains(tipo),
+              conferidoPelaCentral: _conferidoPelaCentral,
               enviando: _enviando == tipo,
               aoEnviar: () => _enviar(tipo, nome),
             ),
@@ -462,6 +466,7 @@ class _LinhaDocumento extends StatelessWidget {
     required this.icone,
     required this.doc,
     required this.temAprovado,
+    required this.conferidoPelaCentral,
     required this.enviando,
     required this.aoEnviar,
   });
@@ -472,6 +477,9 @@ class _LinhaDocumento extends StatelessWidget {
 
   /// Ja existe um aprovado deste tipo (a ultima pode ser uma troca).
   final bool temAprovado;
+
+  /// O cadastro foi aprovado pela Central (documentos conferidos fora do app).
+  final bool conferidoPelaCentral;
   final bool enviando;
   final VoidCallback aoEnviar;
 
@@ -484,6 +492,7 @@ class _LinhaDocumento extends StatelessWidget {
       'REJECTED' => ('Rejeitado', AppColors.danger),
       'PENDING' when temAprovado => ('Novo enviado: aguardando a Central (o aprovado continua valendo)', AppColors.warning),
       'PENDING' => ('Enviado: aguardando a Central', AppColors.warning),
+      _ when conferidoPelaCentral => ('Conferido pela Central', AppColors.primary),
       _ => ('Não enviado', AppColors.textMuted),
     };
     final motivo = doc?['rejectionReason'] as String?;
