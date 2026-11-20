@@ -14,6 +14,7 @@ import 'avisos_screen.dart';
 import 'corrida_manual_screen.dart';
 import 'entrega_manual_screen.dart';
 import 'menu_screen.dart';
+import 'meus_dados_screen.dart';
 import 'rides_history_screen.dart';
 import 'sos_screen.dart';
 import 'wallet_screen.dart';
@@ -178,6 +179,15 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // CNH vencida ou vencendo: atalho direto para Meus dados (atualizar e reenviar).
+                if (driver.profile?.cnhPrecisaAtencao == true)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(Spacing.lg, 0, Spacing.lg, Spacing.md),
+                    child: _AvisoCnh(
+                      dias: driver.profile!.diasParaCnhVencer!,
+                      onTap: () => _abrir(const MeusDadosScreen()),
+                    ),
+                  ),
                 // Pode fechar (X): so volta se o saldo piorar ou depois de 24 h.
                 if (carteira != null && driver.mostrarAvisoSaldo)
                   Padding(
@@ -322,6 +332,47 @@ class _AvisoSaldo extends StatelessWidget {
                 onPressed: onFechar,
                 icon: const Icon(Icons.close, color: AppColors.textMuted),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvisoCnh extends StatelessWidget {
+  const _AvisoCnh({required this.dias, required this.onTap});
+
+  final int dias;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final vencida = dias < 0;
+    final cor = vencida ? AppColors.danger : AppColors.warning;
+    final texto = vencida
+        ? 'Sua CNH está vencida. Atualize seus dados e envie a CNH nova. Toque aqui.'
+        : dias == 0
+        ? 'Sua CNH vence hoje. Atualize seus dados e envie a CNH nova. Toque aqui.'
+        : 'Sua CNH vence em $dias dia${dias == 1 ? '' : 's'}. Atualize seus dados e envie a CNH nova.';
+    return Material(
+      color: AppColors.surface,
+      elevation: 3,
+      shadowColor: const Color(0x44000000),
+      borderRadius: BorderRadius.circular(Radii.sm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.sm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.md, Spacing.md),
+          child: Row(
+            children: [
+              Icon(Icons.badge_outlined, color: cor),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Text(texto, style: AppText.body.copyWith(fontWeight: FontWeight.w600)),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
             ],
           ),
         ),

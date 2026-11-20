@@ -78,6 +78,27 @@ class DriverProfile {
 
   bool get isOnboarded => cpf != null && cnhNumber != null;
 
+  /// Dias ate a CNH vencer (negativo = ja vencida). Null se nao ha data valida.
+  int? get diasParaCnhVencer {
+    final v = cnhExpiresAt;
+    if (v == null || v.isEmpty) return null;
+    final d = DateTime.tryParse(v);
+    if (d == null) return null;
+    final hoje = DateTime.now();
+    return DateTime(d.year, d.month, d.day).difference(DateTime(hoje.year, hoje.month, hoje.day)).inDays;
+  }
+
+  /// CNH vencida ou vencendo em ate 30 dias (merece aviso ao motorista).
+  bool get cnhPrecisaAtencao {
+    final n = diasParaCnhVencer;
+    return n != null && n <= 30;
+  }
+
+  bool get cnhVencida {
+    final n = diasParaCnhVencer;
+    return n != null && n < 0;
+  }
+
   String get firstName => name.split(' ').first;
 
   String get initials {
