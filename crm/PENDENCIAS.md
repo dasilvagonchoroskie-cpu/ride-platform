@@ -20,10 +20,10 @@ e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de
 
 **PRÓXIMOS PASSOS (fazer com o dono acordado):**
 1. [x] 20/11 Extração **server-side segura** de CPF, número da CNH e **RG** (commit 05c2aba): lidos do texto completo do documento no servidor, gravados direto no cadastro do motorista vinculado; NUNCA vão para a IA (Gemini só vê o texto mascarado) nem para logs. CPF validado pelo dígito verificador.
-2. [ ] Criar a **chave de integração** no fm-api (auth máquina-a-máquina) para o CRM chamar `POST /admin/drivers`.
-3. [ ] Confirmar o **código da praça/cidade** de Goiatuba na Central.
-4. [ ] Botão **"Enviar para a Central"** no CRM (monta o payload e chama o endpoint). Mapa: nome→name, email→email, telefone→phone, cpf→cpf, data_nascimento→birthDate, cnh_numero→cnhNumber, cnh_categoria→cnhCategory, cnh_validade→cnhExpiresAt, veiculo_marca/modelo/ano/cor+placa→vehicle, aprovar:true.
-5. [ ] **Testar com 1 motorista** de ponta a ponta antes de ligar o automático.
+2. [x] 20/11 Chave de integração no fm-api: endpoint `POST /api/integracao/motoristas` protegido por `CRM_INTEGRACAO_TOKEN` (header `x-integracao-token`), @Public ao login, cria o motorista APROVADO (commit 1a2df94). Testado: sem chave=401, com chave cria 201.
+3. [ ] Confirmar o **código da praça/cidade** de Goiatuba na Central (hoje o envio vai sem praça; o motorista é criado e a praça pode ser definida depois).
+4. [x] 20/11 Botão **"Enviar para a Central"** no CRM (ficha do motorista, só admin, com confirmação) → `POST /motoristas/:id/enviar-central` → chama a Central via `CENTRAL_API_URL` (http://fm-api:3333/api). Commit 894c7a5.
+5. [x] 20/11 Testado de ponta a ponta com dados FICTÍCIOS (CRM→fm-api): criou motorista APROVADO (HTTP 201) e o teste foi apagado. Dedup de CPF/CNH/e-mail funciona (409).
 6. [ ] Depois: disparo automático na aprovação + **backfill** dos já aprovados.
 7. [ ] Avisar o motorista (mensagem) com as instruções de login por e-mail.
 
