@@ -1628,7 +1628,8 @@ router.get('/motoristas/central/pracas', async (req, res) => {
     const txt = await r.text();
     let data = {}; try { data = JSON.parse(txt); } catch (e) { /* texto cru */ }
     if (!r.ok) return fail(res, 502, 'central_recusou', (data.error && data.error.message) || 'A Central recusou a consulta das cidades.');
-    return res.json({ items: Array.isArray(data.items) ? data.items : [] });
+    const corpo = data && data.data ? data.data : data;
+    return res.json({ items: Array.isArray(corpo.items) ? corpo.items : [] });
   } catch (e) { return fail(res, 502, 'sem_resposta', 'Não consegui falar com a Central: ' + e.message); }
 });
 
