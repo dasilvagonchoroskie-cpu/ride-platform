@@ -597,6 +597,7 @@ async function route() {
   // escreve num container já descartado e não sobrescreve a tela atual.
   const host = document.getElementById('view');
   const view = document.createElement('div');
+  view.className = 'view-host';
   host.replaceChildren(view);
   view.innerHTML = '<div class="card" style="padding:40px;text-align:center;color:#8494ab">Carregando…</div>';
   try {
