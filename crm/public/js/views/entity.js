@@ -256,7 +256,7 @@ export async function renderEntity(view, state, key, params) {
 
     const podeConfirmar = def.confirmStatus && item[def.statusField] !== def.confirmStatus;
     const podeContratar = ehCondutor && item.situacao !== 'Contratado' && item.situacao !== 'Não prosseguiu';
-    const podeEnviarCentral = key === 'motoristas' && state.user && state.user.role === 'admin';
+    const podeEnviarCentral = key === 'motoristas' && state.user && state.user.role === 'admin' && (item.situacao === 'Aprovado' || item.situacao === 'Contratado');
     const podeAtivar = key === 'comercios' && item.situacao !== 'Ativo na plataforma' && item.situacao !== 'Não concretizado';
     const ficha = (data.titular
       ? (data.titular.tipo === 'pessoa'
@@ -327,20 +327,48 @@ export async function renderEntity(view, state, key, params) {
     });
     const centralBtn = m.dialog.querySelector('[data-detail-central]');
     if (centralBtn) centralBtn.addEventListener('click', async () => {
-      const ok = await ui.confirmDialog({
-        title: 'Enviar para a Central',
-        message: `“${item.nome}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado. Faça isso só depois de conferir tudo.`,
-        confirmLabel: 'Enviar para a Central',
-        requireCheck: 'Confirmo que conferi os dados e aprovo este motorista na plataforma.'
-      });
-      if (!ok) return;
       centralBtn.disabled = true;
+      let pracas = [];
       try {
-        await api.post(`/${key}/${item.id}/enviar-central`, { confirmo: true });
-        ui.toast('Motorista criado na Central. Avise ele para entrar no app com o e-mail.', 'success');
-        m.close();
-        loadList();
-      } catch (err) { centralBtn.disabled = false; ui.toast(err.message, 'error'); }
+        const r = await api.get('/motoristas/central/pracas');
+        pracas = Array.isArray(r.items) ? r.items : [];
+      } catch (err) { centralBtn.disabled = false; ui.toast('Não consegui buscar as cidades da Central: ' + err.message, 'error'); return; }
+      centralBtn.disabled = false;
+      const cidadeMot = String(item.cidade || '').trim().toLowerCase();
+      const casa = pracas.find((p) => String(p.nome || '').trim().toLowerCase() === cidadeMot);
+      const opcoes = ['<option value="">— Definir depois na Central —</option>']
+        .concat(pracas.map((p) => `<option value="${ui.esc(p.id)}" ${casa && p.id === casa.id ? 'selected' : ''}>${ui.esc(p.nome)}${p.uf ? ' - ' + ui.esc(p.uf) : ''}</option>`))
+        .join('');
+      const aviso = casa ? '' : (cidadeMot
+        ? `<p class="notice" style="margin-top:8px">A cidade do cadastro (“${ui.esc(item.cidade)}”) ainda não está aberta na Central. Escolha uma da lista ou defina depois.</p>`
+        : '');
+      const dlg = ui.modal({
+        title: 'Enviar para a Central',
+        body: `<p style="font-size:14px;color:#33455e">“${ui.esc(item.nome)}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado.</p>
+               <div class="field" style="margin-top:12px">
+                 <label for="central-praca">Cidade onde vai atuar</label>
+                 <select id="central-praca">${opcoes}</select>
+               </div>
+               ${aviso}
+               <label class="check" style="margin-top:14px"><input type="checkbox" id="central-check"><span>Confirmo que conferi os dados e aprovo este motorista na plataforma.</span></label>`,
+        footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button>
+                 <button class="btn btn-primary" data-ok disabled>${ui.icon('send', 15)} Enviar para a Central</button>`,
+        size: 'small'
+      });
+      const okBtn = dlg.dialog.querySelector('[data-ok]');
+      dlg.dialog.querySelector('#central-check').addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; });
+      dlg.dialog.querySelector('[data-cancel]').addEventListener('click', () => dlg.close());
+      okBtn.addEventListener('click', async () => {
+        okBtn.disabled = true;
+        const praca = dlg.dialog.querySelector('#central-praca').value;
+        try {
+          await api.post(`/${key}/${item.id}/enviar-central`, { confirmo: true, praca });
+          dlg.close();
+          ui.toast('Motorista criado na Central. Avise ele para entrar no app com o e-mail.', 'success');
+          m.close();
+          loadList();
+        } catch (err) { okBtn.disabled = false; ui.toast(err.message, 'error'); }
+      });
     });
 
     const ativarBtn = m.dialog.querySelector('[data-detail-ativar]');

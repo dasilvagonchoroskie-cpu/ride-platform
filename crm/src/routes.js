@@ -1618,12 +1618,27 @@ router.post('/motoristas/:id/contratar', contratar('motoristas', 'Motorista'));
 
 // Ponte CRM -> Central (20/11/2026): envia o motorista aprovado para a Central (fm-api), que cria a conta/cadastro ja aprovado.
 // So admin. Nao dispara sozinho: e acionado pelo botao "Enviar para a Central". CPF/CNH/RG ja estao no cadastro (extraidos no servidor).
+router.get('/motoristas/central/pracas', async (req, res) => {
+  if (!req.user || req.user.role !== 'admin') return fail(res, 403, 'forbidden', 'Só o administrador consulta as cidades da Central.');
+  const base = String(process.env.CENTRAL_API_URL || '').replace(/\/+$/, '');
+  const token = process.env.CRM_INTEGRACAO_TOKEN || '';
+  if (!base || !token) return fail(res, 500, 'config', 'Integração com a Central não configurada.');
+  try {
+    const r = await fetch(`${base}/integracao/pracas`, { headers: { 'x-integracao-token': token } });
+    const txt = await r.text();
+    let data = {}; try { data = JSON.parse(txt); } catch (e) { /* texto cru */ }
+    if (!r.ok) return fail(res, 502, 'central_recusou', (data.error && data.error.message) || 'A Central recusou a consulta das cidades.');
+    return res.json({ items: Array.isArray(data.items) ? data.items : [] });
+  } catch (e) { return fail(res, 502, 'sem_resposta', 'Não consegui falar com a Central: ' + e.message); }
+});
+
 router.post('/motoristas/:id/enviar-central', async (req, res) => {
   if (!req.user || req.user.role !== 'admin') return fail(res, 403, 'forbidden', 'Só o administrador envia para a Central.');
   const id = Number(req.params.id);
   const m = db.prepare('SELECT * FROM motoristas WHERE id = ?').get(id);
   if (!m) return fail(res, 404, 'not_found', 'Motorista não encontrado.');
   if (req.body.confirmo !== true) return fail(res, 422, 'confirm_required', 'É necessário confirmar a ação.');
+  if (m.situacao !== 'Aprovado' && m.situacao !== 'Contratado') return fail(res, 409, 'nao_aprovado', 'Aprove o cadastro no CRM (situação "Aprovado") antes de enviar para a Central.');
   const faltando = [];
   const obrig = (v, nome) => { const t = String(v == null ? '' : v).trim(); if (!t) faltando.push(nome); return t; };
   const ano = Number(m.veiculo_ano);
@@ -1636,7 +1651,9 @@ router.post('/motoristas/:id/enviar-central', async (req, res) => {
     aprovar: true,
   };
   if (String(m.email || '').trim()) payload.email = m.email.trim();
-  if (String(m.cidade || '').trim()) payload.praca = m.cidade.trim();
+  const pracaEscolhida = String(req.body.praca == null ? '' : req.body.praca).trim();
+  if (pracaEscolhida) payload.praca = pracaEscolhida;
+  else if (String(m.cidade || '').trim()) payload.praca = m.cidade.trim();
   if (faltando.length) return fail(res, 422, 'incompleto', 'Faltam dados para enviar: ' + faltando.join(', ') + '.');
   const base = String(process.env.CENTRAL_API_URL || '').replace(/\/+$/, '');
   const token = process.env.CRM_INTEGRACAO_TOKEN || '';

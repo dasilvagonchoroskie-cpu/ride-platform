@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -46,5 +46,15 @@ export class IntegracaoController {
     if (u && praca) await this.pracas.definirPracaDoMotorista(u.id, praca);
     this.pracas.esquecerMotoristas();
     return criado;
+  }
+
+  @Get('pracas')
+  @ApiOperation({ summary: 'Lista as cidades abertas na Central (para o CRM direcionar o motorista)' })
+  async listarPracas() {
+    const todas = await this.pracas.listar();
+    const items = todas
+      .filter((p) => p.ativa !== false)
+      .map((p) => ({ id: p.id, nome: p.nome, uf: p.uf }));
+    return { items };
   }
 }
