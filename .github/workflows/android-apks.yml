@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: 'App a compilar: all, ou um ou mais separados por virgula (mobile_passenger, mobile_driver, central_app)'
+        description: 'App a compilar: all, ou um ou mais separados por virgula (mobile_passenger, mobile_driver, central_app, comercio_app)'
         required: true
         default: 'all'
         type: string
@@ -33,6 +33,7 @@ on:
     paths:
       - 'apps/mobile_*/**'
       - 'apps/central_app/**'
+      - 'apps/comercio_app/**'
       - '.github/workflows/android-apks.yml'
 
 concurrency:
@@ -79,7 +80,7 @@ jobs:
               MUDOU=$(git show --name-only --format= "${{ github.sha }}")
             fi
             if echo "$MUDOU" | grep -q '^.github/workflows/android-apks.yml$'; then QUAL=all; else
-              QUAL=$(echo "$MUDOU" | sed -n 's#^apps/\(mobile_passenger\|mobile_driver\|central_app\)/.*#\1#p' | sort -u | paste -sd, -)
+              QUAL=$(echo "$MUDOU" | sed -n 's#^apps/\(mobile_passenger\|mobile_driver\|central_app\|comercio_app\)/.*#\1#p' | sort -u | paste -sd, -)
             fi
             [ -n "$QUAL" ] || QUAL=nenhum
           fi
@@ -90,6 +91,7 @@ jobs:
               {"app": "mobile_passenger", "label": "Passageiro", "artifact": "ride-passenger-apk", "apk_name": "ride-passenger"},
               {"app": "mobile_driver", "label": "Motorista", "artifact": "ride-driver-apk", "apk_name": "ride-driver"},
               {"app": "central_app", "label": "Central", "artifact": "fortaleza-central-apk", "apk_name": "fortaleza-central"},
+              {"app": "comercio_app", "label": "Comércio", "artifact": "fortaleza-comercio-apk", "apk_name": "fortaleza-comercio"},
           ]
           qual = sys.argv[1]
           pedidos = [x.strip() for x in qual.split(",") if x.strip()]
@@ -356,6 +358,7 @@ jobs:
             mobile_passenger) NOME="Fortaleza Move" ;;
             mobile_driver) NOME="Fortaleza Move Motorista" ;;
             central_app) NOME="Fortaleza Move Central" ;;
+            comercio_app) NOME="Fortaleza Move Comércio" ;;
           esac
           "$AAPT2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
           grep -q "application-label:'$NOME'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Nome no celular nao e '$NOME'"; grep application-label "$RUNNER_TEMP/badging.txt" || true; exit 1; }
