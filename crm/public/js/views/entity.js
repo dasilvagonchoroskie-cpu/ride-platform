@@ -3,6 +3,25 @@ import * as ui from '../ui.js';
 import { abrirExportacao, botaoExportar, podeExportar } from '../exportar.js';
 import { FUNCAO_DA_ENTIDADE, montarPainel } from '../documentos.js';
 
+// Aviso de validade da CNH: vencida, vence hoje ou vence em ate 30 dias. Sem data ou longe: null.
+function avisoCnh(validade) {
+  if (!validade || !/^\d{4}-\d{2}-\d{2}$/.test(String(validade))) return null;
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const v = new Date(String(validade) + 'T00:00:00');
+  if (Number.isNaN(v.getTime())) return null;
+  const dias = Math.round((v - hoje) / 86400000);
+  if (dias < 0) return { texto: 'CNH vencida', tom: 'danger', dias };
+  if (dias === 0) return { texto: 'CNH vence hoje', tom: 'danger', dias };
+  if (dias <= 30) return { texto: `CNH vence em ${dias} dia${dias === 1 ? '' : 's'}`, tom: 'warn', dias };
+  return null;
+}
+function chipCnh(a) {
+  if (!a) return '';
+  const cor = a.tom === 'danger' ? '#991b1b' : '#92400e';
+  const fundo = a.tom === 'danger' ? '#fee2e2' : '#fef3c7';
+  return `<span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;color:${cor};background:${fundo}">${a.texto}</span>`;
+}
+
 export async function renderEntity(view, state, key, params) {
   // O servidor valida de novo: esconder o botão é só conveniência.
   const podeExcluir = ((state.meta.can && state.meta.can.excluir) || []).includes(key);
@@ -126,7 +145,7 @@ export async function renderEntity(view, state, key, params) {
       return {
         label: field ? field.label : colKey,
         render: (row) => first
-          ? `<b>${ui.esc(row[colKey] || '—')}</b>${(key === 'parceiros' || key === 'comercios') && row.responsavel ? `<span class="sub">${ui.esc(row.responsavel)}</span>` : ''}`
+          ? `<b>${ui.esc(row[colKey] || '—')}</b>${key === 'motoristas' ? chipCnh(avisoCnh(row.cnh_validade)) : ''}${(key === 'parceiros' || key === 'comercios') && row.responsavel ? `<span class="sub">${ui.esc(row.responsavel)}</span>` : ''}`
           : cell(field, row)
       };
     });
@@ -195,7 +214,7 @@ export async function renderEntity(view, state, key, params) {
       : '');
     const dlg = ui.modal({
       title: 'Enviar para a Central',
-      body: `<p style="font-size:14px;color:#33455e">“${ui.esc(item.nome)}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado.</p>
+      body: `<p style="font-size:14px;color:#33455e">“${ui.esc(item.nome)}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado. Se ele já está na Central (CNH renovada, troca de carro, dados), use <b>Atualizar na Central</b>.</p>
              <div class="field" style="margin-top:12px">
                <label for="central-praca">Cidade onde vai atuar</label>
                <select id="central-praca">${opcoes}</select>
@@ -204,6 +223,7 @@ export async function renderEntity(view, state, key, params) {
              <label class="check" style="margin-top:14px"><input type="checkbox" id="central-check"><span>Confirmo que conferi os dados e aprovo este motorista na plataforma.</span></label>
              <div id="central-status" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13.5px;white-space:pre-line"></div>`,
       footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button>
+               <button class="btn btn-soft" data-upd disabled>${ui.icon('edit', 15)} Atualizar na Central</button>
                <button class="btn btn-primary" data-ok disabled>${ui.icon('send', 15)} Enviar para a Central</button>`,
       size: 'small'
     });
@@ -217,22 +237,43 @@ export async function renderEntity(view, state, key, params) {
       const cores = { erro: ['#991b1b', '#fef2f2'], ok: ['#166534', '#dcfce7'], info: ['#33455e', '#eef2f8'] }[tipo] || ['#33455e', '#eef2f8'];
       statusEl.style.color = cores[0]; statusEl.style.background = cores[1];
     };
-    checkEl.addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; });
+    const updBtn = dlg.dialog.querySelector('[data-upd]');
+    checkEl.addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; updBtn.disabled = !e.target.checked; });
     cancelEl.addEventListener('click', () => dlg.close());
+    const finalizarOk = (texto) => {
+      mostrar(texto, 'ok');
+      okBtn.style.display = 'none'; updBtn.style.display = 'none'; cancelEl.textContent = 'Fechar';
+      setTimeout(() => { dlg.close(); if (aoSucesso) aoSucesso(); loadList(); }, 1800);
+    };
+    const reabilitar = () => { okBtn.disabled = false; updBtn.disabled = false; checkEl.disabled = false; };
     okBtn.addEventListener('click', async () => {
-      okBtn.disabled = true; checkEl.disabled = true;
+      okBtn.disabled = true; updBtn.disabled = true; checkEl.disabled = true;
       mostrar('Enviando para a Central…', 'info');
       const praca = dlg.dialog.querySelector('#central-praca').value;
       try {
         await api.post(`/motoristas/${item.id}/enviar-central`, { confirmo: true, praca });
-        mostrar('✓ Enviado! Motorista criado na Central como APROVADO e APTO. Avise ele para entrar no app pelo e-mail.', 'ok');
-        okBtn.style.display = 'none'; cancelEl.textContent = 'Fechar';
-        setTimeout(() => { dlg.close(); if (aoSucesso) aoSucesso(); loadList(); }, 1800);
+        finalizarOk('✓ Enviado! Motorista criado na Central como APROVADO e APTO. Avise ele para entrar no app pelo e-mail.');
       } catch (err) {
         let msg = err.message || 'Não foi possível enviar para a Central.';
         if (/Faltam dados/i.test(msg)) msg += ' — preencha na ficha (botão Editar) e tente de novo.';
+        else if (/já é de um motorista|já estão na conta|já existe|CONTA_EXISTENTE/i.test(msg)) msg += ' — ele já está na Central. Use “Atualizar na Central”.';
         mostrar(msg, 'erro');
-        okBtn.disabled = false; checkEl.disabled = false;
+        reabilitar();
+      }
+    });
+    updBtn.addEventListener('click', async () => {
+      okBtn.disabled = true; updBtn.disabled = true; checkEl.disabled = true;
+      mostrar('Atualizando na Central…', 'info');
+      const praca = dlg.dialog.querySelector('#central-praca').value;
+      try {
+        await api.post(`/motoristas/${item.id}/atualizar-central`, { confirmo: true, praca });
+        finalizarOk('✓ Atualizado! Dados, CNH e veículo atualizados na Central.');
+      } catch (err) {
+        let msg = err.message || 'Não foi possível atualizar na Central.';
+        if (/Faltam dados/i.test(msg)) msg += ' — preencha na ficha (botão Editar) e tente de novo.';
+        else if (/achei|not_found|para cadastrar/i.test(msg)) msg += ' — se ele ainda não foi enviado, use “Enviar para a Central”.';
+        mostrar(msg, 'erro');
+        reabilitar();
       }
     });
   }
@@ -241,6 +282,10 @@ export async function renderEntity(view, state, key, params) {
     const value = row[field.key];
     if (field.key === def.statusField) return ui.badge(value);
     if (field.key === 'prioridade') return ui.badge(value, ui.priorityTone(value));
+    if (field.key === 'cnh_validade') {
+      const a = key === 'motoristas' ? avisoCnh(value) : null;
+      return (value ? ui.fmtDate(value) : '<span class="muted">—</span>') + chipCnh(a);
+    }
     if (field.type === 'date') return ui.fmtDate(value);
     if (field.type === 'number') return /invest|custo|valor/.test(field.key) ? ui.fmtMoney(value) : ui.fmtInt(value);
     if (field.type === 'relation' && value) return `#${value}`;
@@ -266,6 +311,10 @@ export async function renderEntity(view, state, key, params) {
     } else if (!(def.perdidos || []).includes(status)) {
       banner = `<div class="ficha-banner andamento">Em andamento: ${ui.esc(status || '—')}</div>`;
     }
+    const avCnh = key === 'motoristas' ? avisoCnh(item.cnh_validade) : null;
+    const cnhBanner = avCnh
+      ? `<div class="ficha-banner" style="background:${avCnh.tom === 'danger' ? '#fee2e2' : '#fef3c7'};color:${avCnh.tom === 'danger' ? '#991b1b' : '#92400e'}">⚠️ ${avCnh.texto}${avCnh.dias < 0 ? ` (há ${Math.abs(avCnh.dias)} dia${Math.abs(avCnh.dias) === 1 ? '' : 's'})` : ''} — atualize a CNH e use “Atualizar na Central”.</div>`
+      : '';
     let docs = '';
     if (ehCondutor && ficha.documentos) {
       // Com o arquivo digital ligado, a situação vem só do ARQUIVO guardado; a menção na conversa é só uma pista.
@@ -296,7 +345,7 @@ export async function renderEntity(view, state, key, params) {
         ? `<div class="ficha-acoes"><a class="btn btn-sm btn-soft" href="#/candidatos?id=${Number(av.id)}">${ui.icon('check', 15)} Avaliação: ${ui.esc(av.etapa_rotulo)}</a></div>`
         : `<div class="ficha-acoes"><button class="btn btn-sm btn-soft" data-abrir-avaliacao type="button">${ui.icon('check', 15)} Abrir avaliação do candidato</button></div>`)
       : '';
-    return banner + avaliacao + docs + conversa + resumo + '<div class="section-title">Dados</div>';
+    return banner + cnhBanner + avaliacao + docs + conversa + resumo + '<div class="section-title">Dados</div>';
   }
 
   async function openDetail(id) {
