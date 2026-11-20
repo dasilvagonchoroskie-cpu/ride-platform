@@ -89,8 +89,8 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: |
           case "${{ matrix.app }}" in
-            mobile_passenger) echo "pkg=br.com.fortalezamov.passageiro" >> "$GITHUB_OUTPUT"; echo "fotos=--fotos" >> "$GITHUB_OUTPUT" ;;
-            mobile_driver)    echo "pkg=br.com.fortalezamov.motorista" >> "$GITHUB_OUTPUT"; echo "fotos=--fotos" >> "$GITHUB_OUTPUT" ;;
+            mobile_passenger) echo "pkg=br.com.fortalezadigitalsecurity.move.passageiro" >> "$GITHUB_OUTPUT"; echo "fotos=--fotos" >> "$GITHUB_OUTPUT" ;;
+            mobile_driver)    echo "pkg=br.com.fortalezadigitalsecurity.move.motorista" >> "$GITHUB_OUTPUT"; echo "fotos=--fotos" >> "$GITHUB_OUTPUT" ;;
             central_app)      echo "pkg=com.rideplatform.central_app" >> "$GITHUB_OUTPUT"; echo "fotos=" >> "$GITHUB_OUTPUT" ;;
           esac
           flutter pub get

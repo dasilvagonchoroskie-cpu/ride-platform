@@ -20,6 +20,11 @@ import pathlib
 import sys
 
 APPS = {
+    # Nomes de pacote definitivos (20/11/2026, registrados no Android Developer Console).
+    # Cada um precisa ter o seu app Android cadastrado no Firebase; sem isso o push fica desligado nesse app.
+    'br.com.fortalezadigitalsecurity.move.motorista': 'apps/mobile_driver',
+    'br.com.fortalezadigitalsecurity.move.passageiro': 'apps/mobile_passenger',
+    # Nomes antigos (APKs anteriores a 20/11/2026): mantidos para a config atual do Firebase continuar valendo.
     'br.com.fortalezamov.motorista': 'apps/mobile_driver',
     'br.com.fortalezamov.passageiro': 'apps/mobile_passenger',
     'com.rideplatform.central_app': 'apps/central_app',

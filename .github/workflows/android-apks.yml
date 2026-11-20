@@ -239,7 +239,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/firebase-config.py infra/firebase-apps.b64
-          test -f "apps/${{ matrix.app }}/android/app/src/main/res/values/firebase.xml"
+          # 20/11/2026: nomes de pacote novos (br.com.fortalezadigitalsecurity.move.*). Enquanto o
+          # Firebase nao tiver o app Android com o nome novo, o APK sai SEM push (so o vigia proprio)
+          # em vez de a esteira quebrar. Cadastrado no Firebase + infra/firebase-apps.b64 atualizado,
+          # o push volta sozinho.
+          if [ ! -f "apps/${{ matrix.app }}/android/app/src/main/res/values/firebase.xml" ]; then
+            echo "::warning::Sem push neste APK: o Firebase ainda nao tem o app Android com o nome de pacote novo de ${{ matrix.app }}."
+          fi
 
       # Google Maps (Evandro, 09/10/2026): a chave (restrita aos 3 apps e ao
       # Maps SDK, gratuito no celular) entra no manifesto; o app liga o mapa
