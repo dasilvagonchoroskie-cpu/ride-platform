@@ -134,6 +134,7 @@ export async function renderEntity(view, state, key, params) {
       label: 'Ações',
       cls: 'right row-actions-cell',
       render: (row) => `<div class="row-actions">
+        ${key === 'motoristas' && state.user && state.user.role === 'admin' && (row.situacao === 'Aprovado' || row.situacao === 'Contratado') ? `<button class="btn btn-sm btn-soft" data-central-row="${row.id}" title="Enviar para a Central">${ui.icon('send', 15)} Central</button>` : ''}
         <button class="btn btn-sm btn-ghost" data-edit="${row.id}" title="Editar">${ui.icon('edit', 15)}</button>
         ${podeExcluir ? `<button class="btn btn-sm btn-ghost" data-del="${row.id}" title="Excluir">${ui.icon('trash', 15)}</button>` : ''}
       </div>`
@@ -166,10 +167,74 @@ export async function renderEntity(view, state, key, params) {
       const item = data.items.find((i) => i.id === Number(b.dataset.del));
       await removeItem(item);
     }));
+    content.querySelectorAll('[data-central-row]').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const alvo = data.items.find((i) => i.id === Number(b.dataset.centralRow));
+      if (alvo) abrirEnvioCentral(alvo, null);
+    }));
     const prev = content.querySelector('#prev');
     const next = content.querySelector('#next');
     if (prev) prev.addEventListener('click', () => { filtros.page -= 1; loadList(); });
     if (next) next.addEventListener('click', () => { filtros.page += 1; loadList(); });
+  }
+
+  // Janela de "Enviar para a Central" — usada no detalhe e no card da lista.
+  async function abrirEnvioCentral(item, aoSucesso) {
+    let pracas = [];
+    try {
+      const r = await api.get('/motoristas/central/pracas');
+      pracas = Array.isArray(r.items) ? r.items : [];
+    } catch (err) { ui.toast('Não consegui buscar as cidades da Central: ' + err.message, 'error'); return; }
+    const cidadeMot = String(item.cidade || '').trim().toLowerCase();
+    const casa = pracas.find((p) => String(p.nome || '').trim().toLowerCase() === cidadeMot);
+    const opcoes = ['<option value="">— Definir depois na Central —</option>']
+      .concat(pracas.map((p) => `<option value="${ui.esc(p.id)}" ${casa && p.id === casa.id ? 'selected' : ''}>${ui.esc(p.nome)}${p.uf ? ' - ' + ui.esc(p.uf) : ''}</option>`))
+      .join('');
+    const aviso = casa ? '' : (cidadeMot
+      ? `<p class="notice" style="margin-top:8px">A cidade do cadastro (“${ui.esc(item.cidade)}”) ainda não está aberta na Central. Escolha uma da lista ou defina depois.</p>`
+      : '');
+    const dlg = ui.modal({
+      title: 'Enviar para a Central',
+      body: `<p style="font-size:14px;color:#33455e">“${ui.esc(item.nome)}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado.</p>
+             <div class="field" style="margin-top:12px">
+               <label for="central-praca">Cidade onde vai atuar</label>
+               <select id="central-praca">${opcoes}</select>
+             </div>
+             ${aviso}
+             <label class="check" style="margin-top:14px"><input type="checkbox" id="central-check"><span>Confirmo que conferi os dados e aprovo este motorista na plataforma.</span></label>
+             <div id="central-status" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13.5px;white-space:pre-line"></div>`,
+      footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button>
+               <button class="btn btn-primary" data-ok disabled>${ui.icon('send', 15)} Enviar para a Central</button>`,
+      size: 'small'
+    });
+    const okBtn = dlg.dialog.querySelector('[data-ok]');
+    const checkEl = dlg.dialog.querySelector('#central-check');
+    const cancelEl = dlg.dialog.querySelector('[data-cancel]');
+    const statusEl = dlg.dialog.querySelector('#central-status');
+    const mostrar = (texto, tipo) => {
+      statusEl.textContent = texto;
+      statusEl.style.display = 'block';
+      const cores = { erro: ['#991b1b', '#fef2f2'], ok: ['#166534', '#dcfce7'], info: ['#33455e', '#eef2f8'] }[tipo] || ['#33455e', '#eef2f8'];
+      statusEl.style.color = cores[0]; statusEl.style.background = cores[1];
+    };
+    checkEl.addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; });
+    cancelEl.addEventListener('click', () => dlg.close());
+    okBtn.addEventListener('click', async () => {
+      okBtn.disabled = true; checkEl.disabled = true;
+      mostrar('Enviando para a Central…', 'info');
+      const praca = dlg.dialog.querySelector('#central-praca').value;
+      try {
+        await api.post(`/motoristas/${item.id}/enviar-central`, { confirmo: true, praca });
+        mostrar('✓ Enviado! Motorista criado na Central como APROVADO e APTO. Avise ele para entrar no app pelo e-mail.', 'ok');
+        okBtn.style.display = 'none'; cancelEl.textContent = 'Fechar';
+        setTimeout(() => { dlg.close(); if (aoSucesso) aoSucesso(); loadList(); }, 1800);
+      } catch (err) {
+        let msg = err.message || 'Não foi possível enviar para a Central.';
+        if (/Faltam dados/i.test(msg)) msg += ' — preencha na ficha (botão Editar) e tente de novo.';
+        mostrar(msg, 'erro');
+        okBtn.disabled = false; checkEl.disabled = false;
+      }
+    });
   }
 
   function detailValue(field, row) {
@@ -326,65 +391,7 @@ export async function renderEntity(view, state, key, params) {
       } catch (err) { ui.toast(err.message, 'error'); }
     });
     const centralBtn = m.dialog.querySelector('[data-detail-central]');
-    if (centralBtn) centralBtn.addEventListener('click', async () => {
-      centralBtn.disabled = true;
-      let pracas = [];
-      try {
-        const r = await api.get('/motoristas/central/pracas');
-        pracas = Array.isArray(r.items) ? r.items : [];
-      } catch (err) { centralBtn.disabled = false; ui.toast('Não consegui buscar as cidades da Central: ' + err.message, 'error'); return; }
-      centralBtn.disabled = false;
-      const cidadeMot = String(item.cidade || '').trim().toLowerCase();
-      const casa = pracas.find((p) => String(p.nome || '').trim().toLowerCase() === cidadeMot);
-      const opcoes = ['<option value="">— Definir depois na Central —</option>']
-        .concat(pracas.map((p) => `<option value="${ui.esc(p.id)}" ${casa && p.id === casa.id ? 'selected' : ''}>${ui.esc(p.nome)}${p.uf ? ' - ' + ui.esc(p.uf) : ''}</option>`))
-        .join('');
-      const aviso = casa ? '' : (cidadeMot
-        ? `<p class="notice" style="margin-top:8px">A cidade do cadastro (“${ui.esc(item.cidade)}”) ainda não está aberta na Central. Escolha uma da lista ou defina depois.</p>`
-        : '');
-      const dlg = ui.modal({
-        title: 'Enviar para a Central',
-        body: `<p style="font-size:14px;color:#33455e">“${ui.esc(item.nome)}” será criado como motorista APROVADO e APTO na Central (Fortaleza Mov), com a conta ligada ao e-mail informado.</p>
-               <div class="field" style="margin-top:12px">
-                 <label for="central-praca">Cidade onde vai atuar</label>
-                 <select id="central-praca">${opcoes}</select>
-               </div>
-               ${aviso}
-               <label class="check" style="margin-top:14px"><input type="checkbox" id="central-check"><span>Confirmo que conferi os dados e aprovo este motorista na plataforma.</span></label>
-               <div id="central-status" style="display:none;margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13.5px;white-space:pre-line"></div>`,
-        footer: `<button class="btn btn-ghost" data-cancel>Cancelar</button>
-                 <button class="btn btn-primary" data-ok disabled>${ui.icon('send', 15)} Enviar para a Central</button>`,
-        size: 'small'
-      });
-      const okBtn = dlg.dialog.querySelector('[data-ok]');
-      const checkEl = dlg.dialog.querySelector('#central-check');
-      const cancelEl = dlg.dialog.querySelector('[data-cancel]');
-      const statusEl = dlg.dialog.querySelector('#central-status');
-      const mostrar = (texto, tipo) => {
-        statusEl.textContent = texto;
-        statusEl.style.display = 'block';
-        const cores = { erro: ['#991b1b', '#fef2f2'], ok: ['#166534', '#dcfce7'], info: ['#33455e', '#eef2f8'] }[tipo] || ['#33455e', '#eef2f8'];
-        statusEl.style.color = cores[0]; statusEl.style.background = cores[1];
-      };
-      checkEl.addEventListener('change', (e) => { okBtn.disabled = !e.target.checked; });
-      cancelEl.addEventListener('click', () => dlg.close());
-      okBtn.addEventListener('click', async () => {
-        okBtn.disabled = true; checkEl.disabled = true;
-        mostrar('Enviando para a Central…', 'info');
-        const praca = dlg.dialog.querySelector('#central-praca').value;
-        try {
-          await api.post(`/${key}/${item.id}/enviar-central`, { confirmo: true, praca });
-          mostrar('✓ Enviado! Motorista criado na Central como APROVADO e APTO. Avise ele para entrar no app pelo e-mail.', 'ok');
-          okBtn.style.display = 'none'; cancelEl.textContent = 'Fechar';
-          setTimeout(() => { dlg.close(); m.close(); loadList(); }, 1800);
-        } catch (err) {
-          let msg = err.message || 'Não foi possível enviar para a Central.';
-          if (/Faltam dados/i.test(msg)) msg += '\nPreencha na ficha (botão Editar) e tente de novo.';
-          mostrar(msg, 'erro');
-          okBtn.disabled = false; checkEl.disabled = false;
-        }
-      });
-    });
+    if (centralBtn) centralBtn.addEventListener('click', () => abrirEnvioCentral(item, () => m.close()));
 
     const ativarBtn = m.dialog.querySelector('[data-detail-ativar]');
     if (ativarBtn) ativarBtn.addEventListener('click', async () => {
