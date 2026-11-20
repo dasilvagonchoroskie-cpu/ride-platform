@@ -54,6 +54,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   String? _avisoPendenteAberto;
 
   late final PainelState _painel;
+  bool _atualizando = false;
 
   /// Abas da Central. As marcadas [soDono] somem para o operador de uma
   /// cidade (Evandro, 08/10/2026: a sobrinha em Teutonia cuida da operacao
@@ -503,11 +504,31 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
         _cidade(p),
         IconButton(
           tooltip: 'Atualizar',
-          onPressed: () {
-            p.atualizar();
-            central.loadAll();
-          },
-          icon: const Icon(Icons.refresh),
+          onPressed: _atualizando
+              ? null
+              : () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  setState(() => _atualizando = true);
+                  try {
+                    await Future.wait([p.atualizar(), central.loadAll()]);
+                  } finally {
+                    if (mounted) setState(() => _atualizando = false);
+                  }
+                  if (mounted) {
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(const SnackBar(
+                      content: Text('Atualizado'),
+                      duration: Duration(seconds: 1),
+                    ));
+                  }
+                },
+          icon: _atualizando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                )
+              : const Icon(Icons.refresh),
         ),
         // Ao vivo: bolinha verde (vermelha sem sinal) — ocupa pouco espaco
         // e deixa o nome da aba aparecer inteiro no celular.
