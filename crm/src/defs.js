@@ -80,6 +80,7 @@ const ENTITIES = {
       { key: 'telefone', label: 'Telefone', type: 'tel', required: true, max: 25 },
       { key: 'email', label: 'E-mail (para acessar o app do motorista)', type: 'text', max: 120 },
       { key: 'cpf', label: 'CPF', type: 'text', max: 14 },
+      { key: 'rg', label: 'RG (identidade)', type: 'text', max: 20 },
       { key: 'data_nascimento', label: 'Data de nascimento', type: 'date' },
       { key: 'cidade', label: 'Cidade', type: 'text', required: true, max: 80 },
       { key: 'data_primeiro_contato', label: 'Data do primeiro contato', type: 'date', required: true },

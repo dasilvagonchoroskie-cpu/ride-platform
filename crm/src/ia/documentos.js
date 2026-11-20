@@ -117,4 +117,27 @@ function mascararNumeros(texto) {
     .replace(/\u0001(\d+)\u0002/g, (_, i) => datas[Number(i)]);
 }
 
-module.exports = { TIPOS_DOCUMENTO, dataISO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };
+const { validarCPF } = require('../protegidos');
+
+// EXTRAÇÃO SERVER-SIDE DE NÚMEROS SENSÍVEIS (CPF, registro da CNH, RG) do TEXTO COMPLETO do documento.
+// Roda SÓ no servidor, antes do mascaramento: estes números NUNCA vão para a IA externa (Gemini só vê o texto mascarado).
+// Só preenche o cadastro do motorista; não é logado em lugar nenhum.
+function soDigitos(v) { return String(v || '').replace(/\D+/g, ''); }
+function extrairNumerosSensiveis(textoBruto) {
+  const t = String(textoBruto || '');
+  const r = {};
+  // CPF: formato com pontos OU 11 dígitos rotulados, sempre validado pelo dígito verificador.
+  const cpfRot = t.match(/\bcpf\b[^0-9]{0,8}(\d{3}\.?\d{3}\.?\d{3}-?\d{2})/i);
+  const cpfLivre = t.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
+  const cpfCand = soDigitos(cpfRot ? cpfRot[1] : (cpfLivre ? cpfLivre[0] : ''));
+  if (cpfCand.length === 11 && validarCPF(cpfCand)) r.cpf = cpfCand;
+  // Número de registro da CNH: rótulo "N° REGISTRO" seguido de 9 a 11 dígitos (o registro tem 11).
+  const reg = t.match(/n[º°o.\s]*registro[^0-9]{0,6}(\d{9,11})/i);
+  if (reg) r.cnh_numero = reg[1];
+  // RG / documento de identidade: rótulo + número (pode ter ponto, traço e órgão emissor depois).
+  const rg = t.match(/(?:doc\.?\s*identidade|identidade|\brg\b)[^0-9]{0,8}(\d[\d.\-]{4,13}\d)/i);
+  if (rg) { const d = rg[1].replace(/[^\dXx]/g, ''); if (d.length >= 5 && d.length <= 14) r.rg = rg[1].trim(); }
+  return r;
+}
+
+module.exports = { extrairNumerosSensiveis, TIPOS_DOCUMENTO, dataISO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };

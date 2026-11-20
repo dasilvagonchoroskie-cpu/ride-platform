@@ -18,7 +18,7 @@ const { criarCofre } = require('./ia/secret');
 const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provider');
 const { criarTranscritor, lerComTentativas } = require('./ia/transcricao');
 const { createRecebidos } = require('./documentos/recebidos');
-const { mascararNumeros } = require('./ia/documentos');
+const { mascararNumeros, extrairNumerosSensiveis } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
 const { createNotificacoes } = require('./notificacoes');
@@ -115,6 +115,22 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
     const lido = r.simbolo === '🎤' ? r.texto : mascararNumeros(r.texto);
     const novo = r.texto === '[sem fala]' ? `${rotulo} (sem fala)` : `${rotulo} ${r.simbolo || '📎'} ${lido}`;
     wa.store.definirTranscricao(mensagemId, novo);
+    // Números sensíveis (CPF, registro da CNH, RG): extraídos AQUI do texto COMPLETO (r.texto), no servidor, e gravados
+    // direto no cadastro do motorista vinculado. NUNCA vão para a IA (que só vê o texto mascarado) nem para logs.
+    try {
+      const sens = extrairNumerosSensiveis(r.texto);
+      if (sens.cpf || sens.cnh_numero || sens.rg) {
+        const msg = db.prepare('SELECT conversa_id FROM wa_mensagens WHERE id = ?').get(mensagemId);
+        const conv = msg && db.prepare('SELECT vinculo_tipo, vinculo_id FROM wa_conversas WHERE id = ?').get(msg.conversa_id);
+        if (conv && conv.vinculo_tipo === 'motoristas' && conv.vinculo_id) {
+          const sets = []; const params = [];
+          for (const [k, v] of [['cpf', sens.cpf], ['cnh_numero', sens.cnh_numero], ['rg', sens.rg]]) {
+            if (v) { sets.push(`${k} = CASE WHEN ${k} IS NULL OR ${k} = '' THEN ? ELSE ${k} END`); params.push(v); }
+          }
+          if (sets.length) db.prepare(`UPDATE motoristas SET ${sets.join(', ')} WHERE id = ?`).run(...params, conv.vinculo_id);
+        }
+      }
+    } catch (e) { /* não atrapalha a leitura do documento */ }
     registrar(true, r.provedor);
     console.log(`[ia] mídia da mensagem ${mensagemId} (${midia.tipo}, ${midia.mime}) lida por ${r.provedor}: ${r.texto.length} caracteres`);
     if (guardar) await guardarArquivo(mensagemId, midia, arquivo, r.texto, false);
