@@ -75,9 +75,12 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
   const cfg = ia.config();
   const pular = (motivo) => { console.log(`[ia] mídia da mensagem ${mensagemId} (${midia && midia.tipo}) não lida: ${motivo}`); return false; };
   if (!midia || typeof midia.baixar !== 'function') return pular('sem arquivo para baixar');
-  // Contato pessoal (família/amigos): nada é lido nem guardado como documento.
+  // Contato pessoal (família/amigos): foto, PDF e vídeo não são lidos nem guardados como documento.
+  // ÁUDIO é sempre transcrito (o recebido e o que o dono manda pelo próprio WhatsApp): vira só texto na conversa;
+  // a IA continua sem atender, sem criar cadastro e sem guardar números sensíveis.
   const pessoal = db.prepare('SELECT k.pessoal FROM wa_mensagens m JOIN wa_conversas c ON c.id = m.conversa_id JOIN wa_contatos k ON k.id = c.contato_id WHERE m.id = ?').get(mensagemId);
-  if (pessoal && pessoal.pessoal) return pular('contato pessoal');
+  const ehPessoal = !!(pessoal && pessoal.pessoal);
+  if (ehPessoal && midia.tipo !== 'audio') return pular('contato pessoal');
   // Foto/documento é GUARDADO (cifrado) mesmo quando a IA não vai ler: o arquivo não pode se perder.
   // Só o que o CLIENTE manda (foto enviada pela equipe pelo celular não é documento do candidato).
   const guardar = !deMim && ['image', 'document'].includes(midia.tipo) && recebidos && recebidos.ativo();
@@ -119,7 +122,7 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
     // direto no cadastro do motorista vinculado. NUNCA vão para a IA (que só vê o texto mascarado) nem para logs.
     try {
       const sens = extrairNumerosSensiveis(r.texto);
-      if (sens.cpf || sens.cnh_numero || sens.rg) {
+      if (!ehPessoal && (sens.cpf || sens.cnh_numero || sens.rg)) {
         const msg = db.prepare('SELECT conversa_id FROM wa_mensagens WHERE id = ?').get(mensagemId);
         if (msg && msg.conversa_id) {
           const conv = db.prepare('SELECT k.vinculo_tipo, k.vinculo_id FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id WHERE c.id = ?').get(msg.conversa_id);
