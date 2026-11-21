@@ -18,7 +18,7 @@ const { criarCofre } = require('./ia/secret');
 const { criarProvedorMulti, descobrirModelo, PROVEDORES } = require('./ia/provider');
 const { criarTranscritor, lerComTentativas } = require('./ia/transcricao');
 const { createRecebidos } = require('./documentos/recebidos');
-const { mascararNumeros, extrairNumerosSensiveis } = require('./ia/documentos');
+const { mascararNumeros, extrairNumerosSensiveis, extrairCamposCnh } = require('./ia/documentos');
 const iaRoutes = require('./ia/routes');
 const correio = require('./email');
 const { createNotificacoes } = require('./notificacoes');
@@ -121,15 +121,15 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
     // Números sensíveis (CPF, registro da CNH, RG): extraídos AQUI do texto COMPLETO (r.texto), no servidor, e gravados
     // direto no cadastro do motorista vinculado. NUNCA vão para a IA (que só vê o texto mascarado) nem para logs.
     try {
-      const sens = extrairNumerosSensiveis(r.texto);
-      if (!ehPessoal && (sens.cpf || sens.cnh_numero || sens.rg)) {
+      const campos = { ...extrairNumerosSensiveis(r.texto), ...extrairCamposCnh(r.texto) };
+      if (!ehPessoal && Object.values(campos).some((v) => v)) {
         const msg = db.prepare('SELECT conversa_id FROM wa_mensagens WHERE id = ?').get(mensagemId);
         if (msg && msg.conversa_id) {
           const conv = db.prepare('SELECT k.vinculo_tipo, k.vinculo_id FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id WHERE c.id = ?').get(msg.conversa_id);
           // Já vinculado ao motorista: preenche na hora. Ainda não (documentos chegam antes do cadastro):
-          // guarda os números num cofre temporário e aplica quando o cadastro for vinculado.
-          if (conv && conv.vinculo_tipo === 'motoristas' && conv.vinculo_id) preencherSensiveis(conv.vinculo_id, sens);
-          else guardarSensiveisPendentes(msg.conversa_id, sens);
+          // guarda os dados num cofre temporário e aplica quando o cadastro for vinculado.
+          if (conv && conv.vinculo_tipo === 'motoristas' && conv.vinculo_id) preencherCamposMotorista(conv.vinculo_id, campos);
+          else guardarCamposPendentes(msg.conversa_id, campos);
         }
       }
     } catch (e) { /* não atrapalha a leitura do documento */ }
@@ -153,37 +153,43 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
   }
 });
 
-// Números sensíveis (CPF, registro da CNH, RG): server-side, nunca vão para a IA nem para logs.
-// Só preenchem campos vazios do cadastro do motorista.
-function preencherSensiveis(motoristaId, sens) {
+// Dados lidos dos documentos que o cadastro do motorista recebe (números sensíveis + campos da CNH). Os números
+// sensíveis (CPF, registro da CNH, RG) nunca vão para a IA nem para logs. Preenche só campos VAZIOS: nunca
+// sobrescreve o que a equipe já conferiu/corrigiu. O documento preenche a ficha automaticamente — nada fica em branco.
+const COLUNAS_DOC_FICHA = ['cpf', 'cnh_numero', 'rg', 'nome', 'data_nascimento', 'cnh_categoria', 'cnh_validade', 'cnh_primeira_habilitacao'];
+function preencherCamposMotorista(motoristaId, campos) {
   const sets = []; const params = [];
-  for (const [k, v] of [['cpf', sens.cpf], ['cnh_numero', sens.cnh_numero], ['rg', sens.rg]]) {
-    if (v) { sets.push(`${k} = CASE WHEN ${k} IS NULL OR ${k} = '' THEN ? ELSE ${k} END`); params.push(v); }
+  for (const k of COLUNAS_DOC_FICHA) {
+    const v = campos[k];
+    if (v == null || String(v).trim() === '') continue;
+    sets.push(`${k} = CASE WHEN ${k} IS NULL OR ${k} = '' THEN ? ELSE ${k} END`);
+    params.push(String(v).trim());
   }
   if (sets.length) db.prepare(`UPDATE motoristas SET ${sets.join(', ')} WHERE id = ?`).run(...params, motoristaId);
 }
-// Cofre temporário: guarda os números lidos quando ainda não há cadastro vinculado à conversa.
+// Cofre temporário: guarda os dados lidos quando ainda não há cadastro vinculado à conversa.
 function garantirPendentes() {
   db.exec('CREATE TABLE IF NOT EXISTS wa_num_pendentes (conversa_id INTEGER PRIMARY KEY, cpf TEXT, cnh_numero TEXT, rg TEXT, criado_em TEXT)');
+  for (const col of ['nome', 'data_nascimento', 'cnh_categoria', 'cnh_validade', 'cnh_primeira_habilitacao']) {
+    try { db.exec(`ALTER TABLE wa_num_pendentes ADD COLUMN ${col} TEXT`); } catch (e) { /* coluna já existe */ }
+  }
 }
-function guardarSensiveisPendentes(conversaId, sens) {
+function guardarCamposPendentes(conversaId, campos) {
   garantirPendentes();
-  const a = db.prepare('SELECT cpf, cnh_numero, rg FROM wa_num_pendentes WHERE conversa_id = ?').get(conversaId) || {};
-  const cpf = sens.cpf || a.cpf || null;
-  const cnh = sens.cnh_numero || a.cnh_numero || null;
-  const rg = sens.rg || a.rg || null;
-  db.prepare(`INSERT INTO wa_num_pendentes (conversa_id, cpf, cnh_numero, rg, criado_em) VALUES (?, ?, ?, ?, ?)
-    ON CONFLICT(conversa_id) DO UPDATE SET cpf = excluded.cpf, cnh_numero = excluded.cnh_numero, rg = excluded.rg`).run(conversaId, cpf, cnh, rg, nowISO());
+  const a = db.prepare(`SELECT ${COLUNAS_DOC_FICHA.join(', ')} FROM wa_num_pendentes WHERE conversa_id = ?`).get(conversaId) || {};
+  const val = COLUNAS_DOC_FICHA.map((c) => campos[c] || a[c] || null);
+  db.prepare(`INSERT INTO wa_num_pendentes (conversa_id, ${COLUNAS_DOC_FICHA.join(', ')}, criado_em) VALUES (?, ${COLUNAS_DOC_FICHA.map(() => '?').join(', ')}, ?)
+    ON CONFLICT(conversa_id) DO UPDATE SET ${COLUNAS_DOC_FICHA.map((c) => `${c} = excluded.${c}`).join(', ')}`).run(conversaId, ...val, nowISO());
 }
 // Aplica o cofre temporário no motorista assim que a conversa é vinculada a ele; depois apaga.
 function aplicarSensiveisPendentes(conversaId) {
   try {
     garantirPendentes();
-    const pend = db.prepare('SELECT cpf, cnh_numero, rg FROM wa_num_pendentes WHERE conversa_id = ?').get(conversaId);
+    const pend = db.prepare(`SELECT ${COLUNAS_DOC_FICHA.join(', ')} FROM wa_num_pendentes WHERE conversa_id = ?`).get(conversaId);
     if (!pend) return;
     const conv = db.prepare('SELECT k.vinculo_tipo, k.vinculo_id FROM wa_conversas c JOIN wa_contatos k ON k.id = c.contato_id WHERE c.id = ?').get(conversaId);
     if (conv && conv.vinculo_tipo === 'motoristas' && conv.vinculo_id) {
-      preencherSensiveis(conv.vinculo_id, { cpf: pend.cpf, cnh_numero: pend.cnh_numero, rg: pend.rg });
+      preencherCamposMotorista(conv.vinculo_id, pend);
       db.prepare('DELETE FROM wa_num_pendentes WHERE conversa_id = ?').run(conversaId);
     }
   } catch (e) { /* silencioso */ }

@@ -140,4 +140,28 @@ function extrairNumerosSensiveis(textoBruto) {
   return r;
 }
 
-module.exports = { extrairNumerosSensiveis, TIPOS_DOCUMENTO, dataISO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };
+// Extracao server-side, do TEXTO COMPLETO da CNH (antes do mascaramento, nunca vai para a IA), dos campos da
+// ficha que estao no documento: data de nascimento, categoria, validade, primeira habilitacao e nome.
+// Datas viram AAAA-MM-DD. Nome: so com rotulo claro e pelo menos dois nomes.
+function extrairCamposCnh(textoBruto) {
+  const t = String(textoBruto || '');
+  const ehCnh = tipoDocumento(`\u{1F4CE} ${t}`) === 'cnh' || /carteira (nacional )?de habilita[\u00e7c][\u00e3a]o|\bcnh\b|\bhabilita[\u00e7c][\u00e3a]o\b|\bdetran\b|\brenach\b/i.test(t);
+  const r = {};
+  if (!ehCnh) return r;
+  const cat = t.match(/cat(?:egoria)?\.?\s*(?:hab\.?|da\s*cnh|habilita[\u00e7c][\u00e3a]o)?\s*[:\-]?\s*([A-Ea-e]{1,2})\b/i);
+  if (cat) { const c = normalizarCategoria(cat[1]); if (c) r.cnh_categoria = c; }
+  const val = t.match(new RegExp(`validade(?:\\s+da\\s+(?:cnh|habilita[\u00e7c][\u00e3a]o))?\\s*[:\\-]?\\s*${DATA_NO_TEXTO}`, 'i'));
+  if (val) { const d = dataISO(val[1]); if (d) r.cnh_validade = d; }
+  const prim = t.match(new RegExp(`(?:primeira|1[\u00aaa\u00b0\u00ba]?)\\s*habilita[\u00e7c][\u00e3a]o\\s*[:\\-]?\\s*${DATA_NO_TEXTO}`, 'i'));
+  if (prim) { const d = dataISO(prim[1]); if (d) r.cnh_primeira_habilitacao = d; }
+  const nasc = t.match(new RegExp(`(?:data\\s*(?:de\\s*)?)?nascimento\\s*[:\\-]?\\s*${DATA_NO_TEXTO}`, 'i'));
+  if (nasc) { const d = dataISO(nasc[1]); if (d) r.data_nascimento = d; }
+  const nome = t.match(/(?:^|\n|\u{1F4CE})\s*nome(?!\s+(?:social|da\s+m[\u00e3a]e|do\s+pai|civil))\s*[:\-]\s*([A-Za-z\u00c0-\u00ff][A-Za-z\u00c0-\u00ff'\u00b4`^~ ]{4,60})/i);
+  if (nome) {
+    const limpo = nome[1].replace(/\s{2,}/g, ' ').trim();
+    if (/\s/.test(limpo) && limpo.length >= 5) r.nome = limpo.slice(0, 80);
+  }
+  return r;
+}
+
+module.exports = { extrairNumerosSensiveis, extrairCamposCnh, TIPOS_DOCUMENTO, dataISO, mascararNumeros, extrairDadosDocumentos, normalizarCategoria, normalizarPlaca, tipoDocumento, documentosRecebidos };
