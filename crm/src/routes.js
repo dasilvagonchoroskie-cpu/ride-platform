@@ -75,15 +75,15 @@ wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {
   const cfg = ia.config();
   const pular = (motivo) => { console.log(`[ia] mídia da mensagem ${mensagemId} (${midia && midia.tipo}) não lida: ${motivo}`); return false; };
   if (!midia || typeof midia.baixar !== 'function') return pular('sem arquivo para baixar');
-  // Contato pessoal (família/amigos): foto, PDF e vídeo não são lidos nem guardados como documento.
-  // ÁUDIO é sempre transcrito (o recebido e o que o dono manda pelo próprio WhatsApp): vira só texto na conversa;
-  // a IA continua sem atender, sem criar cadastro e sem guardar números sensíveis.
+  // Toda mídia que dá para ler (áudio, foto, PDF, vídeo...) é lida em QUALQUER contato, pessoal ou não, e também a que o dono
+  // manda pelo próprio WhatsApp (pedido do dono, 20/11/2026): vira só texto na conversa.
+  // Em contato pessoal a IA continua sem atender, e o arquivo NÃO é guardado como documento de candidato
+  // nem os números sensíveis (CPF/CNH/RG) vão para o cadastro.
   const pessoal = db.prepare('SELECT k.pessoal FROM wa_mensagens m JOIN wa_conversas c ON c.id = m.conversa_id JOIN wa_contatos k ON k.id = c.contato_id WHERE m.id = ?').get(mensagemId);
   const ehPessoal = !!(pessoal && pessoal.pessoal);
-  if (ehPessoal && midia.tipo !== 'audio') return pular('contato pessoal');
   // Foto/documento é GUARDADO (cifrado) mesmo quando a IA não vai ler: o arquivo não pode se perder.
   // Só o que o CLIENTE manda (foto enviada pela equipe pelo celular não é documento do candidato).
-  const guardar = !deMim && ['image', 'document'].includes(midia.tipo) && recebidos && recebidos.ativo();
+  const guardar = !deMim && !ehPessoal && ['image', 'document'].includes(midia.tipo) && recebidos && recebidos.ativo();
   const motivoSemLeitura = (() => {
     if (!cfg.ativo) return 'IA desativada';
     if (!cfg.transcrever) return 'leitura de mídias desligada';

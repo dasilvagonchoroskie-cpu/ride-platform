@@ -1,6 +1,6 @@
 'use strict';
 // Áudio em contato pessoal (20/11/2026, pedido do dono): o áudio é SEMPRE transcrito, inclusive o que ele manda pelo
-// próprio WhatsApp do celular; foto/PDF/vídeo de contato pessoal continuam sem leitura; a IA continua sem atender.
+// próprio WhatsApp do celular; toda mídia legível (foto, PDF, vídeo) também é lida em contato pessoal, mas sem guardar como documento; a IA continua sem atender.
 // Integração no processo: rotas reais + banco real. SIMULADO: canal do WhatsApp (falso) e respostas do Gemini (fetch falso).
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -72,14 +72,18 @@ test('contato pessoal: o áudio é transcrito (recebido e enviado pelo celular) 
   assert.equal(db.prepare('SELECT COUNT(*) n FROM motoristas').get().n, 0, 'nenhum cadastro criado');
 });
 
-test('contato pessoal: foto continua sem ser lida nem guardada como documento', async () => {
+test('contato pessoal: foto, vídeo e PDF também são lidos (viram texto), mas nada é guardado como documento', async () => {
   const canal = rotas.wa.canalFalso();
   await contatoPessoal(canal, '5564999990102');
   const antes = chamadasGemini;
   const foto = await chegar(canal, { telefone: '5564999990102', tipo: 'image', mime: 'image/jpeg', leitura: 'Descrição: foto da família' });
-  assert.equal(foto.texto, '[imagem]', 'texto da foto não muda');
-  assert.equal(chamadasGemini, antes, 'a foto não vai ao Gemini');
-  assert.equal(db.prepare('SELECT COUNT(*) n FROM wa_anexos WHERE mensagem_id = ?').get(foto.id).n, 0, 'nada guardado como documento');
+  assert.match(foto.texto, /📎 Descrição: foto da família/, 'a foto foi lida');
+  const video = await chegar(canal, { telefone: '5564999990102', tipo: 'video', mime: 'video/mp4', deMim: true, leitura: 'Descrição: vídeo do churrasco' });
+  assert.match(video.texto, /📎 Descrição: vídeo do churrasco/, 'o vídeo enviado pelo celular também foi lido');
+  const pdf = await chegar(canal, { telefone: '5564999990102', tipo: 'document', mime: 'application/pdf', leitura: 'Descrição: boleto' });
+  assert.match(pdf.texto, /📎 Descrição: boleto/, 'o PDF foi lido');
+  assert.equal(chamadasGemini - antes, 3, 'as 3 mídias foram ao Gemini');
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM wa_anexos WHERE mensagem_id IN (?, ?, ?)').get(foto.id, video.id, pdf.id).n, 0, 'nada guardado como documento de candidato');
   leituras.length = 0;
 });
 
