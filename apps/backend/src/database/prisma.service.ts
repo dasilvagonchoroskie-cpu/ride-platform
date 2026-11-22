@@ -131,20 +131,29 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
      * celular dele tocou chamado de teste na rua).
      */
     teste?: boolean;
-  }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>> {
+    /**
+     * So para CHAMAR motoristas (nunca para o mapa do passageiro): inclui quem esta
+     * online mas calado ha mais de 2 minutos (Evandro, 22/11/2026: o Android derrubou o
+     * vigia do celular e o motorista online nao recebeu a corrida). O push do Firebase
+     * acorda o aparelho. Quem esta calado vem marcado com semSinal = true.
+     */
+    incluirSemSinal?: boolean;
+  }): Promise<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null; semSinal: boolean }>> {
     const limit = params.limit ?? 20;
     const categoria = params.category ?? 'CARRO';
     const categorias = params.categorias && params.categorias.length > 0 ? params.categorias : [categoria];
     const teste = params.teste === true;
     // '' = filtra pela categoria; senao pelo tipo de veiculo da entrega.
     const veiculos = params.veiculos ?? '';
-    return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null }>>`
+    const incluirSemSinal = params.incluirSemSinal === true;
+    return this.$queryRaw<Array<{ driverId: string; distanceMeters: number; latitude: number; longitude: number; heading: number | null; semSinal: boolean }>>`
       SELECT
         dl.driver_id                     AS "driverId",
         ST_Distance(dl.location, ST_SetSRID(ST_MakePoint(${params.longitude}, ${params.latitude}), 4326)::geography) AS "distanceMeters",
         ST_Y(dl.location::geometry)      AS "latitude",
         ST_X(dl.location::geometry)      AS "longitude",
-        dl.heading                       AS "heading"
+        dl.heading                       AS "heading",
+        (dl.last_seen_at <= NOW() - INTERVAL '2 minutes') AS "semSinal"
       FROM driver_locations dl
       JOIN drivers d ON d.id = dl.driver_id
       JOIN users u ON u.id = d.user_id
@@ -152,7 +161,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         AND d.is_online = TRUE
         AND dl.is_available = TRUE
         AND COALESCE(u.metadata->>'teste' = 'true', FALSE) = ${teste}
-        AND dl.last_seen_at > NOW() - INTERVAL '2 minutes'
+        AND (${incluirSemSinal} OR dl.last_seen_at > NOW() - INTERVAL '2 minutes')
         AND EXISTS (
           SELECT 1 FROM vehicles v
           WHERE v.driver_id = d.id AND v.is_active = TRUE

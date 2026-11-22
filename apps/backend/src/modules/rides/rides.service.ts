@@ -570,7 +570,10 @@ export class RidesService {
       latitude: corrida.pickupLat,
       longitude: corrida.pickupLng,
       radiusMeters: RidesService.RAIOS_METROS[RidesService.RAIOS_METROS.length - 1],
-      limit: 30,
+      // Folga para os calados nao esconderem quem esta com sinal.
+      limit: 60,
+      // Online e calado (o Android derrubou o vigia) tambem e chamado: o push acorda o aparelho.
+      incluirSemSinal: true,
       category: corrida.category,
       // So a categoria escolhida pelo passageiro (Evandro, 11/11/2026).
       categorias: daEntrega ? undefined : categoriasQueAtendem(corrida.category, await this.fare.categoriasNoPonto({ latitude: corrida.pickupLat, longitude: corrida.pickupLng })),
@@ -591,7 +594,13 @@ export class RidesService {
     }
 
     for (const raio of RidesService.RAIOS_METROS) {
-      const proximos = aptos.filter((m) => m.distanceMeters <= raio).slice(0, 10);
+      // Todos tocam ao mesmo tempo, sem prioridade. Os calados tem a propria cota de 10,
+      // para um celular morto perto nao tirar o lugar de quem esta com sinal.
+      const dentro = aptos.filter((m) => m.distanceMeters <= raio);
+      const proximos = [
+        ...dentro.filter((m) => !m.semSinal).slice(0, 10),
+        ...dentro.filter((m) => m.semSinal).slice(0, 10),
+      ].sort((a, b) => a.distanceMeters - b.distanceMeters);
       if (proximos.length === 0) continue;
       const favoritosPerto = primeiraRodada ? proximos.filter((m) => favoritos.includes(m.driverId)) : [];
       const chamar = favoritosPerto.length > 0 ? favoritosPerto : proximos;
