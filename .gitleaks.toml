@@ -4,14 +4,9 @@ title = "Fortaleza Move - gitleaks"
 useDefault = true
 
 [allowlist]
-description = "Falsos positivos conferidos em 26/11/2026: nao sao segredos reais. Segredo de verdade continua sendo detectado."
+description = "Falsos positivos conferidos em 26/11/2026: nao sao segredos reais. Nenhum arquivo inteiro fica de fora; os casos conferidos por arquivo estao no .gitleaksignore."
 regexes = [
   '''FM-TEST-CHAV-E123''',                           # chave de instalacao FALSA usada so nos testes do CRM
   '''RSA_ECB_OAEPwithSHA_256andMGF1Padding''',      # nome de algoritmo no CofreNativo.java (3 apps)
   '''sb_publishable_[A-Za-z0-9_-]+''',              # chave publicavel do Supabase (feita para ser publica; usada no workflow de ping)
-]
-paths = [
-  '''(^|/)apps/backend/src/config/configuration\.ts$''',                        # le segredos de variaveis de ambiente, sem valor fixo
-  '''(^|/)apps/backend/src/modules/documents/documents\.service\.spec\.ts$''', # teste com nomes de arquivo ficticios
-  '''(^|/)\.env\.example$''',                                                   # exemplos com valores de aviso, nao reais
 ]
