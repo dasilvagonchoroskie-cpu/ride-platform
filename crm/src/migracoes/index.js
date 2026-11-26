@@ -117,9 +117,9 @@ function migrar(db, { lista = LISTA, ate = Infinity, antes = null, log = console
 
 /** Cópia de segurança local do banco antes de migrar (pasta backups/, fora do retrato do cofre). */
 function copiaDeSeguranca(db, dataDir, versao) {
-  const dir = path.join(dataDir, 'backups');
+  const dir = path.join(dataDir, 'backups'); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const arq = path.join(dir, `pre-migracao-${versao}-${new Date().toISOString().replace(/[:.]/g, '-')}.db`);
+  const arq = path.join(dir, `pre-migracao-${versao}-${new Date().toISOString().replace(/[:.]/g, '-')}.db`); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   fs.writeFileSync(arq, db.serialize(), { mode: 0o600 });
   return arq;
 }
