@@ -62,7 +62,7 @@ function abrir(tipo, cifrado) {
   const s = String(cifrado || '');
   if (!s.startsWith('P1.')) throw new Error('Formato de campo protegido desconhecido.');
   const buf = Buffer.from(s.slice(3), 'base64');
-  const d = crypto.createDecipheriv('aes-256-gcm', chaves().cifra, buf.subarray(0, 12));
+  const d = crypto.createDecipheriv('aes-256-gcm', chaves().cifra, buf.subarray(0, 12), { authTagLength: 16 });
   d.setAAD(Buffer.from(`fm-${tipo}-v1`));
   d.setAuthTag(buf.subarray(12, 28));
   return Buffer.concat([d.update(buf.subarray(28)), d.final()]).toString();

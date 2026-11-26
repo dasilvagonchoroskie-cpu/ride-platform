@@ -113,7 +113,7 @@ export function cifrar(texto: string, mestre: string): string {
 export function decifrar(guardado: string, mestre: string): string {
   const [v, iv, tag, corpo] = guardado.split('.');
   if (v !== 'v1' || !iv || !tag || !corpo) throw new Error('formato');
-  const d = createDecipheriv('aes-256-gcm', chaveDe(mestre), Buffer.from(iv, 'base64'));
+  const d = createDecipheriv('aes-256-gcm', chaveDe(mestre), Buffer.from(iv, 'base64'), { authTagLength: 16 });
   d.setAuthTag(Buffer.from(tag, 'base64'));
   return Buffer.concat([d.update(Buffer.from(corpo, 'base64')), d.final()]).toString('utf8');
 }

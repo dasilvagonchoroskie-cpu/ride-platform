@@ -47,6 +47,10 @@ marketing (campanhas), tarefas e planejamento financeiro (cenários e simulaçõ
 - `admin`: tudo. `gestor`: lê, cria e edita; exclui só tarefas; não exporta CSV; não acessa configurações, usuários,
   auditoria nem a atividade recente; não exclui cenários/simulações. Mudar regras em `src/policy.js`.
 
+## Triagem do radar do XDR e endurecimento (26/11/2026; 2.1.0-rc.10, cache segue `fm-crm-v36`)
+- `createDecipheriv('aes-256-gcm', ...)` sempre com `{ authTagLength: 16 }` (persist.js, protegidos.js, documentos/cifra.js e `dois-fatores.ts` da API). Dado antigo já tinha tag de 16 bytes. NÃO remover: o Semgrep reclama e a tag truncada passaria.
+- `.gitleaks.toml` na raiz do monorepo: exceções conferidas (chave falsa `FM-TEST-CHAV-E123`, algoritmo do CofreNativo, chave publicável do Supabase, `.env.example`). Chave nova de teste com outro formato = acrescentar lá, não marcar no painel.
+
 ## CNH na ficha do motorista (13/11/2026 noite, pedido do dono; 2.1.0-rc.9, cache segue `fm-crm-v36`)
 - Campos novos em motoristas e entregadores: `cnh_primeira_habilitacao` e `cnh_validade` (date). A IA os preenche pelo texto lido da CNH
   (`extrairDadosDocumentos` só em textos `tipoDocumento === 'cnh'`; `dataISO` converte dd/mm/aaaa, dd-mm-aaaa, dd.mm.aaaa; data impossível é descartada).

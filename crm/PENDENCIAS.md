@@ -4,6 +4,15 @@ Atualizado em 19/11/2026 (horário de Brasília). Lista única do que falta. Ao 
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
+## 26/11/2026 — triagem do radar do XDR e endurecimento (2.1.0-rc.10)
+- [x] 26/11: `createDecipheriv` do AES-GCM agora declara `authTagLength: 16` (persist.js, protegidos.js, documentos/cifra.js x3) e na API (`dois-fatores.ts`). Os dados já usavam tag de 16 bytes: é só endurecimento (recusa tag truncada). `npm test` 246/246; teste do 2FA da API 6/6.
+- [x] 26/11: `.gitleaks.toml` na raiz do monorepo (PR #74) com as exceções conferidas (chave falsa dos testes, nome de algoritmo, chave publicável do Supabase, `.env.example`). Os 13 avisos `gcp-api-key` continuam de propósito.
+- [ ] DONO: restringir no Google Cloud as chaves de API do Firebase/Maps (`infra/firebase-apps.b64`, `infra/mapas.b64`): por aplicativo (pacote/SHA-1) e só as APIs usadas. Chave de cliente do Firebase não é segredo, mas sem restrição qualquer um pode gastar a cota.
+- [ ] Workflows do GitHub Actions: 16 avisos `run-shell-injection` e 59 `mutable-action-tag`. Risco real baixo (só quem tem escrita no repositório controla o contexto), mas mexer nos workflows de APK sem rodá-los pode quebrar a entrega: fazer em lote com teste dos workflows.
+- [ ] Servidor: rodar `sudo bash /opt/fortaleza/endurecer-servidor.sh` (kernel, protocolos raros, aviso legal, LogLevel do SSH) e atualizar o `docker-ce` em horário de pouco movimento (reinicia todos os contêineres por alguns segundos).
+- [ ] App da Central (APK): minSdk 24, CBC/PKCS5, SHA-1, Random inseguro, armazenamento externo: vêm de bibliotecas do Flutter; só mudam com atualização das dependências e novo APK.
+- Aceitos de propósito: CSP `unsafe-inline` e COEP ausente nos apps Flutter (central e comércio); glob/minimatch só no build.
+
 ## INTEGRAÇÃO CRM → Central (Fortaleza Mov) — motorista aprovado vira cadastro apto na plataforma
 
 **Objetivo (pedido do dono, 20/11):** ao aprovar um motorista no CRM, o cadastro cai automaticamente na Central já aprovado e apto; o motorista entra no app com o e-mail que informou, recebe código, cria a senha e usa.
