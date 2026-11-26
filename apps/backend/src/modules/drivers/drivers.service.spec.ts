@@ -52,7 +52,8 @@ function montar(
   };
   const caixa = { avisar: jest.fn(async () => undefined) };
   const pracas = { doPonto: jest.fn(async () => null), buscar: jest.fn(async () => null), definirPracaDoMotorista: jest.fn() };
-  const servico = new DriversService(repo as never, prisma as never, {} as never, {} as never, pracas as never, caixa as never);
+  const vehicles = { adminCriar: jest.fn(), adminEditar: jest.fn(), adminUsar: jest.fn() };
+  const servico = new DriversService(repo as never, prisma as never, {} as never, {} as never, pracas as never, caixa as never, vehicles as never);
   // withProgress/ondeAbrirOMapa leem coisas que nao interessam aqui.
   jest.spyOn(servico as never, 'ondeAbrirOMapa' as never).mockResolvedValue({} as never);
   return { servico, repo, prisma, caixa };
