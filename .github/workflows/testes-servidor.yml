@@ -7,11 +7,17 @@ on:
     paths:
       - 'apps/backend/**'
       - 'packages/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/testes-servidor.yml'
   push:
     branches: [main]
     paths:
       - 'apps/backend/**'
       - 'packages/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/testes-servidor.yml'
   workflow_dispatch: {}
 
 permissions:
@@ -33,4 +39,5 @@ jobs:
           pnpm --filter @ride/shared build
           pnpm --filter @ride/backend exec prisma generate
           pnpm --filter @ride/backend exec tsc --noEmit -p tsconfig.json
+          pnpm --filter @ride/backend build
           pnpm --filter @ride/backend exec jest --config jest.config.js --ci 2>&1 | tee /tmp/testes.txt
