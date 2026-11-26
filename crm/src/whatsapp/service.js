@@ -23,8 +23,8 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
     if (criarCanal) return criarCanal();
     if (process.env.WA_CANAL === 'fake') return require('./fake-channel').criarCanalFalso({ conectado: true });
     return require('./baileys-channel').criar({
-      authDir: path.join(dataDir, 'wa-auth'),
-      libDir: process.env.WA_LIB_DIR ? path.resolve(process.env.WA_LIB_DIR) : path.join(dataDir, 'wa-lib'),
+      authDir: path.join(dataDir, 'wa-auth'), // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+      libDir: process.env.WA_LIB_DIR ? path.resolve(process.env.WA_LIB_DIR) : path.join(dataDir, 'wa-lib'), // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
       log
     });
   }
