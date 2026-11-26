@@ -22,3 +22,16 @@
 # release com Flutter + R8, documentado no proprio flutter.dev.
 -dontwarn com.google.android.play.core.**
 -keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
+
+# Producao sem registro no log do Android: o R8 tira as chamadas de android.util.Log (do app e das bibliotecas
+# Java/Kotlin), para nada sensivel aparecer a quem ligar o celular num computador. Falhas que derrubam o app
+# continuam sendo registradas pelo proprio Android.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+    public static int wtf(...);
+    public static int println(...);
+}

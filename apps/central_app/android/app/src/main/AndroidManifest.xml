@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- A Central apenas consulta: sem localizacao propria -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Mapa abre onde o operador esta, e avisos da operacao -->
@@ -60,6 +61,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Recebedor da biblioteca androidx.profileinstaller: fica exposto e so serve para comandos de teste
+             pelo computador (adb). O app nao precisa dele: um componente exposto a menos. -->
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            tools:node="remove" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
