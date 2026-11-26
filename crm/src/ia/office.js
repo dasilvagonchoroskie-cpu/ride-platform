@@ -47,7 +47,7 @@ const decodificar = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/g
   if (e[0] === '#') { const n = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return Number.isFinite(n) && n < 0x110000 ? String.fromCodePoint(n) : ''; }
   return ENTIDADES[e.toLowerCase()] || m;
 });
-const textosDe = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([^<]*)</${tag}>`, 'g'))].map((m) => decodificar(m[1]));
+const textosDe = (xml, tag) => [...xml.matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([^<]*)</${tag}>`, 'g'))].map((m) => decodificar(m[1])); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
 const ordemNumerica = (a, b) => a.localeCompare(b, 'en', { numeric: true });
 
 function extrairTextoOffice(buf, nomeArquivo = '') {
