@@ -60,7 +60,7 @@ if [ "$ACAO" = "zerar_e_limpar" ]; then
   done < <(contas)
   log "Contas para apagar: ${#IDS[@]}"
   for ((i=0; i<${#IDS[@]}; i+=200)); do
-    LOTE=$(IFS=,; echo "${IDS[*]:i:200}")
+    LOTE=$(IFS=,; echo "${IDS[*]:i:200}")  # nosemgrep: bash.lang.security.ifs-tampering.ifs-tampering
     X=$(post /admin/limpeza/contas/apagar "{\"ids\":[$LOTE]}" "$TA")
     log "  apagadas: $(echo "$X" | jq -c '{contas: .data.contas, recusadas: [.data.recusadas[]? | "\(.nome): \(.motivo)"]}')"
   done

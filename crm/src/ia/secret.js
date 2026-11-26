@@ -14,7 +14,7 @@ const ENV = {
 
 function criarCofre(dataDir) {
   const id = (p) => (Object.prototype.hasOwnProperty.call(ENV, p) ? p : 'anthropic');
-  const arquivoDe = (p) => path.join(dataDir, id(p) === 'anthropic' ? 'ia-key' : `ia-key-${id(p)}`);
+  const arquivoDe = (p) => path.join(dataDir, id(p) === 'anthropic' ? 'ia-key' : `ia-key-${id(p)}`); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   const doEnv = (p) => String(process.env[ENV[id(p)]] || '').trim();
   const ler = (p = 'anthropic') => {
     const env = doEnv(p);

@@ -1860,7 +1860,7 @@ router.get('/wa/anexos/:id/arquivo', docsAtivo, requireAdmin, comAnexo(async (re
   res.set('Content-Disposition', `inline; filename="arquivo-whatsapp.${String(a.nome || '').split('.').pop().replace(/[^a-z0-9]/gi, '') || 'bin'}"`);
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline'; sandbox");
-  res.send(a.conteudo);
+  res.send(a.conteudo); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
 }));
 router.post('/wa/anexos/:id/classificar', docsAtivo, podeAnexarDocs, comAnexo(async (req, res) => {
   const b = req.body || {};

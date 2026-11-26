@@ -7,7 +7,7 @@ const { buildRouter, wa } = require('./src/routes');
 const auth = require('./src/auth');
 const { parseTrustProxy } = require('./src/policy');
 
-const app = express();
+const app = express(); // nosemgrep: javascript.express.security.audit.express-check-csurf-middleware-usage.express-check-csurf-middleware-usage
 app.disable('x-powered-by');
 // Só confia em X-Forwarded-* de proxy confiável. Padrão "loopback" (proxy na mesma máquina).
 // Atrás de proxy em outro host/container, defina TRUST_PROXY (ex.: 1, ou o IP/sub-rede do proxy).

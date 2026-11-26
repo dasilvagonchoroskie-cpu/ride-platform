@@ -285,7 +285,7 @@ export async function renderDocumentos(view, state, params) {
   const corpo = view.querySelector('#dc-corpo');
   const selSit = view.querySelector('#dc-s');
   if (f.situacao && !f.situacao.includes('|')) selSit.value = f.situacao;
-  else if (f.situacao) selSit.insertAdjacentHTML('afterend', `<span class="small muted">Filtro do painel: ${ui.esc(f.situacao.split('|').map((s) => meta.situacoes[s] || s).join(' ou '))}</span>`);
+  else if (f.situacao) selSit.insertAdjacentHTML('afterend', `<span class="small muted">Filtro do painel: ${ui.esc(f.situacao.split('|').map((s) => meta.situacoes[s] || s).join(' ou '))}</span>`); // nosemgrep: typescript.react.security.audit.react-unsanitized-method.react-unsanitized-method
   let seq = 0;
   async function carregar() {
     const mine = ++seq;

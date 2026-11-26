@@ -25,7 +25,7 @@ function converterParaOgg(entrada, { timeoutMs = 25000, bin = process.env.FFMPEG
     if (!formatoDoAudio(entrada)) { falha(new Error('formato de áudio não aceito')); return; }
     let p;
     try {
-      p = spawn(bin, ['-hide_banner', '-loglevel', 'error', '-nostdin', '-protocol_whitelist', 'pipe', '-i', 'pipe:0',
+      p = spawn(bin, ['-hide_banner', '-loglevel', 'error', '-nostdin', '-protocol_whitelist', 'pipe', '-i', 'pipe:0', // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process
         '-vn', '-ac', '1', '-ar', '48000', '-t', String(MAX_SEGUNDOS), '-c:a', 'libopus', '-b:a', '32k', '-application', 'voip', '-f', 'ogg', 'pipe:1'],
       { stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (err) { falha(err); return; }

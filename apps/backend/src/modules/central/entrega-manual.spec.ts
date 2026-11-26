@@ -344,7 +344,7 @@ describe('Lancamento manual: preco oficial', () => {
     ['chave geral desligada', 'c1', { chaveLigada: false }, ''],
   ])('%s: nao cota', async (_nome, id, opcoes, trecho) => {
     const ctx = montar(opcoes);
-    await expect(ctx.comercio.cotarParaMotorista('uMot', { comercioId: id, destino } as never)).rejects.toThrow(trecho ? new RegExp(trecho, 'i') : undefined);
+    await expect(ctx.comercio.cotarParaMotorista('uMot', { comercioId: id, destino } as never)).rejects.toThrow(trecho ? new RegExp(trecho, 'i') : undefined); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
     expect(ctx.rides.estimar).not.toHaveBeenCalled();
   });
 

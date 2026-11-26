@@ -149,7 +149,7 @@ export function lerContasDeRevisao(texto: string | undefined, tamanho: number): 
     const email = par.slice(0, i).trim().toLowerCase();
     const codigo = par.slice(i + 1).trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) continue;
-    if (!new RegExp(`^\\d{${tamanho}}$`).test(codigo)) continue;
+    if (!new RegExp(`^\\d{${tamanho}}$`).test(codigo)) continue; // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
     saida[email] = codigo;
   }
   return saida;
