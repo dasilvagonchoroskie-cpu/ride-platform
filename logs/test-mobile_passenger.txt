@@ -66,24 +66,25 @@
 00:08 +51 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
 00:08 +52 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
 00:09 +53 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:09 +54 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Corrida longa: embarque e destino aparecem os dois na tela
-00:09 +55 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Tela pequena e letra grande: em viagem sem estourar
+00:09 +54 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Tela pequena e letra grande: motorista no local sem estourar
+00:09 +55 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Sem enquadrar (zoom fixo antigo): o destino longe ficava fora
 00:09 +56 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/motorista_a_caminho_test.dart: Tela pequena e letra grande: em viagem sem estourar
 00:09 +57 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Confirmar viagem: o mapa ocupa a largura toda da tela
 00:09 +58 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Confirmar viagem: o mapa ocupa a largura toda da tela
 00:09 +59 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_enquadra_test.dart: Confirmar viagem: o mapa ocupa a largura toda da tela
-00:09 +60 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Ponto do sino: conta do servidor; abriu, some; a Central apagar o aviso nao faz voltar
+00:10 +60 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Ponto do sino: conta do servidor; abriu, some; a Central apagar o aviso nao faz voltar
 00:10 +61 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Lista: abre marcando como lidas; apagar uma com DESFAZER; apagar sem desfazer
 00:10 +62 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Lista: abre marcando como lidas; apagar uma com DESFAZER; apagar sem desfazer
 00:11 +63 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Lista: abre marcando como lidas; apagar uma com DESFAZER; apagar sem desfazer
-00:11 +64 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart: Confirmar viagem: escolhe Moto e o preco e o pedido mudam
+00:11 +64 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/sino_passageiro_test.dart: Apagar todas e Marcar todas como lidas
 00:12 +65 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart: Confirmar viagem: escolhe Moto e o preco e o pedido mudam
 00:12 +66 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/categoria_test.dart: Confirmar viagem: escolhe Moto e o preco e o pedido mudam
 00:13 +67 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando no embarque: usa o caminho do orcamento (sem rota nova)
 00:13 +68 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando no embarque: usa o caminho do orcamento (sem rota nova)
 00:13 +69 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando longe do embarque: pede a rota de onde o carro esta
-00:14 +70 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/rotas_economia_test.dart: Viagem comecando longe do embarque: pede a rota de onde o carro esta
-00:14 +71 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: Central ainda nao mexeu: fica o nome e a cor da montagem
+00:14 +70 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/troca_de_conta_test.dart: Sair da conta limpa historico, destinos e lugares recentes
+00:14 +71 ~12: loading /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart
+00:15 +71 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: Central ainda nao mexeu: fica o nome e a cor da montagem
 00:15 +72 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: Central escolheu: nome, cor, logo (endereco completo) e faixa
 00:15 +73 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: a configuracao do servidor aplica a marca e o tema segue a cor
 00:15 +74 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/marca_test.dart: tela de entrada e faixa do Inicio com o que a Central escolheu
@@ -105,8 +106,8 @@
 00:18 +90 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:18 +91 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:18 +92 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:18 +93 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
-00:18 +94 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:19 +93 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
+00:19 +94 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:19 +95 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:19 +96 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
 00:19 +97 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Imagens do mapa (ritmo da TomTom) 429 ("devagar"): espera e tenta de novo; a imagem chega
@@ -118,10 +119,10 @@
 00:21 +103 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
 00:21 +104 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
 00:21 +105 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/entrega_test.dart: Entrega: preenche, ve o preco e pede (vai como ENTREGA com quem recebe)
-00:21 +106 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:21 +107 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:21 +108 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:21 +109 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
-00:21 +110 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
+00:22 +106 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:22 +107 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:22 +108 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:22 +109 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) mostra o endereco em texto e abre o Google Maps
+00:22 +110 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: Contingencia (429/403) sem chave nao desenha ruas; no limite mostra o aviso com o Google Maps
 00:22 +111 ~12: /home/runner/work/ride-platform/ride-platform/apps/mobile_passenger/test/mapa_config_test.dart: imagens baixadas vao junto do /geo/mapa (cota da chave inteira) e zeram depois
 00:22 +112 ~12: All tests passed!
