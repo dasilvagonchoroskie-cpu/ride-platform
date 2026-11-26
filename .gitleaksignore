@@ -1,0 +1,9 @@
+# Ocorrencias conferidas em 26/11/2026 (exemplos com aviso para trocar, teste com nomes ficticios e leitura de variavel de ambiente).
+# Cada linha vale so para aquele commit, arquivo, regra e linha. Segredo novo nos mesmos arquivos continua sendo detectado.
+6a5635cabd13de963c098853adadd676eea459dc:apps/backend/src/modules/documents/documents.service.spec.ts:generic-api-key:113
+d87d2109c28e4cc67a8066e0996b387605861800:.env.example:generic-api-key:29
+d87d2109c28e4cc67a8066e0996b387605861800:.env.example:generic-api-key:31
+d87d2109c28e4cc67a8066e0996b387605861800:apps/backend/.env.example:generic-api-key:15
+d87d2109c28e4cc67a8066e0996b387605861800:apps/backend/.env.example:generic-api-key:17
+d87d2109c28e4cc67a8066e0996b387605861800:apps/backend/.env.example:generic-api-key:43
+d87d2109c28e4cc67a8066e0996b387605861800:apps/backend/src/config/configuration.ts:generic-api-key:85
