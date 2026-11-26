@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: recuperacao-excepcional
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Instalar o cliente do banco
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
       - name: Redefinir as duas etapas do dono (com auditoria)
