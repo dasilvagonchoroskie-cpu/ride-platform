@@ -27,8 +27,11 @@ jobs:
     steps:
       - name: Pular se nao for este app
         id: pular
+        env:
+          W_ESCOLHA: ${{ inputs.app }}
+          W_APP: ${{ matrix.app }}
         run: |
-          if [ "${{ inputs.app }}" != "" ] && [ "${{ inputs.app }}" != "all" ] && [ "${{ inputs.app }}" != "${{ matrix.app }}" ]; then
+          if [ "${W_ESCOLHA}" != "" ] && [ "${W_ESCOLHA}" != "all" ] && [ "${W_ESCOLHA}" != "${W_APP}" ]; then
             echo "pular=sim" >> "$GITHUB_OUTPUT"
           fi
 
