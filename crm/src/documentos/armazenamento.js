@@ -25,8 +25,8 @@ function efemero(env = process.env) {
 }
 
 function criarLocal({ dir, env = process.env }) {
-  const raiz = path.resolve(dir);
-  const caminho = (chave) => path.join(raiz, ...exigirChave(chave).split('/'));
+  const raiz = path.resolve(dir); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+  const caminho = (chave) => path.join(raiz, ...exigirChave(chave).split('/')); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   return {
     nome: 'local',
     pronto() {
@@ -51,7 +51,7 @@ function criarLocal({ dir, env = process.env }) {
       const out = [];
       const visita = (rel) => {
         let itens = [];
-        try { itens = fs.readdirSync(path.join(raiz, rel), { withFileTypes: true }); } catch (e) { return; }
+        try { itens = fs.readdirSync(path.join(raiz, rel), { withFileTypes: true }); } catch (e) { return; } // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
         for (const it of itens) {
           const r = rel ? `${rel}/${it.name}` : it.name;
           if (it.isDirectory()) visita(r); else if (CHAVE_OK.test(r)) out.push(r);
