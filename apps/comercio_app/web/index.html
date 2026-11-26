@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="https://api.tomtom.com"> <!-- nosemgrep: html.security.audit.missing-integrity.missing-integrity -->
   <!-- Seguranca: so carrega do proprio site, do servidor da plataforma, das imagens do mapa (TomTom) e do motor do Flutter (gstatic). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tomtom.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com https://www.gstatic.com; connect-src 'self' https://api.fortalezadigitalsecurity.com.br https://*.tomtom.com https://www.gstatic.com https://fonts.gstatic.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tomtom.com https://www.gstatic.com; font-src 'self' data: https://fonts.gstatic.com https://www.gstatic.com; connect-src 'self' https://api.fortalezadigitalsecurity.com.br https://*.tomtom.com https://www.gstatic.com https://fonts.gstatic.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Fortaleza Move Comércio</title>
   <style>
@@ -36,54 +36,7 @@
 </head>
 <body>
   <div id="carregando"><img src="icons/Icon-192.png" alt=""><div>Abrindo o Comércio…</div></div>
-  <script>
-    // Alarme "o motorista chegou" no navegador (so com o site aberto): bipes + vibracao.
-    (function () {
-      var ctx = null;
-      function audio() {
-        try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); } catch (_) {}
-        return ctx;
-      }
-      // O navegador so libera som depois de um toque: o primeiro toque no site prepara o audio.
-      window.addEventListener('pointerdown', audio, { once: true });
-      window.addEventListener('keydown', audio, { once: true });
-      window.fmAlarme = function () {
-        try { if (navigator.vibrate) navigator.vibrate([600, 300, 600, 300, 600]); } catch (_) {}
-        var c = audio();
-        if (!c) return;
-        var t0 = c.currentTime;
-        for (var i = 0; i < 6; i++) {
-          var o = c.createOscillator(), g = c.createGain();
-          o.type = 'square'; o.frequency.value = i % 2 ? 880 : 1175;
-          g.gain.setValueAtTime(0.0001, t0 + i * 0.45);
-          g.gain.exponentialRampToValueAtTime(0.35, t0 + i * 0.45 + 0.03);
-          g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.45 + 0.4);
-          o.connect(g); g.connect(c.destination);
-          o.start(t0 + i * 0.45); o.stop(t0 + i * 0.45 + 0.42);
-        }
-      };
-    })();
-  </script>
-  <script>
-    // Instalar como aplicativo (icone na area de trabalho / tela inicial). Nao ha botao solto na tela:
-    // o botao fica na aba Conta do app (13/11/2026), para nao cobrir nada.
-    (function () {
-      var pedido = null;
-      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); pedido = e; });
-      window.addEventListener('appinstalled', function () { pedido = null; });
-      window.fmPodeInstalar = function () { return !!pedido; };
-      window.fmInstalar = function () {
-        if (!pedido) return;
-        var p = pedido; pedido = null;
-        p.prompt();
-      };
-      // Some a tela de "abrindo" quando o Flutter desenha.
-      window.addEventListener('flutter-first-frame', function () {
-        var c = document.getElementById('carregando');
-        if (c) c.remove();
-      });
-    })();
-  </script>
+  <script src="fm-inicio.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
