@@ -31,7 +31,7 @@ function createNotificacoes({ db, dataDir, waStore, publicUrl, webpush, log = co
 
   function vapid() {
     if (chaves) return chaves;
-    const arq = path.join(dataDir, 'vapid.json');
+    const arq = path.join(dataDir, 'vapid.json'); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
     try { chaves = JSON.parse(fs.readFileSync(arq, 'utf8')); } catch (err) { chaves = null; }
     if (!chaves || !chaves.publicKey || !chaves.privateKey) {
       chaves = webpush.generateVAPIDKeys();
