@@ -179,7 +179,7 @@ OK     Central: modo de cobranca em Tarifas (TAXIMETRO)
 OK     Login: acesso vencido e renovado sozinho (refresh)
 OK     Login: o acesso renovado funciona
 FALHA  Refresh usado nao deveria valer de novo
-       resposta: {"success":true,"data":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NzQ3NDZhYS0wYWFlLTRkMDAtYmYwNi05M2ZlYmE4OWM2YjkiLCJyb2xlIjoiUEFTU0VOR0VSIiwibmFtZSI6IlBhc3NhZ2Vpcm8gMjI3OSIsInBob25lIjoiKzU1NjQ5MTQ1NjIyNzkiLCJlbWFpbCI6bnVsbCwiZHJpdmVySWQiOm51bGwsImRldmljZUlkIjoiMDcyYmRmYWEtYjIxNy00MGQ3LThkZjctNDVhYTg1NDhlNDJjIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc5NDc1NDgzNSwiZXhwIjoxNzk1MzU5NjM1
+       resposta: {"success":true,"data":{"accessToken":"[token removido]
 OK     Central: cupom TESTE14562252 criado (R$ 3,00)
 OK     Passageiro: ve o cupom na tela Cupons
 OK     Passageiro: estimativa ja mostra o desconto do cupom
