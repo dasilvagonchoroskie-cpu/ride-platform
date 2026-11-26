@@ -4,15 +4,15 @@
 00:00 +2: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: cidade e UF vindos do mapa (13/11/2026) a cidade e a UF do ponto escolhido trocam as digitadas; o resto só se estiver vazio
 00:00 +3: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: cidade e UF vindos do mapa (13/11/2026) resultado sem bairro: o bairro não vira a rua
 00:00 +4: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: alfinete o ponto marcado vale mais que o texto: completar o número não apaga a localização
-00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens MapaDaEntrega ignora ponto sem latitude/longitude válidas (nunca inventa)
-00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens MapaDaEntrega ignora ponto sem latitude/longitude válidas (nunca inventa)
-00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens MapaDaEntrega ignora ponto sem latitude/longitude válidas (nunca inventa)
-00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens MapaDaEntrega ignora ponto sem latitude/longitude válidas (nunca inventa)
-00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: chamadas ao servidor consultar o preço sem veículo escolhido manda um valor neutro (o servidor atual exige o campo)
-00:00 +10: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: chamadas ao servidor consultar o preço sem veículo escolhido manda um valor neutro (o servidor atual exige o campo)
-00:00 +11: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: chamadas ao servidor consultar o preço sem veículo escolhido manda um valor neutro (o servidor atual exige o campo)
-00:00 +12: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens Caixa de avisos mostra só os do Comércio e conta os não lidos
-00:00 +13: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: chamadas ao servidor o endereço do ponto vem de /geo/reverse com latitude e longitude
+00:00 +5: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: alfinete alfinete preenche bairro e CEP que vieram do mapa, e troca os do ponto anterior
+00:00 +6: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: alfinete endereço achado por busca: mexer na rua apaga a localização (precisa confirmar de novo)
+00:00 +7: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: alfinete ponto sem nome de rua (limite do mapa) não escreve "Ponto no mapa" no campo da rua
+00:00 +8: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: chamadas ao servidor consultar o preço sem veículo escolhido manda um valor neutro (o servidor atual exige o campo)
+00:00 +9: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/endereco_alfinete_test.dart: chamadas ao servidor o endereço do ponto vem de /geo/reverse com latitude e longitude
+00:00 +10: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens MapaDaEntrega ignora ponto sem latitude/longitude válidas (nunca inventa)
+00:00 +11: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens Motorista com sinal velho vem marcado como desatualizado
+00:00 +12: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens ConfigDoMapa só aceita endereço https com {z}/{x}/{y}
+00:00 +13: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Modelos: mapa, avisos e imagens Caixa de avisos mostra só os do Comércio e conta os não lidos
 00:00 +14: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sessão: imagens do mapa o endereço fica só em memória, é reaproveitado e some ao sair
 00:00 +15: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos mostra quantos avisos não foram lidos
 00:00 +16: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos mostra quantos avisos não foram lidos
@@ -22,86 +22,86 @@
 00:00 +20: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos mostra quantos avisos não foram lidos
 00:00 +21: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos mostra quantos avisos não foram lidos
 00:00 +22: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos mostra quantos avisos não foram lidos
-00:00 +23: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
-00:01 +24: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos tocar num aviso marca como lido no servidor; aviso de entrega abre o acompanhamento
-00:01 +25: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +26: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +27: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +28: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +29: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +30: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +31: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +32: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +33: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +34: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
-00:01 +35: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
+00:01 +23: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +24: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +25: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +26: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +27: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +28: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +29: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +30: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +31: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +32: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +33: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +34: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem avisos: nenhum número e a tela diz que está vazio
+00:01 +35: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos tocar num aviso marca como lido no servidor; aviso de entrega abre o acompanhamento
 00:01 +36: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos marcar todos como lidos manda só os ids dos avisos do Comércio
 00:01 +37: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos motorista chegou à loja (aviso novo e não lido): alarma uma vez por entrega; aviso velho não alarma
-00:01 +38: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos apagar todos pede confirmação antes
-00:01 +39: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos sem rede: o sino não quebra e a tela de avisos oferece tentar de novo
-00:01 +40: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Sino de avisos aguardando aprovação também tem o sino (a decisão da Central chega por ele)
-00:02 +41: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento com motorista a caminho: mostra o mapa com os três pontos e a hora do sinal
-00:02 +42: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento com imagens do mapa: mostra a camada de ruas e a atribuição
-00:02 +43: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
-00:02 +44: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
-00:02 +45: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
-00:02 +46: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento ainda sem motorista: só loja e destino, sem texto de falta de sinal
-00:02 +47: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: no celular, na primeira abertura mostra as autorizações e continua sem travar
-00:02 +48: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: no celular, na primeira abertura mostra as autorizações e continua sem travar
-00:03 +49: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: no celular, na primeira abertura mostra as autorizações e continua sem travar
-00:03 +50: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso sem marcar o aceite o app não envia o cadastro
-00:03 +51: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso sem marcar o aceite o app não envia o cadastro
+00:01 +38: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
+00:02 +39: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
+00:02 +40: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
+00:02 +41: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: fora do Android o portão passa direto (computador e testes)
+00:02 +42: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento com motorista a caminho: mostra o mapa com os três pontos e a hora do sinal
+00:02 +43: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: no celular, na primeira abertura mostra as autorizações e continua sem travar
+00:02 +44: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: no celular, na primeira abertura mostra as autorizações e continua sem travar
+00:02 +45: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento sinal velho do motorista: avisa que a posição pode estar desatualizada
+00:03 +46: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento sinal velho do motorista: avisa que a posição pode estar desatualizada
+00:03 +47: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/permissoes_test.dart: lista: notificações, localização, GPS e bateria; ajuste do fabricante com "Já fiz"
+00:03 +48: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento motorista aceitou mas o aparelho não manda localização: explica e não desenha motorista
+00:03 +49: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento ainda sem motorista: só loja e destino, sem texto de falta de sinal
+00:03 +50: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento mapa vazio (servidor não mandou nenhum ponto) mostra aviso em vez de um mapa falso
+00:03 +51: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Mapa do acompanhamento entrega encerrada não mostra mapa nem posição
 00:03 +52: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso sem marcar o aceite o app não envia o cadastro
-00:04 +53: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) sem login: tela de entrada
-00:04 +54: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
-00:04 +55: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) logado sem estabelecimento: cadastro
-00:05 +56: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso a tela dos termos mostra o texto do servidor, sem os avisos de minuta
-00:05 +57: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) aguardando aprovação: não pode pedir entrega
-00:05 +58: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso termos que não carregam oferecem tentar de novo
-00:05 +59: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) suspenso: mostra o motivo da Central e não deixa pedir
-00:05 +60: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso a aba Conta tem os termos e a versão aceita, sem carteira nem mensalidade
-00:05 +61: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso a aba Conta tem os termos e a versão aceita, sem carteira nem mensalidade
-00:05 +62: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) aprovado: início com "Nova entrega" e as quatro abas
-00:05 +63: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) Central com o Comércio desligado: só a tela de fora do ar, mesmo aprovado e instalado
-00:05 +64: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a Central ligou o Comércio depois: "Verificar de novo" volta ao início sozinho
-00:05 +65: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a Central suspendeu a loja depois que o app abriu: ao tocar, mostra a situação e não abre o pedido
-00:05 +66: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) o login venceu com uma tela aberta por cima: volta para a entrada e apaga o login guardado
-00:06 +67: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +68: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +69: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +70: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +71: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +72: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +73: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +74: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) a aba Conta mostra o estabelecimento e não mostra carteira nem crédito
-00:06 +75: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Cadastro do estabelecimento dados inválidos são barrados no app e nada é enviado
-00:06 +76: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +77: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +78: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +79: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +80: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +81: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +82: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +83: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
-00:07 +84: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +85: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +86: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +87: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +88: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +89: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +90: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +91: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +92: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
-00:07 +93: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:04 +53: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso sem marcar o aceite o app não envia o cadastro
+00:04 +54: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) logado sem estabelecimento: cadastro
+00:05 +55: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +56: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +57: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +58: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +59: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +60: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +61: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +62: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso marcando o aceite, o cadastro vai com aceiteTermos verdadeiro
+00:05 +63: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) o login venceu com uma tela aberta por cima: volta para a entrada e apaga o login guardado
+00:06 +64: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Porteiro (qual tela abre) o login venceu com uma tela aberta por cima: volta para a entrada e apaga o login guardado
+00:06 +65: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso termos que não carregam oferecem tentar de novo
+00:06 +66: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/avisos_mapa_termos_test.dart: Termos de uso termos que não carregam oferecem tentar de novo
+00:06 +67: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Cadastro do estabelecimento dados inválidos são barrados no app e nada é enviado
+00:06 +68: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Cadastro do estabelecimento dados inválidos são barrados no app e nada é enviado
+00:06 +69: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +70: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +71: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +72: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +73: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +74: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +75: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +76: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega percorre os passos, mostra o preço do servidor e só pede ao confirmar
+00:07 +77: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +78: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +79: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +80: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +81: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +82: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +83: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +84: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega entrega indisponível na cidade: avisa e não deixa continuar
+00:08 +85: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/comercio_api_test.dart: o pedido leva a chave, a medida do preço e os dados limpos
+00:08 +86: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +87: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +88: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +89: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +90: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +91: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +92: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
+00:08 +93: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
 00:08 +94: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega servidor recusa o preço (entrega desligada): mostra o motivo e fica no passo
-00:08 +95: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/atualizacao_test.dart: em segundo plano não consulta o servidor; ao voltar consulta na hora e retoma o ritmo
-00:08 +96: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega queda de rede ao confirmar: não finge sucesso e repete com a MESMA chave
-00:08 +97: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega queda de rede ao confirmar: não finge sucesso e repete com a MESMA chave
+00:09 +95: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega queda de rede ao confirmar: não finge sucesso e repete com a MESMA chave
+00:09 +96: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega queda de rede ao confirmar: não finge sucesso e repete com a MESMA chave
+00:09 +97: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega queda de rede ao confirmar: não finge sucesso e repete com a MESMA chave
 00:09 +98: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega confirma mandando o preço que a pessoa viu
-00:09 +99: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega preço mudou no servidor: não abre entrega, volta ao preço e usa outra chave
-00:10 +100: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega recusa do servidor ao confirmar (ex.: suspenso): mostra o motivo e não abre entrega
-00:10 +101: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega telefone de quem recebe é opcional: sem telefone o pedido segue
+00:10 +99: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega preço mudou no servidor: não abre entrega, volta ao preço e usa outra chave
+00:11 +100: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega recusa do servidor ao confirmar (ex.: suspenso): mostra o motivo e não abre entrega
+00:11 +101: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega telefone de quem recebe é opcional: sem telefone o pedido segue
 00:11 +102: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega várias entregas: cada uma com nome e telefone próprios; a última vai nos campos principais e as outras como paradas
-00:11 +103: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega limite de 5 entregas por pedido
-00:12 +104: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Termos e privacidade na abertura sem aceite não chega à entrada; com o aceite segue para entrar
-00:12 +105: All tests passed!
+00:12 +103: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Nova entrega limite de 5 entregas por pedido
+00:13 +104: /home/runner/work/ride-platform/ride-platform/apps/comercio_app/test/telas_test.dart: Termos e privacidade na abertura sem aceite não chega à entrada; com o aceite segue para entrar
+00:13 +105: All tests passed!
