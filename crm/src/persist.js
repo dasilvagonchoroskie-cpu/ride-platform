@@ -51,7 +51,7 @@ function decifrar(b64, chave) {
   const buf = Buffer.from(String(b64), 'base64');
   if (buf.slice(0, 4).toString() !== 'FMS1') throw new Error('Retrato em formato desconhecido.');
   const iv = buf.slice(4, 16); const tag = buf.slice(16, 32); const corpo = buf.slice(32);
-  const d = crypto.createDecipheriv('aes-256-gcm', chave, iv);
+  const d = crypto.createDecipheriv('aes-256-gcm', chave, iv, { authTagLength: 16 });
   d.setAAD(Buffer.from('fm-crm-snapshot-v1'));
   d.setAuthTag(tag);
   return Buffer.concat([d.update(corpo), d.final()]);

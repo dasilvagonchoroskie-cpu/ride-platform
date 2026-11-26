@@ -51,7 +51,7 @@ function desembrulhar(chaveEmbrulhada, uid, numero) {
   let erro = null;
   for (const mestra of candidatas) {
     try {
-      const d = crypto.createDecipheriv('aes-256-gcm', derivar(mestra, 'fm-docs-embrulho-v1'), buf.subarray(0, 12));
+      const d = crypto.createDecipheriv('aes-256-gcm', derivar(mestra, 'fm-docs-embrulho-v1'), buf.subarray(0, 12), { authTagLength: 16 });
       d.setAAD(contexto(uid, numero));
       d.setAuthTag(buf.subarray(12, 28));
       return Buffer.concat([d.update(buf.subarray(28)), d.final()]);
@@ -65,7 +65,7 @@ function decifrar(blob, chaveEmbrulhada, uid, numero) {
   if (!Buffer.isBuffer(blob) || blob.length < 32 || !blob.subarray(0, 4).equals(MAGIA)) throw Object.assign(new Error('Arquivo de documento em formato desconhecido.'), { code: 'formato' });
   const dek = desembrulhar(chaveEmbrulhada, uid, numero);
   try {
-    const d = crypto.createDecipheriv('aes-256-gcm', dek, blob.subarray(4, 16));
+    const d = crypto.createDecipheriv('aes-256-gcm', dek, blob.subarray(4, 16), { authTagLength: 16 });
     d.setAAD(contexto(uid, numero));
     d.setAuthTag(blob.subarray(16, 32));
     return Buffer.concat([d.update(blob.subarray(32)), d.final()]);
@@ -87,7 +87,7 @@ function decifrarTexto(buf, rotulo) {
   const chaves = [chaveMestra(), chaveMestra('FM_DOCS_KEY_ANTERIOR')].filter(Boolean);
   for (const m of chaves) {
     try {
-      const d = crypto.createDecipheriv('aes-256-gcm', derivar(m, 'fm-docs-manifesto-v1'), buf.subarray(4, 16));
+      const d = crypto.createDecipheriv('aes-256-gcm', derivar(m, 'fm-docs-manifesto-v1'), buf.subarray(4, 16), { authTagLength: 16 });
       d.setAAD(Buffer.from(rotulo)); d.setAuthTag(buf.subarray(16, 32));
       return Buffer.concat([d.update(buf.subarray(32)), d.final()]);
     } catch (e) { /* tenta a próxima */ }
