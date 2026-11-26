@@ -28,7 +28,9 @@ jobs:
       apps: ${{ steps.a.outputs.apps }}
     steps:
       - id: a
-        run: echo "apps=$(echo '${{ inputs.apps || 'mobile_passenger,mobile_driver,central_app' }}' | tr -d ' ' | jq -Rc 'split(",") | map(select(length>0))')" >> "$GITHUB_OUTPUT"
+        env:
+          W_APPS: ${{ inputs.apps || 'mobile_passenger,mobile_driver,central_app' }}
+        run: echo "apps=$(echo "${W_APPS}" | tr -d ' ' | jq -Rc 'split(",") | map(select(length>0))')" >> "$GITHUB_OUTPUT"
 
   ios:
     name: iPhone ${{ matrix.app }}

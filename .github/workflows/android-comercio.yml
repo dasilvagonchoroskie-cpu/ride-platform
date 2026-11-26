@@ -115,13 +115,15 @@ jobs:
 
       - name: Compilar o APK
         working-directory: apps/comercio_app
+        env:
+          W_TIPO: ${{ inputs.build_type || 'release' }}
         run: |
           set -euo pipefail
-          BUILD_TYPE="${{ inputs.build_type || 'release' }}"
+          BUILD_TYPE="${W_TIPO}"
           OFUSCAR=""
           if [ "$BUILD_TYPE" = release ]; then OFUSCAR="--obfuscate --split-debug-info=$GITHUB_WORKSPACE/simbolos/comercio_app"; fi
-          flutter build apk --$BUILD_TYPE --split-per-abi --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} $OFUSCAR \
+          flutter build apk --$BUILD_TYPE --split-per-abi --build-number=${GITHUB_RUN_NUMBER} \
+            --build-name=1.0.${GITHUB_RUN_NUMBER} --dart-define=APP_VERSION=1.0.${GITHUB_RUN_NUMBER} $OFUSCAR \
             2>&1 | tail -n 40
 
       - name: Localizar o APK
@@ -162,6 +164,8 @@ jobs:
       # Se alguem adicionar uma permissao (ou o build sair depuravel), a
       # esteira falha antes de publicar qualquer coisa.
       - name: Conferir permissoes, depuracao e versao do Android
+        env:
+          W_TIPO: ${{ inputs.build_type || 'release' }}
         run: |
           set -euo pipefail
           B="$RUNNER_TEMP/badging.txt"
@@ -172,7 +176,7 @@ jobs:
           done
           TARGET="$(grep -o "targetSdkVersion:'[0-9]*'" "$B" | grep -o '[0-9]*')"
           test "${TARGET:-0}" -ge 35 || { echo "::error::targetSdk $TARGET abaixo de 35 (exigencia da Play)"; exit 1; }
-          if [ "${{ inputs.build_type || 'release' }}" = release ]; then
+          if [ "${W_TIPO}" = release ]; then
             if grep -q "application-debuggable" "$B"; then echo "::error::Build de release esta marcado como depuravel"; exit 1; fi
           fi
           echo "OK: permissoes dentro da lista, targetSdk $TARGET"
@@ -197,13 +201,18 @@ jobs:
 
       - name: Resumo do build
         if: ${{ always() && steps.apk.outputs.path != '' }}
+        env:
+          W_PUBLICAR: ${{ inputs.publicar }}
+          W_APK: ${{ steps.apk.outputs.path }}
+          W_TAMANHO: ${{ steps.apk.outputs.size }}
+          W_SHA256: ${{ steps.apk.outputs.sha256 }}
         run: |
           {
-            echo "### APK Comercio conferido (publicado: ${{ inputs.publicar }})"
+            echo "### APK Comercio conferido (publicado: ${W_PUBLICAR})"
             echo "| Item | Valor |"
             echo "|---|---|"
-            echo "| Arquivo | \`$(basename "${{ steps.apk.outputs.path }}")\` |"
-            echo "| Tamanho | ${{ steps.apk.outputs.size }} |"
-            echo "| SHA-256 | \`${{ steps.apk.outputs.sha256 }}\` |"
-            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Arquivo | \`$(basename "${W_APK}")\` |"
+            echo "| Tamanho | ${W_TAMANHO} |"
+            echo "| SHA-256 | \`${W_SHA256}\` |"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
           } >> "$GITHUB_STEP_SUMMARY"

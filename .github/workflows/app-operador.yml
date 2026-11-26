@@ -59,12 +59,15 @@ jobs:
           echo "Operador $OPERADOR: $ROTULO ($ID), cor $COR, servidor $API"
 
       - name: Icones do operador
+        env:
+          W_OPERADOR: ${{ inputs.operador }}
+          W_APP: ${{ matrix.app }}
         run: |
           set -euo pipefail
-          S="operadores/${{ inputs.operador }}/icone-$PAPEL.png"
+          S="operadores/${W_OPERADOR}/icone-$PAPEL.png"
           if [ -f "$S" ]; then
             pip install --quiet pillow numpy
-            python3 scripts/gerar-icones.py "$S" "apps/${{ matrix.app }}" --fundo "$ICONE_FUNDO"
+            python3 scripts/gerar-icones.py "$S" "apps/${W_APP}" --fundo "$ICONE_FUNDO"
           else
             echo "Sem $S: fica o icone da Fortaleza Move."
           fi
@@ -96,29 +99,33 @@ jobs:
       # configuracao da Fortaleza Move nao serve para outro pacote).
       - name: Compilar
         working-directory: apps/${{ matrix.app }}
+        env:
+          W_OPERADOR: ${{ inputs.operador }}
         run: |
           set -euo pipefail
           flutter pub get
-          flutter build apk --release --split-per-abi --build-number=${{ github.run_number }} \
-            --build-name=1.0.${{ github.run_number }} --dart-define=APP_VERSION=1.0.${{ github.run_number }} \
+          flutter build apk --release --split-per-abi --build-number=${GITHUB_RUN_NUMBER} \
+            --build-name=1.0.${GITHUB_RUN_NUMBER} --dart-define=APP_VERSION=1.0.${GITHUB_RUN_NUMBER} \
             --dart-define=API_URL="$API_URL" --dart-define=MARCA_NOME="$MARCA_NOME" --dart-define=MARCA_COR="$MARCA_COR" \
             2>&1 | tail -n 15
           mkdir -p "$GITHUB_WORKSPACE/dist"
-          cp build/app/outputs/flutter-apk/*arm64-v8a*.apk "$GITHUB_WORKSPACE/dist/${{ inputs.operador }}-$PAPEL-${{ github.run_number }}.apk"
+          cp build/app/outputs/flutter-apk/*arm64-v8a*.apk "$GITHUB_WORKSPACE/dist/${W_OPERADOR}-$PAPEL-${GITHUB_RUN_NUMBER}.apk"
           ls -la "$GITHUB_WORKSPACE/dist"
 
       - name: Conferir o APK (pacote e nome)
+        env:
+          W_OPERADOR: ${{ inputs.operador }}
         run: |
           set -euo pipefail
           AAPT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n1)aapt2"
-          "$AAPT" dump badging "dist/${{ inputs.operador }}-$PAPEL-${{ github.run_number }}.apk" > "$RUNNER_TEMP/badging.txt" 2>/dev/null || \
-            "$(dirname "$AAPT")/aapt" dump badging "dist/${{ inputs.operador }}-$PAPEL-${{ github.run_number }}.apk" > "$RUNNER_TEMP/badging.txt"
+          "$AAPT" dump badging "dist/${W_OPERADOR}-$PAPEL-${GITHUB_RUN_NUMBER}.apk" > "$RUNNER_TEMP/badging.txt" 2>/dev/null || \
+            "$(dirname "$AAPT")/aapt" dump badging "dist/${W_OPERADOR}-$PAPEL-${GITHUB_RUN_NUMBER}.apk" > "$RUNNER_TEMP/badging.txt"
           grep -E "^package:|^application-label:" "$RUNNER_TEMP/badging.txt"
           grep -q "package: name='$MARCA_ID_APP'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Pacote errado no APK"; exit 1; }
           grep -q "application-label:'$MARCA_NOME_APP'" "$RUNNER_TEMP/badging.txt" || { echo "::error::Nome errado no APK"; exit 1; }
-          mkdir -p "logs/operadores/${{ inputs.operador }}"
-          { echo "Execucao ${{ github.run_number }} ($(date -u +%Y-%m-%dT%H:%MZ))"; grep -E "^package:|^application-label:|^sdkVersion|^targetSdkVersion" "$RUNNER_TEMP/badging.txt"; ls -la dist; } \
-            > "logs/operadores/${{ inputs.operador }}/apk-$PAPEL.txt"
+          mkdir -p "logs/operadores/${W_OPERADOR}"
+          { echo "Execucao ${GITHUB_RUN_NUMBER} ($(date -u +%Y-%m-%dT%H:%MZ))"; grep -E "^package:|^application-label:|^sdkVersion|^targetSdkVersion" "$RUNNER_TEMP/badging.txt"; ls -la dist; } \
+            > "logs/operadores/${W_OPERADOR}/apk-$PAPEL.txt"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -129,19 +136,22 @@ jobs:
       - name: Publicar numa versao do GitHub
         if: inputs.publicar == 'sim'
         env:
+          W_OPERADOR: ${{ inputs.operador }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="apk-${{ inputs.operador }}-$PAPEL-mais-recente"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$MARCA_NOME_APP (mais recente)" --notes "App do operador ${{ inputs.operador }}."
+          TAG="apk-${W_OPERADOR}-$PAPEL-mais-recente"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$MARCA_NOME_APP (mais recente)" --notes "App do operador ${W_OPERADOR}."
           gh release upload "$TAG" dist/*.apk --clobber
 
       - name: Guardar o relatorio
         if: always()
+        env:
+          W_OPERADOR: ${{ inputs.operador }}
         run: |
           [ -d logs/operadores ] || exit 0
           git config user.name "CI Fortaleza"
           git config user.email "ci@fortalezadigitalsecurity.com.br"
           git add logs/operadores
-          git commit -m "relatorio: app do operador ${{ inputs.operador }} ($PAPEL) [skip ci]" || exit 0
+          git commit -m "relatorio: app do operador ${W_OPERADOR} ($PAPEL) [skip ci]" || exit 0
           for t in 1 2 3 4 5; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 5; done
