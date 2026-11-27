@@ -517,7 +517,7 @@ ficou como migração futura: por isso o canal é um **adaptador** (`src/whatsap
 
 ## IA: modelos e menu em lista (26/11/2026, 2.1.0-rc.11)
 - `provider.js`: só `gemini-<versão>` entra na escolha automática. Resposta ao cliente = Flash; `leve: true` (análise) e transcrição/mídia = Flash-Lite;
-  falha do Flash automático (menos 401/403) → Lite. Modelo escrito em Configurações continua fixo, sem reserva.
+  falha do Flash automático (menos 401/403), demora acima de 25 s ou queda de rede → Lite. Modelo escrito em Configurações continua fixo, sem reserva.
 - Menu em lista (`central.js`: `LISTAS`, `menuEmLista`; `baileys-channel.js`: `montarLista`/`sendList`): `interactiveMessage` + `single_select` e nó `biz`
   em `relayMessage`. Não é recurso oficial: o celular pode esconder a mensagem sem erro. Setting `wa_menu_lista` (`desligado` padrão | `teste` | `ligado`)
   e `wa_menu_lista_teste`. Só vale para os menus com texto padrão; o toque volta como o número da opção. Mudou um menu padrão → ajustar `LISTAS`
