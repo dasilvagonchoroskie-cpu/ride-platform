@@ -368,7 +368,8 @@ test('arquivo recusado: pede para reenviar em formato aceito; pendente de classi
   await receber('[imagem] 📎 Tipo: Foto do veículo\nCor: Prata');
   const m = respostas().pop();
   assert.match(m, /Nossa equipe vai conferir qual documento é esse arquivo/);
-  assert.match(m, /Agora, envie também a foto da CNH/);
+  assert.match(m, /não precisa mandar de novo o que já enviou/);
+  assert.doesNotMatch(m, /envie também a foto da CNH/);
 });
 function recebidosFalsoDe(db) { return recebidosFalso(db); }
 
