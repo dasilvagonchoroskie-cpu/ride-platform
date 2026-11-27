@@ -4,7 +4,7 @@ name: Android Comercio
 # 4o aplicativo (Fortaleza Move Comercio). Esteira PROPRIA, para nao
 # mexer na dos outros tres (Passageiro, Motorista e Central).
 #
-# - Envio de codigo: so analise (flutter analyze) e testes (flutter test).
+# - Pedido de mudanca: so analise (flutter analyze) e testes (flutter test).
 # - Botao (workflow_dispatch): alem disso, monta o APK assinado e publica
 #   no Release "apk-fortaleza-comercio-mais-recente".
 # ============================================================
@@ -23,8 +23,7 @@ on:
         required: false
         default: true
         type: boolean
-  push:
-    branches: ['**']
+  pull_request:
     paths:
       - 'apps/comercio_app/**'
       - 'scripts/conferir-rotas.py'
