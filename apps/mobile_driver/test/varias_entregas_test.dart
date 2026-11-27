@@ -68,7 +68,7 @@ void main() {
 
   test('o estado entregue sobrevive a guardar e ler a corrida (app fechado no meio)', () {
     final o = _oferta(ParadaDaCorrida.lista(json)).comParadas([ParadaDaCorrida.lista(json).first.comoEntregue()]);
-    final ride = DriverRide(offer: o, phase: RidePhase.inProgress, pin: '1', startedAt: '2026-11-13T10:00:00Z');
+    final ride = DriverRide(offer: o, phase: RidePhase.inProgress, startedAt: '2026-11-13T10:00:00Z');
     final volta = DriverRide.fromJson(ride.toJson());
     expect(volta.offer.paradas.single.entrega!.entregue, isTrue);
     expect(volta.offer.paradas.single.entrega!.destinatarioNome, 'Ana');
