@@ -65,6 +65,11 @@ export class DriversService {
       phone: semTelefone ? input.phone : null,
     });
     if (outra) throw erroContaExistente(outra);
+    // O e-mail da conta e o que a pessoa confirmou para entrar: o cadastro
+    // de motorista nao grava outro.
+    if (input.email && input.email.toLowerCase() !== (usuario.email ?? '').toLowerCase()) {
+      throw BusinessException.validation('Use o mesmo e-mail com que voce entrou no aplicativo.');
+    }
 
     const driver = await this.prisma.$transaction(async (tx) => {
       const created = await tx.driver.create({
@@ -90,7 +95,6 @@ export class DriversService {
           cpf: input.cpf,
           birthDate: input.birthDate,
           ...(input.name ? { name: input.name.replace(/\s+/g, ' ').trim() } : {}),
-          ...(input.email && input.email !== usuario.email ? { email: input.email, emailVerifiedAt: null } : {}),
           ...(semTelefone && input.phone ? { phone: input.phone, phoneVerifiedAt: null } : {}),
         },
       });
