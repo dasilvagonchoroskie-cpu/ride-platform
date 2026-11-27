@@ -876,17 +876,22 @@ export class RidesService {
         throw new BusinessException(ERROR_CODES.RIDE_INVALID_STATE, 'O tempo para aceitar terminou.');
       }
 
+      // Mesma trava da mudanca de dados do carro: uma coisa de cada vez.
+      await tx.$queryRaw`SELECT id FROM drivers WHERE id = ${driverId}::uuid FOR NO KEY UPDATE`;
       const motorista = await tx.driver.findUnique({
         where: { id: driverId },
         include: { vehicles: { where: { isActive: true }, take: 1 } },
       });
       if (!motorista) throw BusinessException.notFound('Motorista nao encontrado.');
+      if (!motorista.vehicles[0]) {
+        throw BusinessException.validation('Voce esta sem carro liberado. Confira em Meus veiculos.');
+      }
 
       await tx.ride.update({
         where: { id: rideId },
         data: {
           driverId,
-          vehicleId: motorista.vehicles[0]?.id,
+          vehicleId: motorista.vehicles[0].id,
           status: RideStatus.DRIVER_ASSIGNED,
           acceptedAt: new Date(),
         },
