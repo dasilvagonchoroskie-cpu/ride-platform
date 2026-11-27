@@ -9,7 +9,7 @@
  * dependem do registro do MEI.
  */
 
-export const LEGAL_VERSION = '1.0.0';
+export const LEGAL_VERSION = '1.1.0';
 
 // Evandro (11/10/2026): marca Fortaleza Move; quem desenvolve e opera e a
 // Fortaleza Digital Security. CNPJ ainda nao existe: entra aqui quando sair.
@@ -18,9 +18,8 @@ const EMAIL_CONTATO = 'fortalezamovegtba@gmail.com';
 const WHATSAPP_CONTATO = '(64) 99647-2794';
 
 // Texto com acentos e parágrafos inteiros (revisão de 11/10/2026): os apps
-// juntam as linhas de cada parágrafo. A versão continua 1.0.0 porque a
-// plataforma ainda não tem usuários de verdade — depois do lançamento,
-// mudança relevante aqui exige subir LEGAL_VERSION (e kTermsVersion nos apps).
+// juntam as linhas de cada parágrafo. Mudança relevante aqui exige subir
+// LEGAL_VERSION (e kTermsVersion nos apps). 1.1.0: entrada com a conta Google.
 
 export const TERMS_MD = `# Termos de Uso — Fortaleza Move
 
@@ -85,7 +84,7 @@ A plataforma pode suspender ou encerrar contas que violem estes Termos, incluind
 
 ## 9. Alterações destes Termos
 
-Estes Termos podem ser atualizados. Mudanças relevantes exigem novo aceite antes de continuar usando o aplicativo.
+Estes Termos podem ser atualizados. Mudanças relevantes são avisadas no aplicativo.
 
 ## 10. Contato
 
@@ -113,6 +112,8 @@ Esta Política explica como a Fortaleza Move coleta, usa e protege os dados pess
 
 **De todos os usuários:** nome, telefone, e-mail, gênero e cidade (quando informados), CPF, data de nascimento, endereço (quando informado), foto de perfil (opcional) e a localização por GPS durante o uso do aplicativo.
 
+**Se você usar "Entrar com Google":** recebemos do Google o seu nome, o seu e-mail e um código que identifica a sua conta Google, para confirmar quem você é e abrir a sua conta na Fortaleza Move. Não recebemos a sua senha do Google e não acessamos o seu Gmail, os seus contatos, as suas fotos nem o Google Drive. Usar o Google é opcional: o código por e-mail continua funcionando.
+
 **De motoristas parceiros, adicionalmente:** número, categoria e validade da CNH, chave Pix, dados do veículo (placa, marca, modelo, ano, cor) e os documentos enviados para análise (foto da CNH, do CRLV, do veículo, comprovante de residência e certidão de antecedentes criminais).
 
 **Durante uma corrida:** os pontos de embarque e de destino, a localização GPS do motorista e o trajeto percorrido, o horário de cada etapa (pedido, aceite, embarque, desembarque), o valor, a avaliação e as mensagens trocadas no chat da corrida. A localização do passageiro é usada com o aplicativo aberto (para marcar o embarque) e, se ele apertar o SOS, é enviada à Central.
@@ -128,7 +129,7 @@ Esta Política explica como a Fortaleza Move coleta, usa e protege os dados pess
 - **Localização (GPS):** para encontrar o motorista mais próximo, traçar a rota, calcular a distância e o valor da corrida e permitir que passageiro e motorista se encontrem. O app do motorista usa a localização também em segundo plano enquanto ele está disponível ou em corrida, para receber chamados e registrar o trajeto. A localização só é mostrada à outra parte durante a corrida.
 - **CNH e documentos do motorista:** exclusivamente para verificar que o motorista parceiro está habilitado a dirigir e que o veículo está regularizado, como medida de segurança para os passageiros.
 - **CPF e data de nascimento:** para confirmar a identidade e a maioridade do usuário.
-- **Telefone e e-mail:** para entrar na conta (código enviado por e-mail) e para avisos sobre as corridas.
+- **Telefone e e-mail:** para entrar na conta (código enviado por e-mail ou, se você escolher, a sua conta Google) e para avisos sobre as corridas.
 - **Histórico de corridas:** para mostrar o extrato e o recibo ao usuário, calcular tarifas e taxas, e atender dúvidas ou reclamações.
 - **SOS:** a localização e os dados da corrida vão na hora para a Central da plataforma.
 
@@ -143,6 +144,7 @@ Os dados e os documentos ficam no banco de dados da plataforma, com acesso restr
 - **Google Firebase** (envio de notificações ao celular) e serviços de envio de e-mail para os códigos de acesso (**Google/Gmail** e, como reserva, **Brevo**);
 - **TomTom** (mapa, busca de endereço e rotas: recebe coordenadas e o texto buscado, sem o nome do usuário; as imagens do mapa são pedidas pelo próprio celular);
 - **Google Maps**, quando o mapa do Google está ligado no aplicativo (o próprio celular pede ao Google as imagens do mapa);
+- **Login do Google**, somente quando a pessoa toca em "Entrar com Google" (o Google confirma quem ela é);
 - **WhatsApp**, somente quando o próprio usuário escolhe compartilhar a viagem, o recibo ou falar com a Central.
 
 Alguns desses serviços podem tratar dados fora do Brasil (transferência internacional, art. 33 da LGPD).
@@ -193,7 +195,7 @@ O aplicativo não se destina a menores de 18 anos.
 
 ## 10. Alterações desta Política
 
-Esta Política pode ser atualizada para refletir mudanças na forma como tratamos os dados. Mudanças relevantes exigem novo aceite antes de continuar usando o aplicativo.
+Esta Política pode ser atualizada para refletir mudanças na forma como tratamos os dados. Mudanças relevantes são avisadas no aplicativo.
 
 ---
 

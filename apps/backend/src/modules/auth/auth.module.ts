@@ -8,11 +8,12 @@ import { TokenService } from './token.service';
 import { DoisFatoresService } from './dois-fatores';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AvisosDeSeguranca } from './avisos-de-seguranca';
+import { GoogleLoginService } from './google-login.service';
 
 @Module({
   imports: [PassportModule.register({ defaultStrategy: 'jwt' }), JwtModule.register({})],
   controllers: [AuthController],
-  providers: [AuthService, OtpService, TokenService, JwtStrategy, DoisFatoresService, AvisosDeSeguranca],
-  exports: [AuthService, TokenService, AvisosDeSeguranca, OtpService, DoisFatoresService],
+  providers: [AuthService, OtpService, TokenService, JwtStrategy, DoisFatoresService, AvisosDeSeguranca, GoogleLoginService],
+  exports: [AuthService, TokenService, AvisosDeSeguranca, OtpService, DoisFatoresService, GoogleLoginService],
 })
 export class AuthModule {}

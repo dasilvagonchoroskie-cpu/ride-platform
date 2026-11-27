@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../core/utils/formatters.dart';
 import '../widgets/ui.dart';
+import '../widgets/botao_google.dart';
 import 'email_screen.dart';
 import 'otp_screen.dart';
 import 'package:provider/provider.dart';
@@ -155,6 +156,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
                 ),
               ],
               ],
+              const EntrarComGoogle(),
             ],
           ),
         ),

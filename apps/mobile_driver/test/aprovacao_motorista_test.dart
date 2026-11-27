@@ -135,7 +135,7 @@ void main() {
     final d = DriverState(client: ApiClient(client: _servidor('PENDING')));
     await _abrir(tester, d, const WelcomeScreen());
     expect(find.text('Entrar ou cadastrar'), findsOneWidget);
-    expect(find.textContaining('mesmo telefone'), findsOneWidget);
+    expect(find.textContaining('mesmo e-mail ou telefone'), findsOneWidget);
     expect(find.text('Entrar em modo demonstração'), findsNothing);
     expect(find.textContaining('regiao'), findsNothing);
   });

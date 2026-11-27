@@ -698,6 +698,31 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// "Entrar com Google": codigo publico que o servidor manda quando a opcao
+  /// esta ligada. Sem ele, o botao nao aparece.
+  Future<String?> idDoGoogle() async {
+    try {
+      final data = await _client.request('GET', '/app/config') as Map<String, dynamic>;
+      final google = (data['login'] as Map<String, dynamic>?)?['google'];
+      return google is String && google.isNotEmpty ? google : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Entra com o comprovante do Google. Devolve null quando entrou; devolve o
+  /// e-mail quando o servidor quer que ele seja confirmado pelo codigo.
+  Future<String?> entrarComGoogle(String comprovante) async {
+    final data = await _client.request('POST', '/auth/google', body: {
+      'idToken': comprovante,
+      'role': 'DRIVER',
+      'device': await IdentidadeDoAparelho.dados(),
+    }) as Map<String, dynamic>;
+    if (data['precisaCodigoEmail'] == true) return data['email'] as String;
+    await _abrirSessao(data, '');
+    return null;
+  }
+
   /// E-mail da conta (preenche o cadastro).
   String? email;
 
@@ -753,17 +778,22 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
 
+    final u = await _abrirSessao(data, phone);
+    return data['isNewUser'] == true && u['driverId'] == null;
+  }
+
+  /// Guarda o acesso que o servidor acabou de entregar. A conta da Central
+  /// nao entra neste aplicativo.
+  Future<Map<String, dynamic>> _abrirSessao(Map<String, dynamic> data, String telefone) async {
+    final u = data['user'] as Map<String, dynamic>;
+    if (u['role'] == 'ADMIN') {
+      throw ApiException('CONTA_ERRADA', 'Esta conta é da Central. Use o aplicativo da Central.');
+    }
     await AppStorage.write(AppStorage.accessToken, data['accessToken'] as String? ?? '');
     final refresh = data['refreshToken'] as String?;
     if (refresh != null) await AppStorage.write(AppStorage.refreshToken, refresh);
-
-    final u = data['user'] as Map<String, dynamic>;
-    if (u['role'] == 'ADMIN') {
-      await AppStorage.remove(AppStorage.accessToken);
-      throw ApiException('CONTA_ERRADA', 'Esta conta é da Central. Use o aplicativo da Central.');
-    }
-    await _usarConta(u, phone);
-    return data['isNewUser'] == true && u['driverId'] == null;
+    await _usarConta(u, telefone);
+    return u;
   }
 
   /// "Numero errado" logo depois de entrar numa conta nova: o servidor apaga

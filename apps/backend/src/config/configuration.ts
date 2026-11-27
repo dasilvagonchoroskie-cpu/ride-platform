@@ -43,6 +43,7 @@ export interface AppConfiguration {
   };
   fcm: { projectId?: string; clientEmail?: string; privateKey?: string };
   maps: { apiKey?: string; cacheTtl: number };
+  googleLogin: { clientId?: string };
   payments: {
     provider: 'asaas' | 'stripe';
     asaasBaseUrl: string;
@@ -120,6 +121,7 @@ export function configuration(): AppConfiguration {
       privateKey: env.FCM_PRIVATE_KEY || undefined,
     },
     maps: { apiKey: env.GOOGLE_MAPS_API_KEY || undefined, cacheTtl: env.GOOGLE_MAPS_CACHE_TTL },
+    googleLogin: { clientId: env.GOOGLE_LOGIN_CLIENT_ID || undefined },
     payments: {
       provider: env.PAYMENT_PROVIDER,
       asaasBaseUrl: env.ASAAS_BASE_URL,

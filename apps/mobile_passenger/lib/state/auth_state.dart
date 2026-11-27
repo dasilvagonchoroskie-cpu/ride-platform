@@ -15,9 +15,9 @@ import '../core/mapa_config.dart';
 
 /// Sessao do passageiro.
 ///
-/// Entra pelo codigo do telefone ou pelo e-mail e senha. Logo depois do
-/// primeiro login vem a escolha da cidade e o cadastro (nome, e-mail,
-/// genero, CPF e senha), uma vez so.
+/// Entra pelo codigo, pelo e-mail e senha ou pela conta Google. Logo depois
+/// do primeiro login vem a escolha da cidade e o cadastro (nome, e-mail,
+/// genero, CPF e senha; com Google a senha nao e pedida), uma vez so.
 class AuthState extends ChangeNotifier {
   AuthState({ApiClient? client}) : _client = client ?? ApiClient() {
     // Login vencido de vez (refresh tambem venceu): volta para a tela de entrar.
@@ -164,35 +164,50 @@ class AuthState extends ChangeNotifier {
     }
   }
 
-  Future<void> verifyOtp(String destino, String code) async => _entrar('/auth/otp/verify', {
-        ..._alvo(destino),
-        'code': code,
-        'purpose': 'LOGIN',
+  Future<void> verifyOtp(String destino, String code) async {
+    await _entrar('/auth/otp/verify', {
+      ..._alvo(destino),
+      'code': code,
+      'purpose': 'LOGIN',
+      'role': 'PASSENGER',
+      'device': await IdentidadeDoAparelho.dados(),
+    });
+  }
+
+  /// Entra com o comprovante do Google. Devolve null quando entrou; devolve o
+  /// e-mail quando o servidor quer que ele seja confirmado pelo codigo.
+  Future<String?> entrarComGoogle(String comprovante) async => _entrar('/auth/google', {
+        'idToken': comprovante,
         'role': 'PASSENGER',
         'device': await IdentidadeDoAparelho.dados(),
       });
 
-  Future<void> entrarComEmail(String email, String senha) async => _entrar('/auth/password/login', {
-        'email': email.trim().toLowerCase(),
-        'password': senha,
-        'device': await IdentidadeDoAparelho.dados(),
-      });
+  Future<void> entrarComEmail(String email, String senha) async {
+    await _entrar('/auth/password/login', {
+      'email': email.trim().toLowerCase(),
+      'password': senha,
+      'device': await IdentidadeDoAparelho.dados(),
+    });
+  }
 
   /// Codigo (telefone ou e-mail) + senha nova. Ja deixa a pessoa conectada.
-  Future<void> redefinirSenha(String destino, String code, String novaSenha) async => _entrar('/auth/password/reset', {
-        ..._alvo(destino),
-        'code': code,
-        'newPassword': novaSenha,
-        'device': await IdentidadeDoAparelho.dados(),
-      });
+  Future<void> redefinirSenha(String destino, String code, String novaSenha) async {
+    await _entrar('/auth/password/reset', {
+      ..._alvo(destino),
+      'code': code,
+      'newPassword': novaSenha,
+      'device': await IdentidadeDoAparelho.dados(),
+    });
+  }
 
-  Future<void> _entrar(String caminho, Map<String, dynamic> corpo) async {
+  Future<String?> _entrar(String caminho, Map<String, dynamic> corpo) async {
     loading = true;
     error = null;
     notifyListeners();
 
     try {
       final data = await _client.request('POST', caminho, body: corpo) as Map<String, dynamic>;
+      if (data['precisaCodigoEmail'] == true) return data['email'] as String;
       final profile = UserProfile.fromJson(data['user'] as Map<String, dynamic>);
 
       // Motorista tambem pede corrida (mesma conta). So a conta da Central
@@ -215,6 +230,7 @@ class AuthState extends ChangeNotifier {
       await AppStorage.write(AppStorage.donoDosDados, profile.id);
       await _guardarUsuario(profile);
       unawaited(registrarPush());
+      return null;
     } on ApiException catch (exception) {
       error = exception.message;
       rethrow;
@@ -247,7 +263,7 @@ class AuthState extends ChangeNotifier {
     required String email,
     required String genero,
     required String cpf,
-    required String senha,
+    String? senha,
     String? cidade,
     String? telefone,
   }) async {
@@ -257,7 +273,7 @@ class AuthState extends ChangeNotifier {
       'email': email.trim().toLowerCase(),
       'gender': genero,
       'cpf': cpf,
-      'password': senha,
+      if (senha != null) 'password': senha,
       if (cidade != null) 'city': cidade,
     }) as Map<String, dynamic>;
     cidadeEscolhida = null;

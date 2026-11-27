@@ -9,6 +9,7 @@ import '../core/utils/validadores.dart';
 import '../state/app_state.dart';
 import '../state/auth_state.dart';
 import '../state/config_state.dart';
+import '../widgets/botao_google.dart';
 import '../widgets/form_ui.dart';
 import 'email_login_screen.dart';
 import 'legal_screen.dart';
@@ -147,6 +148,7 @@ class _PhoneScreenState extends State<PhoneScreen> {
               MaterialPageRoute<void>(builder: (_) => const EmailLoginScreen()),
             ),
           ),
+          const EntrarComGoogle(),
           const SizedBox(height: Spacing.xl),
           Center(
             child: TextButton.icon(

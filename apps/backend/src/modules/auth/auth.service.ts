@@ -15,6 +15,7 @@ import { AvisosDeSeguranca } from './avisos-de-seguranca';
 import { randomToken } from '../../common/utils/crypto.util';
 import { encerrarComercios } from '../comercio/comercio.conta';
 import { liberarConta, reservarTentativa } from './limite-de-senha';
+import { ligacaoGoogle } from './google-token';
 
 /** Genero informado no cadastro do passageiro. */
 export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
@@ -82,6 +83,8 @@ export interface AuthResult extends IssuedTokens {
     endereco: string | null;
     /** Se ja existe senha (para entrar pelo e-mail). Nunca devolve a senha. */
     temSenha: boolean;
+    /** A conta entra com o Google (no cadastro a senha vira opcional). */
+    entraComGoogle: boolean;
     /** Entrou pelo e-mail e ainda nao informou o telefone. */
     telefonePendente: boolean;
     trocarSenha: boolean;
@@ -465,6 +468,7 @@ export class AuthService {
       cidade: metaDe(user).cidade ?? null,
       endereco: metaDe(user).endereco ?? null,
       temSenha: !!user.passwordHash,
+      entraComGoogle: !!ligacaoGoogle(user),
       telefonePendente: telefonePendente(user.phone),
       /** Operador da Central com senha provisoria: troca antes de usar (etapa 7). */
       trocarSenha: user.role === UserRole.ADMIN && metaDe(user).senhaProvisoria === true,
@@ -508,7 +512,7 @@ export class AuthService {
       email: string;
       gender: Genero;
       cpf: string;
-      password: string;
+      password?: string;
       city?: string;
       phone?: string;
       codigoEmail?: string;
@@ -524,6 +528,9 @@ export class AuthService {
     if (meta.cadastroCompleto === true) {
       throw BusinessException.conflict('Seu cadastro ja foi concluido. Para mudar algum dado, use Meus dados.');
     }
+
+    // Quem entra com o Google nao precisa criar senha.
+    if (!input.password && !ligacaoGoogle(user)) throw BusinessException.validation('Crie uma senha.');
 
     const cidade = await this.validarCidade(input.city);
     await this.garantirUnicos(userId, input.email, input.cpf);
@@ -555,7 +562,7 @@ export class AuthService {
           ...(emailNovo ? { emailVerifiedAt: new Date() } : {}),
           cpf: input.cpf,
           ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null } : {}),
-          passwordHash: await hashPassword(input.password),
+          ...(input.password ? { passwordHash: await hashPassword(input.password) } : {}),
           metadata: {
             ...meta,
             genero: input.gender,

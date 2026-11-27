@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/api/api_client.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
+import '../widgets/botao_google.dart';
 import '../widgets/ui.dart';
 import 'otp_screen.dart';
 
@@ -100,6 +101,7 @@ class _EmailScreenState extends State<EmailScreen> {
                 loading: _enviando,
                 onPressed: _continuar,
               ),
+              const EntrarComGoogle(),
             ],
           ),
         ),

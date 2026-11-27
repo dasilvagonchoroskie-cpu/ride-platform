@@ -36,7 +36,7 @@ class _PendingScreenState extends State<PendingScreen> {
         content: const Text(
           'Não precisa sair para esperar a aprovação: quando a Central aprovar, '
           'esta tela muda sozinha. Se sair, o cadastro continua guardado e você '
-          'entra de novo com o mesmo telefone.',
+          'entra de novo com a mesma conta.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Ficar')),

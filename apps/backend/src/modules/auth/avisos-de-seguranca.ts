@@ -10,6 +10,7 @@ export type EventoDeSeguranca =
   | 'SENHA_RECUPERADA'
   | 'TELEFONE_TROCADO'
   | 'EMAIL_TROCADO'
+  | 'GOOGLE_LIGADO'
   | 'RECUPERACAO_PELA_CENTRAL'
   | 'DUAS_ETAPAS_REDEFINIDAS';
 
@@ -18,6 +19,7 @@ const TEXTOS: Record<EventoDeSeguranca, string> = {
   SENHA_RECUPERADA: 'A senha da sua conta Fortaleza Move foi recuperada pelo "Esqueci minha senha"',
   TELEFONE_TROCADO: 'O telefone da sua conta Fortaleza Move foi trocado',
   EMAIL_TROCADO: 'O e-mail da sua conta Fortaleza Move foi trocado',
+  GOOGLE_LIGADO: 'Sua conta Fortaleza Move passou a aceitar a entrada com o Google',
   RECUPERACAO_PELA_CENTRAL: 'O acesso à sua conta Fortaleza Move foi recuperado pela Central',
   DUAS_ETAPAS_REDEFINIDAS: 'A verificação em duas etapas da sua conta da Central foi redefinida',
 };
@@ -35,6 +37,15 @@ export function horarioDeBrasilia(d: Date): string {
 /** Texto do aviso. Nunca leva senha, codigo, telefone completo nem documento. */
 export function textoDoAviso(evento: EventoDeSeguranca, quando: Date): { titulo: string; texto: string } {
   const titulo = 'Aviso de segurança';
+  if (evento === 'GOOGLE_LIGADO') {
+    // Aqui a senha da Fortaleza Move nao resolve: quem protege e a conta de e-mail.
+    return {
+      titulo,
+      texto:
+        `${TEXTOS[evento]} em ${horarioDeBrasilia(quando)} (horário de Brasília). ` +
+        'Se não foi você, troque agora a senha do seu e-mail e fale com a Central pelo e-mail fortalezamovegtba@gmail.com.',
+    };
+  }
   const texto =
     `${TEXTOS[evento]} em ${horarioDeBrasilia(quando)} (horário de Brasília). ` +
     (evento === 'TELEFONE_TROCADO' || evento === 'EMAIL_TROCADO' ? '' : 'Os outros aparelhos foram desconectados. ') +
