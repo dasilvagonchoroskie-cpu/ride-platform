@@ -303,57 +303,6 @@ export class AuthService {
     };
   }
 
-  async registerWithPassword(params: {
-    phone: string;
-    name: string;
-    email?: string;
-    password: string;
-    device?: DeviceContext;
-  }): Promise<AuthResult> {
-    const exists = await this.prisma.user.findFirst({
-      where: { OR: [{ phone: params.phone }, ...(params.email ? [{ email: params.email }] : [])] },
-    });
-
-    if (exists?.phone === params.phone) {
-      throw BusinessException.conflict('Telefone ja cadastrado.', ERROR_CODES.PHONE_ALREADY_USED);
-    }
-    if (params.email && exists?.email === params.email) {
-      throw BusinessException.conflict('E-mail ja cadastrado.', ERROR_CODES.EMAIL_ALREADY_USED);
-    }
-
-    const user = await this.prisma.user.create({
-      data: {
-        role: UserRole.PASSENGER,
-        status: UserStatus.ACTIVE,
-        name: params.name,
-        phone: params.phone,
-        email: params.email,
-        passwordHash: await hashPassword(params.password),
-        phoneVerifiedAt: new Date(),
-        lastLoginAt: new Date(),
-      },
-      include: { driver: { select: { id: true, status: true, isOnline: true } } },
-    });
-
-    const issued = await this.tokens.issueTokens(
-      {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        driverId: null,
-      },
-      params.device,
-    );
-
-    return {
-      ...issued,
-      isNewUser: true,
-      user: this.paraUsuario(user),
-    };
-  }
-
   async loginWithPassword(params: {
     phone?: string;
     email?: string;
