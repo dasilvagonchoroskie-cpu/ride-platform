@@ -103,7 +103,7 @@ void main() {
     await tester.tap(find.text('Sair'));
     await tester.pumpAndSettle();
     expect(find.text('Sair do cadastro?'), findsOneWidget);
-    expect(find.textContaining('MESMO telefone'), findsOneWidget);
+    expect(find.textContaining('MESMA conta'), findsOneWidget);
     await tester.tap(find.text('Sair').last);
     await tester.pumpAndSettle();
     expect(d.profile, isNull);
