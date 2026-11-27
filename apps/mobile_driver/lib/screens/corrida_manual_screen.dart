@@ -10,7 +10,7 @@ import '../widgets/ui.dart';
 /// Onde o passageiro baixa o app (trocar pelo link da Play Store quando
 /// o app estiver na loja).
 const String linkDoAppDoPassageiro =
-    'https://github.com/dasilvagonchoroskie-cpu/ride-platform/releases/tag/apk-ride-passenger-mais-recente';
+    'https://api.fortalezadigitalsecurity.com.br/baixar/passageiro';
 
 /// Corrida manual lancada pelo motorista (Evandro, 09/10/2026): passageiro
 /// que chamou na rua ou ligou. Com conta: a corrida abre no nome dele. Sem

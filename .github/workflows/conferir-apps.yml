@@ -1,17 +1,11 @@
 name: Conferir Central e Motorista
 
 # So ANALISE e TESTES (flutter analyze e flutter test) dos apps Central e Motorista,
-# em qualquer branch que nao seja a principal. Nao gera APK, nao publica nada,
+# so pelo botao (o pedido de mudanca ja e conferido na esteira Android APKs).
+# Nao gera APK, nao publica nada,
 # nao usa segredo e nao faz deploy (12/11/2026).
 on:
   workflow_dispatch: {}
-  push:
-    branches-ignore: [main]
-    paths:
-      - 'apps/central_app/**'
-      - 'apps/mobile_driver/**'
-      - 'scripts/conferir-rotas.py'
-      - '.github/workflows/conferir-apps.yml'
 
 concurrency:
   group: conferir-apps-${{ github.ref }}
