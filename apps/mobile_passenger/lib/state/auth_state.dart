@@ -150,6 +150,8 @@ class AuthState extends ChangeNotifier {
       final data = await _client.request('POST', '/auth/otp/request', body: {
         ..._alvo(destino),
         'purpose': finalidade,
+        // O servidor reconhece o celular que ja entrou na conta.
+        'device': await IdentidadeDoAparelho.dados(),
       }) as Map<String, dynamic>;
 
       // Sem SMS, o codigo do telefone vai para o e-mail da conta.
@@ -355,19 +357,19 @@ class AuthState extends ChangeNotifier {
   /// ficar presa na tela de aceite so porque a internet caiu bem
   /// naquele instante. Na proxima vez que houver rede, o proximo login
   /// sincroniza de novo.
-  Future<void> acceptTerms() async {
+  Future<void> acceptTerms({String versao = kTermsVersion}) async {
     final current = user;
     if (current == null) return;
 
     if (AppConfig.hasApi && !isDemoSession) {
       try {
-        await _client.request('POST', '/auth/accept-terms', body: {'version': kTermsVersion});
+        await _client.request('POST', '/auth/accept-terms', body: {'version': versao});
       } catch (_) {
         // Segue aceitando localmente; sincroniza no proximo login.
       }
     }
 
-    await _guardarUsuario(current.copyWith(termsAccepted: true));
+    await _guardarUsuario(current.copyWith(termsAccepted: true, termosDesatualizados: false));
   }
 
   Future<void> logout() async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/api/api_client.dart';
+import '../core/config/app_config.dart';
 import '../core/legal/legal_content.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
@@ -15,7 +16,10 @@ import '../widgets/ui.dart';
 /// ca — antes ate do onboarding, porque nao faz sentido cadastrar CNH e
 /// veiculo sem ter aceitado como os dados vao ser usados.
 class TermsScreen extends StatefulWidget {
-  const TermsScreen({super.key});
+  const TermsScreen({super.key, this.cliente});
+
+  /// So os testes mandam um cliente proprio.
+  final ApiClient? cliente;
 
   @override
   State<TermsScreen> createState() => _TermsScreenState();
@@ -23,13 +27,21 @@ class TermsScreen extends StatefulWidget {
 
 class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStateMixin {
   late final TabController _abas = TabController(length: 2, vsync: this);
-  final _client = ApiClient();
+  late final ApiClient _client = widget.cliente ?? ApiClient();
 
   String _termos = kTermsFallback;
   String _privacidade = kPrivacyFallback;
   bool _carregando = true;
   bool _aceitando = false;
-  bool _leuAteOFim = false;
+  bool _marcou = false;
+
+  /// So fica verdadeiro com os dois textos completos na tela.
+  bool _textoCompleto = false;
+  String? _versao;
+
+  /// Sem servidor (demonstracao) vale o resumo; com servidor, ninguem aceita
+  /// um texto que nao conseguiu ler.
+  bool get _podeLer => _textoCompleto || !AppConfig.hasApi;
 
   @override
   void initState() {
@@ -43,9 +55,8 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
-  /// Busca o texto vigente no servidor. Se nao houver rede, fica com o
-  /// resumo local — melhor mostrar algo do que travar a pessoa numa
-  /// tela em branco antes mesmo de ela poder recusar.
+  /// Busca o texto vigente no servidor. Se nao houver rede, mostra o
+  /// resumo local e o botao de tentar de novo; o aceite espera o texto.
   Future<void> _buscarTextoOficial() async {
     try {
       final results = await Future.wait([
@@ -55,9 +66,13 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
       final termos = results[0] as Map<String, dynamic>;
       final privacidade = results[1] as Map<String, dynamic>;
       if (!mounted) return;
+      final textoDosTermos = termos['content'] as String? ?? '';
+      final textoDaPrivacidade = privacidade['content'] as String? ?? '';
       setState(() {
-        _termos = termos['content'] as String? ?? kTermsFallback;
-        _privacidade = privacidade['content'] as String? ?? kPrivacyFallback;
+        _textoCompleto = textoDosTermos.isNotEmpty && textoDaPrivacidade.isNotEmpty;
+        _termos = _textoCompleto ? textoDosTermos : kTermsFallback;
+        _privacidade = _textoCompleto ? textoDaPrivacidade : kPrivacyFallback;
+        _versao = termos['version'] as String?;
         _carregando = false;
       });
     } catch (_) {
@@ -66,9 +81,15 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
     }
   }
 
+  void _tentarDeNovo() {
+    setState(() => _carregando = true);
+    _buscarTextoOficial();
+  }
+
   Future<void> _aceitar() async {
+    if (_aceitando || !_marcou || !_podeLer) return;
     setState(() => _aceitando = true);
-    await context.read<DriverState>().acceptTerms();
+    await context.read<DriverState>().acceptTerms(versao: _versao ?? kTermsVersion);
     // Nao precisa desligar _aceitando: assim que o aceite entra no
     // estado, app.dart troca de tela e este widget sai da arvore.
   }
@@ -79,6 +100,8 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    // Quem ja tinha aceitado esta aqui porque o texto mudou.
+    final atualizacao = context.select<DriverState, bool>((s) => s.profile?.termosDesatualizados ?? false);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -96,38 +119,47 @@ class _TermsScreenState extends State<TermsScreen> with SingleTickerProviderStat
       ),
       body: Column(
         children: [
+          if (atualizacao)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, 0),
+              child: Text('Atualizamos os Termos de Uso e a Política de Privacidade. Leia e aceite para continuar.',
+                  style: AppText.body),
+            ),
           Expanded(
             child: _carregando
                 ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                : NotificationListener<ScrollNotification>(
-                    onNotification: (n) {
-                      // So libera o botao depois que a pessoa chegou perto do
-                      // fim do texto — aceite exige ao menos rolar ate ele.
-                      if (n.metrics.pixels >= n.metrics.maxScrollExtent - 40 && !_leuAteOFim) {
-                        setState(() => _leuAteOFim = true);
-                      }
-                      return false;
-                    },
-                    child: TabBarView(
-                      controller: _abas,
-                      children: [
-                        TextoLegal(texto: _termos),
-                        TextoLegal(texto: _privacidade),
-                      ],
-                    ),
+                : TabBarView(
+                    controller: _abas,
+                    children: [
+                      TextoLegal(texto: _termos),
+                      TextoLegal(texto: _privacidade),
+                    ],
                   ),
           ),
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, Spacing.lg),
+              padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.sm, Spacing.lg, Spacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (!_carregando && !_podeLer) ...[
+                    Text('Sem conexão: não deu para carregar o texto completo. Confira a internet para aceitar.',
+                        style: AppText.body),
+                    TextButton(onPressed: _tentarDeNovo, child: const Text('Tentar de novo')),
+                  ] else
+                    CheckboxListTile(
+                      key: const ValueKey('aceite-termos'),
+                      value: _marcou,
+                      onChanged: _carregando || _aceitando ? null : (v) => setState(() => _marcou = v ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('Li e aceito os Termos de Uso e a Política de Privacidade', style: AppText.body),
+                    ),
                   AppButton(
                     label: 'Aceito os Termos',
                     loading: _aceitando,
-                    enabled: _leuAteOFim || _carregando == false,
+                    enabled: !_carregando && _podeLer && _marcou,
                     onPressed: _aceitar,
                   ),
                   const SizedBox(height: Spacing.sm),

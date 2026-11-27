@@ -60,12 +60,14 @@ class CentralRepository {
 
   /// Codigo de 6 numeros no e-mail do administrador.
   Future<void> pedirCodigo(String email) async {
-    await _client.request('POST', '/auth/otp/request', body: {'email': email, 'purpose': 'LOGIN'});
+    await _client.request('POST', '/auth/otp/request',
+        body: {'email': email, 'purpose': 'LOGIN', 'device': await IdentidadeDoAparelho.dados()});
   }
 
   /// Esqueci a senha: codigo de 6 numeros no e-mail da Central.
   Future<void> pedirCodigoSenhaNova(String email) async {
-    await _client.request('POST', '/auth/otp/request', body: {'email': email, 'purpose': 'PASSWORD_RESET'});
+    await _client.request('POST', '/auth/otp/request',
+        body: {'email': email, 'purpose': 'PASSWORD_RESET', 'device': await IdentidadeDoAparelho.dados()});
   }
 
   /// Codigo do e-mail + senha nova. O servidor troca a senha e ja entra.

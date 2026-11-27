@@ -251,6 +251,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     ready = true;
     notifyListeners();
     if (profile != null) _vigiarAprovacao();
+    if (profile != null) unawaited(conferirTermos());
     // Aberto de novo ainda "em analise": pergunta ja, sem esperar 20 s.
     if (profile != null && !isApproved) unawaited(refreshFromServer());
     if (profile != null && isApproved) unawaited(atualizarPainel());
@@ -497,6 +498,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     checarPermissoes();
+    if (profile != null) unawaited(conferirTermos());
     // Voltou para o aplicativo (ex.: depois de aprovar na Central no mesmo
     // celular): confere a aprovacao na hora. Com o app em segundo plano o
     // Android congela o relogio de 20 s e a tela ficava parada.
@@ -637,7 +639,6 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
       activeRide = DriverRide(
         offer: o,
         phase: fase,
-        pin: c['pin'] as String? ?? '',
         startedAt: (c['acceptedAt'] as String?) ?? DateTime.now().toIso8601String(),
       );
       routeToPickup = [position, o.pickupCoords];
@@ -665,6 +666,8 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final data = await _client.request('POST', '/auth/otp/request', body: {
       'phone': phone,
       'purpose': 'LOGIN',
+      // O servidor reconhece o celular que ja entrou na conta.
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
     // Sem SMS, o codigo do telefone vai para o e-mail da conta.
     codigoEnviadoPara = data['destino'] as String?;
@@ -683,6 +686,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final data = await _client.request('POST', '/auth/otp/request', body: {
       'email': email.trim().toLowerCase(),
       'purpose': 'LOGIN',
+      'device': await IdentidadeDoAparelho.dados(),
     }) as Map<String, dynamic>;
     return data['debugCode'] as String?;
   }
@@ -825,6 +829,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     ).copyWith(
       approval: _aprovacao(u['driverStatus'] as String?),
       termsAccepted: u['termsAccepted'] as bool? ?? false,
+      termosDesatualizados: u['termosDesatualizados'] as bool? ?? false,
       avatarUrl: u['avatarUrl'] as String?,
     );
     if (u['driverId'] != null) await sincronizarCadastro();
@@ -862,11 +867,12 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     final u = data['user'] as Map<String, dynamic>;
     // A conta existente pode ainda nao ter aceitado os termos do motorista;
     // quem esta aqui ja aceitou nesta mesma tela de cadastro.
-    if (u['termsAccepted'] != true) {
+    if (u['termsAccepted'] != true || u['termosDesatualizados'] == true) {
       try {
         await _client.request('POST', '/auth/accept-terms', body: {'version': kTermsVersion});
       } catch (_) {}
       u['termsAccepted'] = true;
+      u['termosDesatualizados'] = false;
     }
     await _usarConta(u, u['phone'] as String? ?? '');
   }
@@ -929,6 +935,25 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   static String _paraIso(String data) => dataBrParaIso(data);
+
+  /// Pergunta ao servidor se o aceite dos Termos continua valendo. O app do
+  /// motorista fica dias aberto: sem isto ele nao saberia que o texto mudou.
+  Future<void> conferirTermos() async {
+    if (!AppConfig.hasApi || profile == null) return;
+    try {
+      final u = await _client.request('GET', '/auth/me') as Map<String, dynamic>;
+      final atual = profile;
+      final aceitos = u['termsAccepted'];
+      if (atual == null || aceitos is! bool) return;
+      final velhos = u['termosDesatualizados'] == true;
+      if (atual.termsAccepted == aceitos && atual.termosDesatualizados == velhos) return;
+      profile = atual.copyWith(termsAccepted: aceitos, termosDesatualizados: velhos);
+      await _persistProfile();
+      notifyListeners();
+    } catch (_) {
+      // Sem rede agora: confere na proxima abertura.
+    }
+  }
 
   /// Consulta o servidor para saber se o cadastro ja foi aprovado pela
   /// Central. Sem isto o motorista ficaria preso na tela "em analise"
@@ -1058,19 +1083,20 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
   /// quando ha rede, mas aceita localmente mesmo se a chamada falhar —
   /// o motorista nao pode ficar presos na tela de aceite so porque a
   /// internet caiu naquele instante.
-  Future<void> acceptTerms() async {
+  Future<void> acceptTerms({String versao = kTermsVersion}) async {
     final current = profile;
     if (current == null) return;
 
     if (AppConfig.hasApi) {
       try {
-        await _client.request('POST', '/auth/accept-terms', body: {'version': kTermsVersion});
+        await _client.request('POST', '/auth/accept-terms', body: {'version': versao});
       } catch (_) {
-        // Segue aceitando localmente; sincroniza no proximo login.
+        // Segue aceitando localmente; o servidor pede de novo na proxima abertura.
       }
     }
 
-    profile = current.copyWith(termsAccepted: true);
+    // Relendo o perfil: ele pode ter mudado enquanto o aviso ia ao servidor.
+    profile = (profile ?? current).copyWith(termsAccepted: true, termosDesatualizados: false);
     await _persistProfile();
     notifyListeners();
   }
@@ -1833,11 +1859,9 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     // Cala o alarme no toque, antes mesmo da resposta do servidor.
     CorridasNativo.pararAlarme();
 
-    String? pinDoServidor;
     if (AppConfig.hasApi) {
       try {
-        final aceite = await _client.request('POST', '/driver/rides/${current.id}/accept');
-        if (aceite is Map<String, dynamic>) pinDoServidor = aceite['pin'] as String?;
+        await _client.request('POST', '/driver/rides/${current.id}/accept');
         // O servidor so aceita "cheguei" depois de "a caminho". Como o app
         // nao tem um botao separado para isso, o aceite ja emenda os dois.
         await _client.request('POST', '/driver/rides/${current.id}/arriving',
@@ -1854,9 +1878,6 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     activeRide = DriverRide(
       offer: current,
       phase: RidePhase.toPickup,
-      // O PIN vem do servidor (o mesmo que o passageiro ve). So a
-      // demonstracao inventa um.
-      pin: pinDoServidor ?? (AppConfig.hasApi ? '' : '${1000 + DateTime.now().millisecond % 9000}'),
       startedAt: DateTime.now().toIso8601String(),
     );
 
@@ -1905,16 +1926,42 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     unawaited(_buscarRotas(forcar: true));
   }
 
-  Future<void> startRide() async {
+  /// Motivo da recusa do codigo de embarque (aparece na janela do codigo).
+  String? erroDoEmbarque;
+
+  /// Inicia a viagem. Se a cidade pede o codigo, volta [InicioDaViagem.pedeCodigo]
+  /// e a tela chama de novo com o que o passageiro disse.
+  Future<InicioDaViagem> startRide({String? codigo}) async {
     final ride = activeRide;
-    if (ride == null) return;
-    if (AppConfig.hasApi && !await _avisarServidor(ride, 'start')) return;
+    if (ride == null || ride.phase != RidePhase.waitingPassenger) return InicioDaViagem.falhou;
+    erroDoEmbarque = null;
+    if (AppConfig.hasApi) {
+      var recusa = InicioDaViagem.falhou;
+      final aceitou = await _avisarServidor(
+        ride,
+        'start',
+        extras: {if (codigo != null) 'codigoEmbarque': codigo},
+        semRede: () => erroDoEmbarque = 'Sem conexão com o servidor. Tente de novo.',
+        tratar: (e) {
+          if (!e.code.startsWith('BOARDING_CODE_')) return false;
+          if (e.code == 'BOARDING_CODE_REQUIRED' && codigo == null) {
+            recusa = InicioDaViagem.pedeCodigo;
+          } else {
+            recusa = InicioDaViagem.codigoRecusado;
+            erroDoEmbarque = e.message;
+          }
+          return true;
+        },
+      );
+      if (!aceitou) return recusa;
+    }
     activeRide = ride.copyWith(phase: RidePhase.inProgress);
     viagemIniciouEm = DateTime.now();
     _comecarTaximetro();
     await _persistRide();
     notifyListeners();
     unawaited(_buscarRotas(forcar: true));
+    return InicioDaViagem.iniciou;
   }
 
   /// Esperando o servidor confirmar uma etapa (evita toque duplo).
@@ -2006,19 +2053,30 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  Future<bool> _avisarServidor(DriverRide ride, String passo) async {
+  /// [tratar] devolve true quando a recusa ja foi tratada por quem chamou
+  /// (ex.: falta o codigo de embarque).
+  Future<bool> _avisarServidor(
+    DriverRide ride,
+    String passo, {
+    Map<String, dynamic> extras = const {},
+    bool Function(ApiException)? tratar,
+    VoidCallback? semRede,
+  }) async {
     if (enviandoEtapa) return false;
     enviandoEtapa = true;
     notifyListeners();
     try {
       await _client.request('POST', '/driver/rides/${ride.offer.id}/$passo',
-          body: {'latitude': position.latitude, 'longitude': position.longitude});
+          body: {'latitude': position.latitude, 'longitude': position.longitude, ...extras});
       return true;
     } on ApiException catch (e) {
+      if (tratar?.call(e) ?? false) return false;
+      if (e.isNetworkError) semRede?.call();
       _avisar(e.message);
       await conferirCorrida();
       return false;
     } catch (_) {
+      semRede?.call();
       _avisar('Sem conexão com o servidor. Tente de novo.');
       return false;
     } finally {

@@ -72,7 +72,7 @@ Future<DriverState> _abrir(WidgetTester tester, _Servidor s, Widget tela, {RideP
   addTearDown(tester.view.resetDevicePixelRatio);
   final d = DriverState(client: ApiClient(client: s.cliente()))..position = const Coords(-18.0126, -49.3548);
   if (fase != null) {
-    d.activeRide = DriverRide(offer: _oferta, phase: fase, pin: '1111', startedAt: '2026-10-30T13:00:00.000Z');
+    d.activeRide = DriverRide(offer: _oferta, phase: fase, startedAt: '2026-10-30T13:00:00.000Z');
   } else {
     d.offer = _oferta;
     d.offerSecondsLeft = 20;

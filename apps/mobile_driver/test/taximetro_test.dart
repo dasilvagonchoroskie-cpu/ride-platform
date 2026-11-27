@@ -143,7 +143,7 @@ void main() {
           )),
     );
     final d = DriverState(client: api)
-      ..activeRide = const DriverRide(offer: _oferta, phase: RidePhase.inProgress, pin: '1234', startedAt: '2026-10-08T20:00:00.000Z')
+      ..activeRide = const DriverRide(offer: _oferta, phase: RidePhase.inProgress, startedAt: '2026-10-08T20:00:00.000Z')
       ..tarifa = _tabela
       ..taximetro = Taximetro(metros: 3000)
       ..viagemIniciouEm = DateTime.now().subtract(const Duration(minutes: 7));
@@ -173,7 +173,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final d = DriverState(client: ApiClient(client: MockClient((r) async => http.Response('{}', 404))))
-      ..activeRide = const DriverRide(offer: _oferta, phase: RidePhase.toPickup, pin: '1234', startedAt: '2026-10-08T20:00:00.000Z');
+      ..activeRide = const DriverRide(offer: _oferta, phase: RidePhase.toPickup, startedAt: '2026-10-08T20:00:00.000Z');
     await tester.pumpWidget(
       ChangeNotifierProvider<DriverState>.value(
         value: d,

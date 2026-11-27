@@ -89,6 +89,9 @@ class _Root extends StatelessWidget {
       if (active.status.isActive) return const SearchingScreen();
     }
 
+    // Os textos mudaram: pede o aceite de novo, mas so fora de uma corrida.
+    if (auth.user!.termosDesatualizados) return const TermsScreen();
+
     // Mapa primeiro (29/10/2026): abre na ultima posicao conhecida deste
     // celular enquanto o GPS acerta. Sem posicao nenhuma (primeira vez e GPS
     // sem sinal), abre no centro da cidade do cadastro; sem cidade, espera.

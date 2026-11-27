@@ -1020,6 +1020,32 @@ void main() {
     expect(find.textContaining('Operador · Teutônia'), findsOneWidget);
   });
 
+  testWidgets('Cidade: chave do código de embarque aparece ligada e pode ser desligada (celular pequeno)', (tester) async {
+    await _abrir(tester, const CidadesEquipeTela(), pequena: true);
+    await _carregar(tester);
+    expect(find.textContaining('Código de embarque: ligado'), findsWidgets);
+    await tester.tap(find.text('Goiatuba - GO'));
+    await tester.pumpAndSettle();
+    final chave = find.byKey(const ValueKey('chave-codigo-embarque'));
+    expect(tester.widget<SwitchListTile>(chave).value, isTrue);
+    // No celular pequeno a janela rola: leva o botao para a area visivel, como o dono faria.
+    final botao = find.descendant(of: chave, matching: find.byType(Switch));
+    await tester.ensureVisible(botao);
+    await tester.pumpAndSettle();
+    await tester.tap(botao);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(chave).value, isFalse);
+    expect(find.textContaining('Desligado: o motorista inicia sem código'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Voltar'));
+    await tester.pumpAndSettle();
+  });
+
+  test('Cidade sem o campo (cadastro antigo) vale como ligada', () {
+    expect(Praca.fromJson(const {'id': 'a', 'nome': 'A'}).exigirCodigoEmbarque, isTrue);
+    expect(Praca.fromJson(const {'id': 'a', 'exigirCodigoEmbarque': false}).exigirCodigoEmbarque, isFalse);
+  });
+
   // Etapa 7 (Evandro, 29/10/2026): "Itumbiara: conferir a rolagem" — com as
   // 6 cidades, a ultima (Itumbiara) aparece e da para escolher no celular.
   testWidgets('Novo operador: com 6 cidades, Itumbiara (a ultima) aparece e e escolhida', (tester) async {

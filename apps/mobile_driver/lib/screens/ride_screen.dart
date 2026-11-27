@@ -523,18 +523,15 @@ class _EsperandoState extends State<_Esperando> {
         if (offer.entrega != null) ...[_FaixaEntrega(entrega: offer.entrega!), const SizedBox(height: Spacing.sm)],
         _Passageiro(d: d, offer: offer),
         _Endereco(rotulo: offer.entrega != null ? 'Coleta' : 'Embarque', texto: offer.pickupAddress, cor: AppColors.primary),
-        // Entrega: sem codigo na coleta (o cliente entrega a encomenda).
-        if (offer.entrega == null)
-          Container(
-            padding: const EdgeInsets.all(Spacing.md),
-            decoration: BoxDecoration(color: AppColors.surfaceElevated, borderRadius: BorderRadius.circular(Radii.sm)),
-            child: Text('Confira o código do passageiro: ${widget.ride.pin}', style: AppText.bodyStrong),
-          ),
         const SizedBox(height: Spacing.lg),
         Deslizar(
           texto: offer.entrega != null ? 'CONFIRMAR COLETA' : 'INICIAR VIAGEM',
           ocupado: d.enviandoEtapa,
-          aoConfirmar: d.startRide,
+          // A cidade pede o codigo de embarque? Quem responde e o servidor.
+          aoConfirmar: () async {
+            final r = await d.startRide();
+            if (r == InicioDaViagem.pedeCodigo && context.mounted) unawaited(pedirCodigoDeEmbarque(context, d));
+          },
         ),
         TextButton(
           onPressed: () => _cancelar(context, d),
@@ -962,4 +959,95 @@ Future<void> pedirCodigoDaEntrega(BuildContext context, DriverState d) async {
       },
     ),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Codigo de embarque
+// ---------------------------------------------------------------------------
+
+/// O motorista digita o codigo que o passageiro disse; a viagem so comeca se
+/// o servidor confirmar.
+Future<void> pedirCodigoDeEmbarque(BuildContext context, DriverState d) => showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _CodigoDeEmbarque(d: d),
+    );
+
+class _CodigoDeEmbarque extends StatefulWidget {
+  const _CodigoDeEmbarque({required this.d});
+
+  final DriverState d;
+
+  @override
+  State<_CodigoDeEmbarque> createState() => _CodigoDeEmbarqueState();
+}
+
+class _CodigoDeEmbarqueState extends State<_CodigoDeEmbarque> {
+  final _campo = TextEditingController();
+  bool _enviando = false;
+  String? _erro;
+
+  @override
+  void dispose() {
+    _campo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirmar() async {
+    if (_enviando) return;
+    final codigo = _campo.text.trim();
+    if (!RegExp(r'^\d{4}$').hasMatch(codigo)) {
+      setState(() => _erro = 'Digite os 4 números.');
+      return;
+    }
+    setState(() {
+      _enviando = true;
+      _erro = null;
+    });
+    final r = await widget.d.startRide(codigo: codigo);
+    if (!mounted) return;
+    // Comecou, ou a corrida mudou (cancelada, por exemplo): fecha a janela.
+    if (r == InicioDaViagem.iniciou || widget.d.activeRide?.phase != RidePhase.waitingPassenger) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _enviando = false;
+      _erro = widget.d.erroDoEmbarque ?? 'Não deu para iniciar. Tente de novo.';
+      if (r == InicioDaViagem.codigoRecusado) _campo.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Código de embarque'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Peça ao passageiro os 4 números que aparecem no celular dele e digite aqui.'),
+            const SizedBox(height: Spacing.md),
+            TextField(
+              key: const ValueKey('campo-codigo-embarque'),
+              controller: _campo,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              style: AppText.title.copyWith(letterSpacing: 8),
+              decoration: const InputDecoration(counterText: '', hintText: '0000'),
+              onSubmitted: (_) => _confirmar(),
+            ),
+            if (_erro != null) Text(_erro!, style: AppText.body.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _enviando ? null : () => Navigator.of(context).pop(), child: const Text('Voltar')),
+        FilledButton(onPressed: _enviando ? null : _confirmar, child: Text(_enviando ? 'Enviando...' : 'Iniciar viagem')),
+      ],
+    );
+  }
 }

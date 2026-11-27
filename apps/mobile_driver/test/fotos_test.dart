@@ -362,7 +362,7 @@ Future<DriverState> _abrir(
     ..permissoesOk = true
     ..vehicle = const VehicleInfo(brand: 'Chevrolet', model: 'Onix Plus', year: 2022, color: 'Prata', plate: 'ABC1D23');
   if (fase != null) {
-    d.activeRide = DriverRide(offer: _oferta, phase: fase, pin: '4821', startedAt: '2026-10-10T15:00:00.000Z');
+    d.activeRide = DriverRide(offer: _oferta, phase: fase, startedAt: '2026-10-10T15:00:00.000Z');
     d.telefonePassageiro = '+5564999990000';
     d.resumoFinal = resumo;
   }

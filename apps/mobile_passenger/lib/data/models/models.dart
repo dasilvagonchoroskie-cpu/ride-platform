@@ -110,6 +110,7 @@ class UserProfile {
     this.email,
     this.role = 'PASSENGER',
     this.termsAccepted = false,
+    this.termosDesatualizados = false,
     this.cadastroCompleto = false,
     this.cpf,
     this.genero,
@@ -131,6 +132,9 @@ class UserProfile {
   /// Se a pessoa ja tocou em "Aceito os Termos". Enquanto for falso, o
   /// aplicativo mostra a tela de aceite antes de qualquer outra coisa.
   final bool termsAccepted;
+
+  /// Aceitou uma versao anterior dos textos (quem diz e o servidor).
+  final bool termosDesatualizados;
 
   /// Cadastro feito (nome, e-mail, genero, CPF, senha e cidade). Enquanto
   /// for falso, o aplicativo mostra Cidade e Cadastro logo apos o login.
@@ -167,6 +171,7 @@ class UserProfile {
         'email': email,
         'role': role,
         'termsAccepted': termsAccepted,
+        'termosDesatualizados': termosDesatualizados,
         'cadastroCompleto': cadastroCompleto,
         'cpf': cpf,
         'genero': genero,
@@ -186,6 +191,7 @@ class UserProfile {
         email: json['email'] as String?,
         role: json['role'] as String? ?? 'PASSENGER',
         termsAccepted: json['termsAccepted'] as bool? ?? false,
+        termosDesatualizados: json['termosDesatualizados'] as bool? ?? false,
         cadastroCompleto: json['cadastroCompleto'] as bool? ?? false,
         cpf: json['cpf'] as String?,
         genero: json['genero'] as String?,
@@ -198,13 +204,14 @@ class UserProfile {
         driverId: json['driverId'] as String?,
       );
 
-  UserProfile copyWith({String? name, String? email, bool? termsAccepted, String? avatarUrl}) => UserProfile(
+  UserProfile copyWith({String? name, String? email, bool? termsAccepted, bool? termosDesatualizados, String? avatarUrl}) => UserProfile(
         id: id,
         name: name ?? this.name,
         phone: phone,
         email: email ?? this.email,
         role: role,
         termsAccepted: termsAccepted ?? this.termsAccepted,
+        termosDesatualizados: termosDesatualizados ?? this.termosDesatualizados,
         cadastroCompleto: cadastroCompleto,
         cpf: cpf,
         genero: genero,
@@ -759,7 +766,7 @@ class Ride {
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
       fareCents: (json['fareCents'] as num?)?.toInt() ?? 0,
       paymentMethod: json['paymentMethod'] as String? ?? 'Pix',
-      pin: json['pin'] as String? ?? '0000',
+      pin: json['pin'] as String? ?? '',
       createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       finishedAt: json['finishedAt'] as String?,
       rating: (json['rating'] as num?)?.toInt(),
@@ -784,7 +791,7 @@ class Ride {
 
   /// Corrida como o servidor manda (GET /rides/:id, POST /rides, historico).
   /// Antes o aplicativo lia isto com o formato local e tudo vinha vazio:
-  /// endereco em branco, valor R$ 0,00 e PIN "0000".
+  /// endereco em branco, valor R$ 0,00 e codigo inventado.
   factory Ride.fromServer(Map<String, dynamic> j) {
     double? numero(Object? v) => v == null ? null : double.tryParse(v.toString());
     final driverJson = j['driver'] as Map<String, dynamic>?;
