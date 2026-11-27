@@ -21,14 +21,14 @@ export function corridaDoToken(token: string, segredo: string): string | null {
 }
 
 /** Pagina publica do acompanhamento (Leaflet + imagens da TomTom servidas pelo proprio servidor, sem a chave na pagina). */
-export function paginaDeAcompanhar(token: string): string {
+export function paginaDeAcompanhar(token: string, nonce = ''): string {
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fortaleza Move - acompanhar viagem</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
   html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, Roboto, Arial, sans-serif; background: #eef0f3; color: #14181f; }
   #mapa { position: absolute; inset: 0 0 170px 0; }
@@ -50,8 +50,8 @@ export function paginaDeAcompanhar(token: string): string {
   <p class="linha" id="trajeto"></p>
   <p class="linha" id="hora"></p>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" nonce="${nonce}"></script>
+<script nonce="${nonce}">
   var TOKEN = ${JSON.stringify(token)};
   var mapa = L.map('mapa', { zoomControl: false }).setView([-15.8, -47.9], 4);
   L.tileLayer('/api/acompanhar/' + TOKEN + '/mapa/{z}/{x}/{y}.png', { minZoom: 3, maxZoom: 18, attribution: '&copy; TomTom' }).addTo(mapa);
