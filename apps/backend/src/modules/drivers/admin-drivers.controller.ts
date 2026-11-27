@@ -61,7 +61,7 @@ export class AdminDriversController {
     const minha = await this.pracas.escopoDe(user.id);
     const praca = minha ?? (body.praca ? (await this.pracas.buscar(body.praca))?.id : null) ?? null;
     const { praca: _p, ...dados } = body;
-    const criado = await this.drivers.adminCreate(user.id, dados as CriarMotoristaInput);
+    const criado = await this.drivers.adminCreate(user.id, dados as CriarMotoristaInput, { donoDaCentral: !minha });
     const u = await this.prisma.user.findUnique({ where: { phone: body.phone }, select: { id: true } });
     if (u && praca) await this.pracas.definirPracaDoMotorista(u.id, praca);
     this.pracas.esquecerMotoristas();
