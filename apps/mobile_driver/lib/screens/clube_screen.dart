@@ -200,7 +200,8 @@ class _Logo extends StatelessWidget {
           width: tamanho,
           height: tamanho,
           fit: BoxFit.cover,
-          headers: t.data == null ? null : {'Authorization': 'Bearer ${t.data}'},
+          // Cabecalho de acesso apenas para o nosso servidor.
+          headers: t.data == null || url!.startsWith('http') ? null : {'Authorization': 'Bearer ${t.data}'},
           errorBuilder: (context, error, stack) => reserva,
         ),
       ),

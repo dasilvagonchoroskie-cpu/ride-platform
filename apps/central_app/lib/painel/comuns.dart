@@ -208,7 +208,8 @@ class FotoDoServidor extends StatelessWidget {
       width: w,
       height: h,
       fit: fit,
-      headers: {'Authorization': 'Bearer $token'},
+      // Cabecalho de acesso apenas para o nosso servidor.
+      headers: url.startsWith('${AppConfig.apiUrl}/') ? {'Authorization': 'Bearer $token'} : null,
       errorBuilder: (context, error, stack) => Container(
         width: w,
         height: h,

@@ -39,7 +39,6 @@ describe('Perfil', () => {
   it('nunca devolve o hash da senha', async () => {
     const { servico } = montar();
     expect(await servico.getProfile('u1')).not.toHaveProperty('passwordHash');
-    expect(await servico.updateProfile('u1', { name: 'Ana Maria' } as never)).not.toHaveProperty('passwordHash');
     const lista = (await servico.adminList({ page: 1, limit: 10 })) as { items: Array<Record<string, unknown>> };
     expect(lista.items[0]).not.toHaveProperty('passwordHash');
   });
@@ -47,18 +46,6 @@ describe('Perfil', () => {
   it('usuario que nao existe: erro', async () => {
     const { servico } = montar({ usuario: null });
     await expect(servico.getProfile('x')).rejects.toThrow('Usuario nao encontrado');
-  });
-
-  it('e-mail ja usado por outra conta: recusa e nao grava', async () => {
-    const { servico, repo } = montar({ emailEmUso: true });
-    await expect(servico.updateProfile('u1', { email: 'a@x.com' } as never)).rejects.toThrow('E-mail ja utilizado');
-    expect(repo.update).not.toHaveBeenCalled();
-  });
-
-  it('e-mail novo volta a "nao confirmado"; CPF so com digitos; campos vazios nao sobrescrevem', async () => {
-    const { servico, repo } = montar();
-    await servico.updateProfile('u1', { email: 'novo@x.com', cpf: '123.456.789-09' } as never);
-    expect(repo.update).toHaveBeenCalledWith('u1', { email: 'novo@x.com', emailVerifiedAt: null, cpf: '12345678909' });
   });
 });
 

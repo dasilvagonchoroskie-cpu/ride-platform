@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ERROR_CODES, UserRole, UserStatus, normalizePhone } from '@ride/shared';
+import { UserRole, UserStatus, normalizePhone } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip, PaginatedResult } from '../../common/dto/pagination.dto';
 import { UsersRepository } from './users.repository';
-import { UpdateProfileInput, CreateAddressInput, UpdateAddressInput } from '@ride/shared';
+import { CreateAddressInput, UpdateAddressInput } from '@ride/shared';
 
 @Injectable()
 export class UsersService {
@@ -23,24 +23,6 @@ export class UsersService {
     });
 
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
-
-    const { passwordHash: _passwordHash, ...safe } = user;
-    return safe;
-  }
-
-  async updateProfile(userId: string, input: UpdateProfileInput) {
-    if (input.email) {
-      const taken = await this.prisma.user.findFirst({ where: { email: input.email, NOT: { id: userId } } });
-      if (taken) throw BusinessException.conflict('E-mail ja utilizado.', ERROR_CODES.EMAIL_ALREADY_USED);
-    }
-
-    const user = await this.repo.update(userId, {
-      ...(input.name ? { name: input.name } : {}),
-      ...(input.email ? { email: input.email, emailVerifiedAt: null } : {}),
-      ...(input.avatarUrl ? { avatarUrl: input.avatarUrl } : {}),
-      ...(input.birthDate ? { birthDate: input.birthDate } : {}),
-      ...(input.cpf ? { cpf: input.cpf.replace(/\D+/g, '') } : {}),
-    });
 
     const { passwordHash: _passwordHash, ...safe } = user;
     return safe;

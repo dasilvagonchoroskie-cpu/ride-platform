@@ -4,7 +4,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   createAddressSchema,
   updateAddressSchema,
-  updateProfileSchema,
   adminListUsersSchema,
   blockUserSchema,
   paginationSchema,
@@ -42,12 +41,6 @@ export class UsersController {
   @ApiOperation({ summary: 'Perfil completo do usuario autenticado' })
   me(@CurrentUser('id') userId: string) {
     return this.users.getProfile(userId);
-  }
-
-  @Patch('me')
-  @ApiOperation({ summary: 'Atualiza nome, e-mail, foto, CPF ou data de nascimento' })
-  update(@CurrentUser('id') userId: string, @Body(new ZodValidationPipe(updateProfileSchema)) body: never) {
-    return this.users.updateProfile(userId, body);
   }
 
   @Get('me/addresses')

@@ -251,6 +251,11 @@ export class OtpService {
   async verify(target: OtpTarget & { code: string }): Promise<void> {
     const { phone, email, purpose, code } = target;
 
+    // Telefone ou e-mail: exatamente um.
+    if (Boolean(phone) === Boolean(email)) {
+      throw BusinessException.validation('Informe o telefone ou o e-mail.');
+    }
+
     const record = await this.prisma.otpCode.findFirst({
       where: { ...(phone ? { phone } : { email }), purpose, consumedAt: null },
       orderBy: { createdAt: 'desc' },
