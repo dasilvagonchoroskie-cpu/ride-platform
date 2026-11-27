@@ -1028,7 +1028,11 @@ void main() {
     await tester.pumpAndSettle();
     final chave = find.byKey(const ValueKey('chave-codigo-embarque'));
     expect(tester.widget<SwitchListTile>(chave).value, isTrue);
-    await tester.tap(chave);
+    // No celular pequeno a janela rola: leva o botao para a area visivel, como o dono faria.
+    final botao = find.descendant(of: chave, matching: find.byType(Switch));
+    await tester.ensureVisible(botao);
+    await tester.pumpAndSettle();
+    await tester.tap(botao);
     await tester.pumpAndSettle();
     expect(tester.widget<SwitchListTile>(chave).value, isFalse);
     expect(find.textContaining('Desligado: o motorista inicia sem código'), findsOneWidget);
