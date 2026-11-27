@@ -6,6 +6,7 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/validadores.dart';
 import '../state/auth_state.dart';
 import '../state/config_state.dart';
+import '../widgets/botao_google.dart';
 import '../widgets/form_ui.dart';
 import 'otp_screen.dart';
 import 'reset_password_screen.dart';
@@ -142,6 +143,7 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
             BotaoPrincipal(texto: 'Entrar', carregando: _carregando, aoTocar: _entrarComSenha)
           else
             BotaoPrincipal(texto: 'Receber código', carregando: _carregando, aoTocar: _receberCodigo),
+          const EntrarComGoogle(),
           const SizedBox(height: Spacing.md),
           if (codigoLigado)
             Center(
