@@ -77,9 +77,9 @@ Para usar é preciso ter cadastro aprovado pela Central da sua cidade.
 |---|---|
 | O app tem anúncios? | Não |
 | Público-alvo | 18 anos ou mais |
-| Acesso ao app (conta para o Google testar) | contas de revisão do passageiro e do motorista (preparar antes de enviar; ver `docs/GOOGLE-PLAY.md`, 5.5) |
+| Acesso ao app (conta para o Google testar) | contas de revisão do passageiro e do motorista (preparar antes de enviar; ver `docs/GOOGLE-PLAY.md`, item 5) |
 | Serviço em primeiro plano | motorista: localização (receber chamadas e seguir a corrida com a tela apagada); passageiro: sincronização de dados (acompanhar a corrida) |
 | Localização em segundo plano | não pedimos (só o serviço em primeiro plano com aviso fixo) |
 | E-mail de suporte | fortalezamovegtba@gmail.com (até ter o domínio próprio) |
-| Política de privacidade | `https://<servidor>/api/legal/privacidade` |
-| Excluir a conta pela internet | `https://<servidor>/api/conta/exclusao` |
+| Política de privacidade | `https://api.fortalezadigitalsecurity.com.br/api/legal/privacidade` |
+| Excluir a conta pela internet | `https://api.fortalezadigitalsecurity.com.br/api/conta/exclusao` |
