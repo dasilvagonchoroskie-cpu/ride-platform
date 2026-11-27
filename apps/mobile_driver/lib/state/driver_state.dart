@@ -1245,7 +1245,7 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
 
     if (vehicle == null) await sincronizarCadastro();
     if (vehicle == null) {
-      _avisar('Cadastre um veículo antes de ficar online.');
+      _avisar(avisoSemCarro);
       return;
     }
 
@@ -2366,11 +2366,25 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
           'plate': vehicle!.plate,
           'category': vehicle!.category,
         }));
+      } else if (veiculos.isNotEmpty) {
+        // Tem carro, mas nenhum liberado para uso (ex.: dados em analise):
+        // nao deixa o carro antigo aparecendo como o de agora.
+        vehicle = null;
+        await AppStorage.remove(AppStorage.vehicle);
       }
       notifyListeners();
     } catch (_) {
       // Sem cadastro ainda ou sem rede.
     }
+  }
+
+  /// Por que nao ha carro para trabalhar agora.
+  String get avisoSemCarro {
+    bool tem(String situacao) => veiculos.any((v) => v['situacao'] == situacao);
+    if (tem('GUARDADO')) return 'Escolha em Meus veículos o carro que você vai usar.';
+    if (tem('PENDENTE')) return 'Seu carro está em análise na Central. Assim que ela liberar, você pode ficar disponível.';
+    if (veiculos.isNotEmpty) return 'Seu carro não está liberado. Veja o motivo em Meus veículos.';
+    return 'Cadastre um veículo antes de ficar online.';
   }
 
   /// Cadastra outro carro. Devolve o carro como o servidor guardou
@@ -2405,9 +2419,14 @@ class DriverState extends ChangeNotifier with WidgetsBindingObserver {
     await carregarCarros();
   }
 
-  Future<void> editarCarro(String id, Map<String, dynamic> dados) async {
-    await _client.request('PATCH', '/vehicles/$id', body: dados);
+  /// Corrige os dados. Devolve o carro como o servidor guardou (situacao
+  /// PENDENTE = voltou para a Central conferir).
+  Future<Map<String, dynamic>> editarCarro(String id, Map<String, dynamic> dados) async {
+    final r = await _client.request('PATCH', '/vehicles/$id', body: dados) as Map<String, dynamic>;
     await carregarCarros();
+    // Era o carro em uso e voltou para a analise: fica indisponivel.
+    if (isOnline && veiculos.isNotEmpty && !veiculos.any((v) => v['isActive'] == true)) await goOffline();
+    return r;
   }
 
   /// Passa a trabalhar com este carro.
