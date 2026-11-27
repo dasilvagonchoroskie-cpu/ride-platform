@@ -188,6 +188,11 @@ test('Modelos de Comunicação da IA: todos veem, só o admin edita; ações do 
   assert.equal(salvo.s, 200);
   assert.equal(salvo.j.modelos.find((m) => m.id === 'saudacao').texto, 'Olá, Fortaleza Move!');
   assert.equal(salvo.j.informacoes.clube, 'Desconto em lavagem.');
+  assert.equal((await g('PUT', '/ia/modelos', { menu_lista: { modo: 'ligado' } })).s, 403, 'gestor não liga o menu em lista');
+  assert.equal((await adm('PUT', '/ia/modelos', { menu_lista: { modo: 'teste', teste: '123' } })).s, 422);
+  assert.equal((await adm('PUT', '/ia/modelos', { menu_lista: { modo: 'teste', teste: '(64) 99999-0000' } })).s, 200);
+  assert.equal((await g('GET', '/ia/modelos')).j.menu_lista.teste, undefined);
+  assert.equal((await adm('PUT', '/ia/modelos', { menu_lista: { modo: 'desligado', teste: '' } })).s, 200);
   assert.equal((await adm('PUT', '/ia/modelos', { modelos: [{ id: '__proto__', texto: 'x' }] })).s, 422);
   assert.equal((await adm('PUT', '/ia/modelos', { site_url: 'javascript:alert(1)' })).s, 422);
   assert.equal((await g('POST', '/wa/conversas/999/atendimento', { acao: 'assumir' })).s, 404, 'gestor atende (não é 403), conversa inexistente → 404');
