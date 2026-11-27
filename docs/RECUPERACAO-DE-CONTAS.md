@@ -102,15 +102,14 @@ no PR #56.
   - a Central fica travada até o dono ligar o Google Authenticator de novo
     no celular novo.
 - Não existe senha mestra nem atalho no aplicativo ou no servidor para isso.
-- **Achado relacionado (A9, `docs/SEGURANCA-CENTRAL.md`):** a chave do teste
-  automático (`OTP_CHAVE_TESTE`) hoje entra na conta do dono sem as duas
-  etapas. Precisa de decisão sua antes de mudar (afeta as esteiras).
+- A chave dos testes automáticos (`OTP_CHAVE_TESTE`) vale somente para contas
+  de teste; não entra na conta do dono (A9, `docs/SEGURANCA-CENTRAL.md`,
+  resolvido em 26/11/2026).
 
 ## Pendências desta parte
 
 - Ambiente `recuperacao-excepcional` no GitHub com você como aprovador
   (passo a passo em `docs/DUAS-ETAPAS-DONO.md`). Sem isso, a esteira roda sem
   esperar a sua aprovação.
-- Decisão A9 (chave do teste e conta do dono).
 - Confirmação do número novo por SMS (quando houver SMS).
 - Teste no celular real: roteiro L–P em `docs/TESTE-DE-RUA.md`.

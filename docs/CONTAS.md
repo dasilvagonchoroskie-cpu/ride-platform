@@ -29,7 +29,8 @@ chat (regra de 30/10/2026).
     cifrado com uma chave tirada do `JWT_ACCESS_SECRET`. Se esse valor for
     trocado, os códigos do Google Authenticator param de valer: entre com um
     **código de recuperação**, desligue e ligue de novo as duas etapas.
-  - `OTP_CHAVE_TESTE`: só a esteira de testes usa (mesmo valor do segredo do GitHub).
+  - `OTP_CHAVE_TESTE`: só os testes automáticos usam, e **somente em contas de teste**
+    (endereços `@teste.fortalezamov.com.br`). Não entra na Central nem em conta de verdade.
   - `OTP_DEBUG_RETURN`: modo teste (código na tela para conta sem e-mail; ligado
     desde o começo, sem SMS). **Desligar antes da loja** (`docs/GOOGLE-PLAY.md`, item 6.5).
   - `OTP_CONTAS_REVISAO`: contas de revisão da loja (Google Play), `e-mail=código` separados por
@@ -51,8 +52,8 @@ chat (regra de 30/10/2026).
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
   **Perder esta chave = não dá mais para atualizar o app na loja.** Guarde uma
   cópia do arquivo .jks e das senhas fora do GitHub.
-- Testes no servidor real: `ADMIN_EMAIL`, `OTP_CHAVE_TESTE` (a esteira entra pelo código do
-  e-mail). `ADMIN_SENHA` não é usado por nenhuma esteira desde 30/10/2026: pode ser apagado.
+- Testes no servidor real: `ADMIN_EMAIL`, `OTP_CHAVE_TESTE` (desde 26/11/2026 a chave não
+  entra na conta da Central; as esteiras que dependiam disso não funcionam mais). `ADMIN_SENHA` não é usado por nenhuma esteira desde 30/10/2026: pode ser apagado.
 - Teste de restauração (só quando for testar): `COPIA_BANCO_CHAVE` (chave privada da cópia)
   e `BANCO_TESTE_URL` (banco de teste vazio).
 - `DATABASE_URL` (antigo): aponta para o banco velho; só a esteira
@@ -71,9 +72,10 @@ chat (regra de 30/10/2026).
 
 ## 5. Cópia do banco e restauração
 
-- Todo dia às 03:23 (Brasília) a esteira **Cópia diária do banco** baixa todas
-  as tabelas, compacta e **criptografa** com a chave pública
-  `infra/copia-banco.age.pub`. A cópia fica 30 dias nos arquivos da execução.
+- Desde 26/11/2026 a cópia diária é feita **pelo próprio servidor**,
+  criptografada, e guardada fora dele em local privado. O que está abaixo
+  vale para as cópias antigas, feitas pela esteira **Cópia diária do banco**
+  (guardadas 30 dias, chave pública `infra/copia-banco.age.pub`).
 - Só abre com a chave privada, que fica **somente** com o Evandro (cofre de
   senhas ou papel; nunca no arquivo do projeto nem no chat). Sem ela, a cópia
   não serve para nada.

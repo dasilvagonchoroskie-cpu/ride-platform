@@ -8,6 +8,9 @@ import { NotificationService } from '../../integrations/notifications/notificati
 import { NotificationChannel } from '@ride/shared';
 import { contaVaziaSemEmail } from './conta-existente';
 
+/** Enderecos que somente os testes automaticos usam. */
+const DOMINIO_DE_TESTE = '@teste.fortalezamov.com.br';
+
 export interface OtpTarget {
   phone?: string;
   email?: string;
@@ -28,8 +31,25 @@ export class OtpService {
     return this.config.jwt.refreshSecret;
   }
 
-  /** O teste automatico manda esta chave para receber o codigo na resposta. */
-  chaveTesteValida(chave?: string): boolean {
+  /**
+   * Modo dos testes automaticos: so existe com a chave certa e so em conta de
+   * teste (conta ja marcada como teste, ou endereco novo do dominio de teste).
+   * Conta da Central e conta de verdade seguem as regras normais.
+   */
+  async modoDeTeste(target: { phone?: string; email?: string }, chave?: string): Promise<boolean> {
+    if (!this.chaveTesteValida(chave)) return false;
+    const { phone, email } = target;
+    if (Boolean(phone) === Boolean(email)) return false;
+    const conta = await this.prisma.user.findFirst({
+      where: phone ? { phone } : { email },
+      select: { role: true, metadata: true },
+    });
+    if (!conta) return !!email && email.endsWith(DOMINIO_DE_TESTE);
+    const meta = conta.metadata as { teste?: unknown } | null;
+    return conta.role !== UserRole.ADMIN && meta?.teste === true;
+  }
+
+  private chaveTesteValida(chave?: string): boolean {
     const certa = this.config.otp.chaveTeste;
     return !!certa && !!chave && chave.length === certa.length && safeCompare(chave, certa);
   }
@@ -115,7 +135,7 @@ export class OtpService {
     }
     // Teste automatico: o codigo volta na resposta e nenhum e-mail sai
     // (os enderecos do teste nao existem).
-    const teste = this.chaveTesteValida(chaveTeste);
+    const teste = await this.modoDeTeste(target, chaveTeste);
 
     // Sem SMS (custa dinheiro): quem entra pelo telefone recebe o codigo no
     // e-mail da conta daquele telefone (decisao do Evandro, 08/10/2026:

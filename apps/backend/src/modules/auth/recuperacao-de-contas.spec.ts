@@ -59,7 +59,7 @@ describe('R1: corte da conta poupando so o aparelho que trocou a senha', () => {
 });
 
 /** AuthService com tudo simulado. */
-function montarAuth(conta: Record<string, unknown>, opcoes: { chaveTeste?: boolean } = {}) {
+function montarAuth(conta: Record<string, unknown>) {
   const user: Record<string, any> = { id: 'u1', role: UserRole.PASSENGER, name: 'Ana Souza', phone: '+5564999990001', email: 'ana@x.com', status: 'ACTIVE', metadata: {}, driver: null, ...conta };
   const prisma = {
     user: {
@@ -78,7 +78,7 @@ function montarAuth(conta: Record<string, unknown>, opcoes: { chaveTeste?: boole
   };
   const otp = {
     verify: jest.fn(async () => undefined),
-    chaveTesteValida: jest.fn(() => opcoes.chaveTeste === true),
+    modoDeTeste: jest.fn(async () => false),
     entregaReal: jest.fn(() => true),
   };
   const doisFatores = new DoisFatoresService({ user: { update: jest.fn() } } as never, { jwt: { accessSecret: MESTRE } } as never, undefined as never);
@@ -143,6 +143,14 @@ describe('R5: Central com duas etapas nunca recupera a senha sem o autenticador'
     expect('precisa2fa' in r && r.precisa2fa).toBe(true);
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(sessoes.cortar).not.toHaveBeenCalled();
+  });
+
+  it('entrada por codigo da Central: sempre pede o autenticador', async () => {
+    const { auth, otp, tokens } = montarAuth(comDuasEtapas);
+    otp.modoDeTeste.mockResolvedValue(false);
+    const r = await auth.verifyOtp({ email: 'dono@x.com', code: '123456', purpose: OtpPurpose.LOGIN, role: UserRole.PASSENGER, chaveTeste: 'qualquer' });
+    expect('precisa2fa' in r && r.precisa2fa).toBe(true);
+    expect(tokens.issueTokens).not.toHaveBeenCalled();
   });
 
   it('o desafio leva a senha nova assinada; alterado, nao vale', async () => {

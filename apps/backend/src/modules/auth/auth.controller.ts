@@ -166,10 +166,8 @@ export class AuthController {
     @Body(new ZodValidationPipe(redefinirSchema))
     body: { phone?: string; email?: string; code: string; newPassword: string; device?: DeviceInfoInput },
     @Req() req: Request,
-    @Headers('x-chave-teste') chaveTeste?: string,
   ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.redefinirSenha({
-      chaveTeste,
       phone: body.phone,
       email: body.email,
       code: body.code,

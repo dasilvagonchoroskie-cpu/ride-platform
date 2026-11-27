@@ -93,5 +93,6 @@ errada, e-mail de operador e tentativa de injeção no e-mail.
 
 ## O que muda para a esteira de testes
 
-Nada: o teste de ponta a ponta usa a chave de teste (segredo
-`OTP_CHAVE_TESTE` do GitHub) e não depende do autenticador.
+Desde 26/11/2026 a chave de teste (`OTP_CHAVE_TESTE`) vale somente para
+contas de teste: não entra na conta da Central. As partes da esteira de testes
+que usavam a conta da Central precisam ser refeitas antes de religá-la.

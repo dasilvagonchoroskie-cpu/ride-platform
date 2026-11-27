@@ -31,7 +31,7 @@ export const envSchema = z.object({
   OTP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   OTP_DEBUG_RETURN: booleanFromEnv(false),
-  /** Chave do teste automatico: com ela no cabecalho x-chave-teste o codigo volta na resposta. */
+  /** Chave do teste automatico (cabecalho x-chave-teste). Vale somente para contas de teste. */
   OTP_CHAVE_TESTE: z.string().optional(),
   /**
    * Contas de REVISAO da loja (Google Play, "Acesso ao app"): `email=codigo,email=codigo`.

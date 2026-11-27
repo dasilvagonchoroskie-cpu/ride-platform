@@ -223,6 +223,9 @@ export class AuthService {
 
     const role = params.role === UserRole.DRIVER ? UserRole.DRIVER : UserRole.PASSENGER;
 
+    // Conferido antes de criar a conta (conta nova ainda nao tem a marca).
+    const emTeste = await this.otp.modoDeTeste({ phone: params.phone, email: params.email }, params.chaveTeste);
+
     const existing = await this.prisma.user.findFirst({
       where: params.phone ? { phone: params.phone } : { email: params.email },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
@@ -234,8 +237,7 @@ export class AuthService {
     // Por e-mail com envio de verdade, o codigo prova que a pessoa e dona do
     // endereco — ai a Central pode entrar por codigo tambem.
     if (existing?.role === UserRole.ADMIN) {
-      const provado =
-        !!params.email && (this.otp.entregaReal({ email: params.email }) || this.otp.chaveTesteValida(params.chaveTeste));
+      const provado = !!params.email && this.otp.entregaReal({ email: params.email });
       if (!provado) {
         throw BusinessException.forbidden('A conta da Central entra com o codigo enviado ao e-mail ou com a senha.');
       }
@@ -274,16 +276,13 @@ export class AuthService {
 
     // Conta do teste automatico: suas corridas nunca vao para motorista de
     // verdade, e motorista de teste nunca recebe corrida de verdade.
-    if (this.otp.chaveTesteValida(params.chaveTeste) && user.role !== UserRole.ADMIN && metaDe(user).teste !== true) {
+    if (emTeste && metaDe(user).teste !== true) {
       await this.prisma.user.update({ where: { id: user.id }, data: { metadata: { ...metaDe(user), teste: true } as never } });
     }
 
-    // Central com as duas etapas ligadas: falta o codigo do autenticador (a
-    // esteira de testes, com a chave do teste, passa direto).
-    if (!this.otp.chaveTesteValida(params.chaveTeste)) {
-      const desafio = this.segundaEtapa(user);
-      if (desafio) return desafio;
-    }
+    // Central com as duas etapas ligadas: falta o codigo do autenticador.
+    const desafio = this.segundaEtapa(user);
+    if (desafio) return desafio;
 
     const issued = await this.tokens.issueTokens(
       {
@@ -674,14 +673,12 @@ export class AuthService {
     code: string;
     newPassword: string;
     device?: DeviceContext;
-    chaveTeste?: string;
   }): Promise<AuthResult | DesafioDoisFatores> {
     const conta = await this.prisma.user.findFirst({
       where: params.phone ? { phone: params.phone } : { email: params.email },
     });
     if (conta?.role === UserRole.ADMIN) {
-      const provado =
-        !!params.email && (this.otp.entregaReal({ email: params.email }) || this.otp.chaveTesteValida(params.chaveTeste));
+      const provado = !!params.email && this.otp.entregaReal({ email: params.email });
       if (!provado) throw BusinessException.forbidden('A senha da Central so e trocada pelo codigo enviado ao e-mail.');
     }
 
@@ -697,8 +694,8 @@ export class AuthService {
 
     // R5: Central com as duas etapas ligadas: a senha nova so vale depois do
     // codigo do Google Authenticator (POST /auth/2fa/entrar). Nada muda
-    // antes disso (a esteira de testes, com a chave do teste, passa direto).
-    if (conta.role === UserRole.ADMIN && doisFatoresLigado(conta.metadata) && !this.otp.chaveTesteValida(params.chaveTeste)) {
+    // antes disso.
+    if (conta.role === UserRole.ADMIN && doisFatoresLigado(conta.metadata)) {
       const aparelhoDaCentral = params.device ? await this.tokens.upsertDevice(conta.id, params.device) : null;
       return {
         precisa2fa: true,
