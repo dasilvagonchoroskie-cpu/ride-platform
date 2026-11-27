@@ -173,9 +173,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Sair do cadastro?'),
         content: const Text(
-          'Você volta para a tela de entrar e pode usar outro telefone. '
-          'Se você já usa o app do passageiro, entre com o MESMO telefone: '
-          'a mesma conta serve para os dois aplicativos.',
+          'Você volta para a tela de entrar e pode usar outra conta. '
+          'Se você já usa o app do passageiro, entre com a MESMA conta de lá: '
+          'ela serve para os dois aplicativos.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Continuar o cadastro')),
