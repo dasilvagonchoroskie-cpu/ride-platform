@@ -7,6 +7,7 @@ import '../state/driver_state.dart';
 import '../widgets/botao_google.dart';
 import '../widgets/painel_ui.dart';
 import '../widgets/ui.dart';
+import 'legal_screen.dart';
 import 'phone_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -106,6 +107,22 @@ class WelcomeScreen extends StatelessWidget {
                 'de lá: a conta é a mesma e o que já foi aprovado pela Central continua valendo.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: AppText.family, color: AppColors.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: Spacing.md),
+              // Antes de entrar a pessoa ja consegue ler como os dados sao tratados.
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const LegalScreen(privacidade: true)),
+                ),
+                child: const Text(
+                  'Política de Privacidade',
+                  style: TextStyle(
+                    fontFamily: AppText.family,
+                    color: AppColors.text,
+                    fontSize: 15,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
               // Modo demonstracao so existe no aplicativo sem servidor (testes):
               // no aplicativo de verdade ele confundia e nao fazia nada real.
