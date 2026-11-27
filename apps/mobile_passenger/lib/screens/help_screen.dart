@@ -25,8 +25,9 @@ class HelpScreen extends StatelessWidget {
     ),
     (
       'Como sei que é o motorista certo?',
-      'Confira o nome, o carro e a placa que aparecem na tela. Ao entrar, diga ao motorista o PIN de embarque '
-          'mostrado na sua corrida.',
+      'Confira o nome, o carro e a placa que aparecem na tela. Em algumas cidades a corrida tem um código de '
+          'embarque: se ele aparecer, diga ao motorista só na hora de entrar, depois de conferir o carro. A viagem '
+          'só começa quando ele digita o código certo.',
     ),
     (
       'Como é calculado o valor?',
