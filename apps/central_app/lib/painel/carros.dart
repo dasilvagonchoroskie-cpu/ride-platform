@@ -259,6 +259,11 @@ class _Carro extends StatelessWidget {
                     Text('${c.ano} · ${c.cor} · ${c.placaBonita}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
                     Text(c.rotuloSituacao, style: AppText.caption.copyWith(color: cor, fontWeight: FontWeight.w600)),
                     if (c.motivo != null) Text('Motivo: ${c.motivo}', style: AppText.caption.copyWith(color: AppColors.danger)),
+                    if (c.dadosMudados && c.situacao != 'SUSPENSO')
+                      Text(
+                        c.mudancas.isEmpty ? 'Os dados voltaram ao que eram antes. Confira as fotos.' : c.mudancas.join('\n'),
+                        style: AppText.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.w600),
+                      ),
                     Text('Categoria: ${nomeDaCategoria(categorias, c.categoria)}', style: AppText.caption.copyWith(color: AppColors.textMuted)),
                   ],
                 ),
@@ -339,7 +344,7 @@ class _Carro extends StatelessWidget {
               spacing: Spacing.sm,
               children: [
                 if (c.paraConferir) ...[
-                  FilledButton(onPressed: ocupado ? null : aprovar, child: const Text('Aprovar carro')),
+                  FilledButton(onPressed: ocupado ? null : aprovar, child: Text(c.dadosMudados ? 'Aprovar mudança' : 'Aprovar carro')),
                   TextButton(
                     onPressed: ocupado ? null : recusar,
                     child: const Text('Recusar', style: TextStyle(color: AppColors.danger)),

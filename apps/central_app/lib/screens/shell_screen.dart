@@ -195,11 +195,11 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
           size: 36,
         ),
         title: Text(doc.ehCarro
-            ? 'Carro novo para conferir'
+            ? (doc.dadosMudados ? 'Dados de carro para conferir' : 'Carro novo para conferir')
             : (doc.ehFotoDePerfil ? 'Foto nova para conferir' : 'Documento para conferir')),
         content: Text(
           doc.ehCarro
-              ? '${doc.nome} cadastrou outro carro no aplicativo${doc.placa == null ? '' : ' (placa ${doc.placa})'}. '
+              ? '${doc.nome} ${doc.dadosMudados ? 'mudou os dados de um carro' : 'cadastrou outro carro'} no aplicativo${doc.placa == null ? '' : ' (placa ${doc.placa})'}. '
                   'Confira a foto do carro e o CRLV e aprove ou recuse. Até aprovar, ele não roda com esse carro.'
               : doc.ehFotoDePerfil
                   ? '${doc.nome} trocou a foto de perfil no aplicativo. Os passageiros continuam vendo a foto antiga até você aprovar a nova.'

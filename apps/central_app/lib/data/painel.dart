@@ -135,7 +135,17 @@ class AprovacaoResumo {
 /// Documento novo de motorista ativo esperando a Central (ex.: foto de
 /// perfil trocada no aplicativo do motorista).
 class DocumentoParaConferir {
-  const DocumentoParaConferir({required this.id, required this.tipo, required this.motoristaId, required this.nome, this.placa});
+  const DocumentoParaConferir({
+    required this.id,
+    required this.tipo,
+    required this.motoristaId,
+    required this.nome,
+    this.placa,
+    this.dadosMudados = false,
+  });
+
+  /// Carro que ja era liberado e teve os dados mudados pelo motorista.
+  final bool dadosMudados;
 
   final String id;
   final String tipo;
@@ -154,7 +164,20 @@ class DocumentoParaConferir {
         motoristaId: j['driverId'] as String? ?? '',
         nome: (j['name'] as String?)?.trim().isNotEmpty == true ? j['name'] as String : 'Motorista',
         placa: j['plate'] as String?,
+        dadosMudados: j['changed'] == true,
       );
+}
+
+/// O que o motorista mudou num carro que ja estava liberado, no formato
+/// "Cor: Branco → Preto". Vazio = nao ha mudanca esperando a Central.
+List<String> mudancasDoMotorista(Map<String, dynamic> carro) {
+  final antes = (carro['alteracao'] as Map?)?['antes'] as Map?;
+  if (antes == null) return const [];
+  String normal(Object? v) => '${v ?? ''}'.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  return [
+    for (final (campo, rotulo) in const [('brand', 'Marca'), ('model', 'Modelo'), ('year', 'Ano'), ('color', 'Cor')])
+      if (normal(antes[campo]) != normal(carro[campo])) '$rotulo: ${antes[campo] ?? '-'} → ${carro[campo] ?? '-'}',
+  ];
 }
 
 /// Carro do motorista com a situacao (09/10/2026): em uso, guardado, para
@@ -174,7 +197,13 @@ class CarroDoMotorista {
     this.crlvUrl,
     this.categoriaPedida,
     this.categoriaMotivo,
+    this.dadosMudados = false,
+    this.mudancas = const [],
   });
+
+  /// O motorista mudou os dados e a Central ainda nao conferiu.
+  final bool dadosMudados;
+  final List<String> mudancas;
 
   /// Categoria que o motorista pediu e espera a Central (null = nenhuma).
   final String? categoriaPedida;
@@ -206,7 +235,7 @@ class CarroDoMotorista {
 
   String get rotuloSituacao => switch (situacao) {
         'EM_USO' => 'Em uso',
-        'PENDENTE' => 'Carro novo para conferir',
+        'PENDENTE' => dadosMudados ? 'Dados mudados pelo motorista: conferir' : 'Carro novo para conferir',
         'RECUSADO' => 'Recusado',
         'SUSPENSO' => 'Suspenso',
         _ => 'Guardado',
@@ -226,6 +255,8 @@ class CarroDoMotorista {
         crlvUrl: j['crlvUrl'] as String?,
         categoriaPedida: j['categoriaPedida'] as String?,
         categoriaMotivo: j['categoriaMotivo'] as String?,
+        dadosMudados: j['alteracao'] != null,
+        mudancas: mudancasDoMotorista(j),
       );
 }
 
@@ -257,7 +288,13 @@ class VeiculoDaFrota {
     this.cnhVencida,
     this.crlvValidade,
     this.crlvVencido,
+    this.dadosMudados = false,
+    this.mudancas = const [],
   });
+
+  /// O motorista mudou os dados e a Central ainda nao conferiu.
+  final bool dadosMudados;
+  final List<String> mudancas;
 
   final String id;
   final String placa;
@@ -328,6 +365,8 @@ class VeiculoDaFrota {
       cnhValidade: j['cnhValidade'] as String?,
       cnhVencida: j['cnhVencida'] as bool?,
       crlvValidade: j['crlvValidade'] as String?,
+      dadosMudados: j['alteracao'] != null,
+      mudancas: mudancasDoMotorista(j),
       crlvVencido: j['crlvVencido'] as bool?,
     );
   }

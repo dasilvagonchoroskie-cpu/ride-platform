@@ -338,6 +338,8 @@ class _DetalheDoVeiculoState extends State<DetalheDoVeiculo> {
           const SizedBox(height: Spacing.sm),
           Linha('Situação', v.rotuloSituacao, destaque: true),
           if (v.motivo != null) Linha('Motivo', v.motivo!),
+          if (v.dadosMudados)
+            Linha('Mudança do motorista', v.mudancas.isEmpty ? 'Voltou aos dados de antes' : v.mudancas.join('\n'), destaque: true),
           Linha('Tipo', v.tipo),
           Linha('Placa', v.placaBonita),
           Linha('Marca / modelo', v.nome.isEmpty ? '-' : v.nome),

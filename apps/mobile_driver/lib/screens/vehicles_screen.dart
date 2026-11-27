@@ -5,6 +5,7 @@ import '../core/api/api_client.dart';
 import '../core/avisos.dart';
 import '../core/central.dart';
 import '../core/fotos.dart';
+import '../core/mudancas_do_carro.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
 import '../widgets/categoria.dart';
@@ -17,6 +18,8 @@ import '../widgets/categoria.dart';
 ///   libera. Ate la ele continua trabalhando com o carro de agora.
 /// - Trocar o carro em uso (um por vez), corrigir marca/modelo/ano/cor e
 ///   tirar um carro.
+/// - Mudar marca, modelo, ano ou cor manda o carro de volta para a Central
+///   conferir (Evandro, 27/11/2026).
 class VehiclesScreen extends StatefulWidget {
   const VehiclesScreen({super.key});
 
@@ -76,11 +79,11 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
   /// Roda a acao. Erros comuns o aplicativo ja mostra; o de conflito (ex.: em
   /// corrida) mostra aqui.
-  Future<void> _fazer(String id, Future<void> Function() acao, String sucesso) async {
+  Future<void> _fazer(String id, Future<void> Function() acao, String? sucesso) async {
     setState(() => _ocupado = id);
     try {
       await acao();
-      avisar(sucesso);
+      if (sucesso != null) avisar(sucesso);
     } on ApiException catch (e) {
       if (e.statusCode == 409) avisar(e.message);
     } catch (_) {
@@ -99,7 +102,64 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     final dados = await _formularioDeCorrecao(context, v);
     if (dados == null || !mounted) return;
     final driver = context.read<DriverState>();
-    await _fazer('${v['id']}', () => driver.editarCarro('${v['id']}', dados), 'Dados do carro salvos.');
+    final mudancas = mudancasDoCarro(v, dados);
+    final liberado = v['situacao'] == 'EM_USO' || v['situacao'] == 'GUARDADO';
+    if (liberado && driver.isApproved && mudancas.isNotEmpty) {
+      final ok = await _confirmarNovaConferencia(mudancas, emUso: v['isActive'] == true);
+      if (ok != true || !mounted) return;
+    }
+    Map<String, dynamic>? salvo;
+    await _fazer('${v['id']}', () async => salvo = await driver.editarCarro('${v['id']}', dados), null);
+    final carro = salvo;
+    if (carro == null || !mounted) return;
+    if (carro['situacao'] != 'PENDENTE' || mudancas.isEmpty) {
+      avisar('Dados do carro salvos.');
+      return;
+    }
+    final mandar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.hourglass_top, color: AppColors.warning, size: 40),
+        title: const Text('Enviado para a Central'),
+        content: const Text(
+          'Agora mande a foto atual do carro (de frente, com a placa) e a foto do CRLV, para a Central conferir.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Depois')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Mandar fotos agora')),
+        ],
+      ),
+    );
+    if (mandar == true && mounted) await _fotos(carro);
+  }
+
+  /// Avisa ANTES de salvar o que vai acontecer.
+  Future<bool?> _confirmarNovaConferencia(List<String> mudancas, {required bool emUso}) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('A Central vai conferir de novo'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final m in mudancas) Text(m, style: AppText.bodyStrong),
+              const SizedBox(height: Spacing.md),
+              Text(
+                emUso
+                    ? 'Este é o carro que você usa agora. Ao salvar, você fica indisponível e só volta a receber chamados com ele depois que a Central liberar.'
+                    : 'Ao salvar, este carro só pode ser usado depois que a Central liberar.',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Voltar')),
+          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Salvar e enviar')),
+        ],
+      ),
+    );
   }
 
   Future<void> _fotos(Map<String, dynamic> v) async {
@@ -231,10 +291,13 @@ class _Veiculo extends StatelessWidget {
     final placa = '${dados['plate'] ?? ''}'.toUpperCase();
     final placaFmt = placa.length == 7 ? '${placa.substring(0, 3)}-${placa.substring(3)}' : placa;
     final motivo = dados['motivo'] as String?;
+    final antes = (dados['alteracao'] as Map?)?['antes'] as Map?;
+    final mudancas = antes == null ? const <String>[] : mudancasDoCarro(antes.cast<String, dynamic>(), dados);
     final (rotulo, cor) = switch (situacao) {
       'EM_USO' => ('Em uso', AppColors.primary),
       'PENDENTE' => ('Aguardando a Central conferir', AppColors.warning),
       'RECUSADO' => ('Recusado pela Central', AppColors.danger),
+      'SUSPENSO' => ('Suspenso pela Central', AppColors.danger),
       _ => ('Guardado (liberado)', AppColors.textMuted),
     };
     final fotoUrl = dados['fotoUrl'] as String?;
@@ -311,6 +374,19 @@ class _Veiculo extends StatelessWidget {
               padding: const EdgeInsets.only(top: Spacing.sm),
               child: Text('Motivo: $motivo. Corrija os dados ou mande as fotos de novo.', style: AppText.caption.copyWith(color: AppColors.danger)),
             ),
+          if (motivo != null && situacao == 'SUSPENSO')
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.sm),
+              child: Text('Motivo: $motivo. Fale com a Central.', style: AppText.caption.copyWith(color: AppColors.danger)),
+            ),
+          if (mudancas.isNotEmpty && situacao == 'PENDENTE')
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.sm),
+              child: Text(
+                'Você mudou: ${mudancas.join('; ')}. Se ainda não mandou, envie a foto atual do carro e do CRLV.',
+                style: AppText.caption.copyWith(color: AppColors.warning),
+              ),
+            ),
           if (pedida != null)
             Padding(
               padding: const EdgeInsets.only(top: Spacing.sm),
@@ -343,7 +419,7 @@ class _Veiculo extends StatelessWidget {
                 if (situacao == 'GUARDADO') FilledButton(onPressed: usar, child: const Text('Usar este carro')),
                 if (situacao == 'PENDENTE' || situacao == 'RECUSADO')
                   OutlinedButton.icon(onPressed: fotos, icon: const Icon(Icons.photo_camera_outlined), label: const Text('Mandar fotos')),
-                TextButton(onPressed: editar, child: const Text('Corrigir dados')),
+                if (situacao != 'SUSPENSO') TextButton(onPressed: editar, child: const Text('Corrigir dados')),
                 TextButton(onPressed: categoria, child: const Text('Mudar categoria')),
                 TextButton(
                   onPressed: tirar,
@@ -399,7 +475,11 @@ Future<Map<String, dynamic>?> _formularioDeCorrecao(BuildContext context, Map<St
               TextField(controller: ano, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Ano')),
               TextField(controller: cor, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Cor')),
               const SizedBox(height: Spacing.sm),
-              Text('A placa não muda aqui: carro com outra placa é carro novo.', style: AppText.caption.copyWith(color: AppColors.textMuted)),
+              Text(
+                'Mudar marca, modelo, ano ou cor manda o carro para a Central conferir de novo. '
+                'A placa não muda aqui: carro com outra placa é carro novo.',
+                style: AppText.caption.copyWith(color: AppColors.textMuted),
+              ),
               if (erro != null) Text(erro!, style: AppText.caption.copyWith(color: AppColors.danger)),
             ],
           ),
@@ -562,7 +642,8 @@ class _NovoCarroScreenState extends State<NovoCarroScreen> {
             _campo('Cor', _cor),
             Builder(builder: (context) {
               final driver = context.watch<DriverState>();
-              final atual = driver.vehicle?.category ?? 'CARRO';
+              final atual = driver.vehicle?.category ??
+                  (driver.veiculos.isEmpty ? 'CARRO' : '${driver.veiculos.first['category'] ?? 'CARRO'}');
               return Padding(
                 padding: const EdgeInsets.only(bottom: Spacing.md),
                 child: EscolhaDeCategoria(
