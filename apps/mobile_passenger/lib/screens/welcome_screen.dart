@@ -5,6 +5,7 @@ import '../core/marca.dart';
 import '../core/theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../state/auth_state.dart';
+import '../widgets/botao_google.dart';
 import '../widgets/form_ui.dart';
 import '../widgets/painel_ui.dart';
 import '../state/config_state.dart';
@@ -100,6 +101,7 @@ class WelcomeScreen extends StatelessWidget {
                         );
                       },
                     ),
+                    const EntrarComGoogle(),
                     if (app.isDemo) ...[
                       const SizedBox(height: Spacing.md),
                       BotaoContorno(
