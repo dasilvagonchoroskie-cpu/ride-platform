@@ -3,23 +3,29 @@
  *
  * AVISO PARA A EQUIPE (nao aparece no aplicativo): este texto e um
  * modelo de partida, redigido para cobrir os pontos que a plataforma
- * pediu. Ele NAO substitui a revisao de um advogado antes de publicar o
- * aplicativo nas lojas — em especial a clausula de responsabilidade
- * penal e os dados da empresa (razao social, CNPJ, endereco), que ainda
- * dependem do registro do MEI.
+ * pediu. Mudanca no texto deve passar pela revisao de um advogado — em
+ * especial a clausula de responsabilidade penal e a identificacao da
+ * operadora (hoje pessoa fisica; trocar quando sair o CNPJ).
  */
 
-export const LEGAL_VERSION = '1.1.0';
+export const LEGAL_VERSION = '1.2.0';
+
+/** Versoes que ja foram publicadas: so estas podem ser registradas num aceite. */
+export const VERSOES_PUBLICADAS: readonly string[] = ['1.0.0', '1.1.0', LEGAL_VERSION];
 
 // Evandro (11/10/2026): marca Fortaleza Move; quem desenvolve e opera e a
 // Fortaleza Digital Security. CNPJ ainda nao existe: entra aqui quando sair.
-const OPERADORA = 'Fortaleza Digital Security (Goiatuba – GO, CNPJ em registro)';
+// Enquanto nao houver CNPJ, quem responde e a pessoa fisica (Evandro, 27/11/2026).
+const OPERADORA = 'Evandro da Silva Gonchoroski, pessoa física que usa a marca Fortaleza Digital Security (Goiatuba – GO)';
 const EMAIL_CONTATO = 'fortalezamovegtba@gmail.com';
 const WHATSAPP_CONTATO = '(64) 99647-2794';
 
 // Texto com acentos e parágrafos inteiros (revisão de 11/10/2026): os apps
 // juntam as linhas de cada parágrafo. Mudança relevante aqui exige subir
-// LEGAL_VERSION (e kTermsVersion nos apps). 1.1.0: entrada com a conta Google.
+// LEGAL_VERSION (e kTermsVersion nos apps), incluir a anterior em
+// VERSOES_PUBLICADAS, e os apps pedem o aceite de novo.
+// 1.1.0: entrada com a conta Google. 1.2.0: identificação da operadora,
+// código de embarque e novo aceite quando o texto muda.
 
 export const TERMS_MD = `# Termos de Uso — Fortaleza Move
 
@@ -64,6 +70,8 @@ Passageiro e motorista podem cancelar uma corrida antes do embarque. Cancelament
 
 Durante a corrida, passageiro e motorista têm o botão SOS, que envia a localização na hora para a Central. O passageiro pode compartilhar a viagem com familiares por um link com o mapa ao vivo.
 
+**Código de embarque.** Nas cidades em que a Central ligar este recurso, o passageiro que pede a corrida pelo aplicativo recebe um código de 4 números, e a corrida só começa no aplicativo do motorista com o código certo. O passageiro só deve dizer o código na hora de embarcar, depois de conferir o veículo, a placa e o motorista. O código é uma proteção a mais e não dispensa essa conferência. Corridas abertas pelo motorista ou pela Central e as entregas não usam o código de embarque.
+
 ## 7-A. Entregas de encomendas — TEXTO PROVISÓRIO (em revisão jurídica)
 
 *Este item ainda está em revisão e pode mudar antes de a entrega ser ligada na sua cidade. Enquanto a Central não ligar, a entrega não aparece no aplicativo.*
@@ -84,7 +92,7 @@ A plataforma pode suspender ou encerrar contas que violem estes Termos, incluind
 
 ## 9. Alterações destes Termos
 
-Estes Termos podem ser atualizados. Mudanças relevantes são avisadas no aplicativo.
+Estes Termos podem ser atualizados. Mudanças relevantes exigem novo aceite antes de continuar usando o aplicativo. Uma corrida em andamento não é interrompida: o novo aceite é pedido depois que ela termina.
 
 ## 10. Contato
 
@@ -126,7 +134,7 @@ Esta Política explica como são tratados os dados pessoais de quem usa os aplic
 
 **Motorista — operação:** os períodos em que ficou disponível, os chamados recebidos e a resposta a eles, as corridas, os ganhos, as taxas, o saldo e o extrato da carteira, os pedidos de saque, os pedidos de alteração de dados e o resultado das análises.
 
-**Corridas:** endereços e coordenadas de embarque, paradas e destino, horário de cada etapa, a posição registrada nas mudanças de etapa, distância, duração, valor, cupom, motivo de cancelamento, agendamento, forma de pagamento escolhida, avaliações, comentários e mensagens do chat da corrida.
+**Corridas:** endereços e coordenadas de embarque, paradas e destino, horário de cada etapa, a posição registrada nas mudanças de etapa, distância, duração, valor, cupom, motivo de cancelamento, agendamento, forma de pagamento escolhida, avaliações, comentários e mensagens do chat da corrida. Onde a cidade usa o código de embarque, guardamos o código junto com a corrida e o registro das tentativas com código errado.
 
 **Pagamento:** a corrida é paga direto ao motorista (dinheiro, Pix ou cartão na maquininha dele). Os aplicativos não pedem nem guardam número de cartão ou senha de banco.
 
@@ -229,9 +237,9 @@ Nenhum sistema é totalmente livre de riscos. Em caso de incidente de segurança
 
 A mesma conta pode ser usada como passageiro e como motorista. **A exclusão feita pelo aplicativo ou pelo pedido na internet encerra os dois perfis.** Ela não é feita enquanto houver corrida em andamento (nem, no caso do passageiro, corrida agendada). O saldo que restar na carteira do motorista é perdido: peça o saque antes.
 
-**São apagados do cadastro:** nome, telefone, e-mail, CPF, data de nascimento, senha, foto de perfil, endereços salvos, motoristas salvos, contatos de emergência e as sessões e aparelhos da conta. Para o motorista, também o cadastro de motorista, a CNH, as fotos de documentos, os veículos, a carteira, o extrato, os saques, a última posição, os períodos disponíveis e os chamados.
+**São apagados do cadastro:** nome, telefone, e-mail, CPF, data de nascimento, senha, foto de perfil, endereços salvos, motoristas salvos, contatos de emergência, avisos da caixa de entrada do aplicativo e as sessões e aparelhos da conta. Para o motorista, também o cadastro de motorista, a CNH, as fotos de documentos, os veículos, a carteira, o extrato, os saques, a última posição, os períodos disponíveis e os chamados.
 
-**Podem continuar guardados:** o histórico de corridas e entregas (com endereços, coordenadas, horários e valores), ligado a um cadastro sem o seu nome ou sem o vínculo com o motorista; as mensagens do chat e os comentários de avaliação, **com o texto que foi escrito**; alertas de SOS, com a localização; registros administrativos, que podem conter, por exemplo, dados do veículo ou o contato informado num pedido de exclusão; os registros de pedidos de código (e-mail ou telefone, IP e horário); os avisos da caixa de entrada, até o prazo de 30 dias; os registros do servidor e as cópias de segurança, pelos prazos do item 9. Quando a conta não tem nenhum histórico, o cadastro é removido por inteiro, mas registros de acesso e cópias de segurança seguem os mesmos prazos.
+**Podem continuar guardados:** o histórico de corridas e entregas (com endereços, coordenadas, horários e valores), ligado a um cadastro sem o seu nome ou sem o vínculo com o motorista; as mensagens do chat e os comentários de avaliação, **com o texto que foi escrito**; alertas de SOS, com a localização; registros administrativos, que podem conter, por exemplo, dados do veículo ou o contato informado num pedido de exclusão; os registros de pedidos de código (e-mail ou telefone, IP e horário); os registros do servidor e as cópias de segurança, pelos prazos do item 9. Quando a conta não tem nenhum histórico, o cadastro é removido por inteiro, mas registros de acesso e cópias de segurança seguem os mesmos prazos.
 
 Para pedir a eliminação ou a anonimização do que continuou guardado, use o canal de privacidade. Vamos analisar o pedido e manter somente o que a lei permitir (art. 16 da LGPD), explicando o motivo.
 
@@ -257,7 +265,7 @@ Os aplicativos são destinados a maiores de 18 anos. Não há verificação auto
 
 ## 13. Mudanças nesta Política
 
-Esta Política pode ser atualizada quando o serviço ou a lei mudar. A data da última atualização aparece no começo do texto, e a versão em vigor fica disponível nos aplicativos e no endereço https://api.fortalezadigitalsecurity.com.br/api/legal/privacidade.
+Esta Política pode ser atualizada quando o serviço ou a lei mudar. Mudanças relevantes exigem novo aceite antes de continuar usando o aplicativo. Uma corrida em andamento não é interrompida: o novo aceite é pedido depois que ela termina. A data da última atualização aparece no começo do texto, e a versão em vigor fica disponível nos aplicativos e no endereço https://api.fortalezadigitalsecurity.com.br/api/legal/privacidade.
 
 ---
 
