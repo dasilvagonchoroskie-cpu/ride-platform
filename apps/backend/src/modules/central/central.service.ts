@@ -203,6 +203,7 @@ export class CentralService {
             driverId: ultimoParaConferir.driverId,
             name: ultimoParaConferir.driver.user?.name ?? null,
             plate: ultimoParaConferir.plate,
+            changed: !!carro && ultimoParaConferir.id === carro.id && carro.alterado,
             createdAt: ultimoParaConferir.createdAt,
           }
         : null,
@@ -371,6 +372,7 @@ export class CentralService {
       );
     }
     if (!motorista.isOnline) throw BusinessException.validation(`${motorista.user.name} esta desconectado.`);
+    if (!motorista.vehicles[0]) throw BusinessException.validation(`${motorista.user.name} esta sem veiculo liberado.`);
     // Requisicao de continuidade (11/11/2026): como no despacho automatico,
     // corrida de teste nunca vai para motorista de verdade (nem o contrario).
     const [corridaDeTeste, motoristaDeTeste] = await Promise.all([
