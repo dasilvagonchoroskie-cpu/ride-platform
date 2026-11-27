@@ -168,7 +168,7 @@ test('documento: confirma o recebimento uma vez e pede o que falta (sem dizer qu
   await receber('[documento] 📎 Documento: CNH\nCategoria: B');
   const m = daIA().pop();
   // 12/11 noite: são 7 itens; pede 2 por vez e avisa quantos ainda faltam (nunca considera completo com menos de 7).
-  assert.match(m, /^Recebemos o seu documento\. Obrigado! Agora, envie também o documento do veículo \(CRLV\) e um comprovante de residência \(conta de luz, água ou internet\)\. Depois disso, ainda faltarão 4 item\(ns\) da lista\.$/);
+  assert.match(m, /^Recebemos o seu documento\. Obrigado! Agora, envie também o documento do veículo \(CRLV\) e um comprovante de residência \(conta de luz, água ou internet\)\. Depois disso, vão faltar mais 4 itens\.$/);
   assert.doesNotMatch(m, /aprovad|analisad/i);
   assert.equal(conv().atendimento, 'ia');
 });

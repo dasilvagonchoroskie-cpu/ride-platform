@@ -141,6 +141,61 @@ const TEXTOS_ANTIGOS = {
   saudacao: ['Olá! Seja bem-vindo(a) à Fortaleza Move!\n\nAgradecemos pelo seu contato. Será um prazer ajudar você!']
 };
 const MODELO_IDS = Object.keys(MODELOS_PADRAO);
+
+// 26/11: menu em lista de toque (botão "Menu"). O id de cada linha é o mesmo número do menu em texto.
+const linha = (id, title, description) => ({ id, title, ...(description ? { description } : {}) });
+const VOLTAR = linha('0', 'Voltar ao início ↩️');
+const LISTAS = {
+  menu: {
+    chamada: 'Toque em *Menu* para escolher o atendimento. 👇',
+    secoes: [
+      { title: 'Passageiros e clientes', rows: [linha('1', 'Sou passageiro 🚖', 'Viagens e uso do aplicativo'), linha('2', 'Encomendas 📦', 'Enviar ou receber')] },
+      { title: 'Comércios', rows: [linha('3', 'Comércios 🏪', 'Entregas para o seu comércio')] },
+      { title: 'Motoristas', rows: [linha('4', 'Quero ser motorista 🚗', 'Cadastro de motorista e veículo'), linha('5', 'Clube de Vantagens ⭐', 'Benefícios para motoristas')] },
+      { title: 'Outros', rows: [linha('6', 'Outros assuntos 💬')] }
+    ]
+  },
+  menu_encomendas: {
+    chamada: '📦 Sobre encomendas, toque em *Menu* e escolha. 👇',
+    secoes: [{ title: 'Encomendas', rows: [linha('1', 'Pedir coleta e entrega'), linha('2', 'Minha encomenda', 'Estou aguardando e não chegou'), linha('3', 'Outras informações'), VOLTAR] }]
+  },
+  menu_comercio: {
+    chamada: '🏪 Sobre comércios, toque em *Menu* e escolha. 👇',
+    secoes: [{ title: 'Comércios', rows: [linha('1', 'Já sou cadastrado'), linha('2', 'Cadastrar meu comércio'), linha('3', 'Outras informações'), VOLTAR] }]
+  }
+};
+/** Se o texto termina num menu padrão (não editado pelo dono), devolve a versão em lista; senão null (vai em texto). */
+function menuEmLista(texto, modeloDe) {
+  const t = String(texto || '');
+  for (const [id, lista] of Object.entries(LISTAS)) {
+    const m = modeloDe(id);
+    if (!m || m !== MODELOS_PADRAO[id].texto.trim() || !t.endsWith(m)) continue;
+    const antes = t.slice(0, -m.length).trim();
+    return { texto: [antes, lista.chamada].filter(Boolean).join('\n\n'), botao: 'Menu', secoes: lista.secoes };
+  }
+  return null;
+}
+const MODOS_LISTA = ['desligado', 'teste', 'ligado'];
+function lerMenuLista(getSetting) {
+  const modo = getSetting('wa_menu_lista', 'desligado');
+  return { modo: MODOS_LISTA.includes(modo) ? modo : 'desligado', teste: getSetting('wa_menu_lista_teste', '') };
+}
+function salvarMenuLista(setSetting, v) {
+  const modo = String((v && v.modo) || '');
+  const teste = String((v && v.teste) || '').replace(/\D/g, '');
+  if (!MODOS_LISTA.includes(modo)) throw new Error('Opção de menu inválida.');
+  if (teste && (teste.length < 10 || teste.length > 13)) throw new Error('Número de teste inválido. Informe DDD e número.');
+  if (modo === 'teste' && !teste) throw new Error('Informe o número que vai receber o teste do menu.');
+  setSetting('wa_menu_lista', modo);
+  setSetting('wa_menu_lista_teste', teste);
+}
+// Compara DDD + 8 últimos dígitos (o WhatsApp às vezes omite o 9º dígito).
+const chaveTelefone = (t) => { let d = String(t || '').replace(/\D/g, ''); if (d.length > 11 && d.startsWith('55')) d = d.slice(2); return d.length >= 10 ? d.slice(0, 2) + d.slice(-8) : ''; };
+function usarLista(getSetting, telefone) {
+  const { modo, teste } = lerMenuLista(getSetting);
+  if (modo === 'ligado') return true;
+  return modo === 'teste' && !!chaveTelefone(telefone) && chaveTelefone(telefone) === chaveTelefone(teste);
+}
 const MAX_MODELO = 1500;
 const MAX_INFO = 4000;
 // Conhecimento extra (não são opções do menu): a IA usa quando o cliente pergunta desses assuntos.
@@ -231,7 +286,8 @@ function criarCentral({ getSetting, setSetting }) {
     }
   }
 
-  return { modelos, texto, salvarModelos, siteUrl, salvarSite, informacoes, salvarInformacoes, situacaoInformacoes };
+  const menuLista = () => lerMenuLista(getSetting);
+  return { menuLista, salvarMenuLista: (v) => salvarMenuLista(setSetting, v), modelos, texto, salvarModelos, siteUrl, salvarSite, informacoes, salvarInformacoes, situacaoInformacoes };
 }
 
 const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -315,4 +371,4 @@ function semIntencao(texto) {
 // Pedido explícito de falar com uma pessoa (reforço sem IA).
 const pediuHumano = (texto) => /\b(atendente|atendimento humano|falar com (um|uma|alguem|algu[eé]m|uma pessoa|pessoa|humano|gente)|pessoa de verdade|ser humano|humano por favor)\b/.test(semAcento(texto));
 
-module.exports = { botaoDoSite, ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, SUBASSUNTOS, SUBASSUNTO_IDS, MENUS_SUB, assuntoBase, emSubfluxo, fluxoDe, nomeDoAssunto, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };
+module.exports = { menuEmLista, usarLista, lerMenuLista, salvarMenuLista, botaoDoSite, ehBotaoDoSite, origemDoContato, semIntencao, INFO_EXTRAS, INFO_ORDEM, ESTADOS, ASSUNTOS, ASSUNTO_IDS, SUBASSUNTOS, SUBASSUNTO_IDS, MENUS_SUB, assuntoBase, emSubfluxo, fluxoDe, nomeDoAssunto, FLUXOS, MOTIVOS_TRANSFERENCIA, MODELOS_PADRAO, MODELO_IDS, criarCentral, opcaoDoMenu, pediuMenu, pediuHumano };

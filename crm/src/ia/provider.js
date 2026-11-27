@@ -117,7 +117,8 @@ function escolherModelo(ids) {
   // Gemini (19/11, pedido do dono): prefere o "flash" mais novo, que segue melhor as regras do atendimento;
   // "flash-lite" (maior limite grátis, respostas mais fracas) só se não houver flash. Ordena pela versão mais nova.
   const porVersao = (a, b) => b.localeCompare(a, 'en', { numeric: true });
-  const gem = pool.filter((x) => /^gemini-/.test(x)).sort(porVersao);
+  // 26/11: só nomes com versão numérica. "gemini-omni-…-flash" ordenava na frente dos numerados e fazia cair no flash-lite.
+  const gem = pool.filter((x) => /^gemini-\d/.test(x)).sort(porVersao);
   if (gem.length) {
     const versao = (x) => parseFloat((/^gemini-(\d+(?:\.\d+)?)/.exec(x) || [])[1] || '0');
     const flash = gem.find((x) => /flash/.test(x) && !/lite/.test(x));
@@ -128,10 +129,17 @@ function escolherModelo(ids) {
   return pool.find((x) => PREFERIDOS.test(x)) || pool[0];
 }
 
-async function descobrirModelo({ urlBase, chave, fetchImpl, timeoutMs }) {
+// Modelo leve (mais cota grátis): análise da conversa, leitura de mídia e reserva quando o principal falha.
+function escolherLeve(ids) {
+  const lista = (Array.isArray(ids) ? ids : []).map((x) => String(x || '').replace(/^models\//, ''));
+  const leves = lista.filter((x) => /^gemini-\d[\d.]*-flash-lite/.test(x));
+  return leves.length ? escolherModelo(leves) : escolherModelo(lista);
+}
+
+async function descobrirModelo({ urlBase, chave, fetchImpl, timeoutMs, leve = false }) {
   const k = `${String(urlBase).replace(/\/+$/, '')}|${String(chave).slice(-6)}`;
   const guardado = MODELOS_DESCOBERTOS.get(k);
-  if (guardado && guardado.ate > Date.now()) return guardado.modelo;
+  if (guardado && guardado.ate > Date.now()) return leve ? guardado.leve : guardado.modelo;
   const controle = new AbortController();
   const timer = setTimeout(() => controle.abort(), timeoutMs);
   let resposta;
@@ -148,8 +156,9 @@ async function descobrirModelo({ urlBase, chave, fetchImpl, timeoutMs }) {
   const ids = dados && Array.isArray(dados.data) ? dados.data.map((m) => m && m.id) : (dados && Array.isArray(dados.models) ? dados.models.map((m) => m && (m.id || m.name)) : []);
   const modelo = escolherModelo(ids);
   if (!modelo) throw new ErroIA('modelo_invalido', 'Não consegui descobrir um modelo nesse provedor. Informe o nome do modelo em Configurações.');
-  MODELOS_DESCOBERTOS.set(k, { modelo, ate: Date.now() + 3600000 });
-  return modelo;
+  const menor = escolherLeve(ids) || modelo;
+  MODELOS_DESCOBERTOS.set(k, { modelo, leve: menor, ate: Date.now() + 3600000 });
+  return leve ? menor : modelo;
 }
 
 // Formato OpenAI (POST {urlBase}/chat/completions). Serve para DeepSeek, OpenAI, OpenRouter e similares.
@@ -157,21 +166,25 @@ function criarProvedorOpenAI({ id = 'personalizado', obterChave, obterModelo, ur
   const preset = PROVEDORES[id] || PROVEDORES.personalizado;
   return {
     nome: id,
-    async completar({ system, user, maxTokens = 1200 }) {
+    async completar({ system, user, maxTokens = 1200, leve = false }) {
       const chave = obterChave();
       if (!chave) throw new ErroIA('sem_chave', 'A chave da IA não está configurada.');
       if (!urlBaseValida(urlBase)) throw new ErroIA('url_invalida', 'O endereço da IA é inválido. Use um endereço https:// em Configurações.');
       if (typeof fetchImpl !== 'function') throw new ErroIA('sem_fetch', 'Este Node não tem suporte a rede (fetch). Use Node 18 ou mais novo.');
-      const modelo = obterModelo() || await descobrirModelo({ urlBase, chave, fetchImpl, timeoutMs });
+      const fixo = obterModelo();
+      let modelo = fixo || await descobrirModelo({ urlBase, chave, fetchImpl, timeoutMs, leve: leve && id === 'gemini' });
+      // Gemini com modelo automático: se o principal não responder (cota do dia, fora do ar, recusado), usa o leve.
+      const alternativo = !fixo && !leve && id === 'gemini' ? await descobrirModelo({ urlBase, chave, fetchImpl, timeoutMs, leve: true }) : '';
+      let reservaDeModelo = alternativo && alternativo !== modelo ? alternativo : '';
       const limite = Math.max(maxTokens, preset.minTokens || 0);
-      const corpo = JSON.stringify({ ...(preset.extra || {}), model: modelo, [preset.campoMaxTokens || 'max_tokens']: limite,
+      const montarCorpo = () => JSON.stringify({ ...(preset.extra || {}), model: modelo, [preset.campoMaxTokens || 'max_tokens']: limite,
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
       const chamar = async () => {
         const controle = new AbortController();
         const timer = setTimeout(() => controle.abort(), timeoutMs);
         try {
           return await fetchImpl(`${String(urlBase).replace(/\/+$/, '')}/chat/completions`, {
-            method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${chave}` }, body: corpo, signal: controle.signal
+            method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${chave}` }, body: montarCorpo(), signal: controle.signal
           });
         } catch (err) {
           throw mensagemRede(err);
@@ -180,6 +193,11 @@ function criarProvedorOpenAI({ id = 'personalizado', obterChave, obterModelo, ur
         }
       };
       let resposta = await chamar();
+      if (reservaDeModelo && !resposta.ok && ![401, 403].includes(resposta.status)) {
+        modelo = reservaDeModelo;
+        reservaDeModelo = '';
+        resposta = await chamar();
+      }
       // Plano grátis: limite por minuto estoura fácil. Espera o tempo pedido (até 20 s) e tenta uma vez de novo.
       if (resposta.status === 429 && esperaRepetir > 0) {
         const pedido = Number(resposta.headers && typeof resposta.headers.get === 'function' ? resposta.headers.get('retry-after') : NaN);
@@ -247,4 +265,4 @@ function criarProvedorFalso(respostas = []) {
   };
 }
 
-module.exports = { descobrirModelo, escolherModelo, criarProvedorAnthropic, criarProvedorOpenAI, criarProvedorMulti, criarProvedorFalso, ErroIA, erroDeStatus, URL_API, PROVEDORES, ehProvedor, urlBaseValida };
+module.exports = { descobrirModelo, escolherModelo, escolherLeve, criarProvedorAnthropic, criarProvedorOpenAI, criarProvedorMulti, criarProvedorFalso, ErroIA, erroDeStatus, URL_API, PROVEDORES, ehProvedor, urlBaseValida };

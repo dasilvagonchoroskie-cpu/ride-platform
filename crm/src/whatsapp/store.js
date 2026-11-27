@@ -292,7 +292,7 @@ function createStore(db, opts = {}) {
   function reservarPendentes(limite = 5) {
     const t = agora();
     const candidatas = db.prepare(
-      `SELECT m.id, m.texto, m.tipo, k.jid, k.ignorado FROM wa_mensagens m
+      `SELECT m.id, m.texto, m.tipo, k.jid, k.telefone, k.ignorado FROM wa_mensagens m
          JOIN wa_conversas c ON c.id = m.conversa_id JOIN wa_contatos k ON k.id = c.contato_id
         WHERE m.direcao = 'out' AND m.status = 'pendente' AND (m.proxima_tentativa_em IS NULL OR m.proxima_tentativa_em <= ?)
         ORDER BY m.id LIMIT ?`

@@ -68,7 +68,7 @@ const transcritor = criarTranscritor({
   obterModeloGemini: async () => {
     const salvo = ia.obterModelo('gemini');
     if (salvo) return salvo;
-    return descobrirModelo({ urlBase: PROVEDORES.gemini.urlBase, chave: cofreIA.ler('gemini'), fetchImpl: globalThis.fetch, timeoutMs: 30000 });
+    return descobrirModelo({ urlBase: PROVEDORES.gemini.urlBase, chave: cofreIA.ler('gemini'), fetchImpl: globalThis.fetch, timeoutMs: 30000, leve: true });
   }
 });
 wa.definirTranscritor(async ({ mensagemId, midia, deMim }) => {

@@ -3,6 +3,7 @@
 // ATENÇÃO: é um método NÃO oficial. O WhatsApp pode bloquear o número. A biblioteca é instalada à parte
 // (scripts/instalar-whatsapp.sh) e carregada só quando o WhatsApp é ativado: sem ela o CRM funciona normalmente.
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { onlyDigits } = require('./phone');
@@ -112,6 +113,22 @@ function textoContatos(lista) {
   return itens.length ? `[contato] ${itens.join(' | ')}`.slice(0, 600) : '[contato]';
 }
 
+// Toque numa linha do menu em lista: vira o número da opção (o mesmo que o cliente digitaria).
+function respostaDeLista(msg) {
+  let id = msg.listResponseMessage && msg.listResponseMessage.singleSelectReply && msg.listResponseMessage.singleSelectReply.selectedRowId;
+  const fluxo = msg.interactiveResponseMessage && msg.interactiveResponseMessage.nativeFlowResponseMessage;
+  if (!id && fluxo) { try { id = JSON.parse(fluxo.paramsJson || '{}').id; } catch (err) { id = ''; } }
+  return /^[0-6]$/.test(String(id || '')) ? String(id) : '';
+}
+
+// Mensagem e marcação extra que o WhatsApp exige para desenhar a lista (sem a marcação o celular esconde a mensagem).
+function montarLista({ texto, botao, secoes }) {
+  return {
+    mensagem: { interactiveMessage: { body: { text: texto }, nativeFlowMessage: { messageVersion: 1, buttons: [{ name: 'single_select', buttonParamsJson: JSON.stringify({ title: botao, sections: secoes }) }] } } },
+    nos: [{ tag: 'biz', attrs: {}, content: [{ tag: 'interactive', attrs: { type: 'native_flow', v: '1' }, content: [{ tag: 'native_flow', attrs: { v: '9', name: 'mixed' } }] }] }]
+  };
+}
+
 // Converte uma mensagem da biblioteca no formato do CRM. Devolve null quando deve ser ignorada.
 // tipoUpsert: 'notify' = mensagem nova em tempo real (inclui as que ficaram na fila enquanto o servidor estava fora);
 // 'append' = costuma ser histórico: só entra se for recente (evita importar conversas antigas).
@@ -127,7 +144,7 @@ function mensagemParaEvento(m, tipoUpsert, agoraSeg = Math.floor(Date.now() / 10
   if (msg.protocolMessage || msg.senderKeyDistributionMessage || msg.reactionMessage || msg.pollUpdateMessage) return null;
 
   let tipo = 'text';
-  let texto = msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || '';
+  let texto = msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || respostaDeLista(msg);
   const comLegenda = (rotulo, legenda) => (legenda ? `${rotulo} ${legenda}` : rotulo);
   if (!texto) {
     if (msg.imageMessage) { tipo = 'image'; texto = comLegenda('[imagem]', msg.imageMessage.caption); }
@@ -354,6 +371,18 @@ function criar({ authDir, libDir, log = console } = {}) {
       const r = await sock.sendMessage(jid, { text: texto });
       return { externalId: r && r.key ? r.key.id : null };
     },
+    async sendList(jid, lista) {
+      if (!sock || estado !== 'conectado') throw new Error('WhatsApp desconectado');
+      const { mensagem, nos } = montarLista(lista);
+      const messageId = `3EB0${crypto.randomBytes(9).toString('hex').toUpperCase()}`;
+      if (process.env.WA_DIGITANDO !== '0') {
+        try { await sock.sendPresenceUpdate('composing', jid); } catch (e) { /* ok */ }
+        await dormir(Math.min(3500, Math.max(700, lista.texto.length * 25)));
+        try { await sock.sendPresenceUpdate('paused', jid); } catch (e) { /* ok */ }
+      }
+      await sock.relayMessage(jid, mensagem, { messageId, additionalNodes: nos });
+      return { externalId: messageId };
+    },
     // 19/11: mensagem de voz (OGG/Opus) gravada no CRM; aparece "gravando áudio…" para o cliente antes.
     async sendAudio(jid, audio) {
       if (!sock || estado !== 'conectado') throw new Error('WhatsApp desconectado');
@@ -366,4 +395,4 @@ function criar({ authDir, libDir, log = console } = {}) {
   };
 }
 
-module.exports = { textoLocalizacao, textoContatos, criar, mensagemParaEvento, normalizarBiblioteca, resolverEntrada, carregarBiblioteca, STATUS_BAILEYS };
+module.exports = { montarLista, textoLocalizacao, textoContatos, criar, mensagemParaEvento, normalizarBiblioteca, resolverEntrada, carregarBiblioteca, STATUS_BAILEYS };

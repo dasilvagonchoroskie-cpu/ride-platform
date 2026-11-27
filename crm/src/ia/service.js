@@ -222,7 +222,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       const paraIA = doAtendimento.length ? doAtendimento : mensagens.slice(-1);
       const { system, user } = P.montarPrompt({ contato: { nome: conv.nome }, vinculo, tipoAlvo, camposEspec, mensagens: paraIA });
 
-      const resp = await provedor.completar({ system, user, maxTokens: 1200 });
+      const resp = await provedor.completar({ system, user, maxTokens: 1200, leve: true });
       let bruto;
       try { bruto = P.extrairJson(resp.texto); } catch (err) { throw new ErroIA('resposta_invalida', 'A IA respondeu em formato inesperado. Tente de novo.'); }
 
@@ -716,7 +716,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     const botao = C.botaoDoSite(textoUlt);
     if (botao) {
       if (botao.assunto && botao.assunto !== conv.atend_assunto) waStore.definirAssunto(conversaId, botao.assunto);
-      const fixo = botao.modelo === 'menu' ? central.texto('menu') : comVoltar(central.texto(botao.modelo));
+      const fixo = /^menu/.test(botao.modelo) ? central.texto(botao.modelo) : comVoltar(central.texto(botao.modelo));
       if (fixo) return enviar([...partes, fixo], { tipo: botao.modelo === 'menu' ? 'menu' : 'botão do site' });
     }
 
@@ -752,14 +752,17 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
       const guardadas = recebidos.categoriasGuardadas(conversaId);
       const linha = conv.vinculo_tipo === 'motoristas' ? valoresAtuais('motoristas', conv.vinculo_id).linha : {};
       const tem = (tipo, campo) => guardadas.has(DOCUMENTOS_MOTORISTA.find((d) => d.tipo === tipo).categoria) || ['Recebido — conferir', 'Conferido'].includes(linha[campo]);
-      const aClassificar = anexo && anexo.situacao === 'pendente_classificacao' ? ' Nossa equipe vai conferir qual documento é esse arquivo.' : '';
+      const aClassificar = anexo && anexo.situacao === 'pendente_classificacao';
       // Os 7 itens obrigatórios; nada conta como completo enquanto faltar um. Pede até 2 por vez (mensagem curta).
       const faltaTodos = DOCUMENTOS_MOTORISTA.filter((d) => !tem(d.tipo, d.campo)).map((d) => d.pedido);
       const falta = faltaTodos.slice(0, 2);
       if (!falta.length) return transferir('documentos', [...partes, `${confirmaDoc} Com isso, seu cadastro está aguardando análise da nossa equipe.`]);
+      // 26/11: sem saber o que é o arquivo, não pede item específico (podia ser justamente o que acabou de chegar).
+      if (aClassificar) return enviar([...partes, `${confirmaDoc} Nossa equipe vai conferir qual documento é esse arquivo. Enquanto isso, pode enviar os outros itens do cadastro; não precisa mandar de novo o que já enviou.`], { tipo: 'confirmação de documento' });
       const lista = falta.length > 1 ? `${falta.slice(0, -1).join(', ')} e ${falta[falta.length - 1]}` : falta[0];
-      const resto = faltaTodos.length > falta.length ? ` Depois disso, ainda faltarão ${faltaTodos.length - falta.length} item(ns) da lista.` : '';
-      return enviar([...partes, `${confirmaDoc}${aClassificar} Agora, envie também ${lista}.${resto}`], { tipo: 'confirmação de documento' });
+      const sobra = faltaTodos.length - falta.length;
+      const resto = sobra > 1 ? ` Depois disso, vão faltar mais ${sobra} itens.` : (sobra === 1 ? ' Depois disso, vai faltar só mais 1 item.' : '');
+      return enviar([...partes, `${confirmaDoc} Agora, envie também ${lista}.${resto}`], { tipo: 'confirmação de documento' });
     }
 
     // Menu: no primeiro contato sem assunto claro, ou quando o cliente pede.
@@ -794,6 +797,7 @@ function createIaService({ db, waStore, entities, ENTITIES, audit, getSetting, s
     try {
       const resp = await provedor.completar({ system, user, maxTokens: 500 });
       r = P.validarResposta(P.extrairJson(resp.texto));
+      log.log(`[ia] conversa ${conversaId}: resposta redigida pelo modelo ${String(resp.modelo || 'não informado').slice(0, 60)}`);
     } catch (err) {
       return partes.length ? enviar(partes, { tipo: 'saudação' }) : { motivo: 'falha_redacao' };
     }

@@ -4,6 +4,14 @@ Atualizado em 19/11/2026 (horário de Brasília). Lista única do que falta. Ao 
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
+## 26/11/2026 — qualidade do atendimento da IA e menu em lista (2.1.0-rc.11)
+- [x] 26/11: escolha automática do modelo corrigida. As 134 análises de 10 a 26/11 usaram o flash-lite; a causa provável é um nome sem versão numérica (família "omni") passando na frente (a lista da chave não foi conferida). Agora: respostas ao cliente no Flash, análise e mídia no Lite, e se o Flash falhar (cota, fora do ar) cai no Lite. O log mostra o modelo de cada resposta.
+- [x] 26/11: instruções da IA sem a cidade errada ("Fortaleza" é só a marca) e com orientações de conversa mais natural; filtros de segurança iguais.
+- [x] 26/11: após receber arquivo não identificado, não pede mais um documento específico (podia ser o que acabou de chegar); fim do texto "item(ns)".
+- [x] 26/11: menu em lista de toque (botão "Menu"), nativo, sem pacote novo. **Vem desligado.** Opções em Configurações → Modelos de Comunicação: texto / só número de teste / todos. Erro no envio cai para texto.
+- [ ] DONO: testar o menu em lista com um segundo número (modo "só número de teste"). O WhatsApp pode aceitar e esconder a mensagem sem avisar o CRM; só ligar para todos depois de ver no celular (Android e, se der, iPhone).
+- [ ] DONO: informações oficiais reais (cidades e serviços, horários, como pedir, link do app, pagamento/preço, requisitos de motorista e Clube). Hoje os textos são quase só instruções; sem fatos a IA encaminha para a equipe.
+
 ## 26/11/2026 — triagem do radar do XDR e endurecimento (2.1.0-rc.10)
 - [x] 26/11: `createDecipheriv` do AES-GCM agora declara `authTagLength: 16` (persist.js, protegidos.js, documentos/cifra.js x3) e na API (`dois-fatores.ts`). Os dados já usavam tag de 16 bytes: é só endurecimento (recusa tag truncada). `npm test` 246/246; teste do 2FA da API 6/6.
 - [x] 26/11: `.gitleaks.toml` na raiz do monorepo (PR #74) com as exceções conferidas (chave falsa dos testes, nome de algoritmo, chave publicável do Supabase, `.env.example`). Os 13 avisos `gcp-api-key` continuam de propósito.

@@ -1,5 +1,6 @@
 'use strict';
 // Orquestra o canal do WhatsApp: liga/desliga, recebe mensagens, roda a fila de envio.
+const C = require('../ia/central');
 const path = require('path');
 const { createStore } = require('./store');
 
@@ -55,6 +56,18 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
     }
   };
 
+  // 26/11: menu em lista de toque, quando ligado (ou só para o número de teste). Qualquer erro → o mesmo menu em texto.
+  const central = C.criarCentral({ getSetting, setSetting });
+  async function enviarTexto(m) {
+    if (typeof canal.sendList === 'function') {
+      const lista = C.menuEmLista(m.texto, central.texto);
+      if (lista && C.usarLista(getSetting, m.telefone || String(m.jid).split('@')[0])) {
+        try { return await canal.sendList(m.jid, lista); } catch (err) { log.error(`[whatsapp] menu em lista falhou, enviando em texto: ${err.message}`); }
+      }
+    }
+    return canal.sendText(m.jid, m.texto);
+  }
+
   async function processarFila() {
     if (rodando || !canal) return 0;
     rodando = true;
@@ -74,7 +87,7 @@ function createService({ db, getSetting, setSetting, dataDir, log = console, now
               if (typeof canal.sendAudio !== 'function') throw new Error('Este canal não envia áudio');
               r = await canal.sendAudio(m.jid, audio);
             } else {
-              r = await canal.sendText(m.jid, m.texto);
+              r = await enviarTexto(m);
             }
             store.concluirEnvio(m.id, r && r.externalId);
             enviadas += 1;
