@@ -326,7 +326,6 @@ void main() {
           paymentMethod: 'Dinheiro',
         ),
         phase: RidePhase.inProgress,
-        pin: '4821',
         startedAt: '2026-10-30T13:00:00.000Z',
       );
     });
