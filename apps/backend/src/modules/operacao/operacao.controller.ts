@@ -10,6 +10,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { GoogleLoginService } from '../auth/google-login.service';
 import { DonoGravaGuard } from '../pracas/so-dono.guard';
 import { PracasService } from '../pracas/pracas.service';
 import { decodificarFoto } from '../arquivos/arquivos.service';
@@ -41,13 +42,15 @@ export class AppPublicoController {
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
     private readonly pracas: PracasService,
+    private readonly google: GoogleLoginService,
   ) {}
 
   @Get('config')
   @ApiOperation({ summary: 'Cidades, WhatsApp da Central, avisos, formas de entrar e endereco do mapa' })
   async config() {
     return {
-      login: { ...this.auth.canaisDeLogin(), senha: true },
+      // google: codigo publico do Google para o botao; null = botao escondido.
+      login: { ...this.auth.canaisDeLogin(), senha: true, google: this.google.idDoCliente() },
       cidades: await lerCidades(this.prisma),
       whatsapp: await whatsappDaCentral(this.prisma),
       avisos: await lerAvisos(this.prisma),
