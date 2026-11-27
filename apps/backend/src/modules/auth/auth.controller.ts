@@ -49,6 +49,7 @@ const cadastroSchema = z.object({
   password: passwordSchema,
   city: cidadeSchema.optional(),
   phone: phoneSchema.optional(),
+  codigoEmail: z.string().trim().regex(/^\d{6}$/, 'O codigo tem 6 numeros.').optional(),
 });
 
 const perfilSchema = z
@@ -185,7 +186,16 @@ export class AuthController {
   cadastro(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(cadastroSchema))
-    body: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string; phone?: string },
+    body: {
+      name: string;
+      email: string;
+      gender: Genero;
+      cpf: string;
+      password: string;
+      city?: string;
+      phone?: string;
+      codigoEmail?: string;
+    },
   ) {
     return this.auth.concluirCadastro(user.id, body);
   }

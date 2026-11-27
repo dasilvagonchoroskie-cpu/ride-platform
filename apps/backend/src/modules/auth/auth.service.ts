@@ -494,7 +494,16 @@ export class AuthService {
    */
   async concluirCadastro(
     userId: string,
-    input: { name: string; email: string; gender: Genero; cpf: string; password: string; city?: string; phone?: string },
+    input: {
+      name: string;
+      email: string;
+      gender: Genero;
+      cpf: string;
+      password: string;
+      city?: string;
+      phone?: string;
+      codigoEmail?: string;
+    },
   ): Promise<AuthResult['user']> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
@@ -510,13 +519,31 @@ export class AuthService {
     const cidade = await this.validarCidade(input.city);
     await this.garantirUnicos(userId, input.email, input.cpf);
 
+    // O e-mail do cadastro e o que a pessoa ja confirmou para entrar. Conta
+    // ainda sem e-mail confirma o endereco com o codigo.
+    const emailDaConta = (user.email ?? '').toLowerCase();
+    const emailNovo = input.email.toLowerCase() !== emailDaConta;
+    if (emailNovo) {
+      if (emailDaConta) {
+        throw BusinessException.validation(
+          'Use o mesmo e-mail com que voce entrou. Para trocar, termine o cadastro e va em Meus dados.',
+        );
+      }
+      if (!input.codigoEmail) {
+        throw BusinessException.validation('Confirme o e-mail: peca o codigo e digite o que chegou nele.', {
+          precisaCodigoEmail: true,
+        });
+      }
+      await this.otp.verify({ email: input.email, purpose: OtpPurpose.EMAIL_VERIFICATION, code: input.codigoEmail });
+    }
+
     try {
       const salvo = await this.prisma.user.update({
         where: { id: userId },
         data: {
           name: input.name.replace(/\s+/g, ' ').trim(),
           email: input.email,
-          ...(user.email !== input.email ? { emailVerifiedAt: null } : {}),
+          ...(emailNovo ? { emailVerifiedAt: new Date() } : {}),
           cpf: input.cpf,
           ...(novoTelefone ? { phone: novoTelefone, phoneVerifiedAt: null } : {}),
           passwordHash: await hashPassword(input.password),
