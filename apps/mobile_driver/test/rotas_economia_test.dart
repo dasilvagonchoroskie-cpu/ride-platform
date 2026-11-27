@@ -60,7 +60,7 @@ class _Servidor {
             ],
           };
         } else if (p == '/api/driver/rides/r1/accept') {
-          dados = {'pin': '4821'};
+          dados = {'ok': true};
         } else if (p == '/api/driver/rides/r1/start') {
           status = 'IN_PROGRESS';
         } else if (p == '/api/driver/rides/r1/arrived') {
