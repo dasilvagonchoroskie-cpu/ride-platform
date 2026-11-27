@@ -647,6 +647,11 @@ function setupModelos(view) {
           </div>
           <textarea id="mod-t-${ui.esc(m.id)}" class="mod-texto" rows="${Math.min(9, Math.max(3, m.texto.split('\n').length + 1))}" maxlength="1500">${ui.esc(m.texto)}</textarea>
         </div>`).join('')}
+      <h4 style="margin:18px 0 4px">Menu em lista de toque</h4>
+      <p class="muted small">Mostra o botão <b>Menu</b> no WhatsApp. É um recurso não oficial nesta conexão: o celular do cliente pode não exibir a mensagem, sem o CRM ser avisado. Teste primeiro num outro número. Vale só para os menus com o texto padrão.</p>
+      <div class="field"><label for="mod-lista">Como enviar o menu</label><select id="mod-lista">
+        ${[['desligado', 'Em texto com números'], ['teste', 'Lista de toque só para o número de teste'], ['ligado', 'Lista de toque para todos']].map(([v, n]) => `<option value="${v}" ${d.menu_lista && d.menu_lista.modo === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="field"><label for="mod-lista-teste">Número de teste (DDD e número)</label><input id="mod-lista-teste" type="tel" maxlength="20" value="${ui.esc((d.menu_lista && d.menu_lista.teste) || '')}"></div>
       <h4 style="margin:18px 0 4px">Informações oficiais por assunto</h4>
       <p class="muted small">A IA só afirma o que estiver aqui. Sem informação, ela diz que precisa confirmar com a equipe e encaminha o atendimento — nunca inventa. Não coloque dados pessoais.</p>
       ${(() => { const falta = (d.informacoes_situacao || []).filter((x) => !x.preenchida); return falta.length ? `<p class="small" style="color:#92400e">Faltam ${falta.length} de ${(d.informacoes_situacao || []).length} assuntos: ${falta.map((x) => ui.esc(x.nome)).join(', ')}.</p>` : '<p class="small" style="color:#15803d">Todos os assuntos têm informação oficial.</p>'; })()}
@@ -664,7 +669,8 @@ function setupModelos(view) {
       const modelos = [...corpo.querySelectorAll('[data-mod]')].map((el) => ({ id: el.dataset.mod, texto: el.querySelector('.mod-texto').value, ativo: el.querySelector('.mod-ativo').checked }));
       const informacoes = Object.fromEntries([...corpo.querySelectorAll('.mod-info')].map((el) => [el.dataset.info, el.value]));
       try {
-        await api.put('/ia/modelos', { modelos, site_url: corpo.querySelector('#mod-site').value.trim(), informacoes });
+        await api.put('/ia/modelos', { modelos, site_url: corpo.querySelector('#mod-site').value.trim(), informacoes,
+          menu_lista: { modo: corpo.querySelector('#mod-lista').value, teste: corpo.querySelector('#mod-lista-teste').value } });
         ui.toast('Modelos salvos.', 'success');
       } catch (e) { erro.hidden = false; erro.textContent = e.message; }
     });
