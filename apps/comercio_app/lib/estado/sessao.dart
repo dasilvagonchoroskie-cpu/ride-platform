@@ -81,6 +81,26 @@ class Sessao extends ChangeNotifier {
     }
     iniciando = false;
     notifyListeners();
+    // Sem segurar a abertura: confere se os textos mudaram.
+    unawaited(conferirTermos());
+  }
+
+  /// Se o servidor publicou uma versao nova dos Termos ou da Politica, o
+  /// aceite e pedido de novo. Sem rede, vale o que ja foi aceito.
+  Future<void> conferirTermos() async {
+    final aceita = termosAceitosVersao;
+    if (aceita == null) return;
+    try {
+      final t = await servidor.termos();
+      final p = await servidor.privacidade();
+      if (t.versao.isEmpty || p.versao.isEmpty) return;
+      if ('${t.versao}|${p.versao}' == aceita || termosAceitosVersao != aceita) return;
+      await Armazenamento.atual.apagar(Armazenamento.termosAceitos);
+      termosAceitosVersao = null;
+      notifyListeners();
+    } catch (_) {
+      // Confere na proxima abertura.
+    }
   }
 
   void _sessaoVenceu() {
@@ -115,7 +135,7 @@ class Sessao extends ChangeNotifier {
     return {'deviceId': 'and-com-$id', 'platform': 'ANDROID', 'appVersion': AppConfig.appVersion};
   }
 
-  Future<void> pedirCodigo(String email) => servidor.pedirCodigo(email);
+  Future<void> pedirCodigo(String email) async => servidor.pedirCodigo(email, await _aparelho());
 
   Future<void> entrarComCodigo(String email, String codigo) async {
     final r = await servidor.entrarComCodigo(email, codigo, await _aparelho());
