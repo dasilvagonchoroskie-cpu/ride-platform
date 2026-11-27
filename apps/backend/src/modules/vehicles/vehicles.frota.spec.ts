@@ -60,6 +60,8 @@ function montar(mapaInicial: Record<string, unknown> = {}) {
       upsert: async ({ where, update }: any) => void (settings[where.key] = { value: update.value }),
     },
     auditLog: { create: jest.fn(async ({ data }: any) => void auditoria.push(data)) },
+    $transaction: async (fn: any) => fn(prisma),
+    $executeRaw: async () => 0,
   };
   const caixa = { avisarMotorista: jest.fn(async (...a: unknown[]) => void avisos.push(a)) };
   const s = new VehiclesService(prisma, caixa as never);
