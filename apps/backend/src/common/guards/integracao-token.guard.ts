@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { BusinessException } from '../errors/business.exception';
+import { safeCompare } from '../utils/crypto.util';
 
 /**
  * Chave de integracao maquina-a-maquina (CRM Fortaleza Move -> Central).
@@ -16,7 +17,7 @@ export class IntegracaoTokenGuard implements CanActivate {
       .getRequest<{ headers: Record<string, string | string[] | undefined> }>();
     const recebido = req.headers['x-integracao-token'];
     const valor = Array.isArray(recebido) ? recebido[0] : recebido;
-    if (!esperado || !valor || valor !== esperado) {
+    if (!esperado || !valor || !safeCompare(valor, esperado)) {
       throw BusinessException.unauthorized('Chave de integracao ausente ou invalida.');
     }
     return true;

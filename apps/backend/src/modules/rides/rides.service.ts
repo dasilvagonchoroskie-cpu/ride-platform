@@ -89,6 +89,17 @@ const ACAO_DA_SITUACAO: Partial<Record<RideStatus, string>> = {
 export const SEM_DESTINO = 'SEM_DESTINO';
 export const TEXTO_SEM_DESTINO = 'Sem destino definido (pelo taxímetro)';
 
+/** Corrida encerrada ha mais de um dia: o contato entre as duas pontas acabou. */
+export function contatoEncerrado(
+  corrida: { status: string; finishedAt?: Date | null; cancelledAt?: Date | null; updatedAt?: Date | null },
+  agora: number = Date.now(),
+): boolean {
+  const abertas = ['SCHEDULED', 'REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'];
+  if (abertas.includes(corrida.status)) return false;
+  const fim = corrida.finishedAt ?? corrida.cancelledAt ?? corrida.updatedAt;
+  return !!fim && agora - fim.getTime() > 24 * 60 * 60_000;
+}
+
 /**
  * Varias entregas num pedido: cada parada do caminho leva quem recebe, o que vai e se ja
  * foi entregue (para o motorista confirmar uma a uma). Corrida comum: as paradas seguem como eram.
@@ -1627,6 +1638,10 @@ export class RidesService {
 
   /** Corrida que o passageiro esta acompanhando (a procura continua por aqui). */
   async acompanharDoPassageiro(userId: string, papel: UserRole, rideId: string, driverId?: string | null) {
+    const corrida = await this.prisma.ride.findUnique({ where: { id: rideId }, select: { passengerId: true, driverId: true } });
+    if (!corrida) throw BusinessException.notFound('Corrida nao encontrada.');
+    const participa = corrida.passengerId === userId || (!!driverId && corrida.driverId === driverId);
+    if (papel !== UserRole.ADMIN && !participa) throw BusinessException.forbidden('Esta corrida nao e sua.');
     await this.acompanharProcura(rideId);
     return this.detalhe(rideId, { userId, papel, driverId });
   }
@@ -1758,10 +1773,16 @@ export class RidesService {
     const fotoDoCarro = corrida.vehicleId
       ? lerMapaDeCarros((await this.prisma.setting.findUnique({ where: { key: CHAVE_VEICULOS } }))?.value)[corrida.vehicleId]?.foto
       : null;
+    // Um dia depois do fim, uma ponta nao ve mais o telefone da outra.
+    const semTelefone = !!quem && quem.papel !== UserRole.ADMIN && contatoEncerrado(corrida);
     const driver = corrida.driver
       ? (() => {
           const { documents, ...resto } = corrida.driver;
-          return { ...resto, fotoCarroUrl: fotoDoCarro ?? documents[0]?.fileUrl ?? null };
+          return {
+            ...resto,
+            ...(semTelefone && resto.user ? { user: { ...resto.user, phone: null } } : {}),
+            fotoCarroUrl: fotoDoCarro ?? documents[0]?.fileUrl ?? null,
+          };
         })()
       : null;
     const paradasEntrega = daEntrega ? this.entregas.publicoParadas(await this.entregas.paradasDaCorrida(rideId), quemVe) : [];
@@ -1781,6 +1802,7 @@ export class RidesService {
     return {
       ride: {
         ...semNotas,
+        ...(semTelefone && semNotas.passenger ? { passenger: { ...semNotas.passenger, phone: null } } : {}),
         driver,
         driverPosition,
         minhaNota,
@@ -1819,7 +1841,7 @@ export class RidesService {
     const r = await this.prisma.ride.findUnique({
       where: { id: rideId },
       select: {
-        status: true, category: true, driverId: true, finishedAt: true, cancelledAt: true,
+        status: true, category: true, driverId: true, finishedAt: true, cancelledAt: true, updatedAt: true,
         pickupAddress: true, pickupLat: true, pickupLng: true,
         dropoffAddress: true, dropoffLat: true, dropoffLng: true,
         vehicle: { select: { brand: true, model: true, color: true, plate: true } },
@@ -1828,7 +1850,7 @@ export class RidesService {
     });
     if (!r) throw BusinessException.notFound('Link de acompanhamento invalido.');
     const encerrada = !['REQUESTED', 'SEARCHING', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'DRIVER_WAITING', 'IN_PROGRESS'].includes(r.status);
-    const fim = r.finishedAt ?? r.cancelledAt;
+    const fim = r.finishedAt ?? r.cancelledAt ?? r.updatedAt;
     if (encerrada && fim && Date.now() - fim.getTime() > 30 * 60_000) {
       throw BusinessException.notFound('Este acompanhamento terminou.');
     }

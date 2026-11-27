@@ -73,8 +73,20 @@ export class ArquivosController {
     @Res() res: Response,
   ): Promise<void> {
     const a = await this.arquivos.ler(id, { id: user.id, role: user.role as never });
+    if (user.role === UserRole.ADMIN && a.ownerId !== user.id) await this.conferirCidade(user.id, a);
     res.setHeader('Content-Type', a.mime);
     res.setHeader('Cache-Control', 'private, max-age=86400');
     res.send(Buffer.from(a.dados));
+  }
+
+  private async conferirCidade(adminId: string, a: { ownerId: string; tipo: string }): Promise<void> {
+    if (this.arquivos.ehPublica(a.tipo)) return;
+    const minha = await this.pracas.escopoDe(adminId);
+    if (!minha) return;
+    const motorista = await this.arquivos.motoristaDoDono(a.ownerId);
+    const praca = motorista ? await this.pracas.pracaDoMotorista(motorista) : null;
+    if (praca && praca !== minha) {
+      throw BusinessException.forbidden('Esta foto e de outra cidade. Voce so ve e mexe na sua cidade.');
+    }
   }
 }
