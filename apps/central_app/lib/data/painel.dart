@@ -2029,7 +2029,11 @@ class Praca {
     required this.ativa,
     this.whatsapp,
     this.fonteBusca = 'tomtom',
+    this.exigirCodigoEmbarque = true,
   });
+
+  /// Corrida pedida pelo app so inicia com o codigo de embarque do passageiro.
+  final bool exigirCodigoEmbarque;
 
   /// De onde vem a busca de endereco nesta cidade (etapa 3): 'tomtom' ou 'google'.
   final String fonteBusca;
@@ -2053,6 +2057,7 @@ class Praca {
         ativa: j['ativa'] != false,
         whatsapp: j['whatsapp'] as String?,
         fonteBusca: j['fonteBusca'] == 'google' ? 'google' : 'tomtom',
+        exigirCodigoEmbarque: j['exigirCodigoEmbarque'] != false,
       );
 }
 
