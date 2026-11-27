@@ -124,7 +124,7 @@ Future<DriverState> _abrir(WidgetTester tester, Widget tela, {RidePhase? fase, M
   addTearDown(tester.view.resetDevicePixelRatio);
   final d = DriverState(client: ApiClient(client: _servidor()));
   if (fase != null) {
-    d.activeRide = DriverRide(offer: _oferta, phase: fase, pin: '4821', startedAt: '2026-10-03T13:00:00.000Z');
+    d.activeRide = DriverRide(offer: _oferta, phase: fase, startedAt: '2026-10-03T13:00:00.000Z');
     d.telefonePassageiro = '+5564999990000';
     d.resumoFinal = resumo;
   }
@@ -172,7 +172,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(find.textContaining('02:0'), findsOneWidget);
     expect(find.text('INICIAR VIAGEM'), findsOneWidget);
-    expect(find.textContaining('4821'), findsOneWidget);
+    // O motorista nunca ve o codigo de embarque do passageiro.
+    expect(find.textContaining('4821'), findsNothing);
   });
 
   testWidgets('Corrida etapa 2: viagem com FINALIZAR VIAGEM', (tester) async {
