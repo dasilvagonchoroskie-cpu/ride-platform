@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { confirmDocumentUploadSchema, requestDocumentUploadSchema, UserRole } from '@ride/shared';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -46,7 +46,7 @@ export class DocumentsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove documento reprovado para reenvio' })
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string): Promise<void> {
+  async remove(@CurrentUser('id') userId: string, @Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.documents.removeMine(userId, id);
   }
 }
