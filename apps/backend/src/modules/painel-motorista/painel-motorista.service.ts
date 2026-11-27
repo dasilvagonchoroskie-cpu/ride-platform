@@ -236,7 +236,10 @@ export class PainelMotoristaService {
 
     await this.prisma.withTransaction(async (tx) => {
       const carteira = await tx.wallet.upsert({ where: { driverId }, update: {}, create: { driverId } });
-      const saldo = carteira.balanceCents + movimento;
+      const { balanceCents: saldo } = await tx.wallet.update({
+        where: { id: carteira.id },
+        data: { balanceCents: { increment: movimento } },
+      });
       await tx.walletTransaction.create({
         data: {
           walletId: carteira.id,
@@ -246,7 +249,6 @@ export class PainelMotoristaService {
           description: (descricao?.trim() || (debito ? 'Saldo removido pela Central' : 'Recarga via Pix')).slice(0, 200),
         },
       });
-      await tx.wallet.update({ where: { id: carteira.id }, data: { balanceCents: saldo } });
       await tx.auditLog.create({
         data: {
           actorId: adminId,
