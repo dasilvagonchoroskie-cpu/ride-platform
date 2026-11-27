@@ -30,6 +30,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   /// Entrou pelo e-mail: o telefone ainda falta.
   bool _pedeTelefone = false;
+
+  /// A conta ja tem e-mail confirmado: o cadastro usa esse mesmo.
+  bool _emailFixo = false;
   final Map<String, String?> _erros = {};
   String? _erroGeral;
   bool _enviando = false;
@@ -49,6 +52,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _telefone.text = formatPhoneInput(d.startsWith('55') && d.length > 11 ? d.substring(2) : d);
       }
       _email.text = u.email ?? '';
+      _emailFixo = _email.text.isNotEmpty;
       if (u.cpf != null) _cpf.text = formatarCpf(u.cpf!);
       _genero = u.genero;
     }
@@ -160,6 +164,8 @@ class _SignupScreenState extends State<SignupScreen> {
             rotulo: 'E-mail',
             dica: 'Digite seu e-mail',
             controller: _email,
+            somenteLeitura: _emailFixo,
+            ajuda: _emailFixo ? 'E-mail confirmado. Para trocar, use Meus dados depois do cadastro.' : null,
             teclado: TextInputType.emailAddress,
             acao: TextInputAction.next,
             preenchimento: const [AutofillHints.email],
