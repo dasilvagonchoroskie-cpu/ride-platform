@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { ACTIVE_RIDE_STATUSES, ERROR_CODES, normalizePlate } from '@ride/shared';
-import type { Vehicle } from '@prisma/client';
+import type { Prisma, Vehicle } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { BusinessException } from '../../common/errors/business.exception';
 import { buildPaginated, toSkip } from '../../common/dto/pagination.dto';
@@ -10,6 +10,7 @@ import { decodificarFoto, soArquivosDoBanco } from '../arquivos/arquivos.service
 import { CATEGORIA_UTILITARIO, ehMoto, lerCategorias } from '../rides/categorias';
 import { ehEntrega } from '../entregas/entregas.regras';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
+import { fecharJornada } from '../painel-motorista/jornada';
 import {
   CHAVE_VEICULOS,
   carroLiberado,
@@ -19,6 +20,10 @@ import {
   situacaoDoCarro,
   diaValido,
   vencido,
+  dadosMudaram,
+  jaFoiAprovado,
+  AlteracaoDoCarro,
+  DadosDoCarro,
 } from './vehicles.situacao';
 
 /** Carro como o aplicativo e a Central leem: dados, situacao e fotos. */
@@ -33,6 +38,8 @@ export type CarroPublico = Vehicle & {
   categoriaPedidaEm: string | null;
   /** Motivo da ultima recusa de categoria. */
   categoriaMotivo: string | null;
+  /** Dados mudados esperando a Central: como o carro era quando foi liberado. */
+  alteracao: Pick<AlteracaoDoCarro, 'antes' | 'em'> | null;
 };
 
 /**
@@ -52,16 +59,28 @@ export class VehiclesService {
 
   // --------------------------- SITUACAO ---------------------------
 
-  async mapa(): Promise<MapaDeCarros> {
-    const s = await this.prisma.setting.findUnique({ where: { key: CHAVE_VEICULOS } });
+  async mapa(db: Pick<Prisma.TransactionClient, 'setting'> = this.prisma): Promise<MapaDeCarros> {
+    const s = await db.setting.findUnique({ where: { key: CHAVE_VEICULOS } });
     return lerMapaDeCarros(s?.value);
   }
 
   /** Le, muda e grava o mapa de situacao (sempre o mais novo do banco). */
   private async mudar(fn: (m: MapaDeCarros) => void, quem?: string): Promise<MapaDeCarros> {
-    const mapa = await this.mapa();
+    return this.prisma.$transaction(async (tx) => {
+      await this.vezDeGravar(tx);
+      return this.gravarMapa(tx, fn, quem);
+    });
+  }
+
+  /** Todas as fichas ficam num registro so: gravacoes em fila, uma por vez. */
+  private async vezDeGravar(tx: Prisma.TransactionClient): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CHAVE_VEICULOS}))`;
+  }
+
+  private async gravarMapa(tx: Prisma.TransactionClient, fn: (m: MapaDeCarros) => void, quem?: string): Promise<MapaDeCarros> {
+    const mapa = await this.mapa(tx);
     fn(mapa);
-    await this.prisma.setting.upsert({
+    await tx.setting.upsert({
       where: { key: CHAVE_VEICULOS },
       update: { value: mapa as never, updatedBy: quem ?? null },
       create: { key: CHAVE_VEICULOS, value: mapa as never, updatedBy: quem ?? null, description: 'Situacao e fotos dos carros dos motoristas' },
@@ -78,6 +97,7 @@ export class VehiclesService {
       fotoUrl: f.foto ?? null,
       crlvUrl: f.crlv ?? null,
       enviadoEm: f.em ?? null,
+      alteracao: f.alteracao ? { antes: f.alteracao.antes, em: f.alteracao.em } : null,
       categoriaPedida: f.categoriaPedida ?? null,
       categoriaPedidaEm: f.categoriaPedidaEm ?? null,
       categoriaMotivo: f.categoriaMotivo ?? null,
@@ -234,7 +254,7 @@ export class VehiclesService {
   }
 
   private async motoristaDe(userId: string) {
-    const driver = await this.prisma.driver.findUnique({ where: { userId }, select: { id: true, status: true, userId: true } });
+    const driver = await this.prisma.driver.findUnique({ where: { userId }, select: { id: true, status: true, userId: true, approvedAt: true } });
     if (!driver) throw BusinessException.notFound('Cadastro de motorista nao encontrado.');
     return driver;
   }
@@ -281,7 +301,7 @@ export class VehiclesService {
    */
   async create(userId: string, input: CreateVehicleInput) {
     const driver = await this.motoristaDe(userId);
-    const conferir = driver.status === 'APPROVED';
+    const conferir = jaFoiAprovado(driver);
     return this.cadastrar(driver.id, input, conferir ? 'CONFERIR' : 'LIBERAR', userId, false);
   }
 
@@ -348,31 +368,93 @@ export class VehiclesService {
     return this.publico(final, novoMapa);
   }
 
-  /** Corrige marca, modelo, ano e cor. Outra placa = outro carro. */
+  /**
+   * Corrige marca, modelo, ano e cor. Outra placa = outro carro.
+   *
+   * Motorista ja aprovado que muda um desses dados: o carro volta para a
+   * Central conferir (Evandro, 27/11/2026) — o passageiro tem que ver o carro
+   * que a Central conferiu. Se era o carro em uso, nenhum outro entra no
+   * lugar sozinho: o motorista fica indisponivel ate a Central liberar ou ate
+   * ele escolher outro carro que esteja dirigindo.
+   */
   async update(userId: string, vehicleId: string, input: UpdateVehicleInput) {
-    const vehicle = await this.carroDoMotorista(userId, vehicleId);
-    const mapa = await this.mapa();
-    if (mapa[vehicleId]?.situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
-    if (input.plate && normalizePlate(input.plate) !== vehicle.plate) {
+    const driver = await this.motoristaDe(userId);
+    const lido = await this.carroDoMotorista(userId, vehicleId);
+    if (input.plate && normalizePlate(input.plate) !== lido.plate) {
       throw BusinessException.validation('Para outra placa, cadastre outro carro (a Central confere o documento dele).');
     }
-    const atualizado = await this.prisma.vehicle.update({
-      where: { id: vehicleId },
-      data: {
-        ...(input.brand ? { brand: input.brand } : {}),
-        ...(input.model ? { model: input.model } : {}),
-        ...(input.year ? { year: input.year } : {}),
-        ...(input.color ? { color: input.color } : {}),
-      },
+    const r = await this.prisma.$transaction(async (tx) => {
+      await this.vezDeGravar(tx);
+      // Mesma trava do "aceitar corrida": uma coisa de cada vez para o motorista.
+      await tx.$queryRaw`SELECT id FROM drivers WHERE id = ${driver.id}::uuid FOR NO KEY UPDATE`;
+      const vehicle = await tx.vehicle.findFirst({ where: { id: vehicleId, driverId: driver.id } });
+      if (!vehicle) throw BusinessException.notFound('Veiculo nao encontrado.');
+      const mapa = await this.mapa(tx);
+      const ficha = mapa[vehicleId];
+      const situacao = ficha?.situacao;
+      if (situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
+      if (situacao === 'SUSPENSO') {
+        throw BusinessException.validation('A Central suspendeu este veiculo. Fale com a Central para mudar os dados.');
+      }
+      const antes: DadosDoCarro = { brand: vehicle.brand, model: vehicle.model, year: vehicle.year, color: vehicle.color };
+      const depois: DadosDoCarro = {
+        brand: input.brand || antes.brand,
+        model: input.model || antes.model,
+        year: input.year || antes.year,
+        color: input.color || antes.color,
+      };
+      const reanalise = jaFoiAprovado(driver) && dadosMudaram(antes, depois);
+      if (reanalise) {
+        const corridas = await tx.ride.count({
+          where: {
+            status: { in: [...ACTIVE_RIDE_STATUSES] },
+            OR: [{ vehicleId }, ...(vehicle.isActive ? [{ driverId: driver.id }] : [])],
+          },
+        });
+        if (corridas > 0) throw BusinessException.conflict('Termine a corrida antes de mudar os dados deste carro.');
+      }
+      const atualizado = await tx.vehicle.update({
+        where: { id: vehicleId },
+        data: { ...depois, ...(reanalise ? { isActive: false } : {}) },
+      });
+      let fichas = mapa;
+      // Dados mudados (carro volta para a conferencia) ou recusado e corrigido.
+      if (reanalise || situacao === 'RECUSADO') {
+        const agora = new Date().toISOString();
+        fichas = await this.gravarMapa(tx, (m) => {
+          // Carro novo que nunca foi liberado continua sendo "carro novo".
+          const alteracao = m[vehicleId]?.alteracao ?? (reanalise && !situacao ? { antes, em: agora, eraEmUso: vehicle.isActive } : null);
+          m[vehicleId] = { ...(m[vehicleId] ?? {}), situacao: 'PENDENTE', motivo: null, em: agora, ...(alteracao ? { alteracao } : {}) };
+        }, userId);
+      }
+      if (reanalise) {
+        await tx.auditLog.create({
+          data: {
+            actorId: userId,
+            actorRole: 'DRIVER',
+            action: 'VEHICLE_DATA_CHANGED',
+            entity: 'Vehicle',
+            entityId: vehicleId,
+            before: { ...antes },
+            after: { ...depois, plate: vehicle.plate },
+          },
+        });
+      }
+      const ficouSemCarro = reanalise && vehicle.isActive;
+      if (ficouSemCarro) {
+        await tx.driver.update({ where: { id: driver.id }, data: { isOnline: false } });
+        await tx.$executeRaw`
+          UPDATE driver_locations SET is_online = FALSE, is_available = FALSE, updated_at = NOW()
+          WHERE driver_id = ${driver.id}::uuid
+        `;
+      }
+      return { atualizado, fichas, reanalise, ficouSemCarro };
     });
-    // Recusado e corrigido: volta para a Central conferir.
-    let novo = mapa[vehicleId]?.situacao === 'RECUSADO'
-      ? await this.mudar((m) => {
-          m[vehicleId] = { ...m[vehicleId], situacao: 'PENDENTE', motivo: null, em: new Date().toISOString() };
-        }, userId)
-      : mapa;
-    if (input.categoria) novo = await this.registrarPedidoDeCategoria(atualizado, input.categoria, userId);
-    return this.publico(atualizado, novo);
+    if (r.ficouSemCarro) await fecharJornada(this.prisma, driver.id);
+    if (r.reanalise) this.logger.log(`Carro ${r.atualizado.plate}: motorista mudou os dados; voltou para a Central conferir`);
+    let fichas = r.fichas;
+    if (input.categoria) fichas = await this.registrarPedidoDeCategoria(r.atualizado, input.categoria, userId);
+    return this.publico(r.atualizado, fichas);
   }
 
   /** Troca o carro em uso (so carro liberado pela Central e fora de corrida). */
@@ -489,6 +571,7 @@ export class VehiclesService {
     if (mapa[vehicleId]?.situacao === 'REMOVIDO') throw BusinessException.notFound('Veiculo nao encontrado.');
     if (mapa[vehicleId]?.situacao === 'SUSPENSO') throw BusinessException.validation('Este veiculo esta suspenso. Use "Reativar".');
     if (!aprovar && !motivo?.trim()) throw BusinessException.validation('Escreva o motivo da recusa (o motorista ve).');
+    const alteracao = mapa[vehicleId]?.alteracao ?? null;
     const novo = await this.mudar((m) => {
       const f = m[vehicleId] ?? {};
       m[vehicleId] = aprovar
@@ -498,10 +581,16 @@ export class VehiclesService {
             em: new Date().toISOString(),
             // O pedido de categoria continua (a Central confere a parte).
             ...(f.categoriaPedida ? { categoriaPedida: f.categoriaPedida, categoriaPedidaEm: f.categoriaPedidaEm ?? null } : {}),
+            // A validade do CRLV anotada pela Central nao se perde na aprovacao.
+            ...(f.crlvValidade ? { crlvValidade: f.crlvValidade } : {}),
           }
         : { ...f, situacao: 'RECUSADO', motivo: motivo!.trim(), em: new Date().toISOString() };
     }, adminId);
-    if (aprovar) await this.garantirCarroEmUso(v.driverId, novo);
+    if (aprovar) {
+      const semCarro = (await this.prisma.vehicle.count({ where: { driverId: v.driverId, isActive: true } })) === 0;
+      if (semCarro && alteracao?.eraEmUso) await this.usarCarro(v.driverId, vehicleId);
+      else await this.garantirCarroEmUso(v.driverId, novo);
+    }
     await this.prisma.auditLog.create({
       data: {
         actorId: adminId,
@@ -509,7 +598,8 @@ export class VehiclesService {
         action: aprovar ? 'VEHICLE_APPROVED' : 'VEHICLE_REJECTED',
         entity: 'Vehicle',
         entityId: vehicleId,
-        after: { plate: v.plate, motivo: motivo ?? null },
+        ...(alteracao ? { before: { ...alteracao.antes } } : {}),
+        after: { plate: v.plate, motivo: motivo ?? null, ...(alteracao ? { brand: v.brand, model: v.model, year: v.year, color: v.color } : {}) },
       },
     });
     await this.caixa.avisarMotorista(
@@ -540,7 +630,13 @@ export class VehiclesService {
       });
       if (emCorrida > 0) throw BusinessException.conflict('Veiculo em uma corrida ativa. Espere terminar para suspender.');
       const novo = await this.mudar((m) => {
-        m[vehicleId] = { ...(m[vehicleId] ?? {}), situacao: 'SUSPENSO', motivo: motivo.trim(), em: new Date().toISOString() };
+        m[vehicleId] = {
+          ...(m[vehicleId] ?? {}),
+          situacao: 'SUSPENSO',
+          motivo: motivo.trim(),
+          em: new Date().toISOString(),
+          ...(atual === 'PENDENTE' || atual === 'RECUSADO' ? { voltarParaConferencia: true } : {}),
+        };
       }, adminId);
       if (v.isActive) await this.prisma.vehicle.update({ where: { id: vehicleId }, data: { isActive: false } });
       await this.garantirCarroEmUso(v.driverId, novo);
@@ -549,6 +645,9 @@ export class VehiclesService {
       const novo = await this.mudar((m) => {
         const ficha: FichaDoCarro = { ...(m[vehicleId] ?? {}), em: new Date().toISOString() };
         delete ficha.situacao;
+        // Suspender e reativar nao vale como conferir.
+        if (ficha.voltarParaConferencia || ficha.alteracao) ficha.situacao = 'PENDENTE';
+        delete ficha.voltarParaConferencia;
         ficha.motivo = null;
         m[vehicleId] = ficha;
       }, adminId);
@@ -568,7 +667,11 @@ export class VehiclesService {
     await this.caixa.avisarMotorista(
       v.driverId,
       suspender ? `Veículo ${v.plate} suspenso` : `Veículo ${v.plate} reativado`,
-      suspender ? motivo!.trim() : `${v.model} liberado novamente pela Central.`,
+      suspender
+        ? motivo!.trim()
+        : (await this.mapa())[vehicleId]?.situacao === 'PENDENTE'
+          ? 'A suspensao acabou. A Central ainda vai conferir os dados antes de liberar.'
+          : `${v.model} liberado novamente pela Central.`,
       { tipo: 'carro', abrir: 'carros' },
     );
     this.logger.log(`Veiculo ${v.plate}: Central ${suspender ? 'suspendeu' : 'reativou'}`);
@@ -626,6 +729,7 @@ export class VehiclesService {
           fotoUrl: p.fotoUrl,
           crlvUrl: p.crlvUrl,
           enviadoEm: p.enviadoEm,
+          alteracao: p.alteracao,
           categoriaPedida: p.categoriaPedida,
           createdAt: v.createdAt,
           // Validades (13/11/2026): CNH vem do cadastro do motorista; CRLV e anotada pela Central.
@@ -734,7 +838,7 @@ export class VehiclesService {
       select: { id: true, plate: true, driverId: true, driver: { select: { user: { select: { name: true } } } } },
     });
     return carros
-      .map((c) => ({ id: c.id, plate: c.plate, driverId: c.driverId, name: c.driver.user?.name ?? null, createdAt: mapa[c.id]?.em ?? null }))
+      .map((c) => ({ id: c.id, plate: c.plate, driverId: c.driverId, name: c.driver.user?.name ?? null, createdAt: mapa[c.id]?.em ?? null, alterado: !!mapa[c.id]?.alteracao }))
       .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
   }
 
