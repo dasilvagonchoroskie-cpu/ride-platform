@@ -73,9 +73,16 @@ export class ContaController {
 <div class="cartao">
 <h2>O que é apagado</h2>
 <ul>
-<li>Nome, telefone, e-mail, CPF, data de nascimento, foto e endereços salvos.</li>
-<li>Motorista: também a CNH, as fotos dos documentos, os carros e a carteira (o saldo que sobrar é perdido; peça o saque antes).</li>
-<li>As corridas já feitas ficam guardadas <strong>sem o seu nome</strong>, porque a empresa precisa delas para a contabilidade e a lei fiscal (até 5 anos).</li>
+<li>Nome, telefone, e-mail, CPF, data de nascimento, senha, foto de perfil, endereços salvos, motoristas salvos, contatos de emergência, sessões e aparelhos da conta.</li>
+<li>Motorista: também a CNH, as fotos dos documentos, os carros e a carteira com o extrato e os saques (o saldo que sobrar é perdido; peça o saque antes).</li>
+<li>A mesma conta serve para passageiro e motorista: a exclusão encerra os dois perfis.</li>
+</ul>
+<h2>O que pode continuar guardado</h2>
+<ul>
+<li>O histórico de corridas e entregas (endereços, horários e valores), sem o seu cadastro identificado.</li>
+<li>Mensagens do chat e comentários de avaliação, com o texto que foi escrito; alertas de SOS com a localização; registros administrativos e de pedidos de código de acesso. Hoje não há exclusão automática por prazo para esses itens.</li>
+<li>Avisos do aplicativo por até 30 dias, registros do servidor e cópias de segurança até serem substituídos.</li>
+<li>Para pedir a eliminação do que ficou, escreva para fortalezamovegtba@gmail.com. Os detalhes estão na <a href="../legal/privacidade">Política de Privacidade</a>.</li>
 </ul>
 </div>
 <div class="cartao">

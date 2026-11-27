@@ -99,105 +99,167 @@ Fica eleito o foro da comarca de Goiatuba, Estado de Goiás, para dirimir quaisq
 Ao tocar em "Aceito os Termos", você declara ter lido e concordado com este documento e com a Política de Privacidade.
 `;
 
+/**
+ * Politica de Privacidade dos aplicativos Passageiro e Motorista. Cada frase
+ * descreve o que o sistema faz: ao mudar o que e coletado, compartilhado,
+ * apagado ou por quanto tempo fica guardado, atualize o texto e a data.
+ */
 export const PRIVACY_MD = `# Política de Privacidade — Fortaleza Move
 
-Versão ${LEGAL_VERSION} — vigente a partir de sua publicação no aplicativo.
+Versão ${LEGAL_VERSION} — atualizada em 27 de novembro de 2026.
 
-Esta Política explica como a Fortaleza Move coleta, usa e protege os dados pessoais de passageiros e motoristas parceiros, em conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018 — LGPD). Vale para os aplicativos Fortaleza Move (passageiro) e Fortaleza Move Motorista e para a Central da plataforma.
+Esta Política explica como são tratados os dados pessoais de quem usa os aplicativos **Fortaleza Move** (passageiro) e **Fortaleza Move Motorista**, conforme a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018 — LGPD). Ela descreve o que o sistema faz hoje, incluindo o que ainda é guardado sem prazo automático de exclusão. Ela não trata do aplicativo Fortaleza Move Comércio, do aplicativo da Central nem do sistema de atendimento (CRM). Dúvidas sobre eles podem ser enviadas pelo mesmo canal abaixo.
 
-**Quem é o responsável (controlador):** ${OPERADORA}, que desenvolve e opera a Fortaleza Move.
-**Encarregado pelos dados (LGPD):** a própria Fortaleza Digital Security — e-mail ${EMAIL_CONTATO}, WhatsApp ${WHATSAPP_CONTATO}.
+## 1. Quem é o responsável pelos seus dados
 
-## 1. Quais dados coletamos
+**Controlador:** Evandro da Silva Gonchoroski, pessoa física, responsável pela Fortaleza Move e pela marca Fortaleza Digital Security, em Goiatuba – GO. Até a data desta versão não há CNPJ.
 
-**De todos os usuários:** nome, telefone, e-mail, gênero e cidade (quando informados), CPF, data de nascimento, endereço (quando informado), foto de perfil (opcional) e a localização por GPS durante o uso do aplicativo.
+**Canal de privacidade e contato do encarregado:** o próprio Evandro da Silva Gonchoroski, pelo e-mail ${EMAIL_CONTATO} ou pelo WhatsApp ${WHATSAPP_CONTATO}.
 
-**Se você usar "Entrar com Google":** recebemos do Google o seu nome, o seu e-mail e um código que identifica a sua conta Google, para confirmar quem você é e abrir a sua conta na Fortaleza Move. Não recebemos a sua senha do Google e não acessamos o seu Gmail, os seus contatos, as suas fotos nem o Google Drive. Usar o Google é opcional: o código por e-mail continua funcionando.
+## 2. Quais dados tratamos
 
-**De motoristas parceiros, adicionalmente:** número, categoria e validade da CNH, chave Pix, dados do veículo (placa, marca, modelo, ano, cor) e os documentos enviados para análise (foto da CNH, do CRLV, do veículo, comprovante de residência e certidão de antecedentes criminais).
+**Passageiro — cadastro:** nome, telefone, e-mail, CPF, gênero e cidade. São opcionais: foto de perfil, endereços salvos, motoristas salvos, contatos de emergência e senha (guardada somente em forma embaralhada, que não permite lê-la).
 
-**Durante uma corrida:** os pontos de embarque e de destino, a localização GPS do motorista e o trajeto percorrido, o horário de cada etapa (pedido, aceite, embarque, desembarque), o valor, a avaliação e as mensagens trocadas no chat da corrida. A localização do passageiro é usada com o aplicativo aberto (para marcar o embarque) e, se ele apertar o SOS, é enviada à Central.
+**Motorista — cadastro:** nome, telefone, e-mail, CPF, data de nascimento, cidade onde trabalha, foto de perfil, número, categoria e validade da CNH, chave Pix e dados do veículo (placa, marca, modelo, ano, cor, categoria, validade do CRLV e fotos).
 
-**Do aparelho:** o identificador de notificações (para os avisos chegarem ao celular), o modelo do aparelho e a versão do aplicativo, para segurança e suporte. Não coletamos contatos da agenda, mensagens SMS, fotos da galeria (só a foto que você escolher enviar) nem o histórico de outros aplicativos.
+**Motorista — documentos para análise:** fotos da CNH, do CRLV e do veículo, comprovante de residência e certidão de antecedentes criminais, quando enviados ou pedidos para a aprovação. Parte do cadastro também pode ser feita ou atualizada pela equipe da Central, com os dados que você informar a ela.
 
-**Contatos de emergência (opcional):** nome e telefone das pessoas que o passageiro cadastrar, para avisá-las em caso de SOS.
+**Motorista — operação:** os períodos em que ficou disponível, os chamados recebidos e a resposta a eles, as corridas, os ganhos, as taxas, o saldo e o extrato da carteira, os pedidos de saque, os pedidos de alteração de dados e o resultado das análises.
 
-**Entregas (TEXTO PROVISÓRIO, em revisão):** quando o cliente pede uma entrega, ele informa o nome e o telefone de quem recebe e a descrição do item. Esses dados são usados só para fazer aquela entrega: o motorista parceiro vê o nome, o telefone e a descrição para entregar; o código de entrega só aparece para o cliente e para a Central. Ficam guardados junto com a corrida, pelo mesmo prazo do histórico, e são apagados com ela. Quem recebe pode pedir a exclusão pelos contatos do item 7.
+**Corridas:** endereços e coordenadas de embarque, paradas e destino, horário de cada etapa, a posição registrada nas mudanças de etapa, distância, duração, valor, cupom, motivo de cancelamento, agendamento, forma de pagamento escolhida, avaliações, comentários e mensagens do chat da corrida.
 
-## 2. Para que usamos esses dados
+**Pagamento:** a corrida é paga direto ao motorista (dinheiro, Pix ou cartão na maquininha dele). Os aplicativos não pedem nem guardam número de cartão ou senha de banco.
 
-- **Localização (GPS):** para encontrar o motorista mais próximo, traçar a rota, calcular a distância e o valor da corrida e permitir que passageiro e motorista se encontrem. O app do motorista usa a localização também em segundo plano enquanto ele está disponível ou em corrida, para receber chamados e registrar o trajeto. A localização só é mostrada à outra parte durante a corrida.
-- **CNH e documentos do motorista:** exclusivamente para verificar que o motorista parceiro está habilitado a dirigir e que o veículo está regularizado, como medida de segurança para os passageiros.
-- **CPF e data de nascimento:** para confirmar a identidade e a maioridade do usuário.
-- **Telefone e e-mail:** para entrar na conta (código enviado por e-mail ou, se você escolher, a sua conta Google) e para avisos sobre as corridas.
-- **Histórico de corridas:** para mostrar o extrato e o recibo ao usuário, calcular tarifas e taxas, e atender dúvidas ou reclamações.
-- **SOS:** a localização e os dados da corrida vão na hora para a Central da plataforma.
+**Entregas:** quando a entrega estiver ligada na cidade, o nome e o telefone de quem recebe e a descrição do item.
 
-Não vendemos dados pessoais a terceiros e não usamos anúncios.
+**Corrida aberta pela Central ou pelo motorista a pedido de um cliente:** o nome, o telefone e os endereços informados por essa pessoa.
 
-## 3. Onde os dados ficam guardados e quem nos ajuda
+**Localização no passageiro:** é usada com o aplicativo aberto, para mostrar o mapa, calcular o valor, procurar motoristas próximos e marcar o embarque. O ponto de embarque fica registrado na corrida. Se você acionar o SOS, a sua posição é enviada à Central e atualizada enquanto o alerta estiver sendo transmitido.
 
-Os dados e os documentos ficam no banco de dados da plataforma, com acesso restrito: documentos do motorista só são vistos pelo próprio motorista e pela equipe da Central responsável pela análise do cadastro. Senhas são guardadas de forma cifrada (nunca em texto). Para funcionar, a plataforma usa estes serviços, que tratam dados apenas para prestar o serviço contratado:
+**Localização no motorista:** é usada enquanto você está **Disponível** ou em corrida, **inclusive com o aplicativo fechado ou a tela desligada**, com um aviso fixo na barra do celular. Ela serve para enviar chamados próximos, mostrar o carro ao passageiro e medir a corrida. No servidor, a posição ao vivo do motorista é substituída pela mais nova a cada envio (guardamos a última); as posições das mudanças de etapa ficam registradas na corrida, junto com a distância medida pelo celular.
 
-- **Integrator Host** (hospedagem do servidor da plataforma, onde ficam o banco de dados e os documentos);
-- **GitHub** (guarda a cópia de segurança do banco, criptografada antes de sair do servidor);
-- **Google Firebase** (envio de notificações ao celular) e serviços de envio de e-mail para os códigos de acesso (**Google/Gmail** e, como reserva, **Brevo**);
-- **TomTom** (mapa, busca de endereço e rotas: recebe coordenadas e o texto buscado, sem o nome do usuário; as imagens do mapa são pedidas pelo próprio celular);
-- **Google Maps**, quando o mapa do Google está ligado no aplicativo (o próprio celular pede ao Google as imagens do mapa);
-- **Login do Google**, somente quando a pessoa toca em "Entrar com Google" (o Google confirma quem ela é);
-- **WhatsApp**, somente quando o próprio usuário escolhe compartilhar a viagem, o recibo ou falar com a Central.
+**Aparelho, acesso e segurança:** um código que identifica a instalação do aplicativo, o modelo do aparelho, a versão do sistema e do aplicativo, o código de notificações, o endereço IP, data e hora dos acessos e as sessões abertas. Quando você pede um código de acesso, registramos o e-mail ou telefone, o IP e o horário. Também guardamos a versão dos Termos e desta Política que você aceitou, com data e hora, e registros de ações administrativas feitas no sistema.
 
-Alguns desses serviços podem tratar dados fora do Brasil (transferência internacional, art. 33 da LGPD).
+**Entrar com Google:** quando essa opção estiver disponível no aplicativo e você a usar, recebemos do Google o seu nome, o seu e-mail e um código que identifica a conta. Não recebemos a sua senha do Google nem acessamos o seu Gmail, contatos, fotos ou arquivos.
 
-## 4. Como protegemos os dados
+**Dados de outras pessoas informados por você:** contatos de emergência (nome e telefone de até 3 pessoas) e destinatários de entregas. Informe somente dados de quem saiba disso. Essas pessoas também podem usar o canal de privacidade. Os contatos de emergência aparecem para a equipe da Central quando você aciona o SOS. O sistema não envia mensagem automática a eles: no aplicativo, você mesmo pode escolher avisá-los pelo seu WhatsApp.
 
-- Toda a comunicação entre os aplicativos e o servidor é criptografada (HTTPS).
-- Senhas são guardadas cifradas; os códigos de acesso vencem em poucos minutos.
-- Documentos e fotos só abrem para quem tem permissão (o dono e a equipe da Central), com login.
-- Links de "Compartilhar viagem" são assinados pelo servidor e vencem sozinhos.
-- Cópia de segurança diária do banco, criptografada, guardada por até 30 dias.
-- A Central só é acessada pela equipe autorizada, com senha ou com código enviado ao e-mail da conta.
+**O que não coletamos:** a agenda de contatos do celular, SMS, registro de chamadas, a sua galeria (somente a imagem que você escolher enviar) e identificadores de publicidade. Os aplicativos não têm anúncios nem ferramentas de análise de publicidade.
 
-## 5. Permissões do celular
+## 3. Para que usamos os dados e com qual base legal
 
-- **Localização:** no passageiro, com o aplicativo aberto, para marcar o embarque; no motorista, também com o aplicativo fechado enquanto ele está Disponível ou em corrida, para receber chamados e mostrar o carro ao passageiro (com aviso fixo na barra do celular).
-- **Notificações:** avisos da corrida (motorista aceitou, chegou, chamado novo, recarga, aprovações).
-- **Câmera e fotos:** só quando a pessoa escolhe tirar ou enviar uma foto (perfil, documentos e carro do motorista).
-- **Motorista, aparecer sobre outros apps e tela cheia com o celular bloqueado:** para o chamado abrir na hora, com o botão de deslizar para aceitar.
+- **Criar e manter a conta, procurar motorista, fazer e cobrar a corrida ou entrega, conversar no chat, mostrar histórico e enviar avisos:** execução do contrato de uso e dos procedimentos anteriores a ele (art. 7º, V, da LGPD).
+- **Analisar documentos e dados do motorista e do veículo, inclusive a certidão de antecedentes quando pedida:** execução do contrato e dos procedimentos para aprovar o parceiro (art. 7º, V) e interesse legítimo na segurança dos passageiros (art. 7º, IX).
+- **Proteger contas, limitar tentativas de acesso, prevenir fraudes e apurar abusos:** interesse legítimo (art. 7º, IX).
+- **Atender o botão SOS e outras situações de risco:** proteção da vida e da integridade física (art. 7º, VII).
+- **Cumprir obrigações previstas em lei e atender ordens de autoridades:** obrigação legal ou regulatória (art. 7º, II).
+- **Guardar registros necessários para responder reclamações e processos:** exercício regular de direitos (art. 7º, VI).
 
-Nenhuma permissão é usada para outra finalidade além das descritas aqui.
+Os recursos opcionais (como foto do passageiro, endereços salvos e Entrar com Google) só são usados se você escolher usá-los. As permissões do celular podem ser retiradas a qualquer momento nos ajustes do aparelho; sem a localização, algumas funções deixam de funcionar.
 
-## 6. Por quanto tempo guardamos
+Não vendemos dados pessoais. O sistema escolhe automaticamente para quem enviar um chamado, usando critérios como disponibilidade e proximidade. Você pode pedir informações ou a revisão pelo canal de privacidade (art. 20 da LGPD).
 
-Os dados são mantidos enquanto a conta estiver ativa e pelo prazo adicional exigido por lei após o encerramento (por exemplo, para fins fiscais ou de defesa em processos). O usuário pode excluir a conta a qualquer momento pelo aplicativo (Conta → Excluir minha conta) ou pela página pública de exclusão, respeitados os prazos legais de guarda que se apliquem ao caso.
+## 4. Permissões do celular
 
-## 7. Seus direitos, conforme a LGPD
+- **Localização:** no passageiro, durante o uso do aplicativo; no motorista, também com o aplicativo fechado enquanto estiver Disponível ou em corrida.
+- **Notificações:** avisos de corrida, chamados, mensagens e comunicados do serviço.
+- **Funcionamento em segundo plano:** no passageiro, para acompanhar a corrida e avisar você, sem coletar localização em segundo plano; no motorista, para receber chamados e manter a localização enquanto estiver Disponível ou em corrida.
+- **Câmera e imagens:** somente quando você escolhe tirar ou enviar uma foto.
+- **Somente no motorista — aparecer sobre outros aplicativos, tela cheia e manter o celular acordado:** para o chamado aparecer a tempo.
+- **Internet e vibração:** para o aplicativo se comunicar com o servidor e chamar a sua atenção.
 
-Você pode, a qualquer momento:
+## 5. Com quem os dados são compartilhados
 
-- confirmar a existência de tratamento dos seus dados;
-- acessar os dados que temos sobre você;
-- corrigir dados incompletos, inexatos ou desatualizados (pelo aplicativo, em Meus dados, ou pela Central);
-- solicitar a anonimização, o bloqueio ou a eliminação de dados desnecessários ou tratados em desacordo com a lei;
-- solicitar a portabilidade dos seus dados;
-- revogar o consentimento dado, quando aplicável;
-- se opor a um tratamento realizado com base em outra hipótese legal.
+**Entre passageiro e motorista:** o passageiro vê o nome, a foto, a nota, o veículo, a placa e a posição do motorista. O motorista vê o nome, a nota e os endereços da corrida. Para combinar o embarque ou resolver um objeto esquecido, um pode ver o telefone do outro durante a corrida e por até 24 horas depois do fim.
 
-Para exercer qualquer um desses direitos, escreva para ${EMAIL_CONTATO}, chame no WhatsApp ${WHATSAPP_CONTATO} ou use o aplicativo (Ajuda → Falar com a Central). Respondemos em até 15 dias. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).
+**Link "Compartilhar viagem":** quem receber o link vê o primeiro nome do motorista, o veículo, a placa, o embarque, o destino e a posição do carro, sem telefone. O link deixa de funcionar 30 minutos depois do fim da corrida. Envie-o somente a pessoas de confiança.
 
-## 8. Compartilhamento de dados
+**Equipe da Fortaleza Move:** a equipe autorizada da Central, incluindo os responsáveis pela Central de uma cidade quando houver, acessa os dados necessários para aprovar cadastros, atender, cuidar da segurança, da operação e das finanças.
 
-Compartilhamos apenas o necessário para a corrida acontecer: o passageiro vê o nome, a foto, a nota e o veículo do motorista; o motorista vê o nome, a nota e os endereços de embarque e destino do passageiro. Para combinarem o embarque ou resolverem um objeto esquecido, um pode ver o telefone do outro durante a corrida e por até 24 horas depois do fim dela. O link de "Compartilhar viagem" mostra o primeiro nome do motorista, o veículo, a placa, o embarque, o destino e a posição do carro, sem telefone de ninguém, e deixa de funcionar 30 minutos depois do fim da corrida. Fora isso, dados pessoais não são repassados a terceiros, exceto quando exigido por lei ou ordem judicial.
+**Fornecedores usados para o serviço funcionar:**
 
-## 9. Menores de idade
+- **Integrator Host:** hospedagem do servidor, do banco de dados e dos documentos.
+- **GitHub:** guarda as cópias de segurança do banco, criptografadas antes de saírem do servidor.
+- **Google:** envio de notificações pelo Firebase (o aviso pode conter dados da corrida e o texto de uma mensagem do chat), envio de e-mails pelo Gmail e, quando disponível, o Entrar com Google. O aplicativo também contém o componente do Google Maps; o mapa em uso na data desta versão é o da TomTom.
+- **Brevo:** serviço reserva para envio de e-mails.
+- **TomTom:** mapas, busca de endereços e rotas. Nas buscas e rotas feitas pelo servidor, enviamos o texto buscado ou as coordenadas, sem o seu nome. As imagens do mapa podem ser pedidas diretamente pelo celular, e então a TomTom recebe o endereço IP e a área do mapa consultada.
 
-O aplicativo não se destina a menores de 18 anos.
+**Serviços que você mesmo aciona:** ao escolher usar o WhatsApp, o Waze, o Google Maps ou o telefone, os dados que você enviar ou abrir passam a ser tratados também por esses serviços, conforme as regras deles.
 
-## 10. Alterações desta Política
+**Autoridades:** dados podem ser fornecidos quando houver obrigação legal ou ordem de autoridade competente, ou quando necessários para exercer direitos ou proteger a vida.
 
-Esta Política pode ser atualizada para refletir mudanças na forma como tratamos os dados. Mudanças relevantes são avisadas no aplicativo.
+## 6. Transferência internacional
+
+Alguns fornecedores são empresas estrangeiras ou usam servidores fora do Brasil, como os de hospedagem, cópia de segurança, notificações, e-mail e mapas. O endereço de rede do servidor da plataforma está registrado em nome de um provedor no Canadá. Por isso, os seus dados podem ser armazenados ou tratados fora do Brasil, na medida necessária para prestar o serviço que você pediu (art. 33, IX, combinado com o art. 7º, V, da LGPD) e para as demais finalidades permitidas pela lei. Você pode pedir mais informações pelo canal de privacidade.
+
+## 7. Cookies e dados de navegação
+
+- **Aplicativos:** guardam no celular as informações necessárias para manter você conectado e lembrar preferências.
+- **Páginas desta Política, de exclusão de conta e de download:** na data desta versão, não gravam cookies.
+- **Site move.fortalezadigitalsecurity.com.br:** não usa cookies nem ferramenta de análise de visitas. Ele usa o armazenamento do navegador para guardar textos e novidades públicas, lembrar que o aviso de instalação foi fechado e funcionar com internet ruim. O site é hospedado no GitHub Pages, busca conteúdo no Supabase e carrega uma biblioteca pela jsDelivr. Esses serviços recebem dados técnicos do acesso, como o endereço IP.
+- **Página do link "Compartilhar viagem":** carrega a biblioteca do mapa pelo serviço unpkg, que recebe dados técnicos do acesso, como o endereço IP.
+- **Registros do servidor:** o servidor registra acessos (por exemplo, IP, data, hora e endereço acessado) para segurança e correção de falhas.
+
+## 8. Segurança
+
+- A comunicação entre os aplicativos e o servidor usa conexão criptografada (HTTPS).
+- Senhas são guardadas somente em forma embaralhada, e os códigos de acesso vencem em poucos minutos.
+- Há limites para tentativas e pedidos repetidos.
+- Fotos e documentos só abrem com login. A CNH, o CRLV, o comprovante de residência, a certidão e as demais fotos de documentos são abertos pelo próprio motorista e pela equipe da Central; a foto de perfil e a foto da frente do veículo podem ser vistas por outros usuários conectados.
+- A cópia de segurança diária do banco é criptografada.
+
+Nenhum sistema é totalmente livre de riscos. Em caso de incidente de segurança, serão feitas as comunicações exigidas pela LGPD.
+
+## 9. Por quanto tempo guardamos
+
+- **Conta, cadastro, documentos e fotos:** enquanto a conta ou o cadastro de motorista existir. Veja no item 10 o que acontece na exclusão.
+- **Histórico de corridas e entregas, registros financeiros, avaliações, mensagens do chat, alertas de SOS, registros administrativos e registros de pedidos de código de acesso:** na data desta versão, **não há exclusão automática por prazo**. São mantidos para o histórico, a segurança, as obrigações legais e a defesa de direitos. Você pode pedir a eliminação do que não precisar mais ser guardado.
+- **Avisos da caixa de entrada do aplicativo:** apagados automaticamente após 30 dias.
+- **Registros de acesso do servidor na internet:** substituídos em rodízio diário, mantidos por cerca de 14 dias. Outros registros técnicos são substituídos conforme o limite de tamanho.
+- **Cópia de segurança diária:** ficam as 7 cópias mais recentes. Um dado apagado continua nelas até serem substituídas. Antes de manutenções que limpam a base, o sistema também pode guardar até 3 cópias internas no próprio banco de dados.
+
+## 10. Como excluir a conta e os dados
+
+**Pelo aplicativo:**
+
+- **Passageiro:** Conta → Excluir minha conta.
+- **Motorista:** Menu → Cadastro → Excluir minha conta.
+
+**Pela internet, sem precisar do aplicativo:** https://api.fortalezadigitalsecurity.com.br/api/conta/exclusao — o pedido é atendido pela equipe em até 7 dias, e podemos confirmar que a conta é sua. Também é possível pedir pelo canal de privacidade.
+
+A mesma conta pode ser usada como passageiro e como motorista. **A exclusão feita pelo aplicativo ou pelo pedido na internet encerra os dois perfis.** Ela não é feita enquanto houver corrida em andamento (nem, no caso do passageiro, corrida agendada). O saldo que restar na carteira do motorista é perdido: peça o saque antes.
+
+**São apagados do cadastro:** nome, telefone, e-mail, CPF, data de nascimento, senha, foto de perfil, endereços salvos, motoristas salvos, contatos de emergência e as sessões e aparelhos da conta. Para o motorista, também o cadastro de motorista, a CNH, as fotos de documentos, os veículos, a carteira, o extrato, os saques, a última posição, os períodos disponíveis e os chamados.
+
+**Podem continuar guardados:** o histórico de corridas e entregas (com endereços, coordenadas, horários e valores), ligado a um cadastro sem o seu nome ou sem o vínculo com o motorista; as mensagens do chat e os comentários de avaliação, **com o texto que foi escrito**; alertas de SOS, com a localização; registros administrativos, que podem conter, por exemplo, dados do veículo ou o contato informado num pedido de exclusão; os registros de pedidos de código (e-mail ou telefone, IP e horário); os avisos da caixa de entrada, até o prazo de 30 dias; os registros do servidor e as cópias de segurança, pelos prazos do item 9. Quando a conta não tem nenhum histórico, o cadastro é removido por inteiro, mas registros de acesso e cópias de segurança seguem os mesmos prazos.
+
+Para pedir a eliminação ou a anonimização do que continuou guardado, use o canal de privacidade. Vamos analisar o pedido e manter somente o que a lei permitir (art. 16 da LGPD), explicando o motivo.
+
+## 11. Seus direitos
+
+Pela LGPD (art. 18), você pode pedir:
+
+- a confirmação de que tratamos seus dados;
+- o acesso aos dados;
+- a correção de dados incompletos, errados ou desatualizados;
+- a anonimização, o bloqueio ou a eliminação de dados desnecessários, excessivos ou tratados em desacordo com a lei;
+- a portabilidade dos dados, nos termos da regulamentação;
+- a eliminação dos dados tratados com o seu consentimento, observadas as exceções da lei;
+- a informação sobre com quem os dados foram compartilhados;
+- a informação sobre a possibilidade de não consentir e o que acontece nesse caso;
+- a revogação do consentimento.
+
+Você também pode se opor a um tratamento feito em desacordo com a lei. Parte dos dados pode ser corrigida no próprio aplicativo, em **Meus dados**. Para os demais pedidos, escreva para ${EMAIL_CONTATO} ou chame no WhatsApp ${WHATSAPP_CONTATO}. Podemos pedir informações para confirmar a sua identidade. Os pedidos são atendidos manualmente; a declaração completa de acesso aos dados é fornecida em até 15 dias, como prevê o art. 19. Você também pode apresentar reclamação à Agência Nacional de Proteção de Dados (ANPD).
+
+## 12. Menores de idade
+
+Os aplicativos são destinados a maiores de 18 anos. Não há verificação automática de idade no cadastro do passageiro. No cadastro do motorista, os dados e documentos passam pela análise da Central. Se você souber que um menor criou uma conta, avise pelo canal de privacidade para que ela seja analisada e encerrada.
+
+## 13. Mudanças nesta Política
+
+Esta Política pode ser atualizada quando o serviço ou a lei mudar. A data da última atualização aparece no começo do texto, e a versão em vigor fica disponível nos aplicativos e no endereço https://api.fortalezadigitalsecurity.com.br/api/legal/privacidade.
 
 ---
 
-Ao tocar em "Aceito os Termos", você declara ter lido e concordado com esta Política de Privacidade e com os Termos de Uso.
+Ao tocar em "Aceito os Termos", você declara ter lido esta Política de Privacidade e concordado com os Termos de Uso.
 `;

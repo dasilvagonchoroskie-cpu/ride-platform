@@ -72,6 +72,8 @@ export function pagina(titulo: string, corpo: string): string {
   header { background: #1e5bb8; color: #fff; padding: 18px 16px; }
   header strong { font-size: 18px; }
   main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  /* Enderecos compridos quebram a linha em vez de alargar a pagina no celular. */
+  p, li { overflow-wrap: anywhere; }
   .cartao { background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 18px; margin: 14px 0; }
   h1 { font-size: 24px; } h2 { font-size: 19px; margin-top: 26px; } h3 { font-size: 16px; }
   label { display:block; font-weight: 600; margin: 12px 0 6px; }
