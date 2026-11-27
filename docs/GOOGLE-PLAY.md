@@ -1,149 +1,156 @@
-# Google Play — o que falta para publicar (Etapa 7, 30/10/2026)
+# Google Play — guia de publicação (atualizado em 26/11/2026)
 
-Vale para o **passageiro** (`br.com.fortalezamov.passageiro`) e o
-**motorista** (`br.com.fortalezamov.motorista`). A **Central**
-(`com.rideplatform.central_app`) fica fora da loja (só a equipe usa).
+| App | Nome na loja | Pacote (não muda depois do primeiro envio) |
+|---|---|---|
+| Passageiro | Fortaleza Move | `br.com.fortalezadigitalsecurity.move.passageiro` |
+| Motorista | Fortaleza Move Motorista | `br.com.fortalezadigitalsecurity.move.motorista` |
 
-Quem faz: **[E]** Evandro · **[C]** Claude · **[S]** sócio/advogado.
-Situação: ✅ pronto · ⏳ falta.
+A **Central** (`com.rideplatform.central_app`) fica fora da loja (só a equipe usa).
+
+Quem faz: **[E]** Evandro · **[C]** Claude.
 
 ---
 
-## 0. Decisão de 11/11/2026 e prazo (Requisição 1)
+## 1. Conta e prazo
 
-- Evandro decidiu: conta **pessoal, no CPF** (sem CNPJ por enquanto).
-  Abrir a conta fica para as últimas etapas, mas **atenção ao calendário**:
-  conta pessoal criada depois de 13/11/2023 só publica depois de um **teste
-  fechado com pelo menos 12 testadores, inscritos sem parar por 14 dias**, e
-  depois o Google analisa o pedido de produção (normalmente até **7 dias**).
-- Conta nova (verificação de identidade, alguns dias) + 14 dias de teste +
-  até 7 dias de análise ≈ **3 a 4 semanas**. Com o prazo de menos de um mês,
-  a conta e o teste fechado precisam começar **logo**, não no fim.
+- Conta **pessoal**. Conta pessoal criada depois de 13/11/2023 só publica
+  depois de um **teste fechado com pelo menos 12 testadores, inscritos sem
+  parar por 14 dias**; depois o Google analisa o pedido de produção
+  ([fonte](https://support.google.com/googleplay/android-developer/answer/14151465?hl=pt-BR)).
 - Os 12 testadores: pessoas reais com conta Google (motoristas, família,
-  amigos), que instalam pela loja (link do teste fechado) e usam o app de
-  vez em quando nesses 14 dias.
-- O item 1 abaixo (CNPJ, D-U-N-S, conta de organização) fica para quando
-  houver CNPJ; a conta pessoal pode passar para empresa depois.
+  amigos), que instalam pelo link do teste e usam o app nesses 14 dias.
 
-Materiais já prontos (Requisição 1, item 10):
+## 2. Ordem no Play Console
 
-| O quê | Onde |
+1. **[E]** Criar os dois apps (Create app — "Criar app"): idioma Português
+   (Brasil), tipo App, Grátis.
+2. **[E+C]** Preencher **Conteúdo do app** (App content) com as respostas da
+   seção 4.
+3. **[E+C]** Preencher a **Página da loja** (Store listing) com a seção 3.
+4. **[E]** Enviar o AAB primeiro no **Teste interno** (Internal testing).
+   Aceitar a **assinatura de apps do Google Play** (Play App Signing).
+5. **[E]** Abrir o **Teste fechado** (Closed testing) com os testadores.
+6. **[E]** Depois dos 14 dias, pedir **acesso à produção**.
+
+## 3. Página da loja
+
+| O quê | Onde está |
 |---|---|
 | Ícone 512 × 512 | `apps/mobile_passenger/loja/icone-512.png`, `apps/mobile_driver/loja/icone-512.png` |
-| Recurso gráfico 1024 × 500 (marinho e dourado) | `apps/*/loja/recurso-grafico.png` (gerado por `scripts/gerar-recurso-grafico.py`) |
-| Textos da loja (curto e completo), categoria e respostas | `docs/loja/TEXTOS-DA-LOJA.md` |
-| Segurança dos dados (rascunho) | seção 8 abaixo |
-| Pacote AAB assinado | a esteira `android-apks.yml` gera junto com o APK |
+| Recurso gráfico 1024 × 500 | `apps/*/loja/recurso-grafico.png` |
+| Textos curto e completo, categoria | `docs/loja/TEXTOS-DA-LOJA.md` |
+| Capturas de tela (mínimo 2 por app) | ⏳ tirar no celular, sem dados de pessoas reais |
+| E-mail de suporte | fortalezamovegtba@gmail.com |
 
-Fonte do teste fechado: [Requisitos de teste para contas pessoais novas (Google)](https://support.google.com/googleplay/android-developer/answer/14151465?hl=pt-BR).
+## 4. Conteúdo do app
 
-## 1. Conta de desenvolvedor (antes de tudo)
+| Pergunta | Resposta |
+|---|---|
+| Política de privacidade | `https://api.fortalezadigitalsecurity.com.br/api/legal/privacidade` |
+| Excluir a conta (link fora do app) | `https://api.fortalezadigitalsecurity.com.br/api/conta/exclusao` |
+| Excluir a conta dentro do app | Passageiro: Conta → Excluir minha conta. Motorista: Menu → Cadastro → Excluir minha conta |
+| Anúncios | Não tem |
+| Público-alvo | 18 anos ou mais |
+| Classificação indicativa (IARC) | Sem violência e sem jogos; usuários se comunicam; o app compartilha a localização |
+| Acesso ao app (App access) | Exige login. Informar as contas de revisão (item 5) |
+| Localização em segundo plano (`ACCESS_BACKGROUND_LOCATION`) | Não é pedida |
+| Outras declarações (recursos financeiros, saúde, governo) | Conferir cada uma na tela; o dinheiro da corrida não passa pela plataforma |
 
-| # | O quê | Quem | Situação |
+### 4.1 Serviço em primeiro plano (Foreground service — "Serviço em primeiro plano")
+
+A loja pede uma descrição e um **vídeo curto** para cada tipo
+([fonte](https://support.google.com/googleplay/android-developer/answer/13392821)).
+Textos em inglês, prontos para colar.
+
+**Motorista — Location:**
+
+> When the driver taps "Available", the app starts a foreground service with a
+> persistent notification. It sends the driver's location so nearby ride
+> requests can be offered and the passenger can see the car approaching. It
+> keeps working with the screen off and stops when the driver goes offline.
+
+Vídeo: ficar Disponível → mostrar o aviso fixo → apagar a tela → chegar um
+chamado → ficar Offline e o aviso sumir.
+
+**Passageiro — Data sync:**
+
+> After the passenger requests a ride, a foreground service with a persistent
+> notification keeps fetching the ride status from our server, so the passenger
+> is alerted when a driver accepts, arrives, sends a message or the ride ends.
+> It is started by the user's request and stops when the ride ends.
+
+Vídeo: pedir corrida → minimizar → mostrar o aviso fixo → motorista aceita e
+chega (avisos) → corrida termina e o aviso some.
+
+Se o Google recusar o tipo "sincronização de dados" no passageiro, o plano B é
+tirar esse serviço e usar só o aviso push (já ligado). Exige teste em celular
+antes.
+
+### 4.2 Tela cheia (Full-screen intent) e janela sobre outros apps (só motorista)
+
+- Declarar que o uso é a **chamada de corrida** com tempo para aceitar. Não
+  marcar o app como app de ligação ou de alarme. Para os demais apps, o
+  Android 14+ não garante a permissão sozinho: o app confere e leva o
+  motorista até o ajuste ([fonte](https://source.android.com/docs/core/permissions/fsi-limits)).
+- **Aparecer sobre outros apps:** explicar na análise que serve para o chamado
+  abrir por cima do GPS ou de outro app.
+
+> Drivers are usually using a navigation app or have the phone locked. A new
+> ride request has only a few seconds to be accepted, so the app shows a
+> full-screen request with a swipe-to-accept button.
+
+## 5. Contas para o Google testar
+
+O código está pronto e **desligado por padrão** (variável `OTP_CONTAS_REVISAO`
+no servidor, formato `e-mail=código,e-mail=código`). Vale só para os e-mails
+da lista, só para passageiro e motorista, nunca para a Central. Falta criar as
+duas contas (passageiro e motorista aprovado, com veículo), gravar a variável
+no servidor e copiar e-mail e código para o formulário. O valor nunca vai para
+o repositório. **[C com o OK do E]**
+
+## 6. Segurança dos dados (Data safety — rascunho para conferir)
+
+| Dado | Coleta? | Para quê | Observação |
 |---|---|---|---|
-| 1.1 | **CNPJ** da empresa que vai ser dona dos apps | E | ⏳ |
-| 1.2 | **Número D-U-N-S** da empresa (grátis, pela Dun & Bradstreet; pode levar **até 28 dias**). Nome e endereço precisam ser **iguais** aos do CNPJ | E | ⏳ |
-| 1.3 | Conta no **Google Play Console** como **organização** (taxa única de US$ 25), com o D-U-N-S, e-mail e telefone de contato da empresa e o site (o domínio do item 2) | E | ⏳ |
-| 1.4 | Verificação de identidade do Google (documento do responsável) | E | ⏳ |
+| Nome, e-mail, telefone | sim | conta e contato na corrida | Durante a corrida e por até 24 h depois, uma ponta pode ver o telefone da outra |
+| CPF, data de nascimento | sim | identidade e maioridade | |
+| CNH, documentos, certidão de antecedentes e fotos do carro (motorista) | sim | aprovação do cadastro | |
+| Foto de perfil | opcional | identificação | |
+| Localização precisa | sim | achar motorista, rota, acompanhar a corrida | TomTom calcula rota e endereço |
+| Endereços (origem, destino, salvos) | sim | pedir e repetir corridas | |
+| Mensagens da corrida | sim | conversa entre as pontas | |
+| Histórico de corridas e entregas | sim | recibo, suporte, segurança | |
+| Contatos de emergência (opcional) | sim | avisar em caso de SOS | |
+| Quem recebe a entrega (nome, telefone) | sim, só em entregas | entregar e confirmar | |
+| Identificador de aviso (push) | sim | avisos da corrida | Google Firebase |
+| Dados de pagamento | **não** | pagamento direto ao motorista | |
 
-Por que organização: a conta **pessoal** criada depois de 13/11/2023 precisa
-de um teste fechado com 12 testadores por 14 dias antes de publicar; a de
-organização não. E a loja, os contratos e a cobrança ficam no nome da
-empresa (docs/CONTAS.md).
+Marcar: dados criptografados no envio — **sim**; a pessoa pode pedir a
+exclusão — **sim**. Prestadores de serviço (hospedagem, e-mail, aviso, mapa)
+tratam os dados em nome da plataforma; conferir na tela a definição de
+"compartilhamento" do Google antes de responder.
 
-## 2. Domínio próprio apontando para o Render
+## 7. Exigências técnicas
 
-| # | O quê | Quem | Situação |
-|---|---|---|---|
-| 2.1 | Registrar o domínio (ex.: `fortalezamove.com.br`) no **Registro.br**, já no CNPJ. Tem taxa anual: confira o valor na tela antes de pagar | E | ⏳ |
-| 2.2 | No servidor (VPS): configurar `api.<domínio>` no Nginx (arquivo `api`) e emitir o certificado HTTPS | C (com o domínio pronto) | ⏳ |
-| 2.3 | No Registro.br: DNS → registro **A** `api` → IP do servidor (VPS) (eu mando o passo a passo com os valores na hora) | E | ⏳ |
-| 2.4 | Apps passam a chamar `https://api.<domínio>` e o teste de ponta a ponta roda no endereço novo | C | ⏳ |
+| O quê | Situação |
+|---|---|
+| Pacote **AAB** assinado | a esteira `android-apks.yml` gera junto com o APK |
+| Alvo **Android 16 (API 36)** ([fonte](https://developer.android.com/google/play/requirements/target-sdk)) | a esteira confere no APK pronto |
+| Bibliotecas nativas alinhadas em **16 KB** | a esteira confere no APK pronto |
+| Assinatura: a chave dos APKs vira a **chave de envio**; o Google guarda a chave do app | guardar uma cópia do `.jks` fora do GitHub |
+| Número da versão | sobe sozinho a cada montagem |
 
-Por que: hoje os apps chamam `api.fortalezadigitalsecurity.com.br`, que aponta para o servidor (VPS). Com domínio próprio, dá para trocar de servidor **sem atualizar o app na loja**: basta apontar o DNS.
+## 8. Verificação de desenvolvedor do Android
 
-## 3. Páginas públicas que a loja pede
+Desde **30/09/2026**, no Brasil, apps instalados pelas lojas participantes
+precisam estar registrados em nome de um desenvolvedor verificado
+([fonte](https://android-developers.googleblog.com/2026/06/android-developer-verification.html)).
+Conferir no Play Console o registro dos dois pacotes e também o da **Central**
+(fora da loja), com a impressão digital da assinatura
+([perguntas](https://developer.android.com/developer-verification/guides/faq)).
 
-| # | O quê | Quem | Situação |
-|---|---|---|---|
-| 3.1 | **Política de privacidade** em página de internet: `<servidor>/api/legal/privacidade` (com o domínio: `https://api.<domínio>/api/legal/privacidade`) | C | ✅ no ar, conferida em todo teste de ponta a ponta |
-| 3.2 | **Excluir a conta pela internet** (a loja exige link fora do app): `<servidor>/api/conta/exclusao` | C | ✅ no ar, conferida em todo teste de ponta a ponta |
-| 3.3 | Excluir a conta **dentro do app** (Conta → Excluir minha conta) | C | ✅ |
-| 3.4 | Revisão do texto dos Termos e da Política (inclui o item 7-A de entregas, **TEXTO PROVISÓRIO**) e nome/CNPJ/endereço do controlador dos dados | S | ⏳ |
+## 9. Depois (não trava a publicação)
 
-## 4. Ficha da loja (Store listing — "Página da loja")
-
-| # | O quê | Quem | Situação |
-|---|---|---|---|
-| 4.1 | Nome no celular e na loja (até 30 letras): "Fortaleza Move" e "Fortaleza Move Motorista" | C | ✅ (a esteira confere o nome dentro do APK) |
-| 4.2 | Ícone 512 × 512 | C | ⏳ sai do símbolo novo (`loja/icone-512.png`, gerado pelo `scripts/gerar-icones.py`) |
-| 4.3 | **Recurso gráfico** (feature graphic) 1024 × 500, obrigatório | C | ⏳ faço com o símbolo novo e a cor #0070B8 |
-| 4.4 | Capturas de tela do celular (mínimo 2 por app) | C | ⏳ tiro no Android de teste do GitHub, sem dados de pessoas reais |
-| 4.5 | Descrição curta (até 80 letras) e completa (até 4.000) | C escreve, E aprova | ⏳ |
-| 4.6 | Categoria: **Mapas e navegação** (passageiro e motorista) | E aprova | ⏳ |
-| 4.7 | E-mail de suporte (obrigatório; de preferência no domínio próprio) | E | ⏳ |
-
-## 5. Conteúdo do app (App content — "Conteúdo do app")
-
-| # | O quê | Quem | Situação |
-|---|---|---|---|
-| 5.1 | **Segurança dos dados** (Data safety): rascunho das respostas na seção 8 | C rascunho, S confere | ⏳ |
-| 5.2 | **Classificação indicativa** (questionário IARC): sem violência, sem jogos; marca que usuários se comunicam e que o app **compartilha a localização** | E responde (eu digo o que marcar) | ⏳ |
-| 5.3 | **Público-alvo**: 18 anos ou mais (a conta já exige 18 anos) | E | ⏳ |
-| 5.4 | **Anúncios**: "não tem anúncios" | E | ⏳ |
-| 5.5 | **Acesso ao app** (App access): o Google precisa entrar no app. **Código pronto (13/11/2026), desligado por padrão:** variável `OTP_CONTAS_REVISAO` no Render (formato `e-mail=código,e-mail=código`; código só de dígitos, do tamanho do código normal). Vale só para e-mail da lista, só entrada por e-mail, só passageiro/motorista (nunca a Central), mantém o limite de 6 pedidos por hora e não envia e-mail. Falta: **você autorizar** criar as duas contas de revisão (passageiro e motorista aprovado, com carro) e gravar a variável no Render (o valor fica só lá; nunca no repositório nem no chat) e copiar e-mail/código para o formulário | C | 🟡 código pronto, falta autorização e variável |
-| 5.6 | **Serviço em primeiro plano** (Foreground service): o motorista usa *localização* (receber chamados e seguir a corrida com a tela apagada); o passageiro usa *sincronização de dados*. A loja pede descrição e um **vídeo curto** mostrando o uso | C escreve e grava no Android de teste; E envia | ⏳ |
-| 5.7 | Localização em segundo plano | — | ✅ não pedimos `ACCESS_BACKGROUND_LOCATION` (só o serviço em primeiro plano, com aviso fixo na tela) |
-| 5.8 | Outras declarações que aparecerem (ex.: recursos financeiros, saúde, governo): todas "não" | E | ⏳ |
-
-## 6. Exigências técnicas
-
-| # | O quê | Quem | Situação |
-|---|---|---|---|
-| 6.1 | Pacote da loja **AAB** assinado | C | ✅ a esteira gera junto com o APK (passageiro e motorista) |
-| 6.2 | Alvo **Android 16 (API 36)** — obrigatório para app novo e atualização desde 31/08/2026 | C | ✅ a esteira confere no APK pronto |
-| 6.3 | Bibliotecas nativas alinhadas em **16 KB** | C | ✅ a esteira confere no APK pronto |
-| 6.4 | Assinatura: a mesma chave dos APKs vira a **chave de envio** (upload key); o Google guarda a chave do app (Play App Signing). Segredos `ANDROID_*` do GitHub + cópia do .jks fora do GitHub | C | ✅ (perder a chave = não atualiza mais) |
-| 6.5 | **Desligar o modo teste do código de entrada** (`OTP_DEBUG_RETURN` no `api.env` do servidor; estava ligado desde o começo, sem SMS). Ligado, conta só com telefone (sem e-mail) recebe o código **na tela**: na loja, qualquer pessoa entraria nessas contas. Antes de desligar: e-mail funcionando e as contas de revisão do item 5.5 (variável `OTP_CONTAS_REVISAO`) testadas em celular | C | ⏳ **obrigatório antes de publicar** |
-| 6.6 | Primeira versão pelo **teste interno** (Internal testing — "Teste interno", até 100 pessoas), depois produção | E + C | ⏳ |
-
-## 7. Verificação de desenvolvedor do Android (regra nova de 2026)
-
-- Desde **30/09/2026**, no Brasil, apps instalados pelas lojas participantes
-  (Google Play, Samsung Galaxy Store, Xiaomi e outras) precisam estar
-  registrados em nome de um desenvolvedor verificado. Os apps publicados
-  pela conta do Play Console entram nesse registro.
-- **APK instalado direto** (como os que eu mando aqui no chat): segundo a
-  página de perguntas do Google, a regra **ainda não vale** ("won't apply to
-  your app yet"); a expansão para o mundo todo está prevista para **2027**.
-- **A fazer [C+E]:** quando a conta do Play Console existir, registrar
-  também o pacote da **Central** (`com.rideplatform.central_app`, fora da
-  loja) e, se houver, os pacotes dos apps de outros operadores, cada um com a
-  impressão digital da assinatura. Sem isso, em 2027 esses APKs só instalam
-  pelo modo avançado do celular (ativa uma vez e espera 1 dia) ou por cabo
-  (adb).
-
-## 8. Rascunho da "Segurança dos dados" (para o sócio conferir)
-
-| Dado | Coleta? | Para quê | Compartilha com terceiros? |
-|---|---|---|---|
-| Nome, e-mail, telefone | sim, obrigatório | conta, contato na corrida | não (o motorista vê o primeiro nome do passageiro e vice-versa, dentro do serviço) |
-| CPF, CNH, fotos de documentos e do carro (motorista) | sim, obrigatório para motorista | aprovação do cadastro | não |
-| Localização precisa | sim | buscar motorista, rota, acompanhar a corrida; motorista: receber chamados | **TomTom** recebe os pontos para calcular rota e endereço (sem nome nem telefone) |
-| Endereços (origem, destino, salvos, recentes) | sim | pedir e repetir corridas | TomTom (busca do endereço) |
-| Histórico de corridas e entregas | sim | recibo, suporte, segurança | não |
-| Dados de quem recebe a entrega (nome, telefone) | sim, só em entregas | entregar e confirmar com o código | não |
-| Identificador do aparelho para aviso (push) | sim | avisos de corrida | Google Firebase (só entrega o aviso) |
-| Dados de pagamento | **não** (pagamento direto ao motorista; nenhum cartão no app) | — | — |
-
-Marcar também: dados **criptografados no envio** (HTTPS) — sim; o usuário
-pode **pedir a exclusão** — sim (no app e pela página do item 3.2).
-
----
-
-Fontes (consultadas em 30/10/2026):
-[Exigência de API alvo (Google)](https://support.google.com/googleplay/android-developer/answer/11926878) ·
-[Verificação de desenvolvedor — perguntas (Google)](https://developer.android.com/developer-verification/guides/faq) ·
-[Verificação de desenvolvedor — junho/2026 (blog Android)](https://android-developers.googleblog.com/2026/06/android-developer-verification.html) ·
-[D-U-N-S grátis (Dun & Bradstreet)](https://www.dnb.com/en-us/smb/duns/get-a-duns.html) ·
-conta de organização e 12 testadores: fonte em docs/CONTAS.md.
+- Conta de organização, quando houver CNPJ (pede número D-U-N-S).
+- Domínio próprio da marca, para trocar de servidor sem atualizar o app.
+- Revisão dos Termos e da Política por um advogado.
