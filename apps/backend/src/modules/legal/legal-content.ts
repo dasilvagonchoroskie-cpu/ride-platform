@@ -138,10 +138,14 @@ Não vendemos dados pessoais a terceiros e não usamos anúncios.
 
 Os dados e os documentos ficam no banco de dados da plataforma, com acesso restrito: documentos do motorista só são vistos pelo próprio motorista e pela equipe da Central responsável pela análise do cadastro. Senhas são guardadas de forma cifrada (nunca em texto). Para funcionar, a plataforma usa estes serviços, que tratam dados apenas para prestar o serviço contratado:
 
-- **Render** (servidor) e **Supabase** (banco de dados), com servidores nos Estados Unidos — a transferência internacional segue o art. 33 da LGPD, com cláusulas de proteção de dados desses fornecedores;
-- **Google Firebase** (envio de notificações ao celular) e **Google/Gmail** (envio dos códigos de acesso por e-mail);
+- **Integrator Host** (hospedagem do servidor da plataforma, onde ficam o banco de dados e os documentos);
+- **GitHub** (guarda a cópia de segurança do banco, criptografada antes de sair do servidor);
+- **Google Firebase** (envio de notificações ao celular) e serviços de envio de e-mail para os códigos de acesso (**Google/Gmail** e, como reserva, **Brevo**);
 - **TomTom** (mapa, busca de endereço e rotas: recebe coordenadas e o texto buscado, sem o nome do usuário; as imagens do mapa são pedidas pelo próprio celular);
+- **Google Maps**, quando o mapa do Google está ligado no aplicativo (o próprio celular pede ao Google as imagens do mapa);
 - **WhatsApp**, somente quando o próprio usuário escolhe compartilhar a viagem, o recibo ou falar com a Central.
+
+Alguns desses serviços podem tratar dados fora do Brasil (transferência internacional, art. 33 da LGPD).
 
 ## 4. Como protegemos os dados
 
@@ -181,7 +185,7 @@ Para exercer qualquer um desses direitos, escreva para ${EMAIL_CONTATO}, chame n
 
 ## 8. Compartilhamento de dados
 
-Compartilhamos apenas o necessário para a corrida acontecer: o passageiro vê o nome, a foto, a nota e o veículo do motorista; o motorista vê o nome, a nota e os endereços de embarque e destino do passageiro. O link de "Compartilhar viagem" mostra o primeiro nome do motorista, o veículo, a placa, o embarque, o destino e a posição do carro, sem telefone de ninguém, e deixa de funcionar 30 minutos depois do fim da corrida. Fora isso, dados pessoais não são repassados a terceiros, exceto quando exigido por lei ou ordem judicial.
+Compartilhamos apenas o necessário para a corrida acontecer: o passageiro vê o nome, a foto, a nota e o veículo do motorista; o motorista vê o nome, a nota e os endereços de embarque e destino do passageiro. Para combinarem o embarque ou resolverem um objeto esquecido, um pode ver o telefone do outro durante a corrida e por até 24 horas depois do fim dela. O link de "Compartilhar viagem" mostra o primeiro nome do motorista, o veículo, a placa, o embarque, o destino e a posição do carro, sem telefone de ninguém, e deixa de funcionar 30 minutos depois do fim da corrida. Fora isso, dados pessoais não são repassados a terceiros, exceto quando exigido por lei ou ordem judicial.
 
 ## 9. Menores de idade
 
