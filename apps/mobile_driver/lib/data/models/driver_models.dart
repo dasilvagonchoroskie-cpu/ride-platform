@@ -52,6 +52,7 @@ class DriverProfile {
     this.totalRides = 0,
     this.acceptanceRate = 100,
     this.termsAccepted = false,
+    this.termosDesatualizados = false,
     this.avatarUrl,
   });
 
@@ -72,6 +73,9 @@ class DriverProfile {
   /// o aplicativo mostra a tela de aceite antes de qualquer outra coisa
   /// — inclusive antes do cadastro do veiculo.
   final bool termsAccepted;
+
+  /// Aceitou uma versao anterior dos textos (quem diz e o servidor).
+  final bool termosDesatualizados;
 
   /// Foto de perfil aprovada (a que o passageiro ve), no formato /arquivos/ID.
   final String? avatarUrl;
@@ -120,6 +124,7 @@ class DriverProfile {
         'totalRides': totalRides,
         'acceptanceRate': acceptanceRate,
         'termsAccepted': termsAccepted,
+        'termosDesatualizados': termosDesatualizados,
         'avatarUrl': avatarUrl,
       };
 
@@ -140,6 +145,7 @@ class DriverProfile {
         totalRides: (json['totalRides'] as num?)?.toInt() ?? 0,
         acceptanceRate: (json['acceptanceRate'] as num?)?.toInt() ?? 100,
         termsAccepted: json['termsAccepted'] as bool? ?? false,
+        termosDesatualizados: json['termosDesatualizados'] as bool? ?? false,
         avatarUrl: json['avatarUrl'] as String?,
       );
 
@@ -153,6 +159,7 @@ class DriverProfile {
     DriverApproval? approval,
     bool? isOnline,
     bool? termsAccepted,
+    bool? termosDesatualizados,
     double? rating,
     int? totalRides,
     int? acceptanceRate,
@@ -172,6 +179,7 @@ class DriverProfile {
         totalRides: totalRides ?? this.totalRides,
         acceptanceRate: acceptanceRate ?? this.acceptanceRate,
         termsAccepted: termsAccepted ?? this.termsAccepted,
+        termosDesatualizados: termosDesatualizados ?? this.termosDesatualizados,
         avatarUrl: avatarUrl ?? this.avatarUrl,
       );
 }
@@ -428,25 +436,26 @@ class ParadaDaCorrida {
 /// Fases da corrida do ponto de vista do motorista.
 enum RidePhase { toPickup, waitingPassenger, inProgress, completed }
 
+/// O que aconteceu ao deslizar INICIAR VIAGEM. A cidade pode pedir o codigo
+/// de embarque: quem sabe e confere e o servidor (o app nunca recebe o codigo).
+enum InicioDaViagem { iniciou, pedeCodigo, codigoRecusado, falhou }
+
 class DriverRide {
   const DriverRide({
     required this.offer,
     required this.phase,
-    required this.pin,
     required this.startedAt,
     this.finishedAt,
   });
 
   final RideOffer offer;
   final RidePhase phase;
-  final String pin;
   final String startedAt;
   final String? finishedAt;
 
   DriverRide copyWith({RidePhase? phase, String? finishedAt, RideOffer? offer}) => DriverRide(
         offer: offer ?? this.offer,
         phase: phase ?? this.phase,
-        pin: pin,
         startedAt: startedAt,
         finishedAt: finishedAt ?? this.finishedAt,
       );
@@ -455,7 +464,6 @@ class DriverRide {
         'offerId': offer.id,
         'code': offer.code,
         'phase': phase.name,
-        'pin': pin,
         'startedAt': startedAt,
         'finishedAt': finishedAt,
         'earningCents': offer.earningCents,
@@ -491,7 +499,6 @@ class DriverRide {
           (p) => p.name == json['phase'],
           orElse: () => RidePhase.toPickup,
         ),
-        pin: json['pin'] as String? ?? '0000',
         startedAt: json['startedAt'] as String? ?? DateTime.now().toIso8601String(),
         finishedAt: json['finishedAt'] as String?,
       );
