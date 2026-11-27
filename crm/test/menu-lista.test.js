@@ -87,3 +87,16 @@ test('fila de envio: lista só para o número de teste e, se a lista falhar, o m
   await wa.desligar();
   db.close();
 });
+
+test('Flash demorou demais: responde com o Lite', async () => {
+  const usados = [];
+  const f = async (url, o) => {
+    if (url.endsWith('/models')) return { ok: true, status: 200, json: async () => ({ data: [{ id: 'gemini-3.8-flash' }, { id: 'gemini-3.5-flash-lite' }] }) };
+    const m = JSON.parse(o.body).model; usados.push(m);
+    if (m === 'gemini-3.8-flash') { const e = new Error('abortada'); e.name = 'AbortError'; throw e; }
+    return { ok: true, status: 200, json: async () => ({ model: m, choices: [{ message: { content: 'OK' } }] }) };
+  };
+  const p = criarProvedorOpenAI({ id: 'gemini', obterChave: () => 'chave-de-teste-exclusiva-002', obterModelo: () => '', urlBase: PROVEDORES.gemini.urlBase, fetchImpl: f, esperaRepetir: 0 });
+  assert.equal((await p.completar({ system: 's', user: 'u' })).modelo, 'gemini-3.5-flash-lite');
+  assert.deepEqual(usados, ['gemini-3.8-flash', 'gemini-3.5-flash-lite']);
+});
