@@ -25,6 +25,7 @@ export class AppConfigService {
       mail: this.config.get('mail') as AppConfiguration['mail'],
       fcm: this.config.get('fcm') as AppConfiguration['fcm'],
       maps: this.config.get('maps') as AppConfiguration['maps'],
+      googleLogin: this.config.get('googleLogin') as AppConfiguration['googleLogin'],
       payments: this.config.get('payments') as AppConfiguration['payments'],
       business: this.config.get('business') as AppConfiguration['business'],
     };
@@ -92,6 +93,10 @@ export class AppConfigService {
 
   get fcm(): AppConfiguration['fcm'] {
     return this.root.fcm;
+  }
+
+  get googleLogin(): AppConfiguration['googleLogin'] {
+    return this.root.googleLogin;
   }
 
   get maps(): AppConfiguration['maps'] {
