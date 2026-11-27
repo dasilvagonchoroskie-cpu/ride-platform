@@ -274,9 +274,10 @@ export class AdminCentralController {
     @Body(new ZodValidationPipe(z.object({ note: z.string().trim().max(300).default('') }))) body: { note: string },
   ) {
     const e = await this.prisma.safetyEvent.findUnique({ where: { id }, select: { latitude: true, longitude: true } });
-    if (e?.latitude != null && e.longitude != null) {
-      await this.pracas.exigirAcesso(user, (await this.pracas.doPonto({ latitude: e.latitude, longitude: e.longitude }))?.id ?? null);
-    }
+    // Sem localizacao o alerta nao e de nenhuma cidade: so o dono encerra.
+    const ponto =
+      e?.latitude != null && e.longitude != null ? { latitude: e.latitude, longitude: e.longitude } : null;
+    await this.pracas.exigirAcesso(user, ponto ? ((await this.pracas.doPonto(ponto))?.id ?? null) : null);
     return this.central.resolverSos(user.id, id, body.note);
   }
 }
