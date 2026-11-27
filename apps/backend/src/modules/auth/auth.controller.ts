@@ -27,6 +27,7 @@ import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-
 import { getClientIp, getUserAgent } from '../../common/utils/request.util';
 import { AuthService, AuthResult, DesafioDoisFatores, Genero } from './auth.service';
 import { DoisFatoresService } from './dois-fatores';
+import { GoogleLoginService, PrecisaDoCodigo } from './google-login.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 
 const generoSchema = z.enum(['FEMININO', 'MASCULINO', 'OUTRO', 'NAO_INFORMAR'], {
@@ -46,7 +47,7 @@ const cadastroSchema = z.object({
   email: emailSchema,
   gender: generoSchema,
   cpf: cpfSchema,
-  password: passwordSchema,
+  password: passwordSchema.optional(),
   city: cidadeSchema.optional(),
   phone: phoneSchema.optional(),
   codigoEmail: z.string().trim().regex(/^\d{6}$/, 'O codigo tem 6 numeros.').optional(),
@@ -80,6 +81,12 @@ const redefinirSchema = z
   })
   .refine((d) => Boolean(d.phone) !== Boolean(d.email), { message: 'Informe o telefone ou o e-mail.', path: ['phone'] });
 
+const googleSchema = z.object({
+  idToken: z.string().min(100).max(4096),
+  role: z.enum([UserRole.PASSENGER, UserRole.DRIVER]),
+  device: deviceInfoSchema.optional(),
+});
+
 /** Os mesmos dados que o app mandou no cadastro de motorista. */
 const vinculoSchema = z.object({
   email: z.string().trim().toLowerCase().email().optional(),
@@ -94,6 +101,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly doisFatores: DoisFatoresService,
+    private readonly google: GoogleLoginService,
   ) {}
 
   @Public()
@@ -134,6 +142,22 @@ export class AuthController {
       device: body.device
         ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) }
         : undefined,
+    });
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Entrar com Google (passageiro e motorista): o servidor confere o comprovante do Google' })
+  entrarComGoogle(
+    @Body(new ZodValidationPipe(googleSchema)) body: { idToken: string; role: UserRole; device?: DeviceInfoInput },
+    @Req() req: Request,
+  ): Promise<AuthResult | PrecisaDoCodigo> {
+    return this.google.entrar({
+      idToken: body.idToken,
+      role: body.role,
+      device: body.device ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) } : undefined,
     });
   }
 
@@ -189,7 +213,7 @@ export class AuthController {
       email: string;
       gender: Genero;
       cpf: string;
-      password: string;
+      password?: string;
       city?: string;
       phone?: string;
       codigoEmail?: string;
