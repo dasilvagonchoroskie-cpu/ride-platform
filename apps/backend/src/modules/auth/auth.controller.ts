@@ -6,7 +6,6 @@ import {
   loginPasswordSchema,
   logoutSchema,
   refreshTokenSchema,
-  registerPasswordSchema,
   requestOtpSchema,
   verifyOtpSchema,
   acceptTermsSchema,
@@ -134,21 +133,6 @@ export class AuthController {
       device: body.device
         ? { ...body.device, ip: getClientIp(req), userAgent: getUserAgent(req) }
         : undefined,
-    });
-  }
-
-  @Public()
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @Post('password/register')
-  @ApiOperation({ summary: 'Cadastro com telefone e senha' })
-  register(
-    @Body(new ZodValidationPipe(registerPasswordSchema))
-    body: { phone: string; name: string; email?: string; password: string },
-    @Req() req: Request,
-  ): Promise<AuthResult> {
-    return this.auth.registerWithPassword({
-      ...body,
-      device: { deviceId: 'web', platform: 'WEB' as never, ip: getClientIp(req), userAgent: getUserAgent(req) },
     });
   }
 
