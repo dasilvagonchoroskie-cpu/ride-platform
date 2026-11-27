@@ -67,6 +67,9 @@ export const envSchema = z.object({
   FCM_CLIENT_EMAIL: z.string().optional(),
   FCM_PRIVATE_KEY: z.string().optional(),
 
+  /** "Entrar com Google": codigo do cliente "Aplicativo da Web" (nao e segredo). Vazio = desligado. */
+  GOOGLE_LOGIN_CLIENT_ID: z.string().optional(),
+
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   GOOGLE_MAPS_CACHE_TTL: z.coerce.number().int().positive().default(300),
 
