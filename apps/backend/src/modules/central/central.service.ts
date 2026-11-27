@@ -14,6 +14,8 @@ import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de
 import { DadosPessoaisService } from './dados-pessoais.service';
 import { PedidosExclusaoService } from './pedidos-exclusao.service';
 import { encerrarComercios } from '../comercio/comercio.conta';
+import { SessoesService } from '../auth/sessoes.service';
+import { corridasAbertasDoPassageiro } from '../conta/corridas-abertas';
 import { motoristasEmSos, servicoDa, servicosDasCorridas } from '../comercio/comercio.servico';
 import { ehEntrega } from '../entregas/entregas.regras';
 
@@ -64,6 +66,7 @@ export class CentralService {
     private readonly push: PushService,
     private readonly exclusoes: PedidosExclusaoService,
     private readonly caixa: CaixaDeEntradaService,
+    private readonly sessoes: SessoesService,
   ) {}
 
   // ================= Visao geral =================
@@ -288,7 +291,7 @@ export class CentralService {
       // Sem destino informado pelo motorista: vai pelo taximetro (etapa 3).
       semDestino: !input.dropoff,
       paymentMethodType: 'CASH',
-    } as never);
+    } as never, { semCodigoDeEmbarque: true });
     const rideId = (criada as { ride: { id: string } }).ride.id;
     await this.prisma.rideStatusHistory.create({
       data: { rideId, status: RideStatus.REQUESTED, actorId: userId, actorRole: UserRole.DRIVER, note: 'Corrida manual lancada pelo motorista.' },
@@ -336,7 +339,7 @@ export class CentralService {
       paymentMethodType: input.paymentMethodType,
       category: input.category,
       scheduledFor: input.scheduledFor,
-    } as never);
+    } as never, { semCodigoDeEmbarque: true });
     const rideId = (criada as { ride: { id: string } }).ride.id;
     await this.prisma.rideStatusHistory.create({
       data: { rideId, status: RideStatus.REQUESTED, actorId: adminId, actorRole: UserRole.ADMIN, note: 'Corrida criada pela Central.' },
@@ -717,20 +720,7 @@ export class CentralService {
     if (!u || u.deletedAt) throw BusinessException.notFound('Passageiro nao encontrado (ja excluido?).');
     if (u.role === UserRole.ADMIN) throw BusinessException.validation(`${u.name}: conta da Central nao sai aqui.`);
     if (u.driver) throw BusinessException.validation(`${u.name} tambem e motorista: exclua pela aba Motoristas.`);
-    const emCorrida = await this.prisma.ride.count({
-      where: {
-        passengerId: userId,
-        status: {
-          notIn: [
-            RideStatus.COMPLETED,
-            RideStatus.CANCELLED_BY_PASSENGER,
-            RideStatus.CANCELLED_BY_DRIVER,
-            RideStatus.CANCELLED_BY_SYSTEM,
-            RideStatus.EXPIRED,
-          ],
-        },
-      },
-    });
+    const emCorrida = await corridasAbertasDoPassageiro(this.prisma, userId);
     if (emCorrida > 0) throw BusinessException.conflict(`${u.name} tem corrida em andamento ou agendada.`);
     // Quarto aplicativo: o cadastro da loja nao trava a exclusao nem guarda dados da pessoa.
     await encerrarComercios(this.prisma, [userId], {}, (m) => this.logger.warn(m));
@@ -759,6 +749,7 @@ export class CentralService {
         await tx.device.deleteMany({ where: { userId } });
         await tx.userAddress.deleteMany({ where: { userId } });
         await tx.paymentMethod.deleteMany({ where: { userId } });
+        await tx.notification.deleteMany({ where: { userId } });
         await tx.user.update({
           where: { id: userId },
           data: {
@@ -779,6 +770,7 @@ export class CentralService {
         });
       });
     }
+    this.sessoes.esquecer(userId);
     await this.prisma.auditLog.create({
       data: {
         actorId: papel === UserRole.ADMIN ? adminId : null,

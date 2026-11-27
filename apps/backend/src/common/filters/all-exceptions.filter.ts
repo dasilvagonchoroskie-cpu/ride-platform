@@ -9,6 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { ERROR_CODES, ErrorCode } from '@ride/shared';
 import { Request, Response } from 'express';
+import { caminhoParaRegistro, linhasDeSeguranca } from './registro-de-seguranca';
 
 interface ErrorPayload {
   success: false;
@@ -31,9 +32,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        `${request.method} ${request.url} -> ${status} ${message}`,
+        `${request.method} ${caminhoParaRegistro(request.url)} -> ${status} ${message}`,
         exception instanceof Error ? exception.stack : undefined,
       );
+    }
+
+    // Recusas dos guardas de acesso nao passam pelo registro normal: anota aqui.
+    const conta = (request as Request & { user?: { id?: string } }).user?.id;
+    for (const linha of linhasDeSeguranca({ status, codigo: code, metodo: request.method, url: request.url, ip: request.ip, conta })) {
+      this.logger.warn(linha);
     }
 
     const payload: ErrorPayload = {

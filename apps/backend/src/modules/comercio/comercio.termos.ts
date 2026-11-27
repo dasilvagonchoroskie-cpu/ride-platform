@@ -14,9 +14,9 @@
  * A versão abaixo é gravada junto do cadastro da loja (comercios.termos_versao).
  * Mudança relevante no texto exige subir a versão.
  */
-export const COMERCIO_TERMS_VERSION = '0.1.0-minuta';
+export const COMERCIO_TERMS_VERSION = '0.2.0-minuta';
 
-const OPERADORA = 'Fortaleza Digital Security (Goiatuba – GO, CNPJ em registro)';
+const OPERADORA = 'Evandro da Silva Gonchoroski, pessoa física que usa a marca Fortaleza Digital Security (Goiatuba – GO)';
 const EMAIL_CONTATO = 'fortalezamovegtba@gmail.com';
 
 export const COMERCIO_TERMS_MD = `# Termos de Uso e Condições Comerciais — Fortaleza Move Comércio
@@ -95,7 +95,7 @@ Podemos atualizar estes termos. Mudanças relevantes terão nova versão e novo 
 
 ### Pontos para validação externa (equipe — não faz parte do texto aceito)
 
-1. Razão social, CNPJ e endereço da operadora (ainda em registro).
+1. A operadora é hoje pessoa física; ao abrir o CNPJ, trocar por razão social, CNPJ e endereço.
 2. Limite de responsabilidade por dano/extravio e eventual seguro.
 3. Natureza do vínculo entre loja, plataforma e motorista; regras de entrega de produtos regulados (alimentos, medicamentos).
 4. Regras de cancelamento e de cobrança por entrega falha.

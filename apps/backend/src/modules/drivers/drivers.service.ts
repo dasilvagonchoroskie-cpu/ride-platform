@@ -3,6 +3,7 @@ import { regrasDaCarteira, semSaldo } from '../painel-motorista/regras-carteira'
 import { Injectable, Logger } from '@nestjs/common';
 import { ACTIVE_RIDE_STATUSES, ERROR_CODES, DriverStatus, DocumentStatus, REQUIRED_DRIVER_DOCUMENTS, UserRole, UserStatus, normalizePlate } from '@ride/shared';
 import { PrismaService } from '../../database/prisma.service';
+import { SessoesService } from '../auth/sessoes.service';
 import { Prisma } from '@prisma/client';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { CaixaDeEntradaService } from '../../integrations/notifications/caixa-de-entrada.service';
@@ -39,6 +40,7 @@ export class DriversService {
     private readonly pracas: PracasService,
     private readonly caixa: CaixaDeEntradaService,
     private readonly vehicles: VehiclesService,
+    private readonly sessoes: SessoesService,
   ) {}
 
   /** Onboarding do motorista: cria o registro e a carteira virtual. */
@@ -364,7 +366,7 @@ export class DriversService {
    * aprovado se a Central conferiu pessoalmente. O motorista so entra no
    * app do motorista com o telefone e o codigo.
    */
-  async adminCreate(adminId: string, input: CriarMotoristaInput) {
+  async adminCreate(adminId: string, input: CriarMotoristaInput, quem: { donoDaCentral?: boolean } = {}) {
     const existente = await this.prisma.user.findUnique({
       where: { phone: input.phone },
       include: { driver: { select: { id: true } } },
@@ -372,8 +374,22 @@ export class DriversService {
     if (existente?.role === UserRole.ADMIN) {
       throw BusinessException.conflict('Este telefone e da conta da Central.', ERROR_CODES.CONFLICT);
     }
+    // O cadastro preserva a situacao da conta.
+    if (existente && (existente.status === UserStatus.BLOCKED || existente.status === UserStatus.DELETED)) {
+      throw BusinessException.forbidden(
+        existente.status === UserStatus.BLOCKED
+          ? 'A conta deste telefone esta bloqueada. So o dono da Central pode desbloquear, antes do cadastro.'
+          : 'A conta deste telefone foi excluida e nao pode ser cadastrada.',
+      );
+    }
     if (existente?.driver) {
       throw BusinessException.conflict('Este telefone ja e de um motorista cadastrado.', ERROR_CODES.DRIVER_ALREADY_EXISTS);
+    }
+    // Em conta ja existente, so o dono inclui o e-mail.
+    if (existente && input.email && !existente.email && quem.donoDaCentral !== true) {
+      throw BusinessException.forbidden(
+        'Este telefone ja tem conta sem e-mail. So o dono da Central pode colocar um e-mail nela: peca ao dono para fazer este cadastro.',
+      );
     }
     if (existente?.cpf && existente.cpf !== input.cpf) {
       throw BusinessException.validation('O CPF informado e diferente do CPF da conta deste telefone.');
@@ -410,7 +426,7 @@ export class DriversService {
             where: { id: existente.id },
             data: {
               role: UserRole.DRIVER,
-              status: UserStatus.ACTIVE,
+              ...(existente.status === UserStatus.PENDING ? { status: UserStatus.ACTIVE } : {}),
               name: nome,
               cpf: input.cpf,
               birthDate: input.birthDate,
@@ -713,11 +729,15 @@ export class DriversService {
       throw BusinessException.conflict('Este motorista esta numa corrida agora. Espere a corrida terminar para excluir.');
     }
     const userId = d.userId;
-    const [corridas, comoPassageiro, pagamentos, avaliacoes] = await Promise.all([
+    const [corridas, comoPassageiro, pagamentos, avaliacoes, alertas, lojas] = await Promise.all([
       this.prisma.ride.count({ where: { driverId } }),
       this.prisma.ride.count({ where: { passengerId: userId } }),
       this.prisma.payment.count({ where: { payerId: userId } }),
       this.prisma.rating.count({ where: { OR: [{ authorId: userId }, { targetId: userId }] } }),
+      // O historico de SOS e preservado.
+      this.prisma.safetyEvent.count({ where: { userId } }),
+      // A conta pode ser tambem de uma loja.
+      this.prisma.comercio.count({ where: { userId } }).catch(() => 0),
     ]);
 
     let resultado: 'APAGADO' | 'ANONIMIZADO' | 'VIROU_PASSAGEIRO' = 'APAGADO';
@@ -729,10 +749,10 @@ export class DriversService {
         // jornadas, chamados e posicao. Corridas ficam, sem o motorista.
         await tx.driver.delete({ where: { id: driverId } });
 
-        if (comoPassageiro > 0 || cadastroDePassageiro) {
+        if (comoPassageiro > 0 || cadastroDePassageiro || lojas > 0) {
           await tx.user.update({ where: { id: userId }, data: { role: UserRole.PASSENGER } });
           resultado = 'VIROU_PASSAGEIRO';
-        } else if (pagamentos + avaliacoes === 0) {
+        } else if (pagamentos + avaliacoes + alertas === 0) {
           await tx.arquivo.deleteMany({ where: { ownerId: userId } });
           await tx.user.delete({ where: { id: userId } });
           resultado = 'APAGADO';
@@ -743,6 +763,8 @@ export class DriversService {
           await tx.refreshToken.deleteMany({ where: { userId } });
           await tx.device.deleteMany({ where: { userId } });
           await tx.userAddress.deleteMany({ where: { userId } });
+          await tx.paymentMethod.deleteMany({ where: { userId } });
+          await tx.notification.deleteMany({ where: { userId } });
           await tx.user.update({
             where: { id: userId },
             data: {
@@ -779,6 +801,7 @@ export class DriversService {
       },
       { timeout: 30_000 },
     );
+    this.sessoes.esquecer(userId);
 
     this.logger.log(`Motorista ${driverId} excluido pela Central (${resultado}, ${corridas} corrida(s)) por ${adminId}`);
     return { id: driverId, resultado, corridas };

@@ -7,6 +7,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { DriverApprovedGuard } from '../../common/guards/driver-approved.guard';
+import { PracasService } from '../pracas/pracas.service';
 import { RidesService } from './rides.service';
 import { PushService } from '../../integrations/notifications/push.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -43,6 +44,15 @@ const posicaoOpcional = z
   .partial()
   .transform((p) => (p.latitude != null && p.longitude != null ? { latitude: p.latitude, longitude: p.longitude } : undefined));
 
+/** Iniciar: a posicao (opcional) e o codigo de embarque que o passageiro disse. */
+export const inicioSchema = z
+  .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), codigoEmbarque: z.string().max(12) })
+  .partial()
+  .transform((p) => ({
+    onde: p.latitude != null && p.longitude != null ? { latitude: p.latitude, longitude: p.longitude } : undefined,
+    codigoEmbarque: p.codigoEmbarque,
+  }));
+
 const mensagemSchema = z.object({ texto: z.string().trim().min(1, 'Escreva a mensagem.').max(500, 'Mensagem muito longa.') });
 
 @ApiTags('Corridas - Passageiro')
@@ -51,7 +61,10 @@ const mensagemSchema = z.object({ texto: z.string().trim().min(1, 'Escreva a men
 @Roles(UserRole.PASSENGER, UserRole.DRIVER, UserRole.ADMIN)
 @Controller('rides')
 export class RidesController {
-  constructor(private readonly rides: RidesService) {}
+  constructor(
+    private readonly rides: RidesService,
+    private readonly pracas: PracasService,
+  ) {}
 
   @Post('estimate')
   @ApiOperation({ summary: 'Quanto custa a corrida antes de chamar (com cupom e horario agendado, se houver)' })
@@ -152,8 +165,16 @@ export class RidesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Detalhe de uma corrida (so de quem participa dela)' })
-  detail(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) rideId: string) {
-    return this.rides.acompanharDoPassageiro(user.id, user.role, rideId, user.driverId);
+  async detail(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) rideId: string) {
+    return this.rides.acompanharDoPassageiro(user.id, await this.papelNaCorrida(user, rideId), rideId, user.driverId);
+  }
+
+  /** Papel de quem consulta o detalhe da corrida, conforme a cidade. */
+  private async papelNaCorrida(user: AuthenticatedUser, rideId: string): Promise<AuthenticatedUser['role']> {
+    if (user.role !== UserRole.ADMIN) return user.role;
+    const minha = await this.pracas.escopoDe(user.id);
+    if (!minha || minha === (await this.pracas.pracaDaCorrida(rideId))) return user.role;
+    return UserRole.PASSENGER as AuthenticatedUser['role'];
   }
 
   @Post(':id/cancel')
@@ -261,9 +282,9 @@ export class DriverRidesController {
   async start(
     @CurrentUser('driverId') driverId: string,
     @Param('id') rideId: string,
-    @Body(new ZodValidationPipe(posicaoOpcional)) body: never,
+    @Body(new ZodValidationPipe(inicioSchema)) body: z.output<typeof inicioSchema>,
   ) {
-    const r = await this.rides.iniciar(driverId, rideId, body);
+    const r = await this.rides.iniciar(driverId, rideId, body.onde, body.codigoEmbarque);
     this.avisar(rideId, 'INICIOU');
     return r;
   }

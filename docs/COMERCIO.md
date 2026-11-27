@@ -139,7 +139,7 @@ não existem na plataforma e não foram inventados.
 
 ## Termos de uso e condições comerciais
 
-Texto em `apps/backend/src/modules/comercio/comercio.termos.ts` (versão `0.1.0-minuta`), servido em
+Texto em `apps/backend/src/modules/comercio/comercio.termos.ts` (versão `0.2.0-minuta`), servido em
 `/legal/comercio` (JSON) e `/legal/termos-comercio` (página). Estrutura: identificação e responsabilidades da
 loja, aprovação e disponibilidade, responsabilidades da entrega, preço/pagamento/gastos, cancelamento, dados
 pessoais (LGPD), limitações da plataforma, suspensão, mudanças e contato.
@@ -147,10 +147,10 @@ pessoais (LGPD), limitações da plataforma, suspensão, mudanças e contato.
 **É uma minuta técnica, NÃO aprovada por advogado.** O app mostra essa faixa na tela dos termos. O cadastro
 só é aceito com o aceite marcado (o servidor também recusa sem `aceiteTermos`) e grava versão e data do
 aceite. A Central mostra a versão aceita no detalhe da loja. Para validação externa (lista também no fim do
-arquivo): dados da operadora (CNPJ em registro), limite de responsabilidade por dano/extravio e seguro,
+arquivo): dados da operadora (hoje pessoa física; trocar quando houver CNPJ), limite de responsabilidade por dano/extravio e seguro,
 vínculo loja–plataforma–motorista e produtos regulados, regras de cancelamento/cobrança em entrega falha,
-papéis na LGPD e retenção, foro, nota fiscal. Pendente de decisão: novo aceite quando a versão mudar (hoje o
-aceite é no cadastro).
+papéis na LGPD e retenção, foro, nota fiscal. Quando a versão muda, o app pede o aceite de novo na abertura
+(guardado no aparelho; o servidor registra a versão aceita no cadastro).
 
 ## Pagamento e gastos
 

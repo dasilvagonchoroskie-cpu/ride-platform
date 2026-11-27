@@ -21,7 +21,10 @@ export const createAddressSchema = z.object({
   longitude: coordinatesSchema.shape.longitude,
 });
 
-export const updateAddressSchema = createAddressSchema.partial();
+// Sem o valor padrao do apelido: alterar so o complemento nao muda o nome do endereco.
+export const updateAddressSchema = createAddressSchema.partial().extend({
+  label: z.string().trim().min(1).max(40).optional(),
+});
 
 export const blockUserSchema = z.object({
   blocked: z.boolean(),

@@ -30,6 +30,11 @@ export interface Praca {
    * (padrao) ou 'google' (quando houver a chave do Google no servidor).
    */
   fonteBusca?: 'tomtom' | 'google';
+  /**
+   * Corrida pelo app so inicia com o codigo de embarque do passageiro. Sem o
+   * campo (cidade antiga) vale ligado.
+   */
+  exigirCodigoEmbarque?: boolean;
 }
 
 export const CHAVE_PRACAS = 'pracas';
@@ -44,6 +49,7 @@ export const PRACA_PADRAO: Praca = {
   raioKm: 60,
   ativa: true,
   whatsapp: null,
+  exigirCodigoEmbarque: true,
 };
 
 export function codigoDaPraca(nome: string, uf: string): string {
@@ -75,6 +81,7 @@ export function lerListaDePracas(valor: unknown): Praca[] {
       ativa: p.ativa !== false,
       whatsapp: typeof p.whatsapp === 'string' && p.whatsapp ? p.whatsapp : null,
       fonteBusca: p.fonteBusca === 'google' ? 'google' : 'tomtom',
+      exigirCodigoEmbarque: p.exigirCodigoEmbarque !== false,
     });
   }
   return lista.length > 0 ? lista : [PRACA_PADRAO];

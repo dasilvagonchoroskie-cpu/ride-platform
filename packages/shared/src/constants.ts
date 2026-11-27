@@ -57,6 +57,11 @@ export const ERROR_CODES = {
 
   RIDE_NOT_FOUND: 'RIDE_NOT_FOUND',
   RIDE_INVALID_STATE: 'RIDE_INVALID_STATE',
+  /** A cidade pede o codigo de embarque para iniciar a viagem. */
+  BOARDING_CODE_REQUIRED: 'BOARDING_CODE_REQUIRED',
+  BOARDING_CODE_INVALID: 'BOARDING_CODE_INVALID',
+  /** Erros demais: pausa ou bloqueio do codigo desta corrida. */
+  BOARDING_CODE_LOCKED: 'BOARDING_CODE_LOCKED',
   NO_DRIVER_AVAILABLE: 'NO_DRIVER_AVAILABLE',
 
   PAYMENT_FAILED: 'PAYMENT_FAILED',

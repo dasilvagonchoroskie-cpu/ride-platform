@@ -110,7 +110,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Solicita codigo OTP por SMS ou e-mail' })
   requestOtp(
-    @Body(new ZodValidationPipe(requestOtpSchema)) body: { phone?: string; email?: string; purpose: string },
+    @Body(new ZodValidationPipe(requestOtpSchema))
+    body: { phone?: string; email?: string; purpose: string; device?: DeviceInfoInput },
     @Req() req: Request,
     @Headers('x-chave-teste') chaveTeste?: string,
   ) {
@@ -118,6 +119,7 @@ export class AuthController {
       { phone: body.phone, email: body.email, purpose: body.purpose as never },
       getClientIp(req),
       chaveTeste,
+      body.device?.deviceId,
     );
   }
 
@@ -133,6 +135,7 @@ export class AuthController {
     @Headers('x-chave-teste') chaveTeste?: string,
   ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.verifyOtp({
+      ip: getClientIp(req),
       chaveTeste,
       phone: body.phone,
       email: body.email,
@@ -172,6 +175,7 @@ export class AuthController {
     @Req() req: Request,
   ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.loginWithPassword({
+      ip: getClientIp(req),
       phone: body.phone,
       email: body.email,
       password: body.password,
@@ -192,6 +196,7 @@ export class AuthController {
     @Req() req: Request,
   ): Promise<AuthResult | DesafioDoisFatores> {
     return this.auth.redefinirSenha({
+      ip: getClientIp(req),
       phone: body.phone,
       email: body.email,
       code: body.code,
@@ -218,8 +223,9 @@ export class AuthController {
       phone?: string;
       codigoEmail?: string;
     },
+    @Req() req: Request,
   ) {
-    return this.auth.concluirCadastro(user.id, body);
+    return this.auth.concluirCadastro(user.id, body, getClientIp(req));
   }
 
   @ApiBearerAuth()
@@ -239,8 +245,9 @@ export class AuthController {
       endereco?: string;
       codigoEmail?: string;
     },
+    @Req() req: Request,
   ) {
-    return this.auth.atualizarPerfil(user.id, body);
+    return this.auth.atualizarPerfil(user.id, body, getClientIp(req));
   }
 
   @Public()
@@ -385,6 +392,7 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Patch('password')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Troca a senha do usuario autenticado' })

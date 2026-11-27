@@ -18,6 +18,7 @@ import { HistoricoDeDestinos } from './destinos';
 import { PushService } from '../../integrations/notifications/push.service';
 import { AppConfigService } from '../../config/app-config.service';
 import { assinarCotacao, lerCotacao } from './cotacao';
+import { cidadePedeCodigo, conferirCodigoDeEmbarque, exigeCodigoDeEmbarque } from './codigo-de-embarque';
 import { EntregasService } from '../entregas/entregas.service';
 import { CODIGO_ENTREGA, codigoDaEntrega, ehEntrega, veiculosDaCidade } from '../entregas/entregas.regras';
 import { MAX_ENTREGAS_POR_PEDIDO } from '../entregas/entregas.service';
@@ -407,7 +408,13 @@ export class RidesService {
   async pedir(
     passengerId: string,
     input: RequestRideInput,
-    opcoes: { varias?: boolean; paradasDeEntrega?: boolean; aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void> } = {},
+    opcoes: {
+      varias?: boolean;
+      paradasDeEntrega?: boolean;
+      aoCriar?: (tx: Prisma.TransactionClient, rideId: string) => Promise<void>;
+      /** Lancada pelo motorista ou pela Central: o passageiro pode nao ter o app para ver o codigo. */
+      semCodigoDeEmbarque?: boolean;
+    } = {},
   ) {
     const jaTem = opcoes.varias
       ? null
@@ -475,13 +482,17 @@ export class RidesService {
       ? await validarCupom(this.prisma, passengerId, input.couponCode, orcamento.totalCents)
       : null;
 
+    // Codigo de embarque: so nas corridas de passageiro pedidas pelo app, nas
+    // cidades que pedem (entrega usa o codigo proprio dela).
+    const comCodigo = !entrega && !opcoes.semCodigoDeEmbarque && (await cidadePedeCodigo(this.prisma, input.pickup));
+
     const corrida = await this.prisma.withTransaction(async (tx) => {
       const criada = await tx.ride.create({
         data: {
           code: await this.codigoUnico(tx),
-          // PIN de embarque: o passageiro diz ao motorista, que confere
-          // antes de iniciar — garante que entrou a pessoa certa.
-          pin: generateNumericCode(4),
+          // O passageiro diz ao motorista, que digita para iniciar —
+          // garante que entrou a pessoa certa.
+          pin: comCodigo ? generateNumericCode(4) : null,
           passengerId,
           status: agendadaPara ? RideStatus.SCHEDULED : RideStatus.REQUESTED,
           scheduledFor: agendadaPara,
@@ -918,8 +929,8 @@ export class RidesService {
           actorRole: UserRole.DRIVER,
         },
       });
-      const pin = (await tx.ride.findUnique({ where: { id: rideId }, select: { pin: true } }))?.pin ?? null;
-      return { ok: true, rideId, pin };
+      // O codigo de embarque nunca vai para o motorista.
+      return { ok: true, rideId };
     });
   }
 
@@ -965,9 +976,10 @@ export class RidesService {
     return this.detalhe(rideId);
   }
 
-  async iniciar(driverId: string, rideId: string, onde?: { latitude: number; longitude: number }) {
+  async iniciar(driverId: string, rideId: string, onde?: { latitude: number; longitude: number }, codigoEmbarque?: string) {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.IN_PROGRESS);
+    await conferirCodigoDeEmbarque(this.prisma, corrida, driverId, codigoEmbarque);
     await this.gravarSeNaoMudou(this.prisma, rideId, [corrida.status], driverId, {
       status: RideStatus.IN_PROGRESS,
       startedAt: new Date(),
@@ -1768,11 +1780,14 @@ export class RidesService {
             (quem.papel === UserRole.DRIVER ? r.targetDriverId == null : r.targetDriverId != null),
         )?.score ?? null)
       : null;
-    const { ratings: _notas, stops: paradas, entrega: daEntrega, ...semNotas } = corrida;
+    const { ratings: _notas, stops: paradas, entrega: daEntrega, pin: codigoDeEmbarque, ...semNotas } = corrida;
     // Entrega: o codigo so vai para o cliente e a Central (o motorista pede a
     // quem recebe). Sem saber quem pergunta, trata como motorista.
     const quemVe: 'cliente' | 'motorista' | 'central' =
       quem?.papel === UserRole.ADMIN ? 'central' : quem && quem.userId === corrida.passengerId ? 'cliente' : 'motorista';
+    // Codigo de embarque: o cliente (e a Central) so veem enquanto a cidade
+    // pede; o motorista nunca.
+    const pedeCodigo = await exigeCodigoDeEmbarque(this.prisma, corrida);
     // Foto do carro (de frente): a do carro desta corrida (carro cadastrado
     // depois, conferido pela Central) ou a que o motorista mandou nos documentos.
     const fotoDoCarro = corrida.vehicleId
@@ -1808,6 +1823,9 @@ export class RidesService {
       ride: {
         ...semNotas,
         ...(semTelefone && semNotas.passenger ? { passenger: { ...semNotas.passenger, phone: null } } : {}),
+        // Sem codigo o campo nao vai (os apps ja instalados leriam "null").
+        ...(pedeCodigo && quemVe !== 'motorista' ? { pin: codigoDeEmbarque } : {}),
+        exigeCodigoEmbarque: pedeCodigo,
         driver,
         driverPosition,
         minhaNota,
@@ -1956,7 +1974,8 @@ export class RidesService {
       total,
       page: filtro.page,
       pageSize: filtro.pageSize,
-      items: itens,
+      // O historico do motorista tambem traz a corrida aberta: sem o codigo.
+      items: papel === UserRole.DRIVER ? itens.map(({ pin: _codigo, ...resto }) => resto) : itens,
       /** Taxa de aceitacao, cancelamentos e nota (so com periodo, para o motorista). */
       performance: desempenho ?? null,
       /** Totais das concluidas no filtro: valor, taxa da Central e liquido. */

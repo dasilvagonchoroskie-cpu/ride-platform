@@ -16,21 +16,37 @@ import { codigoDaPraca } from './pracas.store';
 import type { Praca } from './pracas.store';
 import { SoDonoGuard } from './so-dono.guard';
 
-const pracaSchema = z.object({
+const camposDaPraca = {
   nome: z.string().trim().min(2).max(80),
   uf: z.string().trim().toUpperCase().length(2, 'UF com 2 letras (ex.: GO, RS).'),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-  raioKm: z.number().min(5).max(300).default(60),
-  ativa: z.boolean().default(true),
+  raioKm: z.number().min(5).max(300),
+  ativa: z.boolean(),
   whatsapp: z
     .string()
     .regex(/^\d{10,13}$/, 'WhatsApp so com numeros, com DDI e DDD.')
     .nullable()
     .optional(),
   /** Fonte da busca de endereco nesta cidade (etapa 3). */
-  fonteBusca: z.enum(['tomtom', 'google']).default('tomtom'),
+  fonteBusca: z.enum(['tomtom', 'google']),
+  /** A viagem so inicia com o codigo de embarque do passageiro. */
+  exigirCodigoEmbarque: z.boolean(),
+};
+
+/** Cidade nova: o que nao vier ganha o valor padrao. */
+export const pracaSchema = z.object({
+  ...camposDaPraca,
+  raioKm: camposDaPraca.raioKm.default(60),
+  ativa: camposDaPraca.ativa.default(true),
+  fonteBusca: camposDaPraca.fonteBusca.default('tomtom'),
+  exigirCodigoEmbarque: camposDaPraca.exigirCodigoEmbarque.default(true),
 });
+
+/**
+ * Alteracao: so muda o que veio (sem valores padrao).
+ */
+export const alterarPracaSchema = z.object(camposDaPraca).partial();
 
 const operadorSchema = z.object({
   name: nameSchema,
@@ -105,11 +121,11 @@ export class PracasController {
 
   @Patch('pracas/:id')
   @UseGuards(SoDonoGuard)
-  @ApiOperation({ summary: 'Altera a cidade (nome, centro, raio, WhatsApp, ligada)' })
+  @ApiOperation({ summary: 'Altera a cidade (nome, centro, raio, WhatsApp, ligada, codigo de embarque)' })
   async alterar(
     @CurrentUser('id') adminId: string,
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(pracaSchema.partial())) body: Partial<Omit<Praca, 'id'>>,
+    @Body(new ZodValidationPipe(alterarPracaSchema)) body: Partial<Omit<Praca, 'id'>>,
   ) {
     const lista = await this.pracas.listar();
     if (!lista.some((p) => p.id === id)) throw BusinessException.notFound('Cidade nao encontrada.');

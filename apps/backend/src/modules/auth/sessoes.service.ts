@@ -92,6 +92,11 @@ export class SessoesService {
     return estado;
   }
 
+  /** A conta mudou por fora do corte (ex.: exclusao): consulta o banco no proximo pedido. */
+  esquecer(userId: string): void {
+    this.cache.delete(userId);
+  }
+
   async acessoValido(userId: string, iat?: number, aparelho?: string | null): Promise<boolean> {
     return tokenValido(await this.estado(userId), iat, aparelho);
   }
