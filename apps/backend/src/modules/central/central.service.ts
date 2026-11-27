@@ -396,8 +396,9 @@ export class CentralService {
 
     const anterior = corrida.driverId;
     await this.prisma.withTransaction(async (tx) => {
-      await tx.ride.update({
-        where: { id: rideId },
+      // So troca se a corrida nao terminou, nao comecou e segue com quem foi lido.
+      const mudou = await tx.ride.updateMany({
+        where: { id: rideId, status: { in: ABERTAS.filter((s) => s !== RideStatus.IN_PROGRESS) }, driverId: corrida.driverId },
         data: {
           status: RideStatus.SEARCHING,
           driverId: null,
@@ -410,6 +411,7 @@ export class CentralService {
           category: ehEntrega(corrida.category) ? corrida.category : (motorista.vehicles[0]?.category ?? corrida.category),
         },
       });
+      if (mudou.count !== 1) throw BusinessException.validation('Esta corrida acabou de mudar. Atualize a tela.');
       if (anterior) {
         await tx.driverLocation.updateMany({ where: { driverId: anterior }, data: { isAvailable: true } });
       }
@@ -604,7 +606,7 @@ export class CentralService {
         ate.setMonth(ate.getMonth() + 1);
         await this.prisma.withTransaction(async (tx) => {
           const w = await tx.wallet.upsert({ where: { driverId: d.id }, update: {}, create: { driverId: d.id } });
-          const saldo = w.balanceCents - valor;
+          const { balanceCents: saldo } = await tx.wallet.update({ where: { id: w.id }, data: { balanceCents: { decrement: valor } } });
           await tx.walletTransaction.create({
             data: {
               walletId: w.id,
@@ -614,7 +616,6 @@ export class CentralService {
               description: `Mensalidade ate ${ate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`,
             },
           });
-          await tx.wallet.update({ where: { id: w.id }, data: { balanceCents: saldo } });
           await tx.driver.update({ where: { id: d.id }, data: { monthlyPaidUntil: ate } });
         });
       }
@@ -863,17 +864,29 @@ export class CentralService {
     if (p.status !== 'REQUESTED' && p.status !== 'PROCESSING') throw BusinessException.validation('Este saque ja foi decidido.');
     const valor = (p.amountCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace(/\u00a0/g, ' ');
     if (!pago) {
-      const r = await this.prisma.payout.update({
-        where: { id: payoutId },
+      const recusado = await this.prisma.payout.updateMany({
+        where: { id: payoutId, status: p.status },
         data: { status: 'FAILED', failureReason: motivo?.trim() || 'Recusado pela Central.', processedAt: new Date() },
       });
+      if (recusado.count !== 1) throw BusinessException.validation('Este saque ja foi decidido.');
+      const r = await this.prisma.payout.findUniqueOrThrow({ where: { id: payoutId } });
       await this.caixa.avisarMotorista(p.driverId, 'Saque recusado', `${valor}: ${r.failureReason}`, { tipo: 'saque', abrir: 'saques' });
       return r;
     }
     const feito = await this.prisma.withTransaction(async (tx) => {
+      // Marca o saque e depois debita.
+      const pego = await tx.payout.updateMany({
+        where: { id: payoutId, status: p.status },
+        data: { status: 'PAID', processedAt: new Date() },
+      });
+      if (pego.count !== 1) throw BusinessException.validation('Este saque ja foi decidido.');
       const w = await tx.wallet.upsert({ where: { driverId: p.driverId }, update: {}, create: { driverId: p.driverId } });
-      if (w.balanceCents < p.amountCents) throw BusinessException.validation('Saldo da carteira ficou menor que o saque.');
-      const saldo = w.balanceCents - p.amountCents;
+      const debitado = await tx.wallet.updateMany({
+        where: { id: w.id, balanceCents: { gte: p.amountCents } },
+        data: { balanceCents: { decrement: p.amountCents } },
+      });
+      if (debitado.count !== 1) throw BusinessException.validation('Saldo da carteira ficou menor que o saque.');
+      const { balanceCents: saldo } = await tx.wallet.findUniqueOrThrow({ where: { id: w.id } });
       await tx.walletTransaction.create({
         data: {
           walletId: w.id,
@@ -884,11 +897,10 @@ export class CentralService {
           description: `Saque PIX para ${p.pixKey ?? ''}`.slice(0, 200),
         },
       });
-      await tx.wallet.update({ where: { id: w.id }, data: { balanceCents: saldo } });
       await tx.auditLog.create({
         data: { actorId: adminId, actorRole: UserRole.ADMIN, action: 'SAQUE_PAGO', entity: 'payout', entityId: p.id },
       });
-      return tx.payout.update({ where: { id: payoutId }, data: { status: 'PAID', processedAt: new Date() } });
+      return tx.payout.findUniqueOrThrow({ where: { id: payoutId } });
     });
     await this.caixa.avisarMotorista(p.driverId, 'Saque pago', `A Central fez o PIX de ${valor}.`, { tipo: 'saque', abrir: 'saques' });
     return feito;
