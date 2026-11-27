@@ -145,8 +145,8 @@ class ComercioApi {
 
   // ---- Entrar ----
 
-  Future<void> pedirCodigo(String email) async {
-    await api.post('/auth/otp/request', {'email': email.trim().toLowerCase(), 'purpose': 'LOGIN'});
+  Future<void> pedirCodigo(String email, Map<String, dynamic> aparelho) async {
+    await api.post('/auth/otp/request', {'email': email.trim().toLowerCase(), 'purpose': 'LOGIN', 'device': aparelho});
   }
 
   Future<Map<String, dynamic>> entrarComCodigo(String email, String codigo, Map<String, dynamic> aparelho) async {
