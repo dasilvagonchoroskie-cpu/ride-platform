@@ -7,6 +7,9 @@ import { hashToken, randomNumericCode, safeCompare } from '../../common/utils/cr
 import { NotificationService } from '../../integrations/notifications/notification.service';
 import { NotificationChannel } from '@ride/shared';
 import { contaVaziaSemEmail } from './conta-existente';
+import { origemDoPedido } from './origem-do-pedido';
+import { reconhecerPedinte } from './pedinte-conhecido';
+import { LIMITE_DE_CODIGOS, reservarTentativaDeFora, umDeCadaVez } from './limites-de-codigo';
 
 /** Enderecos que somente os testes automaticos usam. */
 const DOMINIO_DE_TESTE = '@teste.fortalezamov.com.br';
@@ -96,40 +99,82 @@ export class OtpService {
     return `${nome.slice(0, 1)}•••@${dominio ?? ''}`;
   }
 
-  /** Cria e envia um novo codigo. Invalida codigos anteriores do mesmo alvo. */
+  /** Recusa o pedido quando algum teto da ultima hora (ou do dia) estourou. */
+  private async conferirLimites(
+    alvo: { phone: string } | { email: string },
+    origem?: string,
+    instalacao?: string,
+  ): Promise<void> {
+    const agora = Date.now();
+    const umaHora = { gte: new Date(agora - 60 * 60 * 1000) };
+    const contar = (where: Record<string, unknown>) => this.prisma.otpCode.count({ where: where as never });
+    const recusar = (mensagem: string) => {
+      throw BusinessException.tooManyRequests(mensagem, ERROR_CODES.OTP_COOLDOWN);
+    };
+    const daConta = 'Muitos codigos pedidos para esta conta. Entre com a sua senha, espere um pouco ou fale com a Central.';
+
+    // Sem a origem (chamada interna), vale o limite mais apertado pela conta.
+    const meus = await contar({ ...alvo, ...(origem ? { ip: origem } : {}), createdAt: umaHora });
+    if (meus >= LIMITE_DE_CODIGOS.porPessoaEContaNaHora) recusar(daConta);
+    if (!origem) return;
+    const umDia = { gte: new Date(agora - 24 * 60 * 60 * 1000) };
+    // Aparelho ou conexao que ja entrou na conta nao divide o teto com quem e de fora.
+    const conta = await this.prisma.user.findFirst({ where: alvo, select: { id: true } });
+    const { conhecido } = await reconhecerPedinte(this.prisma, conta?.id, { instalacao, origem });
+    if (conhecido) {
+      const meusNoDia = await contar({ ...alvo, ip: origem, createdAt: umDia });
+      if (meusNoDia >= LIMITE_DE_CODIGOS.porConhecidoNoDia) recusar(daConta);
+    } else {
+      if ((await contar({ ...alvo, createdAt: umaHora })) >= LIMITE_DE_CODIGOS.porContaNaHora) recusar(daConta);
+      if ((await contar({ ...alvo, createdAt: umDia })) >= LIMITE_DE_CODIGOS.porContaNoDia) recusar(daConta);
+    }
+    if ((await contar({ ip: origem, createdAt: umaHora })) >= LIMITE_DE_CODIGOS.porPessoaNaHora) {
+      recusar('Muitos codigos pedidos desta conexao. Espere um pouco e tente de novo.');
+    }
+  }
+
+  /**
+   * Cria e envia um novo codigo. Invalida os codigos anteriores que a mesma
+   * pessoa pediu para o mesmo telefone ou e-mail.
+   */
   async request(
     target: OtpTarget,
     ip?: string,
     chaveTeste?: string,
+    instalacao?: string,
   ): Promise<{ expiresIn: number; debugCode?: string; enviadoPor: 'email' | 'tela'; destino?: string }> {
     const { phone, email, purpose } = target;
+    const origem = origemDoPedido(ip);
+    const daMesmaOrigem = origem ? { ip: origem } : {};
     const fixo = await this.codigoDeRevisao(target);
     if (fixo) {
       // Conta de revisao: grava o codigo fixo (mesmas regras de validade e tentativas do
       // verify) e NAO envia e-mail nem devolve codigo na resposta. O limite de 6 pedidos
       // por hora continua valendo: sem ele, pedir codigo novo zeraria as tentativas e
       // daria para adivinhar o codigo fixo.
-      const umaHoraRev = new Date(Date.now() - 60 * 60 * 1000);
-      const pedidosRev = await this.prisma.otpCode.count({ where: { email, createdAt: { gte: umaHoraRev } } });
-      if (pedidosRev >= 6) {
-        throw BusinessException.tooManyRequests(
-          'Muitos codigos pedidos para esta conta. Espere uma hora ou fale com a Central.',
-          ERROR_CODES.OTP_COOLDOWN,
-        );
-      }
-      await this.prisma.$transaction([
-        this.prisma.otpCode.updateMany({ where: { email, purpose, consumedAt: null }, data: { consumedAt: new Date() } }),
-        this.prisma.otpCode.create({
-          data: {
-            email,
-            purpose,
-            codeHash: hashToken(fixo, this.pepper),
-            expiresAt: new Date(Date.now() + this.config.otp.ttlSeconds * 1000),
-            maxAttempts: this.config.otp.maxAttempts,
-            ip,
-          },
-        }),
-      ]);
+      await umDeCadaVez(`destino:${email}`, async () => {
+        const umaHoraRev = new Date(Date.now() - 60 * 60 * 1000);
+        const pedidosRev = await this.prisma.otpCode.count({ where: { email, createdAt: { gte: umaHoraRev } } });
+        if (pedidosRev >= 6) {
+          throw BusinessException.tooManyRequests(
+            'Muitos codigos pedidos para esta conta. Espere uma hora ou fale com a Central.',
+            ERROR_CODES.OTP_COOLDOWN,
+          );
+        }
+        await this.prisma.$transaction([
+          this.prisma.otpCode.updateMany({ where: { email, purpose, consumedAt: null }, data: { consumedAt: new Date() } }),
+          this.prisma.otpCode.create({
+            data: {
+              email,
+              purpose,
+              codeHash: hashToken(fixo, this.pepper),
+              expiresAt: new Date(Date.now() + this.config.otp.ttlSeconds * 1000),
+              maxAttempts: this.config.otp.maxAttempts,
+              ip: origem,
+            },
+          }),
+        ]);
+      });
       this.logger.warn(`Conta de revisao da loja pediu entrada (${this.mascararEmail(email!)}).`);
       return { expiresIn: this.config.otp.ttlSeconds, enviadoPor: 'email', destino: `e-mail ${this.mascararEmail(email!)}` };
     }
@@ -179,64 +224,54 @@ export class OtpService {
       );
     }
 
-    // Protecao da conta e do limite do Gmail (~100 por dia): no maximo 6
-    // codigos por hora para o mesmo telefone ou e-mail, venha de onde vier.
-    if (!teste) {
-      const umaHora = new Date(Date.now() - 60 * 60 * 1000);
-      const pedidos = await this.prisma.otpCode.count({
-        where: { ...(phone ? { phone } : { email }), createdAt: { gte: umaHora } },
-      });
-      if (pedidos >= 6) {
-        throw BusinessException.tooManyRequests(
-          'Muitos codigos pedidos para esta conta. Espere uma hora ou fale com a Central.',
-          ERROR_CODES.OTP_COOLDOWN,
-        );
-      }
-    }
-
     if (!phone && !email) {
       throw BusinessException.validation('Informe telefone ou e-mail.');
     }
 
-    const windowStart = new Date(Date.now() - 60 * 1000);
-    const recent = await this.prisma.otpCode.findFirst({
-      where: {
-        ...(phone ? { phone } : { email }),
-        purpose,
-        createdAt: { gte: windowStart },
-        consumedAt: null,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (recent) {
-      const seconds = Math.ceil((recent.createdAt.getTime() + 60000 - Date.now()) / 1000);
-      throw BusinessException.tooManyRequests(
-        `Aguarde ${seconds}s para solicitar um novo codigo.`,
-        ERROR_CODES.OTP_COOLDOWN,
-      );
-    }
-
     const code = randomNumericCode(this.config.otp.length);
     const expiresAt = new Date(Date.now() + this.config.otp.ttlSeconds * 1000);
+    const destinoDoCodigo = phone ? { phone } : { email: email! };
 
-    await this.prisma.$transaction([
-      this.prisma.otpCode.updateMany({
-        where: { ...(phone ? { phone } : { email }), purpose, consumedAt: null },
-        data: { consumedAt: new Date() },
-      }),
-      this.prisma.otpCode.create({
-        data: {
-          phone,
-          email,
-          purpose,
-          codeHash: hashToken(code, this.pepper),
-          expiresAt,
-          maxAttempts: this.config.otp.maxAttempts,
-          ip,
-        },
-      }),
-    ]);
+    // Conferir os limites e gravar acontecem em fila: primeiro a da origem,
+    // depois a do destino (sempre nesta ordem).
+    const conferirEGravar = () =>
+      umDeCadaVez(`destino:${phone ?? email}`, async () => {
+        // Protecao da conta e do limite de envio de e-mails.
+        if (!teste) await this.conferirLimites(destinoDoCodigo, origem, instalacao);
+
+        const windowStart = new Date(Date.now() - 60 * 1000);
+        const recent = await this.prisma.otpCode.findFirst({
+          where: { ...destinoDoCodigo, ...daMesmaOrigem, purpose, createdAt: { gte: windowStart }, consumedAt: null },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (recent) {
+          const seconds = Math.ceil((recent.createdAt.getTime() + 60000 - Date.now()) / 1000);
+          throw BusinessException.tooManyRequests(
+            `Aguarde ${seconds}s para solicitar um novo codigo.`,
+            ERROR_CODES.OTP_COOLDOWN,
+          );
+        }
+
+        await this.prisma.$transaction([
+          this.prisma.otpCode.updateMany({
+            where: { ...destinoDoCodigo, ...daMesmaOrigem, purpose, consumedAt: null },
+            data: { consumedAt: new Date() },
+          }),
+          this.prisma.otpCode.create({
+            data: {
+              phone,
+              email,
+              purpose,
+              codeHash: hashToken(code, this.pepper),
+              expiresAt,
+              maxAttempts: this.config.otp.maxAttempts,
+              ip: origem,
+            },
+          }),
+        ]);
+      });
+    await (origem ? umDeCadaVez(`origem:${origem}`, conferirEGravar) : conferirEGravar());
 
     const paraEmail = entrega ? (emailDoTelefone ?? email ?? null) : null;
     if (phone && !paraEmail) {
@@ -267,8 +302,14 @@ export class OtpService {
     };
   }
 
-  /** Valida o codigo e o consome. Lanca excecao se invalido/expirado. */
-  async verify(target: OtpTarget & { code: string }): Promise<void> {
+  /**
+   * Valida o codigo e o consome. Lanca excecao se invalido/expirado.
+   *
+   * Quem pediu o codigo confere o proprio codigo, com as proprias
+   * tentativas. Quem confere de outra origem (celular que trocou de rede)
+   * confere o codigo mais novo, com uma contagem separada.
+   */
+  async verify(target: OtpTarget & { code: string; ip?: string }): Promise<void> {
     const { phone, email, purpose, code } = target;
 
     // Telefone ou e-mail: exatamente um.
@@ -276,10 +317,15 @@ export class OtpService {
       throw BusinessException.validation('Informe o telefone ou o e-mail.');
     }
 
-    const record = await this.prisma.otpCode.findFirst({
-      where: { ...(phone ? { phone } : { email }), purpose, consumedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
+    const alvo = { ...(phone ? { phone } : { email }), purpose, consumedAt: null };
+    const origem = origemDoPedido(target.ip);
+    const meu = origem
+      ? await this.prisma.otpCode.findFirst({
+          where: { ...alvo, ip: origem, expiresAt: { gt: new Date() } },
+          orderBy: { createdAt: 'desc' },
+        })
+      : null;
+    const record = meu ?? (await this.prisma.otpCode.findFirst({ where: alvo, orderBy: { createdAt: 'desc' } }));
 
     if (!record) {
       throw BusinessException.unauthorized('Codigo invalido ou expirado.', ERROR_CODES.OTP_EXPIRED);
@@ -295,20 +341,26 @@ export class OtpService {
         ERROR_CODES.OTP_MAX_ATTEMPTS,
       );
 
-    if (record.attempts >= record.maxAttempts) throw esgotado();
+    // Conta de revisao da loja (codigo fixo): uma contagem so, para todos.
+    const separada = !meu && !!origem && !!record.ip && record.ip !== origem && !(await this.codigoDeRevisao(target));
 
     // Conta a tentativa e depois compara.
-    const contada = await this.prisma.otpCode.updateMany({
-      where: { id: record.id, consumedAt: null, attempts: { lt: record.maxAttempts } },
-      data: { attempts: { increment: 1 } },
-    });
-    if (contada.count !== 1) throw esgotado();
+    if (separada) {
+      if (!reservarTentativaDeFora(record.id, record.maxAttempts, record.expiresAt)) throw esgotado();
+    } else {
+      if (record.attempts >= record.maxAttempts) throw esgotado();
+      const contada = await this.prisma.otpCode.updateMany({
+        where: { id: record.id, consumedAt: null, attempts: { lt: record.maxAttempts } },
+        data: { attempts: { increment: 1 } },
+      });
+      if (contada.count !== 1) throw esgotado();
+    }
 
     if (!safeCompare(record.codeHash, hashToken(code, this.pepper))) {
       throw BusinessException.unauthorized('Codigo incorreto.', ERROR_CODES.OTP_INVALID);
     }
 
-    // O codigo certo vale uma unica vez.
+    // O codigo certo vale uma unica vez, e leva junto os outros pendentes.
     const usado = await this.prisma.otpCode.updateMany({
       where: { id: record.id, consumedAt: null },
       data: { consumedAt: new Date() },
@@ -316,6 +368,7 @@ export class OtpService {
     if (usado.count !== 1) {
       throw BusinessException.unauthorized('Codigo invalido ou expirado.', ERROR_CODES.OTP_EXPIRED);
     }
+    await this.prisma.otpCode.updateMany({ where: alvo, data: { consumedAt: new Date() } });
   }
 }
 
