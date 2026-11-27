@@ -22,6 +22,8 @@ dependencies:
   # A versao certa e a que o flutter_localizations exige.
   intl: any
   image_picker: ^1.1.2
+  # "Entrar com Google" (pacote oficial da equipe do Flutter).
+  google_sign_in: ^7.2.0
   flutter_map: ^8.3.2
   google_maps_flutter: ^2.16.0
   latlong2: ^0.10.1
