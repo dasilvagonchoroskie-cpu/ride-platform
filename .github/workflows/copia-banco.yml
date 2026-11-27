@@ -3,9 +3,9 @@ name: Copia diaria do banco
 # Evandro (10/10/2026): copia de seguranca diaria, de graca. Todas as tabelas,
 # compactadas e CRIPTOGRAFADAS (so abre com a chave privada do Evandro).
 # Fica guardada 30 dias nos artefatos desta esteira.
+# 26/11/2026: agendamento desligado. A copia diaria e feita pelo proprio
+# servidor.
 on:
-  schedule:
-    - cron: '23 6 * * *'   # 03:23 em Brasilia
   workflow_dispatch: {}
 
 permissions:
