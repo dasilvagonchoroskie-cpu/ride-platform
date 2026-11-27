@@ -202,7 +202,14 @@ export class DriversService {
 
       const activeVehicles = await this.prisma.vehicle.count({ where: { driverId: driver.id, isActive: true } });
       if (activeVehicles === 0) {
-        throw BusinessException.validation('Cadastre um veiculo ativo antes de ficar online.');
+        const carros = await this.vehicles.carrosDoMotorista(driver.id);
+        throw BusinessException.validation(
+          carros.some((c) => c.situacao === 'GUARDADO')
+            ? 'Escolha em Meus veiculos o carro que voce vai usar.'
+            : carros.some((c) => c.situacao === 'PENDENTE')
+              ? 'Seu carro esta em analise na Central. Assim que ela liberar, voce pode ficar disponivel.'
+              : 'Cadastre um veiculo ativo antes de ficar online.',
+        );
       }
 
       if (driver.cnhExpiresAt < new Date()) {
