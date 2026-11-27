@@ -6,6 +6,8 @@ export const requestOtpSchema = z
     phone: phoneSchema.optional(),
     email: emailSchema.optional(),
     purpose: z.enum(['LOGIN', 'PHONE_VERIFICATION', 'EMAIL_VERIFICATION', 'PASSWORD_RESET']).default('LOGIN'),
+    /** Aparelho que pede (para reconhecer quem ja entrou na conta). */
+    device: deviceInfoSchema.optional(),
   })
   .refine((data) => Boolean(data.phone) !== Boolean(data.email), {
     message: 'Informe exatamente um dos campos: "phone" ou "email".',
