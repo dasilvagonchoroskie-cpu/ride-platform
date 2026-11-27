@@ -6,7 +6,9 @@
  * - EM_USO: o carro com que ele trabalha agora (vehicles.is_active). Um so.
  * - GUARDADO: aprovado, mas nao e o de agora (ele troca quando quiser).
  * - PENDENTE: carro novo de motorista ja aprovado — a Central confere a
- *   foto e o documento (CRLV) antes de ele poder usar.
+ *   foto e o documento (CRLV) antes de ele poder usar. Tambem volta para
+ *   ca o carro liberado que teve marca, modelo, ano ou cor mudados pelo
+ *   motorista (Evandro, 27/11/2026).
  * - RECUSADO: a Central recusou (motivo aparece para o motorista).
  * - SUSPENSO: a Central suspendeu o carro (nao roda ate ser reativado; o
  *   motivo aparece para o motorista). A suspensao e do VEICULO: nao mexe na
@@ -18,6 +20,50 @@
  * mapa id do carro -> situacao, fotos e data. Carro fora do mapa = aprovado.
  */
 export type SituacaoGuardada = 'PENDENTE' | 'RECUSADO' | 'SUSPENSO' | 'REMOVIDO';
+
+export interface DadosDoCarro {
+  brand: string;
+  model: string;
+  year: number;
+  color: string;
+}
+
+/** Mudanca de dados feita pelo motorista num carro que ja estava liberado. */
+export interface AlteracaoDoCarro {
+  /** Como o carro estava quando a Central o liberou. */
+  antes: DadosDoCarro;
+  /** Quando o motorista mudou (ISO). */
+  em: string;
+  /** Era o carro em uso: aprovado, volta a ser (se ele nao escolheu outro). */
+  eraEmUso: boolean;
+}
+
+const normal = (t: string) => t.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
+
+/** Mudou de verdade? Maiuscula/minuscula e espaco sobrando nao contam. */
+export function dadosMudaram(a: DadosDoCarro, b: DadosDoCarro): boolean {
+  return normal(a.brand) !== normal(b.brand) || normal(a.model) !== normal(b.model) || a.year !== b.year || normal(a.color) !== normal(b.color);
+}
+
+function lerAlteracao(v: unknown): AlteracaoDoCarro | null {
+  if (!v || typeof v !== 'object') return null;
+  const a = v as Record<string, unknown>;
+  const d = a.antes as Record<string, unknown> | undefined;
+  if (!d || typeof d.brand !== 'string' || typeof d.model !== 'string' || typeof d.year !== 'number' || typeof d.color !== 'string') return null;
+  return {
+    antes: { brand: d.brand, model: d.model, year: d.year, color: d.color },
+    em: typeof a.em === 'string' ? a.em : '',
+    eraEmUso: a.eraEmUso === true,
+  };
+}
+
+/**
+ * Quem ja foi liberado alguma vez (aprovado agora, ou suspenso/bloqueado
+ * depois de aprovado): carro novo ou dado mudado passa pela Central.
+ */
+export function jaFoiAprovado(d: { status: string; approvedAt?: Date | null }): boolean {
+  return d.status === 'APPROVED' || !!d.approvedAt;
+}
 
 export interface FichaDoCarro {
   situacao?: SituacaoGuardada;
@@ -41,6 +87,10 @@ export interface FichaDoCarro {
    * sistema mostra se esta vencida, mas nao bloqueia o carro por conta propria.
    */
   crlvValidade?: string;
+  /** Presente enquanto a Central nao confere uma mudanca de dados. */
+  alteracao?: AlteracaoDoCarro | null;
+  /** Suspenso sem nunca ter sido liberado: ao reativar volta para a conferencia. */
+  voltarParaConferencia?: boolean;
 }
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
@@ -75,8 +125,11 @@ export function lerMapaDeCarros(valor: unknown): MapaDeCarros {
     const f = v as Record<string, unknown>;
     const situacao =
       f.situacao === 'PENDENTE' || f.situacao === 'RECUSADO' || f.situacao === 'SUSPENSO' || f.situacao === 'REMOVIDO' ? f.situacao : undefined;
+    const alteracao = lerAlteracao(f.alteracao);
     mapa[id] = {
       ...(situacao ? { situacao } : {}),
+      ...(alteracao ? { alteracao } : {}),
+      ...(f.voltarParaConferencia === true ? { voltarParaConferencia: true } : {}),
       motivo: typeof f.motivo === 'string' ? f.motivo : null,
       foto: typeof f.foto === 'string' ? f.foto : null,
       crlv: typeof f.crlv === 'string' ? f.crlv : null,
