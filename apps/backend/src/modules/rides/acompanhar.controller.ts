@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { Controller, Get, Param, ParseUUIDPipe, Post, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@ride/shared';
@@ -62,12 +63,13 @@ export class AcompanharCorridaController {
     res.setHeader('Cache-Control', 'no-store');
     // Esta pagina usa o Leaflet (unpkg); as imagens do mapa (TomTom) vem do
     // proprio servidor, entao a chave nunca aparece na pagina.
+    const nonce = randomBytes(16).toString('base64');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; " +
-        "img-src 'self' data: https://unpkg.com; connect-src 'self'",
+      `default-src 'self'; script-src 'nonce-${nonce}'; style-src 'self' 'unsafe-inline' https://unpkg.com; ` +
+        "img-src 'self' data: https://unpkg.com; connect-src 'self'; base-uri 'none'; object-src 'none'",
     );
-    res.send(paginaDeAcompanhar(token));
+    res.send(paginaDeAcompanhar(token, nonce));
   }
 
   /** Imagem do mapa da pagina (TomTom pelo servidor, sem guardado no servidor). */
