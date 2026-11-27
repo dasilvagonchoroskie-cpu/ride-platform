@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mobile_driver/core/api/api_client.dart';
 import 'package:mobile_driver/data/models/driver_models.dart';
+import 'package:mobile_driver/screens/legal_screen.dart';
 import 'package:mobile_driver/screens/pending_screen.dart';
 import 'package:mobile_driver/screens/welcome_screen.dart';
 import 'package:mobile_driver/state/driver_state.dart';
@@ -138,5 +139,17 @@ void main() {
     expect(find.textContaining('mesmo e-mail ou telefone'), findsOneWidget);
     expect(find.text('Entrar em modo demonstração'), findsNothing);
     expect(find.textContaining('regiao'), findsNothing);
+  });
+
+  testWidgets('Boas-vindas: a Politica de Privacidade abre antes de entrar', (tester) async {
+    final d = DriverState(client: ApiClient(client: _servidor('PENDING')));
+    await _abrir(tester, d, const WelcomeScreen());
+    final link = find.text('Política de Privacidade');
+    await tester.ensureVisible(link);
+    await tester.pumpAndSettle();
+    await tester.tap(link);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(LegalScreen), findsOneWidget);
   });
 }
