@@ -1,10 +1,7 @@
 import { Request } from 'express';
 
+/** Endereco de quem pediu, como o proxy da frente anotou (main.ts: trust proxy = 1). */
 export function getClientIp(request: Request): string | undefined {
-  const forwarded = request.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0].trim();
-  }
   return request.ip || request.socket?.remoteAddress || undefined;
 }
 
