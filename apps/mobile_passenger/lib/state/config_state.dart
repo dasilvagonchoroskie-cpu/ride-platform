@@ -35,6 +35,10 @@ class ConfigState extends ChangeNotifier {
   bool loginTelefone = true;
   bool loginEmail = false;
 
+  /// "Entrar com Google": codigo publico que o servidor manda quando a opcao
+  /// esta ligada. Sem ele, o botao nao aparece.
+  String? loginGoogle;
+
   /// Ja tem uma resposta (do servidor agora ou guardada de antes).
   bool carregado = false;
   bool carregando = false;
@@ -192,6 +196,8 @@ class ConfigState extends ChangeNotifier {
     if (login is Map<String, dynamic>) {
       loginTelefone = login['telefone'] as bool? ?? true;
       loginEmail = login['email'] as bool? ?? false;
+      final google = login['google'];
+      loginGoogle = google is String && google.isNotEmpty ? google : null;
     }
     final numero = data['whatsapp'];
     whatsapp = numero is String && numero.isNotEmpty ? numero : null;
