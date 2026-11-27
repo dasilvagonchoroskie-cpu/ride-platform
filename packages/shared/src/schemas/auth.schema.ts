@@ -22,6 +22,9 @@ export const verifyOtpSchema = z.object({
   purpose: z.enum(['LOGIN', 'PHONE_VERIFICATION', 'EMAIL_VERIFICATION', 'PASSWORD_RESET']).default('LOGIN'),
   role: z.enum(['PASSENGER', 'DRIVER']).default('PASSENGER'),
   device: deviceInfoSchema.optional(),
+}).refine((data) => Boolean(data.phone) !== Boolean(data.email), {
+  message: 'Informe exatamente um dos campos: "phone" ou "email".',
+  path: ['phone'],
 });
 
 export const refreshTokenSchema = z.object({
