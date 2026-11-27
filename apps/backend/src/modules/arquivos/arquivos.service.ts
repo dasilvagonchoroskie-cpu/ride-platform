@@ -148,6 +148,15 @@ export class ArquivosService {
     return { id: doc.id, type: doc.type, status: doc.status, fileUrl, avatarUrl: fileUrl };
   }
 
+  ehPublica(tipo: string): boolean {
+    return PUBLICAS.has(tipo);
+  }
+
+  async motoristaDoDono(userId: string): Promise<string | null> {
+    const d = await this.prisma.driver.findUnique({ where: { userId }, select: { id: true } });
+    return d?.id ?? null;
+  }
+
   /** Le a foto. Documento so o dono e a Central; rosto, qualquer pessoa logada. */
   async ler(id: string, quem: { id: string; role: UserRole }) {
     const a = await this.prisma.arquivo.findUnique({ where: { id } });
