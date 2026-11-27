@@ -8,8 +8,8 @@ const entrada = {
   password: 'Teste1234',
 };
 
-function montar(emailDaConta: string | null) {
-  const usuario = { id: 'u1', role: 'PASSENGER', status: 'ACTIVE', name: 'Passageiro', phone: '+5564999990000', email: emailDaConta, metadata: {} };
+function montar(emailDaConta: string | null, metadata: Record<string, unknown> = {}) {
+  const usuario = { id: 'u1', role: 'PASSENGER', status: 'ACTIVE', name: 'Passageiro', phone: '+5564999990000', email: emailDaConta, metadata };
   const update = jest.fn().mockResolvedValue({ ...usuario, driver: null });
   const prisma = {
     user: { findUnique: jest.fn().mockResolvedValue(usuario), findFirst: jest.fn().mockResolvedValue(null), update },
@@ -48,5 +48,20 @@ describe('Cadastro: so e-mail confirmado', () => {
     await servico.concluirCadastro('u1', { ...entrada, codigoEmail: '123456' });
     expect(otp.verify).toHaveBeenCalledWith({ email: 'nova@exemplo.test', purpose: 'EMAIL_VERIFICATION', code: '123456' });
     expect(update.mock.calls[0][0].data.emailVerifiedAt).toBeInstanceOf(Date);
+  });
+
+  it('sem senha so quem entra com o Google; com a ligacao vencida a senha volta a ser exigida', async () => {
+    const semSenha = { ...entrada, password: undefined };
+    const comum = montar('nova@exemplo.test');
+    await expect(comum.servico.concluirCadastro('u1', semSenha)).rejects.toThrow('Crie uma senha');
+    expect(comum.update).not.toHaveBeenCalled();
+
+    const antiga = montar('nova@exemplo.test', { google: { sub: 'g', email: 'outra@exemplo.test' } });
+    await expect(antiga.servico.concluirCadastro('u1', semSenha)).rejects.toThrow('Crie uma senha');
+
+    const google = montar('nova@exemplo.test', { google: { sub: 'g', email: 'nova@exemplo.test' } });
+    await google.servico.concluirCadastro('u1', semSenha);
+    expect(google.update.mock.calls[0][0].data.passwordHash).toBeUndefined();
+    expect(google.update.mock.calls[0][0].data.metadata).toMatchObject({ cadastroCompleto: true, google: { sub: 'g' } });
   });
 });
