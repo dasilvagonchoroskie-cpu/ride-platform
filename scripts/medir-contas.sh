@@ -100,7 +100,8 @@ case "${1:-}" in
         entrar_fone "+55649${SUF}81" PASSENGER; TP="$TOKEN"; RP="$REFRESH"
         post /auth/accept-terms '{"version":"1.0.0"}' "$TP" >/dev/null
         CID=$(get /app/config | jq -r '.data.cidades[0] // empty')
-        post /auth/cadastro "{\"name\":\"Passageiro Teste Automatico\",\"email\":\"medida.${SUF}@teste.fortalezamov.com.br\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$(cpf)\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TP" >/dev/null
+        CE=$(codigo "{\"email\":\"medida.${SUF}@teste.fortalezamov.com.br\",\"purpose\":\"EMAIL_VERIFICATION\"}")
+        post /auth/cadastro "{\"codigoEmail\":\"$CE\",\"name\":\"Passageiro Teste Automatico\",\"email\":\"medida.${SUF}@teste.fortalezamov.com.br\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$(cpf)\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TP" >/dev/null
         ME=$(get /auth/me "$TP" | jq -c '.data'); echo "$ME" | jq -r '.id' >> "$PASTA/contas.txt"
         [ "$(echo "$ME" | jq -r '.cadastroCompleto')" = "true" ] || { echo "Cadastro do passageiro nao completou"; exit 1; }
         echo "Carros perto do passageiro de teste: $(get "/rides/nearby-drivers?lat=$EMB_LAT&lng=$EMB_LNG" "$TP" | jq -r '.data | length')"
