@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/app_theme.dart';
 import '../state/driver_state.dart';
+import '../widgets/botao_google.dart';
 import '../widgets/painel_ui.dart';
 import '../widgets/ui.dart';
 import 'phone_screen.dart';
@@ -98,10 +99,11 @@ class WelcomeScreen extends StatelessWidget {
                   MaterialPageRoute<void>(builder: (_) => const PhoneScreen()),
                 ),
               ),
+              const EntrarComGoogle(),
               const SizedBox(height: Spacing.md),
               const Text(
-                'Já tem cadastro, ou usa o app do passageiro? Entre com o mesmo telefone: '
-                'a conta é a mesma e o que já foi aprovado pela Central continua valendo.',
+                'Já tem cadastro, ou usa o app do passageiro? Entre com o mesmo e-mail ou telefone '
+                'de lá: a conta é a mesma e o que já foi aprovado pela Central continua valendo.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: AppText.family, color: AppColors.textMuted, fontSize: 13),
               ),
