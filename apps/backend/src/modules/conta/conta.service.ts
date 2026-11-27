@@ -8,6 +8,7 @@ import { AppConfigService } from '../../config/app-config.service';
 import { CentralService } from '../central/central.service';
 import { ACAO_PEDIDO_EXCLUSAO, PedidosExclusaoService } from '../central/pedidos-exclusao.service';
 import { safeCompare } from '../../common/utils/crypto.util';
+import { corridasAbertasDoPassageiro } from './corridas-abertas';
 import { DriversService } from '../drivers/drivers.service';
 
 /**
@@ -16,8 +17,8 @@ import { DriversService } from '../drivers/drivers.service';
  *
  * Pelo aplicativo: na hora. Motorista: cadastro, CNH, fotos, carros,
  * carteira (o saldo se perde) e extrato. Passageiro: nome, telefone,
- * e-mail, CPF, foto e enderecos. As corridas ja feitas ficam no financeiro,
- * sem identificar a pessoa (obrigacao fiscal).
+ * e-mail, CPF, foto e enderecos. As corridas ja feitas ficam no historico,
+ * ligadas a um cadastro sem o nome da pessoa (ver a Politica de Privacidade).
  *
  * Pela pagina da internet: a pessoa deixa o telefone ou e-mail e a Central
  * recebe o pedido por e-mail para atender.
@@ -46,6 +47,13 @@ export class ContaService {
     });
     if (!u || u.deletedAt) throw BusinessException.notFound('Conta nao encontrada (ja excluida?).');
     if (u.role === UserRole.ADMIN) throw BusinessException.forbidden('A conta da Central nao pode ser excluida pelo aplicativo.');
+
+    // Motorista que tambem e passageiro: as duas partes sao conferidas antes.
+    if (u.driver && (await corridasAbertasDoPassageiro(this.prisma, userId)) > 0) {
+      throw BusinessException.conflict(
+        'Esta conta tem corrida em andamento ou agendada como passageiro. Cancele ou espere terminar para excluir.',
+      );
+    }
 
     let resultado = 'APAGADO';
     // Motorista: sai o cadastro de motorista (e a conta, se nao usar o app do passageiro).
