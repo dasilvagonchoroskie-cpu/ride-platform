@@ -269,27 +269,33 @@ export class OtpService {
       throw BusinessException.unauthorized('Codigo expirado. Solicite um novo.', ERROR_CODES.OTP_EXPIRED);
     }
 
-    if (record.attempts >= record.maxAttempts) {
-      throw BusinessException.tooManyRequests(
+    const esgotado = () =>
+      BusinessException.tooManyRequests(
         'Numero maximo de tentativas excedido. Solicite um novo codigo.',
         ERROR_CODES.OTP_MAX_ATTEMPTS,
       );
-    }
 
-    const matches = safeCompare(record.codeHash, hashToken(code, this.pepper));
+    if (record.attempts >= record.maxAttempts) throw esgotado();
 
-    if (!matches) {
-      await this.prisma.otpCode.update({
-        where: { id: record.id },
-        data: { attempts: { increment: 1 } },
-      });
+    // Conta a tentativa e depois compara.
+    const contada = await this.prisma.otpCode.updateMany({
+      where: { id: record.id, consumedAt: null, attempts: { lt: record.maxAttempts } },
+      data: { attempts: { increment: 1 } },
+    });
+    if (contada.count !== 1) throw esgotado();
+
+    if (!safeCompare(record.codeHash, hashToken(code, this.pepper))) {
       throw BusinessException.unauthorized('Codigo incorreto.', ERROR_CODES.OTP_INVALID);
     }
 
-    await this.prisma.otpCode.update({
-      where: { id: record.id },
+    // O codigo certo vale uma unica vez.
+    const usado = await this.prisma.otpCode.updateMany({
+      where: { id: record.id, consumedAt: null },
       data: { consumedAt: new Date() },
     });
+    if (usado.count !== 1) {
+      throw BusinessException.unauthorized('Codigo invalido ou expirado.', ERROR_CODES.OTP_EXPIRED);
+    }
   }
 }
 
