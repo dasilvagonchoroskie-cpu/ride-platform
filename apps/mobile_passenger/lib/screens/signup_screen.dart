@@ -33,6 +33,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   /// A conta ja tem e-mail confirmado: o cadastro usa esse mesmo.
   bool _emailFixo = false;
+
+  /// Entrou com o Google: nao precisa criar senha.
+  bool _comGoogle = false;
   final Map<String, String?> _erros = {};
   String? _erroGeral;
   bool _enviando = false;
@@ -53,6 +56,7 @@ class _SignupScreenState extends State<SignupScreen> {
       }
       _email.text = u.email ?? '';
       _emailFixo = _email.text.isNotEmpty;
+      _comGoogle = u.entraComGoogle;
       if (u.cpf != null) _cpf.text = formatarCpf(u.cpf!);
       _genero = u.genero;
     }
@@ -96,8 +100,8 @@ class _SignupScreenState extends State<SignupScreen> {
           : 'Informe o telefone com DDD.',
       'genero': _genero == null ? 'Selecione uma opção.' : null,
       'cpf': cpfValido(_cpf.text) ? null : 'CPF inválido. Confira os números.',
-      'senha': problemaSenha(_senha.text),
-      'confirma': _senha.text == _confirma.text ? null : 'As senhas não são iguais.',
+      'senha': _comGoogle ? null : problemaSenha(_senha.text),
+      'confirma': _comGoogle || _senha.text == _confirma.text ? null : 'As senhas não são iguais.',
     };
     setState(() {
       _erros
@@ -115,7 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
         email: _email.text,
         genero: _genero!,
         cpf: onlyDigits(_cpf.text),
-        senha: _senha.text,
+        senha: _comGoogle ? null : _senha.text,
         cidade: auth.cidadeEscolhida,
         telefone: _pedeTelefone ? '+55${onlyDigits(_telefone.text)}' : null,
       );
@@ -204,29 +208,38 @@ class _SignupScreenState extends State<SignupScreen> {
             erro: _erros['cpf'],
             aoMudar: (_) => _limpar('cpf'),
           ),
-          espaco,
-          CampoForm(
-            rotulo: 'Crie uma senha',
-            dica: 'Digite uma senha',
-            ajuda: 'Mínimo de 8 caracteres, com letras e números. Serve para entrar pelo e-mail.',
-            controller: _senha,
-            senha: true,
-            acao: TextInputAction.next,
-            preenchimento: const [AutofillHints.newPassword],
-            erro: _erros['senha'],
-            aoMudar: (_) => _limpar('senha'),
-          ),
-          espaco,
-          CampoForm(
-            rotulo: 'Confirme a senha',
-            dica: 'Repita a senha',
-            controller: _confirma,
-            senha: true,
-            acao: TextInputAction.done,
-            erro: _erros['confirma'],
-            aoMudar: (_) => _limpar('confirma'),
-            aoEnviar: (_) => _enviar(),
-          ),
+          if (_comGoogle) ...[
+            espaco,
+            Text(
+              'Você entra com o Google, então não precisa criar senha agora. Se quiser, crie depois em Meus dados.',
+              style: AppText.body.copyWith(fontSize: 16, color: AppColors.textMuted, height: 1.4),
+            ),
+          ],
+          if (!_comGoogle) ...[
+            espaco,
+            CampoForm(
+              rotulo: 'Crie uma senha',
+              dica: 'Digite uma senha',
+              ajuda: 'Mínimo de 8 caracteres, com letras e números. Serve para entrar pelo e-mail.',
+              controller: _senha,
+              senha: true,
+              acao: TextInputAction.next,
+              preenchimento: const [AutofillHints.newPassword],
+              erro: _erros['senha'],
+              aoMudar: (_) => _limpar('senha'),
+            ),
+            espaco,
+            CampoForm(
+              rotulo: 'Confirme a senha',
+              dica: 'Repita a senha',
+              controller: _confirma,
+              senha: true,
+              acao: TextInputAction.done,
+              erro: _erros['confirma'],
+              aoMudar: (_) => _limpar('confirma'),
+              aoEnviar: (_) => _enviar(),
+            ),
+          ],
           if (_erroGeral != null) ...[
             const SizedBox(height: Spacing.lg),
             Text(_erroGeral!, style: AppText.bodyStrong.copyWith(color: AppColors.danger)),
