@@ -29,6 +29,8 @@ pedir_codigo() {
   done
   echo "$r"
 }
+# Codigo de confirmacao de um e-mail (conta que ainda nao tem e-mail).
+codigo_email() { pedir_codigo "{\"email\":\"$1\",\"purpose\":\"EMAIL_VERIFICATION\"}" | jq -r '.data.debugCode // empty'; }
 entrar() {
   local p c v t
   # O servidor aceita 5 pedidos de codigo por minuto do mesmo IP (protecao
@@ -154,7 +156,10 @@ for k in (10,11):
     s=sum(d*(k-i) for i,d in enumerate(n)); r=(s*10)%11; n.append(0 if r==10 else r)
 print(''.join(map(str,n)))")
 EMAILP="passageiro.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
-CORPO="{\"name\":\"Passageiro Teste Automatico\",\"email\":\"$EMAILP\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFP\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}"
+X=$(post /auth/cadastro "{\"name\":\"Passageiro Teste Automatico\",\"email\":\"$EMAILP\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFP\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TP")
+sucesso "$X" && falha "Seguranca: cadastro com e-mail sem confirmar deveria ser recusado" "$X" || ok "Seguranca: cadastro so aceita e-mail confirmado"
+CEP=$(codigo_email "$EMAILP")
+CORPO="{\"codigoEmail\":\"$CEP\",\"name\":\"Passageiro Teste Automatico\",\"email\":\"$EMAILP\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFP\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}"
 X=$(post /auth/cadastro "$CORPO" "$TP")
 [ "$(echo "$X" | jq -r '.data.cadastroCompleto' 2>/dev/null)" = "true" ] && ok "Passageiro: cadastro completo gravado (cidade: ${CID:-sem lista})" || falha "Passageiro: cadastro completo" "$X"
 X=$(post /auth/cadastro "$CORPO" "$TP")
@@ -276,7 +281,8 @@ print(''.join(map(str,n)))"; }
 gerar_cnh() { python3 -c "import random;print(''.join(str(random.randint(0,9)) for _ in range(11)))"; }
 FONE_V="+55649${SUF}75"; CPFV=$(gerar_cpf); EMAILV="dupla.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
 TPV=$(entrar "$FONE_V" PASSENGER); post /auth/accept-terms '{"version":"1.0.0"}' "$TPV" >/dev/null
-post /auth/cadastro "{\"name\":\"Pessoa Dois Apps\",\"email\":\"$EMAILV\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFV\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TPV" >/dev/null
+CEV=$(codigo_email "$EMAILV")
+post /auth/cadastro "{\"codigoEmail\":\"$CEV\",\"name\":\"Pessoa Dois Apps\",\"email\":\"$EMAILV\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFV\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TPV" >/dev/null
 IDV=$(get /auth/me "$TPV" | jq -r '.data.id')
 TOUTRO=$(entrar "+55649${SUF}76" DRIVER); post /auth/accept-terms '{"version":"1.0.0"}' "$TOUTRO" >/dev/null
 CNHV=$(gerar_cnh)
@@ -1231,7 +1237,8 @@ X=$(get /geo/uso "$TP"); sucesso "$X" && falha "Passageiro nao deveria ver o uso
 # documento conferido (nada do documento vai ao servidor); fica na auditoria.
 FONE_R3="+55649${SUF}77"; TR3=$(entrar "$FONE_R3" PASSENGER "and-r3-antigo")
 EMAILR3="recuperar.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"; CPFR3=$(gerar_cpf)
-post /auth/cadastro "{\"name\":\"Pessoa Recuperada Teste\",\"email\":\"$EMAILR3\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFR3\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TR3" >/dev/null
+CER=$(codigo_email "$EMAILR3")
+post /auth/cadastro "{\"codigoEmail\":\"$CER\",\"name\":\"Pessoa Recuperada Teste\",\"email\":\"$EMAILR3\",\"gender\":\"NAO_INFORMAR\",\"cpf\":\"$CPFR3\",\"password\":\"Teste1234\"${CID:+,\"city\":\"$CID\"}}" "$TR3" >/dev/null
 UR3=$(get /auth/me "$TR3" | jq -r '.data.id // empty')
 if [ -n "$UR3" ]; then
   NOVO_R3="recuperado.${SUF}$((RANDOM%1000))@teste.fortalezamov.com.br"
