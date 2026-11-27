@@ -162,7 +162,8 @@ class _CidadesEquipeTelaState extends State<CidadesEquipeTela> {
                 title: Text(c.rotulo, style: AppText.bodyStrong),
                 subtitle: Text(
                   '${c.ativa ? 'Atendendo' : 'Desligada'} · raio de ${c.raioKm.round()} km'
-                  '${c.whatsapp == null ? '' : ' · WhatsApp ${telefoneBonito(c.whatsapp)}'}',
+                  '${c.whatsapp == null ? '' : ' · WhatsApp ${telefoneBonito(c.whatsapp)}'}'
+                  '\nCódigo de embarque: ${c.exigirCodigoEmbarque ? 'ligado' : 'desligado'}',
                   style: AppText.caption.copyWith(color: AppColors.textMuted),
                 ),
                 trailing: const Icon(Icons.edit_outlined),
@@ -256,6 +257,7 @@ class _NovaCidadeState extends State<_NovaCidade> {
   List<Lugar> _achados = const [];
   Lugar? _escolhido;
   bool _buscando = false;
+  bool _codigo = true;
   String? _erro;
 
   @override
@@ -307,6 +309,7 @@ class _NovaCidadeState extends State<_NovaCidade> {
       'latitude': l.coords.latitude,
       'longitude': l.coords.longitude,
       'raioKm': raio,
+      'exigirCodigoEmbarque': _codigo,
     });
   }
 
@@ -351,6 +354,7 @@ class _NovaCidadeState extends State<_NovaCidade> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Raio atendido (km)', helperText: 'Até onde vão as corridas desta cidade, a partir do centro.'),
             ),
+            ChaveDoCodigoDeEmbarque(ligado: _codigo, aoMudar: (v) => setState(() => _codigo = v)),
             if (_erro != null) ...[
               const SizedBox(height: Spacing.sm),
               Text(_erro!, style: AppText.caption.copyWith(color: AppColors.danger)),
@@ -379,6 +383,7 @@ class _EditarCidadeState extends State<_EditarCidade> {
   late final _raio = TextEditingController(text: widget.cidade.raioKm.round().toString());
   late final _whatsapp = TextEditingController(text: widget.cidade.whatsapp ?? '');
   late bool _ativa = widget.cidade.ativa;
+  late bool _codigo = widget.cidade.exigirCodigoEmbarque;
   late String _fonte = widget.cidade.fonteBusca;
   String? _erro;
 
@@ -399,6 +404,7 @@ class _EditarCidadeState extends State<_EditarCidade> {
       'ativa': _ativa,
       'whatsapp': zap.isEmpty ? null : (zap.length <= 11 ? '55$zap' : zap),
       'fonteBusca': _fonte,
+      'exigirCodigoEmbarque': _codigo,
     });
   }
 
@@ -416,6 +422,7 @@ class _EditarCidadeState extends State<_EditarCidade> {
               title: const Text('Atendendo nesta cidade'),
               onChanged: (v) => setState(() => _ativa = v),
             ),
+            ChaveDoCodigoDeEmbarque(ligado: _codigo, aoMudar: (v) => setState(() => _codigo = v)),
             TextField(controller: _raio, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Raio atendido (km)')),
             TextField(
               controller: _whatsapp,
@@ -539,6 +546,33 @@ class _NovoOperadorState extends State<_NovoOperador> {
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Voltar')),
         FilledButton(onPressed: _salvar, child: const Text('Criar conta')),
       ],
+    );
+  }
+}
+
+/// Liga ou desliga o codigo de embarque da cidade (so o dono muda; o
+/// servidor confere).
+class ChaveDoCodigoDeEmbarque extends StatelessWidget {
+  const ChaveDoCodigoDeEmbarque({super.key, required this.ligado, required this.aoMudar});
+
+  final bool ligado;
+  final ValueChanged<bool> aoMudar;
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      key: const ValueKey('chave-codigo-embarque'),
+      contentPadding: EdgeInsets.zero,
+      value: ligado,
+      onChanged: aoMudar,
+      title: const Text('Código de embarque'),
+      subtitle: Text(
+        ligado
+            ? 'Ligado: a viagem só começa quando o motorista digita o código que o passageiro vê. '
+                'Vale para os próximos pedidos feitos pelo aplicativo.'
+            : 'Desligado: o motorista inicia sem código. Ao salvar, vale na hora, inclusive nas corridas abertas.',
+        style: AppText.caption.copyWith(color: AppColors.textMuted),
+      ),
     );
   }
 }
