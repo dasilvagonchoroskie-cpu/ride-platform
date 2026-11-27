@@ -65,7 +65,7 @@ class _Root extends StatelessWidget {
     if (profile == null) return const WelcomeScreen();
 
     // Antes do cadastro: ninguem entrega CNH sem aceitar como ela e usada.
-    if (!profile.termsAccepted) return const TermsScreen();
+    if (!profile.termsAccepted || profile.termosDesatualizados) return const TermsScreen();
     if (!driver.isOnboarded) return const OnboardingScreen();
     if (profile.approval != DriverApproval.approved) return const PendingScreen();
 
