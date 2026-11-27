@@ -14,8 +14,11 @@ import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
 import { AvisosDeSeguranca } from './avisos-de-seguranca';
 import { randomToken } from '../../common/utils/crypto.util';
 import { encerrarComercios } from '../comercio/comercio.conta';
-import { liberarConta, reservarTentativa } from './limite-de-senha';
+import { liberarConta, reservarTentativa, senhaCerta } from './limite-de-senha';
+import { reconhecerPedinte } from './pedinte-conhecido';
+import { origemDoPedido } from './origem-do-pedido';
 import { ligacaoGoogle } from './google-token';
+import { LEGAL_VERSION, VERSOES_PUBLICADAS } from '../legal/legal-content';
 
 /** Genero informado no cadastro do passageiro. */
 export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
@@ -75,6 +78,8 @@ export interface AuthResult extends IssuedTokens {
     /** Falso enquanto a pessoa nao tocou em "Aceito os Termos" no app. */
     termsAccepted: boolean;
     termsVersion: string | null;
+    /** Aceitou uma versao anterior: o app pede o aceite de novo. */
+    termosDesatualizados: boolean;
     /** Cadastro do passageiro (nome, e-mail, genero, CPF, senha e cidade) ja feito. */
     cadastroCompleto: boolean;
     cpf: string | null;
@@ -163,8 +168,13 @@ export class AuthService {
     return { ...issued, isNewUser: false, user: this.paraUsuario(user) };
   }
 
-  async requestOtp(params: { phone?: string; email?: string; purpose: OtpPurpose }, ip?: string, chaveTeste?: string) {
-    return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip, chaveTeste);
+  async requestOtp(
+    params: { phone?: string; email?: string; purpose: OtpPurpose },
+    ip?: string,
+    chaveTeste?: string,
+    instalacao?: string,
+  ) {
+    return this.otp.request({ phone: params.phone, email: params.email, purpose: params.purpose }, ip, chaveTeste, instalacao);
   }
 
   // ------------------------------------------------------------------
@@ -216,8 +226,10 @@ export class AuthService {
     role: UserRole;
     device?: DeviceContext;
     chaveTeste?: string;
+    ip?: string;
   }): Promise<AuthResult | DesafioDoisFatores> {
     await this.otp.verify({
+      ip: params.ip ?? params.device?.ip,
       phone: params.phone,
       email: params.email,
       purpose: params.purpose,
@@ -311,6 +323,7 @@ export class AuthService {
     email?: string;
     password: string;
     device?: DeviceContext;
+    ip?: string;
   }): Promise<AuthResult | DesafioDoisFatores> {
     const user = await this.prisma.user.findFirst({
       where: params.phone ? { phone: params.phone } : { email: params.email },
@@ -319,9 +332,13 @@ export class AuthService {
 
     // Conta que existe ou nao: a contagem e a resposta sao as mesmas.
     const chave = user?.id ?? (params.phone ?? params.email ?? '').toLowerCase();
-    if (!reservarTentativa(chave)) {
+    const pedinte = await reconhecerPedinte(this.prisma, user?.id, {
+      instalacao: params.device?.deviceId,
+      origem: origemDoPedido(params.ip),
+    });
+    if (!reservarTentativa(chave, pedinte)) {
       throw BusinessException.tooManyRequests(
-        'Muitas senhas erradas. Espere 15 minutos ou entre com o codigo enviado por e-mail.',
+        'Muitas senhas erradas. Espere um pouco ou entre com o codigo enviado por e-mail.',
       );
     }
 
@@ -333,7 +350,7 @@ export class AuthService {
     if (!valid) {
       throw BusinessException.unauthorized('Credenciais invalidas.', ERROR_CODES.INVALID_CREDENTIALS);
     }
-    liberarConta(chave);
+    senhaCerta(chave, pedinte);
 
     this.assertUserActive(user.status);
 
@@ -372,10 +389,18 @@ export class AuthService {
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
 
     if (user.passwordHash) {
+      // Esta tela tem contagem propria.
+      const sessao = { chave: 'sessao', conhecido: true };
+      if (!reservarTentativa(`troca:${userId}`, sessao)) {
+        throw BusinessException.tooManyRequests(
+          'Muitas senhas erradas. Espere um pouco ou use "Esqueci a senha".',
+        );
+      }
       const valid = await comparePassword(currentPassword, user.passwordHash);
       if (!valid) {
         throw BusinessException.unauthorized('Senha atual incorreta.', ERROR_CODES.INVALID_CREDENTIALS);
       }
+      senhaCerta(`troca:${userId}`, sessao);
     }
 
     // Trocar a senha tira a marca de "senha provisoria" do operador (etapa 7).
@@ -462,6 +487,7 @@ export class AuthService {
       isOnline: user.driver?.isOnline ?? null,
       termsAccepted: user.termsAcceptedAt != null,
       termsVersion: user.termsVersion ?? null,
+      termosDesatualizados: user.termsAcceptedAt != null && user.termsVersion !== LEGAL_VERSION,
       cadastroCompleto: metaDe(user).cadastroCompleto === true,
       cpf: user.cpf ?? null,
       genero: metaDe(user).genero ?? null,
@@ -481,15 +507,20 @@ export class AuthService {
   /**
    * Registra que a pessoa tocou em "Aceito os Termos".
    *
-   * So grava para frente: uma vez aceito, aceitar de novo so atualiza a
-   * versao (por exemplo quando os termos mudam), nunca apaga o aceite
-   * anterior.
+   * A conta guarda o aceite mais recente; cada aceite tambem fica no
+   * registro de auditoria, para o anterior nao se perder.
    */
   async acceptTerms(userId: string, version: string): Promise<AuthResult['user']> {
+    if (!VERSOES_PUBLICADAS.includes(version)) {
+      throw BusinessException.validation('Versão dos termos desconhecida. Atualize o aplicativo.');
+    }
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { termsAcceptedAt: new Date(), termsVersion: version },
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
+    });
+    await this.prisma.auditLog.create({
+      data: { actorId: userId, actorRole: user.role, action: 'TERMOS_ACEITOS', entity: 'User', entityId: userId, after: { versao: version } },
     });
     return this.paraUsuario(user);
   }
@@ -517,6 +548,7 @@ export class AuthService {
       phone?: string;
       codigoEmail?: string;
     },
+    ip?: string,
   ): Promise<AuthResult['user']> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
@@ -550,7 +582,7 @@ export class AuthService {
           precisaCodigoEmail: true,
         });
       }
-      await this.otp.verify({ email: input.email, purpose: OtpPurpose.EMAIL_VERIFICATION, code: input.codigoEmail });
+      await this.otp.verify({ email: input.email, purpose: OtpPurpose.EMAIL_VERIFICATION, code: input.codigoEmail, ip });
     }
 
     try {
@@ -593,6 +625,7 @@ export class AuthService {
       endereco?: string;
       codigoEmail?: string;
     },
+    ip?: string,
   ): Promise<AuthResult['user']> {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { driver: { select: { id: true } } } });
     if (!user) throw BusinessException.notFound('Usuario nao encontrado.');
@@ -618,7 +651,7 @@ export class AuthService {
       throw BusinessException.validation('Por seguranca, troque o e-mail e o telefone em momentos separados.');
     }
     const novoTelefone = input.phone
-      ? await this.validarTelefoneNovo(userId, user.phone, input.phone, input.codigo, { email: user.email, meta: metaDe(user) })
+      ? await this.validarTelefoneNovo(userId, user.phone, input.phone, input.codigo, { email: user.email, meta: metaDe(user) }, ip)
       : null;
     // R2: e-mail novo so com o codigo que chegou NELE (prova que e da pessoa).
     if (trocaEmail) {
@@ -628,7 +661,7 @@ export class AuthService {
           precisaCodigoEmail: true,
         });
       }
-      await this.otp.verify({ email: input.email, purpose: OtpPurpose.EMAIL_VERIFICATION, code: input.codigoEmail });
+      await this.otp.verify({ email: input.email, purpose: OtpPurpose.EMAIL_VERIFICATION, code: input.codigoEmail, ip });
     }
 
     if (input.cpf && user.cpf && input.cpf !== user.cpf) {
@@ -680,6 +713,7 @@ export class AuthService {
     code: string;
     newPassword: string;
     device?: DeviceContext;
+    ip?: string;
   }): Promise<AuthResult | DesafioDoisFatores> {
     const conta = await this.prisma.user.findFirst({
       where: params.phone ? { phone: params.phone } : { email: params.email },
@@ -690,6 +724,7 @@ export class AuthService {
     }
 
     await this.otp.verify({
+      ip: params.ip ?? params.device?.ip,
       phone: params.phone,
       email: params.email,
       purpose: OtpPurpose.PASSWORD_RESET,
@@ -729,6 +764,7 @@ export class AuthService {
     if (eraProvisoria) this.pracas.esquecerEscopo(conta.id);
 
     liberarConta(conta.id);
+    liberarConta(`troca:${conta.id}`);
 
     // R1: o aparelho que recuperou a senha e o UNICO que continua. Sem os
     // dados do aparelho, cria um so para esta entrada.
@@ -765,6 +801,7 @@ export class AuthService {
     novo?: string,
     codigo?: string,
     conta?: { email: string | null; meta: MetaUsuario },
+    ip?: string,
   ): Promise<string | null> {
     if (!telefonePendente(atual)) {
       if (!novo || novo === atual) return null;
@@ -788,7 +825,7 @@ export class AuthService {
       if (dono && !(await liberarTelefoneDeContaVazia(this.prisma, novo, userId))) {
         throw BusinessException.conflict('Este telefone ja esta em outra conta.', ERROR_CODES.PHONE_ALREADY_USED);
       }
-      await this.otp.verify({ phone: atual, purpose: OtpPurpose.PHONE_VERIFICATION, code: codigo });
+      await this.otp.verify({ phone: atual, purpose: OtpPurpose.PHONE_VERIFICATION, code: codigo, ip });
       return novo;
     }
     if (!novo) throw BusinessException.validation('Informe o seu telefone com DDD.');
