@@ -965,14 +965,16 @@ export class CentralService {
     const aberto = await this.prisma.safetyEvent.findFirst({
       where: { userId, type: 'PANIC_BUTTON', resolved: false, createdAt: { gt: new Date(Date.now() - 2 * HORA) } },
     });
-    // Corrida em andamento de quem apertou (se o app nao mandou).
-    let rideId = input.rideId ?? null;
+    const d = await this.prisma.driver.findUnique({ where: { userId }, select: { id: true } });
+    const minhas = [{ passengerId: userId }, ...(d ? [{ driverId: d.id }] : [])];
+    // A corrida que o app mandou, se for de quem apertou; senao, a que esta em andamento.
+    let rideId: string | null = null;
+    if (input.rideId) {
+      const dele = await this.prisma.ride.findFirst({ where: { id: input.rideId, OR: minhas }, select: { id: true } });
+      rideId = dele?.id ?? null;
+    }
     if (!rideId) {
-      const d = await this.prisma.driver.findUnique({ where: { userId }, select: { id: true } });
-      const r = await this.prisma.ride.findFirst({
-        where: { status: { in: EM_ANDAMENTO }, OR: [{ passengerId: userId }, ...(d ? [{ driverId: d.id }] : [])] },
-        select: { id: true },
-      });
+      const r = await this.prisma.ride.findFirst({ where: { status: { in: EM_ANDAMENTO }, OR: minhas }, select: { id: true } });
       rideId = r?.id ?? null;
     }
     if (aberto) {
