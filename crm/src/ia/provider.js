@@ -179,9 +179,9 @@ function criarProvedorOpenAI({ id = 'personalizado', obterChave, obterModelo, ur
       const limite = Math.max(maxTokens, preset.minTokens || 0);
       const montarCorpo = () => JSON.stringify({ ...(preset.extra || {}), model: modelo, [preset.campoMaxTokens || 'max_tokens']: limite,
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }] });
-      const chamar = async () => {
+      const chamar = async (prazo = timeoutMs) => {
         const controle = new AbortController();
-        const timer = setTimeout(() => controle.abort(), timeoutMs);
+        const timer = setTimeout(() => controle.abort(), prazo);
         try {
           return await fetchImpl(`${String(urlBase).replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${chave}` }, body: montarCorpo(), signal: controle.signal
@@ -192,8 +192,14 @@ function criarProvedorOpenAI({ id = 'personalizado', obterChave, obterModelo, ur
           clearTimeout(timer);
         }
       };
-      let resposta = await chamar();
-      if (reservaDeModelo && !resposta.ok && ![401, 403].includes(resposta.status)) {
+      // Com reserva disponível, o principal ganha no máximo 25 s; estourou o tempo ou caiu a rede, vai para o leve.
+      let resposta = null;
+      try {
+        resposta = await chamar(reservaDeModelo ? Math.min(timeoutMs, 25000) : timeoutMs);
+      } catch (err) {
+        if (!reservaDeModelo) throw err;
+      }
+      if (reservaDeModelo && (!resposta || (!resposta.ok && ![401, 403].includes(resposta.status)))) {
         modelo = reservaDeModelo;
         reservaDeModelo = '';
         resposta = await chamar();

@@ -4,6 +4,11 @@ Atualizado em 19/11/2026 (horário de Brasília). Lista única do que falta. Ao 
 e a data; ao surgir um novo, acrescentar na seção certa. Detalhes técnicos de cada item estão no arquivo-mestre
 (`PROJETO-crm-fortaleza-move.md`) e no `CLAUDE.md`.
 
+## 26/11/2026 — reserva por demora e informações oficiais (2.1.0-rc.12)
+- [x] 26/11: se o Flash passar de 25 s ou a rede cair, a resposta sai pelo Flash-Lite (antes a reserva só cobria erro devolvido pelo serviço).
+- [x] 26/11: informações oficiais da IA preenchidas no servidor com as respostas do dono (só Goiatuba no começo, ainda sem operar, equipe das 8h às 19h, sem link do app, dinheiro/cartão/Pix). Texto anterior em `data/informacoes-ia-antes-2026-11-26.json`.
+- [ ] DONO: dias de atendimento, preços e o que o Clube de Vantagens oferece.
+
 ## 26/11/2026 — qualidade do atendimento da IA e menu em lista (2.1.0-rc.11)
 - [x] 26/11: escolha automática do modelo corrigida. As 134 análises de 10 a 26/11 usaram o flash-lite; a causa provável é um nome sem versão numérica (família "omni") passando na frente (a lista da chave não foi conferida). Agora: respostas ao cliente no Flash, análise e mídia no Lite, e se o Flash falhar (cota, fora do ar) cai no Lite. O log mostra o modelo de cada resposta.
 - [x] 26/11: instruções da IA sem a cidade errada ("Fortaleza" é só a marca) e com orientações de conversa mais natural; filtros de segurança iguais.
