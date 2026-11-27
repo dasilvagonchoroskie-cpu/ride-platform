@@ -115,6 +115,7 @@ class UserProfile {
     this.genero,
     this.cidade,
     this.temSenha = false,
+    this.entraComGoogle = false,
     this.telefonePendente = false,
     this.avatarUrl,
     this.endereco,
@@ -143,6 +144,9 @@ class UserProfile {
   /// Ja tem senha para entrar pelo e-mail (a senha nunca vem do servidor).
   final bool temSenha;
 
+  /// A conta entra com o Google: no cadastro, a senha nao e pedida.
+  final bool entraComGoogle;
+
   /// Entrou pelo e-mail e ainda nao informou o telefone (pedido no cadastro).
   final bool telefonePendente;
 
@@ -168,6 +172,7 @@ class UserProfile {
         'genero': genero,
         'cidade': cidade,
         'temSenha': temSenha,
+        'entraComGoogle': entraComGoogle,
         'telefonePendente': telefonePendente,
         'avatarUrl': avatarUrl,
         'endereco': endereco,
@@ -186,6 +191,7 @@ class UserProfile {
         genero: json['genero'] as String?,
         cidade: json['cidade'] as String?,
         temSenha: json['temSenha'] as bool? ?? false,
+        entraComGoogle: json['entraComGoogle'] as bool? ?? false,
         telefonePendente: json['telefonePendente'] as bool? ?? false,
         avatarUrl: json['avatarUrl'] as String?,
         endereco: json['endereco'] as String?,
@@ -204,6 +210,7 @@ class UserProfile {
         genero: genero,
         cidade: cidade,
         temSenha: temSenha,
+        entraComGoogle: entraComGoogle,
         telefonePendente: telefonePendente,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         endereco: endereco,
