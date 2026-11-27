@@ -65,7 +65,9 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
   /* ---------------------- Modelos de Comunicação da IA (Central) ---------------------- */
   // Todos que atendem podem ver; só o administrador edita.
   router.get('/ia/modelos', (req, res) => {
-    res.json({ modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes(), informacoes_situacao: ia.central.situacaoInformacoes() });
+    const lista = ia.central.menuLista();
+    // o número de teste só aparece para o administrador
+    res.json({ menu_lista: req.user.role === 'admin' ? lista : { modo: lista.modo }, modelos: ia.central.modelos(), site_url: ia.central.siteUrl(), informacoes: ia.central.informacoes(), informacoes_situacao: ia.central.situacaoInformacoes() });
   });
 
   router.get('/ia/aprendizado', requireAdmin, (req, res) => {
@@ -83,6 +85,8 @@ function registrar(router, { ia, cofre, fail, audit, requireAdmin }) {
   router.put('/ia/modelos', requireAdmin, (req, res) => {
     const b = req.body || {};
     try {
+      // primeiro o que valida número: se estiver errado, nada é salvo
+      if (b.menu_lista !== undefined) ia.central.salvarMenuLista(b.menu_lista);
       if (b.modelos !== undefined) ia.central.salvarModelos(b.modelos);
       if (b.site_url !== undefined) ia.central.salvarSite(b.site_url);
       if (b.informacoes !== undefined) ia.central.salvarInformacoes(b.informacoes);
