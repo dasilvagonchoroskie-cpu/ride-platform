@@ -14,6 +14,7 @@ import { cidadeAtendida, lerCidades } from '../operacao/operacao.store';
 import { AvisosDeSeguranca } from './avisos-de-seguranca';
 import { randomToken } from '../../common/utils/crypto.util';
 import { encerrarComercios } from '../comercio/comercio.conta';
+import { liberarConta, reservarTentativa } from './limite-de-senha';
 
 /** Genero informado no cadastro do passageiro. */
 export type Genero = 'FEMININO' | 'MASCULINO' | 'OUTRO' | 'NAO_INFORMAR';
@@ -314,6 +315,14 @@ export class AuthService {
       include: { driver: { select: { id: true, status: true, isOnline: true } } },
     });
 
+    // Conta que existe ou nao: a contagem e a resposta sao as mesmas.
+    const chave = user?.id ?? (params.phone ?? params.email ?? '').toLowerCase();
+    if (!reservarTentativa(chave)) {
+      throw BusinessException.tooManyRequests(
+        'Muitas senhas erradas. Espere 15 minutos ou entre com o codigo enviado por e-mail.',
+      );
+    }
+
     if (!user?.passwordHash) {
       throw BusinessException.unauthorized('Credenciais invalidas.', ERROR_CODES.INVALID_CREDENTIALS);
     }
@@ -322,6 +331,7 @@ export class AuthService {
     if (!valid) {
       throw BusinessException.unauthorized('Credenciais invalidas.', ERROR_CODES.INVALID_CREDENTIALS);
     }
+    liberarConta(chave);
 
     this.assertUserActive(user.status);
 
@@ -713,6 +723,8 @@ export class AuthService {
       },
     });
     if (eraProvisoria) this.pracas.esquecerEscopo(conta.id);
+
+    liberarConta(conta.id);
 
     // R1: o aparelho que recuperou a senha e o UNICO que continua. Sem os
     // dados do aparelho, cria um so para esta entrada.

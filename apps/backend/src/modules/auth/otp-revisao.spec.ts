@@ -103,10 +103,10 @@ describe('Conta de revisao da loja', () => {
     const reg: Record<string, unknown> = { id: 'c1', codeHash: hashToken(FIXO, PEPPER), expiresAt: new Date(Date.now() + 60_000), attempts: 0, maxAttempts: 5, consumedAt: null };
     const { otp, prisma } = montar({ contas: REV, role: 'PASSENGER' });
     (prisma.otpCode.findFirst as jest.Mock).mockImplementation(async () => (reg.consumedAt ? null : reg));
-    (prisma.otpCode.update as jest.Mock).mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+    (prisma.otpCode.updateMany as jest.Mock).mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
       if ((data.attempts as { increment?: number })?.increment) reg.attempts = (reg.attempts as number) + 1;
       if (data.consumedAt) reg.consumedAt = data.consumedAt;
-      return reg;
+      return { count: 1 };
     });
     await expect(otp.verify({ email: 'revisor@exemplo.com', purpose: OtpPurpose.LOGIN, code: '000000' })).rejects.toThrow('incorreto');
     expect(reg.attempts).toBe(1);

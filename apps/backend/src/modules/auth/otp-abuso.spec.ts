@@ -21,7 +21,16 @@ function montar(opcoes: { debugReturn?: boolean; emailConfigurado?: boolean; cod
         return c;
       }),
       count: jest.fn(async () => opcoes.pedidosNaHora ?? 0),
-      updateMany: jest.fn(async () => ({ count: 0 })),
+      // Gravacao condicional, como no banco: so altera se o filtro ainda vale.
+      updateMany: jest.fn(async ({ where, data }: { where: { id?: string; consumedAt?: null; attempts?: { lt: number } }; data: Record<string, unknown> }) => {
+        const c = codigos.find((x) => x.id === where.id);
+        if (!c) return { count: 0 };
+        if (where.consumedAt === null && c.consumedAt) return { count: 0 };
+        if (where.attempts && (c.attempts as number) >= where.attempts.lt) return { count: 0 };
+        if ((data.attempts as { increment?: number })?.increment) c.attempts = (c.attempts as number) + 1;
+        if (data.consumedAt) c.consumedAt = data.consumedAt;
+        return { count: 1 };
+      }),
       create: jest.fn(async () => ({})),
     },
     user: { findUnique: jest.fn(async () => opcoes.dono ?? null) },
@@ -63,6 +72,24 @@ describe('Codigos (OTP): abuso e repeticao', () => {
       await expect(otp.verify({ email: 'a@x.com', purpose: OtpPurpose.LOGIN, code: '000000' })).rejects.toThrow('incorreto');
     }
     await expect(otp.verify({ email: 'a@x.com', purpose: OtpPurpose.LOGIN, code: '123456' })).rejects.toThrow('tentativas');
+  });
+
+  it('contagem de tentativas consistente', async () => {
+    const { otp, codigos } = montar({ codigos: [codigo('123456')] });
+    const saidas = await Promise.allSettled(
+      Array.from({ length: 30 }, () => otp.verify({ email: 'a@x.com', purpose: OtpPurpose.LOGIN, code: '000000' })),
+    );
+    const comparadas = saidas.filter((s) => s.status === 'rejected' && String((s.reason as Error).message).includes('incorreto'));
+    expect(comparadas).toHaveLength(5);
+    expect(codigos[0].attempts).toBe(5);
+  });
+
+  it('codigo certo: uso unico', async () => {
+    const { otp } = montar({ codigos: [codigo('123456')] });
+    const saidas = await Promise.allSettled(
+      Array.from({ length: 10 }, () => otp.verify({ email: 'a@x.com', purpose: OtpPurpose.LOGIN, code: '123456' })),
+    );
+    expect(saidas.filter((s) => s.status === 'fulfilled')).toHaveLength(1);
   });
 
   it('mais de 6 codigos por hora para o mesmo contato: recusa', async () => {

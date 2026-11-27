@@ -163,7 +163,12 @@ describe('Reatribuir pela Central (atribuir) preserva a categoria de ENTREGA', (
   function montarAtribuir(categoria: string) {
     const atualizacoes: any[] = [];
     const tx: any = {
-      ride: { update: jest.fn(async ({ data }: any) => void atualizacoes.push(data)) },
+      ride: {
+        updateMany: jest.fn(async ({ data }: any) => {
+          atualizacoes.push(data);
+          return { count: 1 };
+        }),
+      },
       driverLocation: { updateMany: jest.fn() },
       rideOffer: { updateMany: jest.fn(), upsert: jest.fn() },
       rideStatusHistory: { create: jest.fn() },

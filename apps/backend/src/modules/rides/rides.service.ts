@@ -543,8 +543,8 @@ export class RidesService {
     // em Sao Paulo e o servidor nos EUA, entao cada consulta custa ~0,2 s.
     // Antes eram ~20 consultas em fila ate o chamado sair; agora as
     // independentes vao juntas e a busca dos motoristas e uma so.
-    const [, carteira, proprio, favoritos, bloqueados, ofertasAntes, teste] = await Promise.all([
-      this.mudarSituacao(rideId, RideStatus.SEARCHING, null, null),
+    const [aberta, carteira, proprio, favoritos, bloqueados, ofertasAntes, teste] = await Promise.all([
+      this.abrirProcura(rideId),
       // Carteira pre-paga: com o bloqueio ligado na Central, quem esta abaixo
       // do saldo minimo nao recebe chamado (a comissao nao teria de onde sair).
       regrasDaCarteira(this.prisma),
@@ -560,6 +560,8 @@ export class RidesService {
       this.prisma.rideOffer.findMany({ where: { rideId }, select: { driverId: true } }),
       this.prisma.contaDeTeste(corrida.passengerId),
     ]);
+    // A corrida ja saiu da fase de procura.
+    if (!aberta) return { offered: 0 };
     const primeiraRodada = ofertasAntes.length === 0;
     const jaChamados = new Set(ofertasAntes.map((o) => o.driverId));
 
@@ -929,9 +931,9 @@ export class RidesService {
   async cheguei(driverId: string, rideId: string, onde?: { latitude: number; longitude: number }) {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.DRIVER_WAITING);
-    await this.prisma.ride.update({
-      where: { id: rideId },
-      data: { status: RideStatus.DRIVER_WAITING, arrivedAt: new Date() },
+    await this.gravarSeNaoMudou(this.prisma, rideId, [corrida.status], driverId, {
+      status: RideStatus.DRIVER_WAITING,
+      arrivedAt: new Date(),
     });
     await this.registrar(rideId, RideStatus.DRIVER_WAITING, driverId, UserRole.DRIVER, onde);
     return this.detalhe(rideId);
@@ -940,9 +942,8 @@ export class RidesService {
   async aCaminho(driverId: string, rideId: string, onde?: { latitude: number; longitude: number }) {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.DRIVER_ARRIVING);
-    await this.prisma.ride.update({
-      where: { id: rideId },
-      data: { status: RideStatus.DRIVER_ARRIVING },
+    await this.gravarSeNaoMudou(this.prisma, rideId, [corrida.status], driverId, {
+      status: RideStatus.DRIVER_ARRIVING,
     });
     await this.registrar(rideId, RideStatus.DRIVER_ARRIVING, driverId, UserRole.DRIVER, onde);
     return this.detalhe(rideId);
@@ -951,9 +952,9 @@ export class RidesService {
   async iniciar(driverId: string, rideId: string, onde?: { latitude: number; longitude: number }) {
     const corrida = await this.daCorridaDoMotorista(driverId, rideId);
     this.exigirTransicao(corrida.status, RideStatus.IN_PROGRESS);
-    await this.prisma.ride.update({
-      where: { id: rideId },
-      data: { status: RideStatus.IN_PROGRESS, startedAt: new Date() },
+    await this.gravarSeNaoMudou(this.prisma, rideId, [corrida.status], driverId, {
+      status: RideStatus.IN_PROGRESS,
+      startedAt: new Date(),
     });
     await this.registrar(rideId, RideStatus.IN_PROGRESS, driverId, UserRole.DRIVER, onde);
     // Entrega: "iniciar" e o motorista confirmando que coletou a encomenda.
@@ -1145,20 +1146,18 @@ export class RidesService {
     const descontoCents = cupom ? descontoDoCupom(cupom, orcamento.totalCents) : 0;
 
     return this.prisma.withTransaction(async (tx) => {
-      await tx.ride.update({
-        where: { id: rideId },
-        data: {
-          status: RideStatus.COMPLETED,
-          discountCents: descontoCents,
-          finishedAt: new Date(),
-          distanceMeters: distancia,
-          durationSeconds: duracao,
-          finalFareCents: orcamento.totalCents,
-          commissionCents: orcamento.commissionCents,
-          driverEarningCents: orcamento.driverEarningCents,
-          chargedDistanceMeters: orcamento.chargedDistanceMeters,
-          chargedWaitingSeconds: orcamento.chargedWaitingSeconds,
-        },
+      // Grava o encerramento; a carteira vem depois.
+      await this.gravarSeNaoMudou(tx, rideId, [corrida.status], driverId, {
+        status: RideStatus.COMPLETED,
+        discountCents: descontoCents,
+        finishedAt: new Date(),
+        distanceMeters: distancia,
+        durationSeconds: duracao,
+        finalFareCents: orcamento.totalCents,
+        commissionCents: orcamento.commissionCents,
+        driverEarningCents: orcamento.driverEarningCents,
+        chargedDistanceMeters: orcamento.chargedDistanceMeters,
+        chargedWaitingSeconds: orcamento.chargedWaitingSeconds,
       });
 
       // Carteira PRE-PAGA: o passageiro paga o motorista direto (o dinheiro
@@ -1167,7 +1166,16 @@ export class RidesService {
       // comprou com a Central. Nada se apaga: correcao vira lancamento novo,
       // e cada linha guarda o saldo que ficou depois dela.
       const carteira = await tx.wallet.upsert({ where: { driverId }, update: {}, create: { driverId } });
-      const aposComissao = carteira.balanceCents - orcamento.commissionCents;
+      // O saldo muda por soma no proprio banco.
+      const bonusCents = cupom && descontoCents > 0 ? descontoCents : 0;
+      const atualizada = await tx.wallet.update({
+        where: { id: carteira.id },
+        data: {
+          balanceCents: { increment: bonusCents - orcamento.commissionCents },
+          totalEarnedCents: { increment: orcamento.driverEarningCents },
+        },
+      });
+      const aposComissao = atualizada.balanceCents - bonusCents;
       if (orcamento.commissionCents > 0) {
         await tx.walletTransaction.create({
           data: {
@@ -1180,28 +1188,19 @@ export class RidesService {
           },
         });
       }
-      let saldoFinal = aposComissao;
-      if (cupom && descontoCents > 0) {
-        saldoFinal = aposComissao + descontoCents;
+      if (cupom && bonusCents > 0) {
         await tx.walletTransaction.create({
           data: {
             walletId: carteira.id,
             type: 'BONUS',
-            amountCents: descontoCents,
-            balanceAfterCents: saldoFinal,
+            amountCents: bonusCents,
+            balanceAfterCents: atualizada.balanceCents,
             description: `Cupom ${cupom.code}: desconto pago pela plataforma`,
             rideId,
           },
         });
         await tx.coupon.update({ where: { id: cupom.id }, data: { usedCount: { increment: 1 } } });
       }
-      await tx.wallet.update({
-        where: { id: carteira.id },
-        data: {
-          balanceCents: saldoFinal,
-          totalEarnedCents: { increment: orcamento.driverEarningCents },
-        },
-      });
       await tx.driver.update({ where: { id: driverId }, data: { totalRides: { increment: 1 } } });
 
       // O motorista volta para a fila assim que encerra.
@@ -1274,16 +1273,19 @@ export class RidesService {
       multaCents = await this.fare.taxaDeCancelamento(new Date(), corrida.category, { latitude: corrida.pickupLat, longitude: corrida.pickupLng });
     }
 
+    // Enquanto procura, a corrida alterna entre "pedida" e "procurando".
+    const lidas: RideStatus[] =
+      corrida.status === RideStatus.REQUESTED || corrida.status === RideStatus.SEARCHING
+        ? [RideStatus.REQUESTED, RideStatus.SEARCHING]
+        : [corrida.status];
+
     await this.prisma.withTransaction(async (tx) => {
-      await tx.ride.update({
-        where: { id: rideId },
-        data: {
-          status: destino,
-          cancelledAt: new Date(),
-          cancelledBy: atorId,
-          cancellationReason: input.reason,
-          finalFareCents: multaCents > 0 ? multaCents : null,
-        },
+      await this.gravarSeNaoMudou(tx, rideId, lidas, corrida.driverId, {
+        status: destino,
+        cancelledAt: new Date(),
+        cancelledBy: atorId,
+        cancellationReason: input.reason,
+        finalFareCents: multaCents > 0 ? multaCents : null,
       });
       await tx.rideOffer.updateMany({
         where: { rideId, status: OfferStatus.PENDING },
@@ -1963,16 +1965,34 @@ export class RidesService {
     return corrida;
   }
 
-  private async mudarSituacao(
-    rideId: string,
-    para: RideStatus,
-    atorId: string | null,
-    papel: UserRole | null,
-  ) {
-    await this.prisma.ride.update({ where: { id: rideId }, data: { status: para } });
-    await this.prisma.rideStatusHistory.create({
-      data: { rideId, status: para, actorId: atorId, actorRole: papel },
+  /** Passa para "procurando" so se a corrida ainda estiver esperando motorista. */
+  private async abrirProcura(rideId: string): Promise<boolean> {
+    const mudou = await this.prisma.ride.updateMany({
+      where: { id: rideId, status: { in: [RideStatus.REQUESTED, RideStatus.SEARCHING] } },
+      data: { status: RideStatus.SEARCHING },
     });
+    if (mudou.count !== 1) return false;
+    await this.prisma.rideStatusHistory.create({
+      data: { rideId, status: RideStatus.SEARCHING, actorId: null, actorRole: null },
+    });
+    return true;
+  }
+
+  /** Grava a mudanca so se a corrida continua como foi lida. */
+  private async gravarSeNaoMudou(
+    banco: Pick<Prisma.TransactionClient, 'ride'>,
+    rideId: string,
+    lidas: RideStatus[],
+    motoristaLido: string | null,
+    data: Prisma.RideUncheckedUpdateManyInput,
+  ): Promise<void> {
+    const mudou = await banco.ride.updateMany({
+      where: { id: rideId, status: { in: lidas }, driverId: motoristaLido },
+      data,
+    });
+    if (mudou.count !== 1) {
+      throw new BusinessException(ERROR_CODES.RIDE_INVALID_STATE, 'Esta corrida acabou de mudar. Atualize a tela.');
+    }
   }
 
   private async registrar(
