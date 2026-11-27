@@ -2,7 +2,7 @@
 /// (LEGAL_VERSION em apps/backend/src/modules/legal/legal-content.ts) —
 /// se o texto mudar la, muda aqui tambem, para o app saber pedir o
 /// aceite de novo em vez de achar que uma versao velha ainda vale.
-const String kTermsVersion = '1.0.0';
+const String kTermsVersion = '1.1.0';
 
 /// Copia local, usada so quando o aparelho esta sem rede (ou em modo
 /// demonstracao) e por isso nao consegue buscar o texto oficial no
